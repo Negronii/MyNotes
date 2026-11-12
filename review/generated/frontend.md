@@ -4911,11 +4911,13 @@ for (const image of imageBatch.querySelectorAll("img[data-src]")) {
 > - `aspect-ratio` 与 `object-fit`：[CSS Box Sizing Module Level 4](https://www.w3.org/TR/css-sizing-4/#aspect-ratio)，Working Draft，2026-09-04；[CSS Images Module Level 3](https://www.w3.org/TR/css-images-3/#the-object-fit)，Candidate Recommendation Draft，2023-12-18。视口矩形 API：[CSSOM View Module](https://www.w3.org/TR/cssom-view-1/)，Working Draft，2025-09-16。
 ## 27. 怎样为报表图标选择资源形式？
 
-报表工具栏的图标可以内嵌 SVG（可缩放矢量图形）、使用可缓存的外部 SVG/图片、从雪碧图中裁取，或沿用图标字体。选择时要看图标颜色能否随状态改变、是否跨页面复用、下载与缓存边界，以及控件怎样获得可访问名称。
+**案例背景。** 同一公开合成案例中，用户打开 `/reports/42` 并改变筛选；工具栏有“添加筛选条件”和“编辑报表”按钮，多个报表页还复用一组小型状态图标。添加筛选图标会随主题、焦点和禁用状态换色；编辑图标外形固定；不同页面会取用不同数量的状态图标。选择资源时，要同时看控件名称、图形是否要跟页面样式变化、页面会取用多少图、文件怎样缓存，以及一次更新会让哪些页面重新下载。
+
+图形用 Scalable Vector Graphics（可缩放矢量图形，SVG）绘制时，页面会用 Cascading Style Sheets（层叠样式表，CSS）控制颜色与尺寸。常见载体是 inline SVG（行内 SVG）、独立 SVG 图片、CSS Sprite（CSS 雪碧图）和 icon font（图标字体）。没有一种形式能单凭“文件更少”或“矢量更清晰”胜出；先沿着这个报表站的一次选择看颜色与名称，再比较缓存单位和下载范围。
 
 ### SVG 怎样兼顾颜色、复用与替代文本？
 
-同页面中的行内 SVG 是文档的一部分，可以用 CSS 设置颜色；让形状使用 `currentColor`（当前文字颜色），就能跟随按钮的 `color`（文字颜色）。按钮已有可见文字时，图标只是装饰：
+“添加筛选条件”的颜色要跟随按钮状态，行内 SVG 可以直接受宿主页面的 CSS 控制。让形状使用 `currentColor`（当前文字颜色），它就沿用按钮的 `color`。按钮已有可见文字时，图标只是装饰，应从辅助技术呈现中隐藏：
 
 ~~~html
 <button type="button" class="report-action">
@@ -4931,55 +4933,80 @@ for (const image of imageBatch.querySelectorAll("img[data-src]")) {
 .report-action__icon { width: 1em; height: 1em; }
 ~~~
 
-如果图标内容固定、在多个页面复用，可把 SVG 作为独立资源交给 `<img>`，从而按 URL 单独缓存。宿主页面的 CSS 不能直接选择外部 SVG 文档中的路径，SVG 里的 `currentColor` 也不会继承按钮颜色；信息图像应在 `<img alt>` 写替代文本，按钮内已有可见名称时用 `alt=""`：
+行内 SVG 的标记和所在 HyperText Markup Language（超文本标记语言，HTML）一起传输；它没有可供其他页面单独请求的资源 Uniform Resource Locator（统一资源定位符，URL）。若“编辑报表”图案固定而多个页面重复使用，可把它保存成独立 SVG，通过 `<img>` 使用同一 URL。宿主页面的 CSS 不能直接选择外部 SVG 文档里的路径，内部 `currentColor` 也不会继承按钮颜色。按钮已有可见文字时图片用 `alt=""`；图片本身承担信息时，才由 `alt` 提供替代文本：
 
 ~~~html
 <button type="button">
-  <img src="/assets/add-filter.svg" width="16" height="16" alt="">
-  <span>添加筛选条件</span>
+  <img src="/assets/edit-report.svg" width="16" height="16" alt="">
+  <span>编辑报表</span>
 </button>
 ~~~
 
-行内 SVG 便于按主题换色，但标记会随 HTML 一同传输；外部 SVG 可独立缓存和复用，缓存策略允许时多个页面可重用同一 URL、减少重复传输，却不适合直接由宿主页面逐路径改色。控件名称应来自控件内的可见文字、图片的替代文本，或显式关联的可访问名称；孤立的相邻文字不会自动成为控件名称。
+控件的名称应来自控件内的可见文字、图片替代文本，或显式关联的可访问名称；孤立的相邻文字不会自动成为控件名称。若无文字图标按钮承担操作名称，可把 `aria-label="编辑报表"` 放在按钮上，不要让图案本身成为唯一的说明。
 
 ### CSS Sprite 怎样裁出图集中的一格？
 
-CSS Sprite（雪碧图）把多个小图排进同一张 sprite sheet（精灵图集），再用固定尺寸的盒子和 `background-position`（背景图像定位）露出目标区域。假设图集是 `64 × 32px`，每格 `16 × 16px`，共有 4 列、2 行：
+当多个小图总在同一组页面一起出现，可以把它们排进一张 sprite sheet（精灵图集），让固定尺寸的盒子只露出目标区域。假设图集是 `64 × 32px`，每格 `16 × 16px`，有 4 列、2 行：
 
-```text
-x →    0      16      32      48
-y   ┌──────┬──────┬──────┬──────┐
-0   │  1   │  2   │  3   │  4   │
-    ├──────┼──────┼──────┼──────┤
-16  │  5   │  6   │ [7]  │  8   │
-    └──────┴──────┴──────┴──────┘
-```
+图中的 `x`、`y` 是每格左上角坐标，以图集左上角为原点；数值单位均为 CSS px。右侧小盒子大小固定，移动的是它背后的整张背景图。
+
+![将图集向左移动32、向上移动16后，第七格进入固定的16乘16视窗](../../frontend/performance/resources/css-sprite-crop.svg)
 
 > [!example] 第二行第三列的坐标
-> 以左上角为原点，该格左上角在 `(32, 16)`；背景向左、向上移动对应距离后，它落在 `16 × 16px` 的视窗内，所以两个定位偏移写成 `-32px -16px`。
+> 第七格位于 `x=32`、`y=16`，也就是第三列、第二行。把背景向左、向上移动这么多距离后，该格落进 `16 × 16px` 的视窗，所以定位写成 `-32px -16px`。
 
 ~~~css
-.icon-edit {
+.report-status__pending-icon {
   display: inline-block;
   width: 16px;
   height: 16px;
-  background-image: url("/assets/report-icons.png");
+  background-image: url("/assets/report-icons.4f2a.svg");
   background-repeat: no-repeat;
   background-position: -32px -16px;
 }
 ~~~
 
-图集变化时，每个图标坐标都可能要更新；改动一个格子也会改变整张图集资源，页面需要获取更新后的整份图像。若用内容哈希命名，文件 URL 也随之变化。图标多时可由资源构建步骤生成坐标，避免人工维护数字。背景图本身不提供有意义的替代文本；功能图标要由按钮或链接的可访问名称表达。
+~~~html
+<span class="report-status__pending-icon" aria-hidden="true"></span>
+<span>等待处理</span>
+~~~
 
-若图片本身承载信息，使用 `<img>` 提供替代文本，并按[图片资源加载规则](#26.%20%E5%9B%BE%E7%89%87%E4%B8%8E%E5%AA%92%E4%BD%93%E8%B5%84%E6%BA%90%E6%80%8E%E6%A0%B7%E5%8A%A0%E8%BD%BD%E5%B9%B6%E4%BF%9D%E6%8C%81%E9%A1%B5%E9%9D%A2%E7%A8%B3%E5%AE%9A%EF%BC%9F)处理宽高、候选资源和加载时机。
+这是“等待处理”状态旁的装饰图标。背景图本身不提供有意义的替代文本；状态文字承担说明。图标很多时，可以在构建阶段从源图和布局配置同时生成图集与坐标，避免手写偏移。若图片本身承载信息，应改用 `<img>` 提供替代文本，并按[图片与媒体资源加载规则](#26.%20%E5%9B%BE%E7%89%87%E4%B8%8E%E5%AA%92%E4%BD%93%E8%B5%84%E6%BA%90%E6%80%8E%E6%A0%B7%E5%8A%A0%E8%BD%BD%E5%B9%B6%E4%BF%9D%E6%8C%81%E9%A1%B5%E9%9D%A2%E7%A8%B3%E5%AE%9A%EF%BC%9F)处理宽高、候选资源和加载时机。图集坐标一旦移动，每个引用这些坐标的页面都可能要改；更新一个格子也会更新整张图集资源。
 
 ### Sprite 是否一定比独立图片快？
 
-合并能减少一些独立资源请求，但并不自动减少总传输量：页面可能为一个图标下载整张图集。HTTP/2 可在一个连接上多路复用多个流，图片请求数也不等于每张图都新建连接。比较时按实际页面测总字节、压缩、缓存复用和更新频率；图标经常独立变化或只在少数页面出现时，分开缓存可能更合适。
+先看浏览器缓存的对象：Hypertext Transfer Protocol（超文本传输协议，HTTP）缓存按请求目标 URL 等条件寻找可复用响应，同一 URL 只有在响应仍新鲜、验证成功或其他缓存条件允许时才能复用。若报表图标是公开且不含用户数据的静态资源，构建时可把内容摘要放进 URL，例如 `/assets/report-icons.4f2a.svg`。服务器首次成功响应这个新 URL 时，可以返回：
+
+~~~http
+HTTP/1.1 200 OK
+Content-Type: image/svg+xml
+Cache-Control: public, max-age=31536000, immutable
+~~~
+
+`Cache-Control` 是服务器随响应发送的字段。`max-age` 指定这份响应可新鲜复用的时间；`immutable` 扩展声明在新鲜期间不需要再次验证。图片内容改变时生成新的摘要 URL，再让页面或样式表引用新地址。若发布时删掉仍被旧页面引用的文件，旧页面仍会请求那个旧 URL，所以部署应保留旧哈希资源一段足够的时间。
+
+验证器和新鲜时间解决不同问题。响应带 `ETag`（实体标签）时，缓存可以在响应变旧后发 `If-None-Match` 询问是否仍是同一份内容；服务器回 `304 Not Modified` 时复用已保存的正文，内容改变时回 `200 OK` 和新正文。`ETag` 本身不会让仍新鲜的旧响应提前发起验证。可变的同 URL 图标可以用较短的 `max-age` 限制旧内容最多直接复用多久，到期后配合 `ETag` 验证；也可以让服务器返回 `Cache-Control: public, no-cache` 和单独的 `ETag` 响应字段，让缓存保留正文、但每次复用前都联系服务器验证。`no-store` 则要求缓存不存储响应。
+
+对照报表站的一次更新：把详情页 `/reports/42` 记作 A，它使用整组 8 格；把报表列表页记作 B，它只使用第 1 格；这次只改第 7 格。若图集按内容摘要生成新 URL，两个更新后的页面都指向新版整张图集。在同一浏览器缓存上下文里，A 或 B 先打开都会请求新版完整图集，后打开的页面可复用该 URL 的新鲜响应。若每格是独立的哈希图片，B 仍引用未变化的第 1 格 URL，可以复用缓存；A 只需取得改名后的第 7 格，其余七个仍可用原 URL。是否命中还取决于缓存分区、响应新鲜度和缓存是否仍保留该对象。
+
+因此，图集减少的是多个图标共享时的资源数；它不会把一张雪碧图拆成可单独缓存的格子。若某个页面没有可复用的图集响应，即便它只露出一格，也需要请求整份图集。独立图片则可以只请求当前页面所需的 URL，并让未变化的图标继续命中缓存。
+
+下面的本地浏览器对照只回答“请求哪些文件、缓存能否复用”，不把它当成所有站点的速度结论：
+
+| 报表页加载的图标资源 | 冷缓存请求数 | 正文编码字节 | `transferSize` 合计 | 同一上下文热重载 |
+|---|---:|---:|---:|---|
+| 8 个独立 `16 × 16` SVG | 8 | 1,780 | 4,180 | 0 新请求；0 字节传输值 |
+| 含 8 个图形的单张 SVG 图集 | 1 | 1,383 | 1,683 | 0 新请求；0 字节传输值 |
+| 只取 1 个独立 SVG | 1 | 210 | 510 | 0 新请求；0 字节传输值 |
+| 只用图集中的 1 格 | 1 | 1,383 | 1,683 | 0 新请求；0 字节传输值 |
+
+实测使用 Chromium `157.0.8103.51`、本机 Node HTTP/1.1 服务、8 个极小合成 SVG 和 `Cache-Control: public, max-age=86400, immutable`；分别新建干净浏览器上下文测冷缓存，再在原上下文热重载。字节来自 PerformanceResourceTiming（资源计时 API）：`encodedBodySize` 计响应正文；网络响应的 `transferSize` 是编码正文大小加规范定义的 `300` 字节响应头估值，本地缓存命中且无需网络验证时为 `0`。若缓存响应经过网络验证后复用，`transferSize` 按规范记为 `300` 字节估值。此值不是实际 HTTP 头、TLS 或链路字节的精确账单。本表只计图标资源，不含 HTML、CSS 或其他页面资源；它也没有测连接、内容压缩、Content Delivery Network（内容分发网络，CDN）、真实图形复杂度或页面延迟。它只展示同一配置下的资源粒度：页面取用全组时图集少 7 个请求；只取一格时，单张独立 SVG 少传约 `1,173` 个 `transferSize` 字节。热重载结果说明本次测试配置可复用缓存，并不保证资源一直留在缓存里。
+
+现代协议也改变了“少一个请求”的意义。HTTP/2 允许多个资源流在同一 Transmission Control Protocol（传输控制协议，TCP）连接上交错传输，但 TCP 丢失字节时仍可能暂时挡住同一连接的后续数据；HTTP/3 用 QUIC 流承载请求，单个流受阻时其他流可以继续推进，但流仍共享连接的拥塞与连接级流量控制。资源请求数不再等于新建连接数，因此不能仅为减少文件请求就断言雪碧图更快。独立图标仍会带来各自的请求处理和响应头；图集则把未用图案的字节、变更频率与缓存失效绑在一起。实际选择时，若这组图标在多数报表页一起出现且共用更新节奏，可测图集；若路由只取少量图标或图标经常独立更新，独立资源可以只请求当前需要的 URL；若少量图案要随按钮状态换色，行内 SVG 更直接。
 
 ### 图标字体怎样保留可访问名称？
 
-icon font（图标字体）把图案映射到字体字形，因此可按文字方式用 CSS 控制颜色和尺寸。每个私用区码点只对配套字体文件有意义；字体载入失败时，外形可能缺失或变成替代符号。把图标保持为装饰，让按钮或链接文字承担功能名称：
+若报表站已经维护一套图标字体，字形也能用 CSS 控制颜色和尺寸。每个私用区码点只对配套字体有意义；字体载入失败时，字形可能缺失或显示替代符号。把字形当装饰，让按钮或链接文字承担功能名称：
 
 ~~~css
 @font-face {
@@ -5001,23 +5028,27 @@ icon font（图标字体）把图案映射到字体字形，因此可按文字�
 </button>
 ~~~
 
-`aria-hidden="true"` 把纯装饰字形从辅助技术呈现中隐藏，按钮的可见文字仍提供名称。若设计确实是无文字图标按钮，应给按钮本身设置合适名称，例如 `aria-label="编辑报表"`；不要让私用区字符成为唯一可理解的名称。
+`aria-hidden="true"` 把纯装饰字形从辅助技术呈现中隐藏，按钮的可见文字仍提供名称。新系统若只为几个小图标引入一整套字体，会多一个字体资源和字形映射维护成本；字体文件还可能带入当前页面用不到的字形。为已有字体继续支付这项成本，取决于它是否已被页面使用、是否跨页面共享，以及是否能按实际使用子集构建。选择字体并不会自动解决无文字按钮的名称问题。
 
-### 旧横幅图展示的是静态选中项
+### 怎样只显示当前横幅？
 
-雪碧图从同一张资源里裁出装饰性小图；横幅则按状态显示完整图片，图片角色不同会影响替代文本和加载时机。下面保留归档横幅图与 `.current` 片段，展示静态选中项。图片原件保持不变：
+雪碧图从同一张资源里裁出装饰性小图；横幅则按状态显示完整图片。图片角色不同，替代文本和请求时机也不同。下面先保留旧电商页面的归档截图；原图可见中秋活动文案、商品分类和左右切换箭头。接着的报表代码是另一个独立合成示例，只用 `.current` 显示一项，不是截图中的页面源码：
 
-![归档横幅原图](../../archive/front-end/0-1_Learning_Notes/HTML/banner.png)
+![归档电商横幅：中秋活动图，两侧有左右切换箭头，左侧列出商品分类](../../archive/front-end/0-1_Learning_Notes/HTML/banner.png)
 
-旧例用 `.current` 显示选中的一项，是静态横幅切换状态的 CSS 片段：
+下面的列表只有静态的选中项，没有把归档截图里的箭头纳入行为：
 
 ~~~html
 <ul class="report-banner">
   <li class="current">
-    <a href="/reports/monthly"><img src="/assets/monthly-banner.jpg" alt="查看月度订单报表"></a>
+    <a href="/reports/monthly">
+      <img src="/assets/monthly-banner.jpg" alt="查看月度订单报表">
+    </a>
   </li>
   <li>
-    <a href="/reports/quarterly"><img src="/assets/quarterly-banner.jpg" alt="查看季度订单报表"></a>
+    <a href="/reports/quarterly">
+      <img src="/assets/quarterly-banner.jpg" alt="查看季度订单报表">
+    </a>
   </li>
 </ul>
 ~~~
@@ -5036,18 +5067,18 @@ icon font（图标字体）把图案映射到字体字形，因此可按文字�
 .report-banner img { display: block; width: 100%; height: 100%; object-fit: cover; }
 ~~~
 
-这段代码只决定哪项显示；它没有自动轮换、前后按钮、键盘模式或暂停控制，因此不构成完整轮播。真正的自动轮播需提供操作控制并照顾焦点、悬停和减少动态效果；连续移动图片的装饰演算见[CSS 过渡与动画](#24.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%BF%87%E6%B8%A1%EF%BC%8C%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%EF%BC%9F)。
+这段代码只决定哪项显示；它没有自动轮换、前后按钮、键盘模式或暂停控制，因此不构成完整轮播。真正的自动轮播需提供操作控制并照顾焦点、悬停和减少动态效果；连续移动图片的装饰演算见[何时使用过渡，何时使用关键帧动画？](#24.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%BF%87%E6%B8%A1%EF%BC%8C%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%EF%BC%9F)。信息图片的宽高、候选文件与加载时机见[图片与媒体资源怎样加载并保持页面稳定？](#26.%20%E5%9B%BE%E7%89%87%E4%B8%8E%E5%AA%92%E4%BD%93%E8%B5%84%E6%BA%90%E6%80%8E%E6%A0%B7%E5%8A%A0%E8%BD%BD%E5%B9%B6%E4%BF%9D%E6%8C%81%E9%A1%B5%E9%9D%A2%E7%A8%B3%E5%AE%9A%EF%BC%9F)。
+
+这里的 CSS 只控制显示，不会推迟普通 `<img src>` 的请求。按 HTML 标准，图片默认立即获取；两个 URL 在 HTML 创建时就已提供，即使季度项是 `display: none`，浏览器仍可获取它。若需要由应用决定请求时机，初始状态不要设置真实 `src`，在选中该项时再设置。本页的 Chromium `157.0.8103.51` 小复现记录了隐藏的季度图片被请求并解码。
 
 > [!info]- 来源
-> - 背景图像坐标：W3C CSS Backgrounds and Borders Level 3，Candidate Recommendation Draft（2024-03-11），[background-position](https://www.w3.org/TR/css-backgrounds-3/#the-background-position)，检查于 2026-11-06。
-> - 多路复用：IETF RFC 9113，HTTP/2，Standards Track（2022-06），[Streams and multiplexing](https://www.rfc-editor.org/rfc/rfc9113.html#name-streams-and-multiplexing)，检查于 2026-11-06。
-> - HTTP 缓存语义：IETF RFC 9111，HTTP Caching，Standards Track（2022-06），[HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111.html)，检查于 2026-11-06。
-> - 可下载字体及 <code>@font-face</code>：W3C CSS Fonts Level 4，Working Draft（2026-11-04），[CSS Fonts Level 4](https://www.w3.org/TR/css-fonts-4/)，检查于 2026-11-06。
-> - 隐藏装饰字形并保留控件名称：W3C WAI-ARIA 1.2，Recommendation（2023-06-06），[`aria-hidden`](https://www.w3.org/TR/wai-aria-1.2/#aria-hidden)，及 WAI [Images Tutorial](https://www.w3.org/WAI/tutorials/images/)，检查于 2026-11-06。
-> - SVG 文档、形状与呈现：W3C SVG 2，Candidate Recommendation Snapshot（2026-10-06），[SVG 2](https://www.w3.org/TR/SVG2/)，检查于 2026-11-06；该快照预计不早于 2026-12-01 进入 Recommendation 阶段。
-> - `currentColor` 值：W3C CSS Color Level 4，Candidate Recommendation Draft（2026-11-03），[currentcolor](https://www.w3.org/TR/css-color-4/#valdef-color-currentcolor)，检查于 2026-11-06。
-> - `<img>` 的替代文本和图标规则：WHATWG HTML Living Standard（2026-11-05 更新），[Images](https://html.spec.whatwg.org/multipage/images.html#the-img-element)，检查于 2026-11-06；外部 SVG 作为图像资源时的处理见 [SVG 2: embedded content](https://www.w3.org/TR/SVG2/embedded.html)。
-> - 自动轮播控制：W3C WAI [ARIA APG Carousel Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/)，检查于 2026-11-06。
+> - `<img>` 的替代文本与图片呈现边界：[WHATWG HTML Living Standard，Images](https://html.spec.whatwg.org/multipage/images.html#the-img-element)；外部 SVG 作为图像是独立文档、不会继承宿主属性：[W3C SVG 2，Embedded content](https://www.w3.org/TR/SVG/embedded.html)；核对于 2026-11-12。
+> - `currentColor` 的计算与使用：[W3C CSS Color Module Level 4，2026-10-07 CRD，§4.4](https://www.w3.org/TR/2026/CRD-css-color-4-20261007/#valdef-color-currentcolor)；SVG 图形的 `color` 如何为 `fill` 提供 `currentColor`，以及行内 SVG 接受 HTML 文档继承值：[W3C SVG 2，§§13.2–13.3](https://www.w3.org/TR/SVG/single-page.html#ColorProperty)；核对于 2026-11-12。
+> - `background-position` 的定位语法：[W3C CSS Backgrounds and Borders Module Level 3](https://www.w3.org/TR/css-backgrounds-3/#the-background-position)；核对于 2026-11-12。图例使用 4 列 × 2 行、每格 16px 的合成数据，偏移按该几何直接计算。
+> - 背景图不提供替代文本、隐藏装饰并给控件名称：[W3C WAI-ARIA 1.2，`aria-hidden`](https://www.w3.org/TR/wai-aria-1.2/#aria-hidden)；[WAI Images Tutorial](https://www.w3.org/WAI/tutorials/images/)；轮播操作模式：[WAI-ARIA APG Carousel Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/)；核对于 2026-11-12。
+> - 缓存键、新鲜度和 `max-age`：[IETF RFC 9111，HTTP Caching §§2、4.2](https://www.rfc-editor.org/rfc/rfc9111.html#section-4.2)，2022-06；`ETag` 验证、`no-cache` 与 `no-store`：[RFC 9111 §§4.3、5.2.2](https://www.rfc-editor.org/rfc/rfc9111.html#section-4.3)；不可变响应扩展：[IETF RFC 8246，§§2–3](https://www.rfc-editor.org/rfc/rfc8246.html#section-2)，2017-09；核对于 2026-11-12。哈希 URL 更新策略：[MDN HTTP Caching Guide，Cache Busting](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching#cache_busting)，访问于 2026-11-12。
+> - HTTP/2 多路复用但仍受 TCP 队头阻塞影响：[IETF RFC 9113，§§1.2、5](https://www.rfc-editor.org/rfc/rfc9113.html#section-1.2)，2022-06；HTTP/3 的 QUIC 流、流间独立交付与连接级拥塞控制：[IETF RFC 9114，§§1.2、2](https://www.rfc-editor.org/rfc/rfc9114.html#section-1.2)，2022-06；QUIC 流级与连接级流量控制：[IETF RFC 9000，§4](https://www.rfc-editor.org/rfc/rfc9000.html#section-4)，2021-05；核对于 2026-11-12。
+> - `PerformanceResourceTiming.transferSize`、`encodedBodySize` 的定义，网络响应的 300 字节估值与无网络缓存命中为 0：[W3C Resource Timing，2026-11-02 Candidate Recommendation Draft，§3.3](https://www.w3.org/TR/2026/CRD-resource-timing-20261102/#dom-performanceresourcetiming-transfersize)；实测条件和数值见上文本地浏览器对照。
 ## 28. JavaScript 值如何转换、比较，并成为属性键？
 
 **案例背景：**2026 年 10 月的报表导入中，`first` 与 `retry` 的 `reportId` 相同但金额不同，`rows` 还保留了一个缺失位置。导入代码需要保住合法的零金额、识别缺行，并决定按业务键还是对象身份查记录。本章用这组输入说明值转换、相等比较、对象图比较和属性键转换；后续章节沿用同一组输入：
@@ -12838,84 +12869,155 @@ const directRows = reports?.querySelectorAll(":scope > li.report") ?? [];
 > - `children`、`childNodes`、`getElementsBy*()` 的成员筛选与实时性按具体接口算法定义；`nodeName`、`tagName` 属于通用节点和元素接口各自的字段：[WHATWG DOM Standard §4.2.6 ParentNode](https://dom.spec.whatwg.org/#interface-parentnode)、[§4.4 Node](https://dom.spec.whatwg.org/#interface-node)、[§4.5 Document](https://dom.spec.whatwg.org/#interface-document) 与 [§4.9 Element](https://dom.spec.whatwg.org/#interface-element)，Living Standard，核对于 2026-11-12。
 ## 58. 用户离开报表页时，分析事件怎样尽力发送？
 
-案例背景：用户打开报表、改变一次筛选，然后立刻导航到别处。analytics event (分析事件) 不应拖慢筛选或导航；页面可先在内存中收集少量事件，再小批量发送，并在页面变为隐藏时尝试提交一批。这个生命周期信号只提供最后一次机会，不能保证服务器已收到。
+analytics event (分析事件)记录页面使用情况，例如打开报表或改变筛选。它们可以帮助产品理解使用情况，但通常不决定报表本身是否正确。本文跟踪一个合成案例：用户打开 `/reports/42`，改变一次筛选，再导航到另一个完整页面。页面只把 `report_opened`、`filter_applied` 和受控页面代号放入内存队列；它既不收集筛选原文，也不把离页发送当作服务器已记账。
 
 ### 先限制采集内容和积压量
 
-先列出产品真正需要的事件名与字段。只收集允许的 `report_opened`、`filter_applied` 等事件和受控的页面代号；不要把搜索框原文、完整 URL、用户令牌或可识别身份的值塞进载荷。用户关闭可选采集时，停止入队并清空仍在应用内存中的未发送数据；已经交给 Beacon 或 Fetch 的批次可能还在途，不能由这个开关撤回。
+允许列表先限定事件名和页面代号，再限定每条事件的字段。案例中的两条事件只有事件 ID（标识符）、名称、页面代号和时间戳；搜索框原文、完整 URL、用户令牌和身份字段不进入载荷。选择退出可选采集时，停止新入队并清空应用内存中的未发送事件。已经交给浏览器的请求无法由这个开关撤回。
 
-内存队列需要上限和明示的溢出策略。下面采用最多 200 条，满时丢弃最旧条目；每 50 条或定时尝试发送一批。生产实现还应限制序列化后的字节数，因为事件条数不能代表请求体大小。`visibilitychange` 到 `hidden` 时只尝试一批，队列若仍有剩余，页面退出后可能被丢弃。发送小批次时可以先试 Beacon API，它不会等待服务器响应。
+| 时点 | 页面内存队列 | 接下来发生什么 |
+| --- | --- | --- |
+| 打开 `/reports/42` | `report_opened` | 事件尚未离开页面 |
+| 改变筛选 | `report_opened`、`filter_applied` | 载荷不含筛选值；两条仍在内存 |
+| 10 秒定时器前离开当前文档 | 同上 | `visibilitychange` 到 `hidden` 时取出一批并尝试发送 |
 
-> [!example] 报表打开和筛选变化
-> 页面先把 `report_opened` 和 `filter_applied` 放进内存队列。这两条尚未达到 50 条的成批门槛；若用户在 10 秒定时器触发前切换页面，文档变为 `hidden` 时处理器会将两条一起取出并尝试发送。
+队列最多保留 200 条；满时丢弃最旧的一条。达到 50 条时安排一次分批发送；10 秒定时器也会尝试一批。发送时先试 Beacon API（信标接口）；若接口不可用或拒绝排队，就尝试 Fetch API（资源获取接口）的 `keepalive`（页面环境结束后仍允许请求继续）选项。单看条数不能约束请求体大小，所以例子再把序列化后的请求体限制为 8 KiB。字段值来自固定允许列表，事件 ID 使用安全上下文中的 `crypto.randomUUID()` 生成 UUID（通用唯一标识符）v4，时间戳是数字；这组有界字段让每条事件都能放进空批次。若以后加入自由文本或其他字段，必须重新检查字节上限和过大单条的处理。
 
-~~~javascript
-const MAX_PENDING = 200;
-const BATCH_SIZE = 50;
-const allowedNames = new Set(["report_opened", "filter_applied"]);
-const allowedScreens = new Set(["report_list", "report_detail"]);
-const queue = [];
-let collectionEnabled = false;
-let flushScheduled = false;
+下面的实现把事件在入队时生成的 ID 保留在载荷中。`takeBatchBody()` 只在同时满足条数和 UTF-8 编码字节上限时取出事件；它在调用发送 API 前就把所选事件从内存队列移除，API 拒绝或网络失败后也不会自动放回。下面的合成运行假设用户已允许可选采集；生产页面应从实际同意状态调用启用函数，不要固定开启。
 
-function setCollectionEnabled(enabled) {
-  collectionEnabled = enabled;
-  if (!enabled) queue.length = 0;
-}
+> [!example]- 实现：同一事件 ID、大小限制与尽力发送
+>
+> 完整样例只发送两个允许的事件。离页时取出它们；正文载荷不含筛选值。
+>
+> ~~~javascript
+> const MAX_PENDING = 200;
+> const BATCH_SIZE = 50;
+> const MAX_BATCH_BYTES = 8 * 1024;
+> const allowedNames = new Set([
+>   "report_opened",
+>   "filter_applied",
+> ]);
+> const allowedScreens = new Set([
+>   "report_list",
+>   "report_detail",
+> ]);
+> const queue = [];
+> const encoder = new TextEncoder();
+> let collectionEnabled = false;
+> let flushScheduled = false;
+>
+> function setCollectionEnabled(enabled) {
+>   collectionEnabled = enabled;
+>   if (!enabled) queue.length = 0;
+> }
+>
+> function takeBatchBody() {
+>   const batch = [];
+>   let body = "[]";
+>   while (queue.length && batch.length < BATCH_SIZE) {
+>     const candidate = [...batch, queue[0]];
+>     const candidateBody = JSON.stringify(candidate);
+>     if (encoder.encode(candidateBody).byteLength > MAX_BATCH_BYTES) break;
+>     batch.push(queue.shift());
+>     body = candidateBody;
+>   }
+>   return batch.length ? body : null;
+> }
+>
+> function flushOneBatch() {
+>   const body = takeBatchBody();
+>   if (body === null) return;
+>   const payload = new Blob([body], { type: "application/json" });
+>   // 同源端点。true 只表示浏览器接受了排队，不是服务器确认。
+>   if (navigator.sendBeacon?.("/analytics", payload)) return;
+>   // Beacon 不可用或拒绝时尝试 Fetch；两者共用 keepalive 在途字节额度。
+>   void fetch("/analytics", {
+>     method: "POST",
+>     body: payload,
+>     keepalive: true,
+>     credentials: "same-origin",
+>   }).catch(() => {});
+> }
+>
+> function scheduleFlush() {
+>   if (flushScheduled) return;
+>   flushScheduled = true;
+>   setTimeout(() => {
+>     flushScheduled = false;
+>     flushOneBatch();
+>     if (queue.length >= BATCH_SIZE) scheduleFlush();
+>   }, 0);
+> }
+>
+> function trackEvent(name, screen) {
+>   if (
+>     !collectionEnabled ||
+>     !allowedNames.has(name) ||
+>     !allowedScreens.has(screen)
+>   ) return;
+>   if (queue.length === MAX_PENDING) queue.shift();
+>   queue.push({
+>     id: crypto.randomUUID(),
+>     name,
+>     screen,
+>     ts: Date.now(),
+>   });
+>   if (queue.length >= BATCH_SIZE) scheduleFlush();
+> }
+>
+> setInterval(flushOneBatch, 10_000);
+> document.addEventListener("visibilitychange", () => {
+>   if (document.visibilityState === "hidden") flushOneBatch();
+> });
+>
+> setCollectionEnabled(true);
+> trackEvent("report_opened", "report_detail");
+> trackEvent("filter_applied", "report_detail");
+> ~~~
 
-function sendBatch(batch) {
-  const body = new Blob([JSON.stringify(batch)], { type: "application/json" });
-  // 本例假设同源端点。返回 true 仅表示浏览器已接受排队。
-  if (navigator.sendBeacon?.("/analytics", body)) return;
-  // Beacon 不可用或拒绝排队时尝试 Fetch；两者共享 keepalive 配额，不能保证后者绕过拒绝。
-  void fetch("/analytics", { method: "POST", body, keepalive: true }).catch(() => {});
-}
+运行条件：代码假设用户已允许采集、页面运行在 HTTPS 或本机 loopback 等安全上下文，且 `/analytics` 与页面同源。复现离页分支时，应在 10 秒定时器触发前点击会加载新文档的普通链接，例如 `<a href="/help">帮助</a>`；只在单页应用内改路由不会触发这里的 `hidden` 处理器。
 
-function trackEvent(name, screen) {
-  if (!collectionEnabled || !allowedNames.has(name) || !allowedScreens.has(screen)) return;
-  if (queue.length === MAX_PENDING) queue.shift();
-  queue.push({ name, screen, ts: Date.now() });
-  if (queue.length >= BATCH_SIZE) scheduleFlush();
-}
-
-function scheduleFlush() {
-  if (flushScheduled) return;
-  flushScheduled = true;
-  setTimeout(() => {
-    flushScheduled = false;
-    flushEvents();
-    if (queue.length >= BATCH_SIZE) scheduleFlush();
-  }, 0);
-}
-
-function flushEvents() {
-  if (!queue.length) return;
-  sendBatch(queue.splice(0, BATCH_SIZE));
-}
-
-setInterval(flushEvents, 10_000);
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "hidden") flushEvents();
-});
-
-setCollectionEnabled(true);
-trackEvent("report_opened", "report_detail");
-trackEvent("filter_applied", "report_detail");
-~~~
+`visibilitychange` 到 `hidden` 是页面变为不可见的信号；它也会在切换标签或应用进入后台时出现，所以不代表用户永久离开。对于**同一文档内的单页应用路由切换**，文档仍可见，通常不会触发这个信号；如果产品需要在路由边界提交队列，应由路由层显式调用队列模块提供的分批函数，不能假定页面生命周期事件会替它运行。hidden 处理器每次只尝试一批；页面离开前队列余量可能来不及发送。达到门槛后的定时任务可以继续排下一批，但页面离开不保证这些后续任务都能运行。
 
 ### “已排队”不等于“已记录”
 
-Beacon API 的 `navigator.sendBeacon()` 返回 `true` 只表示用户代理接受了传输排队；它没有响应回调，也不报告服务器是否处理。浏览器会在文档变为 `hidden` 时安排发送，但设备进程随后仍可能被系统终止。若需要自定义请求头或更细控制，可尝试 Fetch API 的 `keepalive` 请求；Beacon 和 Fetch keepalive 共用限额，一个 Fetch 组中尚未完成请求的正文总量受 64 KiB 限制，队列太大时提交可能被拒绝。若 Beacon 因这个限额被拒绝，回退到 Fetch 不能绕过限额。两个接口都不能替代可靠业务队列、服务器确认或幂等去重。
+离开页面时可监听 `visibilitychange`，并在状态变为 `hidden` 时调用 Beacon API。规范要求浏览器在这个状态变化时安排已提交给它的信标请求；但浏览器进程随后仍可能被系统终止。`hidden` 只是一次尽力发送的时机，不能证明页面一定要关闭，也不能证明服务器收到数据。
 
-本例 `flushEvents()` 在尝试发送前从内存队列取出一批。传输失败后该批不会自动重试；这正是“尽力发送”的损失边界。若统计数据不可丢，应把它升级为持久队列并设计服务端确认与重放，而不是阻塞离页等待。
+`pagehide` 表示一个会话历史条目不再是当前页面；其 `persisted` 为 `true` 时，页面可能进入往返缓存（back-forward cache，BFCache），之后还能恢复。它也不是所有后台或关闭场景都能观察到的信号。不要用 `unload` 作为最后发送钩子；移动端进程被系统结束时，脚本可能没有机会再运行。
 
-**延伸阅读：** [报表页面里的状态应该放在哪里？](#52.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明偏好与业务状态的归属；[流式报表断线重连后，界面怎样保留正确状态？](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 说明哪些消息影响报表正确性、不能混同于可丢弃的分析事件；[WebView 怎样安全地开放原生能力并更新页面包？](#59.%20WebView%20%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E5%9C%B0%E5%BC%80%E6%94%BE%E5%8E%9F%E7%94%9F%E8%83%BD%E5%8A%9B%E5%B9%B6%E6%9B%B4%E6%96%B0%E9%A1%B5%E9%9D%A2%E5%8C%85%EF%BC%9F) 讨论混合应用中的宿主权限。
+| 观察到的阶段 | 这能证明什么 | 不能证明什么 |
+| --- | --- | --- |
+| 事件进入 JavaScript 内存队列 | 本页面暂存了事件 | 页面销毁后还能恢复 |
+| `sendBeacon()` 返回 `true` | 浏览器接受了请求排队 | 网络请求完成或服务器已处理 |
+| 服务端日志出现请求 | 请求到达了这个服务端入口 | 事件已写入耐久存储或业务事务已提交 |
+| 服务端按事件 ID 完成去重并提交 | 服务端按自己的事务契约记录了该事件 | 浏览器知道提交结果；Beacon 没有响应回调 |
+
+Beacon 是非阻塞的尽力传输。它自动使用 `keepalive`，不提供响应回调，也不允许调用者自定义请求头。普通 Fetch 请求默认不带 `keepalive`；文档销毁、Fetch 组结束时，尚未完成的普通请求可以被终止。样例只有在 Beacon 不存在或返回 `false` 时才改用 Fetch API 并设置 `keepalive: true`，使请求可以越过发起页面环境的销毁而继续处理。Fetch 的 Promise（异步结果对象）可能得到服务器响应，但页面离开后不能靠这个回调确认记录结果；`keepalive` 也不保证请求一定到达服务器。请求已被页面取消，也不代表服务端一定没读到正文：本地延迟响应测试中，普通 Fetch 的正文已到服务端，但导航后响应连接先关闭；keepalive Fetch 则等到了延迟的 `204` 响应。
+
+Beacon 与 Fetch 的 `keepalive` 请求共享同一个 fetch group（Fetch 组）的在途请求体额度。Fetch 标准在 `contentLength + inflightKeepaliveBytes` 超过 64 KiB（65,536 字节）时拒绝请求；这计入尚未完成的其他 keepalive 请求，不只是当前这一批。因此样例的 8 KiB 是留有余量的应用上限，不是浏览器保证接受的大小；若其他请求占用了额度，8 KiB 请求仍可能被拒。此时回退到 Fetch 不能绕过限制。
+
+同源 `/analytics` 端点让认证边界可见：Beacon 规范的凭证模式是 `include`，同源请求可带上适用的 Cookie；Fetch 样例明确选 `credentials: "same-origin"`。浏览器实测的同源测试请求携带了合成 Cookie `report_session=synthetic`。不要把身份令牌放进事件正文。若把端点改成跨源地址，JSON Blob 产生的 `Content-Type: application/json` 不符合 CORS 安全列表条件；预检缓存没有匹配项时，浏览器会先发不带凭证的 `OPTIONS`，成功后才发送实际 Beacon POST。实际 Beacon 的凭证模式固定为 `include`，服务端还需按规范回应允许的来源、凭证与请求头。Fetch 默认只发送同源凭证；跨源要显式设置 `include`，并满足 CORS 和 Cookie 的站点策略。
+
+事件正文不放完整 URL，也不等于服务端看不到页面 URL：浏览器还可能在请求头中自动带 `Referer`。本地 Chromium `157.0.8103.51` 复现的同源请求，在页面没有设置 `Referrer-Policy` 时带上了来源页的路径与合成查询参数。若路径或查询串可能含敏感值，应通过文档响应头设置 `Referrer-Policy: strict-origin`（同源请求只发来源）或 `no-referrer`；`sendBeacon()` 不能单独改请求头，需在文档/站点策略处控制。Fetch 可设置单次 `referrerPolicy`，但两条发送路径都应遵守应用实际需要的策略。
+
+样例在尝试发送前已把一批从内存队列取出。若 Beacon 返回 `false` 且 Fetch 因额度或网络失败而拒绝，这些事件不会自动回到队列；即使 Beacon 返回 `true`，异步请求也仍可能没有到达服务端。浏览器复现中，`sendBeacon()` 返回 `true` 后拦截并中止网络请求，服务端没有收到任何记录。
+
+这属于可丢失的分析遥测。若数据丢失不可接受，需要另行实现持久化发件箱、重试与服务器确认。重试必须沿用入队时生成的同一个事件 ID；服务器为事件 ID 预先建立唯一约束，并在写入事务中按该键去重或执行幂等写入。浏览器不会按正文里的 ID 替应用去重：复现实验是应用代码**主动调用两次** Beacon，浏览器接受了两次，服务端看到了两个请求和两行原始事件；只有服务端按 ID 去重后，唯一事件数才是 1。这个实验说明重复提交需要服务端去重，不表示一次调用会被浏览器自行重发。当前样例不重试，因此可能丢失，但不会自行创建无限重试流。`setCollectionEnabled(false)` 只能清空尚在本地的队列，不能撤回已经交给浏览器的批次。
+
+**延伸阅读：** [报表页面里的状态应该放在哪里？](#52.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F) 说明偏好与业务状态的归属；[流式报表断线重连后，界面怎样保留正确状态？](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 说明不能和可丢弃分析数据混为一谈的业务消息；[WebView 怎样安全地开放原生能力并更新页面包？](#59.%20WebView%20%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E5%9C%B0%E5%BC%80%E6%94%BE%E5%8E%9F%E7%94%9F%E8%83%BD%E5%8A%9B%E5%B9%B6%E6%9B%B4%E6%96%B0%E9%A1%B5%E9%9D%A2%E5%8C%85%EF%BC%9F) 讨论混合应用中的宿主权限。
 
 > [!info]- 来源
-> - Beacon 是非阻塞的尽力传输；返回值仅表示排队成功，且无响应回调：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3，2026-11-06 核对。
-> - Beacon 在页面 `visibilityState` 变为 `hidden` 时安排发送；规范也提示后台页面在移动设备上仍可能随进程终止而丢失：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3、§4，2026-11-06 核对。
-> - Fetch `keepalive` 与 64 KiB 的在途请求总量限制：[WHATWG Fetch Standard，HTTP-network-or-cache fetch](https://fetch.spec.whatwg.org/)，2026-11-06 核对。
-> - 页面可见性状态：[WHATWG HTML Standard，Page visibility](https://html.spec.whatwg.org/multipage/interaction.html#page-visibility)，2026-11-06 核对。
+> - `sendBeacon()` 的返回值只表示浏览器成功排队；它没有响应回调，自动使用 `keepalive`，并在文档 `visibilityState` 变为 `hidden` 时安排传输：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3.1、§3.2，2026-11-12 核对。
+> - Beacon 凭证模式、`Blob` 的 `Content-Type` 与 CORS 模式选择：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3.2，2026-11-12 核对。
+> - keepalive 请求组的在途字节累计规则与 64 KiB 上限：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)，“HTTP-network-or-cache fetch”中对 `inflightKeepaliveBytes` 的检查，2026-11-12 核对。
+> - 文档 Fetch 组销毁时，未完成且未设 `keepalive` 的请求会被终止；keepalive 请求可在环境设置对象销毁后继续处理：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)，§2.2.5、§2.4；HTML 文档销毁步骤：[WHATWG HTML Standard](https://html.spec.whatwg.org/multipage/document-lifecycle.html)，§7.5.10，2026-11-12 核对。
+> - 跨源预检使用 `OPTIONS`，预检缓存决定是否要重新发起检查：[WHATWG Fetch Standard](https://fetch.spec.whatwg.org/)，§§3.3.2、4.8–4.10；Beacon 载荷类型与 CORS 选择：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3.2，2026-11-12 核对。
+> - `visibilityState` 及页面可见性变化：[WHATWG HTML Standard](https://html.spec.whatwg.org/multipage/interaction.html#page-visibility)，Page visibility；`pagehide` 与文档生命周期顺序：[WHATWG HTML Standard](https://html.spec.whatwg.org/multipage/document-lifecycle.html)，Document lifecycle，2026-11-12 核对。
+> - `hidden` 往往是移动端最后可靠观察到的生命周期状态；`pagehide` 可能伴随进入往返缓存，`unload` 不可靠：[Chrome for Developers, Page Lifecycle API](https://developer.chrome.com/docs/web-platform/page-lifecycle-api)，Developer recommendations for each state 和 Events，页面核对于 2026-11-12。
+> - `crypto.randomUUID()` 生成 v4 UUID 且仅在安全上下文可用：[MDN Web Crypto API](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID)，2026-11-12 核对。
+> - 同源 Cookie 与 Fetch credentials 行为、跨源凭证的 CORS 要求：[MDN, Using the Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)，“Including credentials”，2026-11-12 核对。
+> - 同源请求的 `Referer` 可含来源 URL 路径/查询串；`strict-origin` 仅发送 origin，`no-referrer` 不发送：[W3C Referrer Policy](https://www.w3.org/TR/referrer-policy/)，§§3.4–3.5、8.3，2026-11-12 核对；本页的同源合成请求核对了默认策略与 `strict-origin` 下的请求头。
+> - 代码分支、导航期间的生命周期顺序、队列/额度/重复/凭证/Referer 实测：Chromium `157.0.8103.51`，本地 HTTP 页面与 Node 服务器；合成两事件在离页时成批 POST，回退、在途额度、主动重复提交、网络拦截以及 Referer 分支按正文所述逐项验证；这些观察仅限本地浏览器和合成环境，不代表跨浏览器送达保证。
 ## 59. WebView 怎样安全地开放原生能力并更新页面包？
 
 案例背景：报表应用把页面放进原生应用的 WebView，页面需要请求宿主打开报表详情；页面脚本同时会随应用安装或网络更新。JavaScript bridge (原生桥接接口) 把页面输入送到宿主应用的权限边界，因此必须把“哪个页面能发消息”“消息能请求什么”“更新后的代码是否兼容”作为一条信任链来设计。

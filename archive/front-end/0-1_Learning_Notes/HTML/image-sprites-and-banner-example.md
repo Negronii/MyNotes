@@ -8,7 +8,7 @@ CSS Sprite（雪碧图）把小图排在同一张图集中，再移动背景图�
 
 ![旧横幅页面截图：分类导航和中秋主题横幅，仅作静态布局参考](banner.png)
 
-另一个独立的[报表横幅显示例子](../../../../frontend/performance/css-sprites-and-image-caching.md#旧横幅图展示的是静态选中项)用 CSS 隐藏普通横幅，只显示带 `.current` 的一张；它不是这张旧截图的源码，也不控制截图左侧的分类高亮。这个类名是示例约定，本身没有浏览器内置行为。真正切换时还要由交互逻辑更新选中项。只有显示规则，还没有实现轮播的切换与键盘操作；若加入自动轮播，还需要停止和恢复轮播的控制。图片的实际尺寸与加载时机可接着看[图片与媒体资源加载](../../../../frontend/browser-apis/image-lazy-loading.md)。
+另一个独立的[报表横幅显示例子](../../../../frontend/performance/css-sprites-and-image-caching.md#怎样只显示当前横幅？)用 CSS 隐藏普通横幅，只显示带 `.current` 的一张；它不是这张旧截图的源码，也不控制截图左侧的分类高亮。这个类名是示例约定，本身没有浏览器内置行为。真正切换时还要由交互逻辑更新选中项。只有显示规则，还没有实现轮播的切换与键盘操作；若加入自动轮播，还需要停止和恢复轮播的控制。图片的实际尺寸与加载时机可接着看[图片与媒体资源加载](../../../../frontend/browser-apis/image-lazy-loading.md)。
 
 > [!info]- 来源
 > - 背景定位、重复与缩放：[CSS Backgrounds and Borders Level 3 §2.4、§2.6、§2.9](https://www.w3.org/TR/css-backgrounds-3/#the-background-position)，Candidate Recommendation Draft，2024-03-11；核对于 2026-11-12。
