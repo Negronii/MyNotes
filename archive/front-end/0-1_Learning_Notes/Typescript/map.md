@@ -18,8 +18,8 @@ console.log(roles.get(2), roles.has(2), roles.size); // "user", true, 2
 
 | Map 状态 | `get(1)` | `has(1)` |
 |---|---|---|
-| `new Map<number, string \| undefined>()` | `undefined` | `false` |
-| `new Map<number, string \| undefined>([[1, undefined]])` | `undefined` | `true` |
+| `new Map()` | `undefined` | `false` |
+| `new Map([[1, undefined]])` | `undefined` | `true` |
 
 在 strict TypeScript 中，`Map<K, V>.get` 的静态返回类型是 `V | undefined`；因此本例 `roles.get(2)` 的类型也是 `string | undefined`，即使运行时该键存在并取到 `"user"`。若 `V` 本身含 `undefined`，返回值类型同样无法说明是键缺失还是取到 `undefined`，要用 `has` 判断存在性。`delete` 返回是否确实删去键，`clear` 清空所有条目。
 

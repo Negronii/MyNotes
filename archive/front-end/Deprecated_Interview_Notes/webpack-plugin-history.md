@@ -4,14 +4,14 @@ Webpack plugin（插件）通过 compiler（编译器）或 compilation（单次
 
 | 插件 | 构建阶段或系统边界 | 常见作用 | 配置前要确认 |
 |---|---|---|---|
-| HtmlWebpackPlugin | compilation 生成页面时 | 生成 HTML 并写入输出 bundle（打包文件）的引用 | 插件 README 已标记弃用；原生 HTML `auto` 的探测和逐模块处理见表后说明。既有模板选项需按具体迁移目标核对 |
-| MiniCssExtractPlugin | CSS 模块处理与页面资源输出 | 将 CSS 提取为独立文件 | Webpack 5.109.0 起原生 CSS 已稳定；该插件及常见 CSS loader 被原生指南标记为弃用。Sass、Less、Stylus、PostCSS 等预处理仍可能需要对应 loader |
+| Html<wbr>Webpack<wbr>Plugin | compilation 生成页面时 | 生成 HTML 并写入输出 bundle（打包文件）的引用 | 插件 README 已标记弃用；原生 HTML `auto` 的探测和逐模块处理见表后说明。既有模板选项需按具体迁移目标核对 |
+| MiniCss<wbr>Extract<wbr>Plugin | CSS 模块处理与页面资源输出 | 将 CSS 提取为独立文件 | Webpack 5.109.0 起原生 CSS 已稳定；该插件及常见 CSS loader 被原生指南标记为弃用。Sass、Less、Stylus、PostCSS 等预处理仍可能需要对应 loader |
 | DefinePlugin | 编译期解析代码表达式 | 编译时替换指定表达式 | 写进客户端代码的值会暴露给用户；不能放服务端密钥，也不等于读取浏览器运行时环境变量 |
 | minimizer-webpack-plugin（旧名 terser-webpack-plugin） | production optimization 的压缩阶段 | 最小化 JavaScript；默认 JavaScript 实现仍是 Terser | Webpack 5.109 默认已用新包；一般无需额外重复添加。自定义 `optimization.minimizer` 时，用 `"..."` 才保留默认 minimizer |
-| CompressionWebpackPlugin | 构建输出的压缩资源生成阶段 | 生成 gzip 或 Brotli 副本 | 该插件现已弃用并归档。迁移表把压缩生成器放入 `minimizer-webpack-plugin`；迁移项从其 5.11.0 起适用。构建出副本仍不表示服务器会返回它；还要核对内容协商和资源路径 |
-| HotModuleReplacementPlugin（热模块替换插件） | 监听编译、更新产物与浏览器运行期 | 编译端生成更新资源；浏览器端热模块替换（Hot Module Replacement，HMR）客户端检查并应用模块接受的更新，避免整页刷新 | 官方警告不要用于生产；它不负责生产缓存或发布版本切换 |
+| Compression<wbr>Webpack<wbr>Plugin | 构建输出的压缩资源生成阶段 | 生成 gzip 或 Brotli 副本 | 该插件现已弃用并归档。迁移表把压缩生成器放入 `minimizer-webpack-plugin`；迁移项从其 5.11.0 起适用。构建出副本仍不表示服务器会返回它；还要核对内容协商和资源路径 |
+| HotModule<wbr>Replacement<wbr>Plugin（热模块替换插件） | 监听编译、更新产物与浏览器运行期 | 编译端生成更新资源；浏览器端热模块替换（Hot Module Replacement，HMR）客户端检查并应用模块接受的更新，避免整页刷新 | 官方警告不要用于生产；它不负责生产缓存或发布版本切换 |
 | ProvidePlugin | 模块解析时形成依赖 | 源码遇到配置指定的自由标识符（没有局部绑定）时，自动引入其对应模块或导出 | 可能隐藏文件的实际依赖，降低可读性和依赖追踪清晰度 |
-| DllPlugin / DllReferencePlugin | 两次分开的 Webpack compilation | `DllPlugin` 在单独配置中生成 DLL bundle 与 manifest；应用编译中的 `DllReferencePlugin` 再读取 manifest 并复用其中依赖 | 较早的跨编译共享 bundle 工作流；官方称文件系统缓存已大体替代其缩短应用编译时间的用途。保留前先测量项目收益 |
+| DllPlugin / Dll<wbr>Reference<wbr>Plugin | 两次分开的 Webpack compilation | `DllPlugin` 在单独配置中生成 DLL bundle 与 manifest；应用编译中的 `DllReferencePlugin` 再读取 manifest 并复用其中依赖 | 较早的跨编译共享 bundle 工作流；官方称文件系统缓存已大体替代其缩短应用编译时间的用途。保留前先测量项目收益 |
 
 Webpack 5.109 的 `auto` 先用 `/file.html`、`/file.css` 或 `/file.module.css` 等合成路径做宽松的构建级探测：`test`、`resource`、`include` 任一条件可命中便计入（忽略 `exclude`），显式 `type` 或未设 `enforce` 的普通 `loader/use` 才会关闭该构建对应的原生处理。探测不等于真实资源的完整规则匹配；若 `auto` 保持开启，它还会逐模块让已应用 loader、且未显式改用其他类型的请求沿原有解析路径，因此不能据此认定所有未命中实际规则的 HTML 都由原生接管，`HtmlWebpackPlugin` 注入的请求也须按具体配置判断。
 
