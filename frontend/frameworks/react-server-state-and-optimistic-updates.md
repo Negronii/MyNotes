@@ -375,7 +375,7 @@ onSuccess: (saved, _change, snapshot, context) => {
 
 查询缓存和页面中任何已确认数据仍是服务端状态的副本，不是授权来源。若同一报表另有详情 key，也要按 `accountId` 更新/失效详情项，不能只修当前列表。切换账号时 query key 会隔离组件读取的缓存项；退出登录或权限范围更换时，若旧账户数据不该留在客户端，再显式移除对应缓存。对不上账户身份的界面 fallback 不应暂时显示旧账户行。
 
-最后，React 手写 `useEffect` 请求要在 cleanup 中忽略过期结果或取消请求；该请求模式与 TanStack Query 的 key/cache 管理由[React 更新轮次中的数据请求](./react-basics.md#effect在提交后同步外部系统)对照学习。有关错误如何从查询状态进入错误边界，见[React 错误边界](./react-error-boundaries.md)。网络 JSON 仍需在运行时校验，见[如何处理不可信 JSON？](../typescript/advanced-typescript.md)。
+最后，React 手写 `useEffect` 请求要在 cleanup 中忽略过期结果或取消请求；该请求模式与 TanStack Query 的 key/cache 管理由[React 更新轮次中的数据请求](./react-basics.md#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)对照学习。有关错误如何从查询状态进入错误边界，见[React 错误边界](./react-error-boundaries.md)。网络 JSON 仍需在运行时校验，见[如何处理不可信 JSON？](../typescript/advanced-typescript.md)。
 
 > [!info]- 来源与版本核验（React 19.3；TanStack Query v5 Latest；核验日期 2026-11-12）
 > - Query key 应包含会改变 `queryFn` 结果的变量；此处账户和排序都影响数据：[Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)，TanStack Query v5 Latest。

@@ -231,9 +231,9 @@ function ReportsView({
 
 父组件把当前会话和排序一起交给 ReportPage，例如 `<ReportPage session={sessions[account]} sort={sort} />`。当会话权限范围或 sort 改变时，key 随之改变，React 在新视图第一次提交前就重建 ReportsView；其初始 state 是 loading，旧账户或旧筛选结果不能占据这个提交。session 对象和 api 实例应在该会话范围内保持稳定；权限或账户范围变化时换用新的 viewKey 和 API。key 不是授权检查，服务端仍是权限的最终裁判。
 
-Effect 的 cleanup 会使旧读取失效并 abort 客户端请求。即便异步工作不理会 signal，current 检查也阻止旧成功或旧失败覆盖新视图。abort 只停止客户端继续等待或处理，不能撤回服务端已经收到的请求。预览只从按钮处理器触发；若视图被替换，cleanup 也会取消客户端等待。Effect 在提交后同步外部系统的阶段与清理语义见[React Effect 更新轮次](../../../../frontend/frameworks/react-basics.md#effect在提交后同步外部系统)；需要共享缓存、去重和跨组件更新时，可继续看[React 如何维护服务端数据与乐观更新](../../../../frontend/frameworks/react-server-state-and-optimistic-updates.md#排序值构成查询身份)。
+Effect 的 cleanup 会使旧读取失效并 abort 客户端请求。即便异步工作不理会 signal，current 检查也阻止旧成功或旧失败覆盖新视图。abort 只停止客户端继续等待或处理，不能撤回服务端已经收到的请求。预览只从按钮处理器触发；若视图被替换，cleanup 也会取消客户端等待。Effect 在提交后同步外部系统的阶段与清理语义见[React Effect 更新轮次](../../../../frontend/frameworks/react-basics.md#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)；需要共享缓存、去重和跨组件更新时，可继续看[React 如何维护服务端数据与乐观更新](../../../../frontend/frameworks/react-server-state-and-optimistic-updates.md#排序值构成查询身份)。
 
-Axios 默认对 2xx 响应兑现 Promise，并把不符合默认 validateStatus 的 HTTP 响应放到拒绝分支；自定义 validateStatus 会改变分界。Fetch 对 HTTP 404/500 通常仍兑现 Promise，因此调用方要检查 response.ok。两种客户端都不能代替正文校验；HTTP 层响应和失败的边界见[浏览器请求如何到达 HTTP 响应](../../../../engineering-foundations/networking/http-protocols-and-websockets.md#服务端返回了什么页面何时才能使用)。
+Axios 默认对 2xx 响应兑现 Promise，并把不符合默认 validateStatus 的 HTTP 响应放到拒绝分支；自定义 validateStatus 会改变分界。Fetch 对 HTTP 404/500 通常仍兑现 Promise，因此调用方要检查 response.ok。两种客户端都不能代替正文校验；HTTP 层响应和失败的边界见[浏览器请求如何到达 HTTP 响应](../../../../engineering-foundations/networking/http-protocols-and-websockets.md#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E8%BF%94%E5%9B%9E%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E9%A1%B5%E9%9D%A2%E4%BD%95%E6%97%B6%E6%89%8D%E8%83%BD%E4%BD%BF%E7%94%A8%EF%BC%9F)。
 
 本机合成 API 对 GET 返回 [{ "id": "r-41", "period": "2026-Q3", "title": "acct-17-recent" }]。parseReports 接受这些字段后，页面显示 “recent: acct-17-recent”；若同一视图收到空数组，则显示“没有报表”。
 

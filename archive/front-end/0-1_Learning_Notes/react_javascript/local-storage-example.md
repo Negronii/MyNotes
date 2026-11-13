@@ -1,6 +1,6 @@
 # React 组件怎样读写少量浏览器偏好？
 
-**案例背景。** 报表页面让用户切换“紧凑列”显示，并在刷新后保留这个小型偏好。下面用 localStorage（本地存储）的字符串 API（应用程序编程接口）保存 JSON（JavaScript 对象表示法），同时检查读回的数据形状。它适合这类非敏感、可重建的界面偏好；存储作用域、跨标签页事件和安全边界见[报表页面里的状态应该放在哪里？](../../../../frontend/browser-apis/browser-storage-and-communication.md)，Effect（副作用）的提交时序见[更新轮次](../../../../frontend/frameworks/react-basics.md#effect在提交后同步外部系统)。
+**案例背景。** 报表页面让用户切换“紧凑列”显示，并在刷新后保留这个小型偏好。下面用 localStorage（本地存储）的字符串 API（应用程序编程接口）保存 JSON（JavaScript 对象表示法），同时检查读回的数据形状。它适合这类非敏感、可重建的界面偏好；存储作用域、跨标签页事件和安全边界见[报表页面里的状态应该放在哪里？](../../../../frontend/browser-apis/browser-storage-and-communication.md)，Effect（副作用）的提交时序见[更新轮次](../../../../frontend/frameworks/react-basics.md#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。
 
 ~~~tsx
 import { useEffect, useState } from "react";

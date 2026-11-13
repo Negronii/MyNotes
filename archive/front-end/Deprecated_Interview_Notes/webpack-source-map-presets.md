@@ -17,7 +17,7 @@ Source map（源映射）记录生成代码中的位置与原始源码位置之�
 
 若某个 loader 改写代码但没有提供或传递该步的位置映射，后续 source map 就无法准确关联到更早源码；调试位置可能停留在转换后代码，或因 loader 链的映射不完整而降低精度。Source map 文件、其中的源码文本和服务器上的源文件路径是不同的暴露面：`hidden-source-map` 只去掉 bundle 引用；`nosources-source-map` 只去掉 `sourcesContent`，若 `.map` 公开，仍会暴露映射和路径，源文件本身若可请求也可能被调试器加载。发布前分别检查 map URL、`sourcesContent` 和源文件访问规则。
 
-Webpack 5.105 起，`devtool` 也支持用数组分别为 JavaScript、CSS 或两者指定映射类型；这里的 `all` 指 JavaScript 与 CSS，不是任意图片、字体等资源。旧式字符串配置仍可用。构建主线对映射的发布边界见[Source map 怎样用于调试，又会暴露什么](../../../frontend/tooling/build-tools.md#source-map-怎样用于调试又会暴露什么)。
+Webpack 5.105 起，`devtool` 也支持用数组分别为 JavaScript、CSS 或两者指定映射类型；这里的 `all` 指 JavaScript 与 CSS，不是任意图片、字体等资源。旧式字符串配置仍可用。构建主线对映射的发布边界见[Source map 怎样用于调试，又会暴露什么](../../../frontend/tooling/build-tools.md#Source%20map%20%E6%80%8E%E6%A0%B7%E7%94%A8%E4%BA%8E%E8%B0%83%E8%AF%95%EF%BC%8C%E5%8F%88%E4%BC%9A%E6%9A%B4%E9%9C%B2%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 > [!info]- 来源
 > - [Webpack `devtool` 配置参考](https://webpack.js.org/configuration/devtool/)：预设的映射质量、开发/生产取舍、`inline`/`eval`/`cheap`/`module`/`hidden`/`nosources` 语义及性能分类；完整语法按当前页面和锁定版本核对。

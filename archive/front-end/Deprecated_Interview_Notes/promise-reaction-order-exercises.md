@@ -1,6 +1,6 @@
 # Promise 处理器的顺序由什么决定？
 
-本归档练习包含三段使用 Promise 链的程序，关键差异是处理器返回普通值还是已履行的 Promise，以及多条链怎样交错。三段完整程序及原归档记录的 Node.js v26.11.1 CommonJS 历史输出，现归入[回调、Promise 与 async 函数怎样组合异步工作？](../../../frontend/javascript/asynchronous-javascript.md#promise-处理器为什么会交错)。本轮另在 Node.js v26.13.0 CommonJS 逐段复跑，输出相同。
+本归档练习包含三段使用 Promise 链的程序，关键差异是处理器返回普通值还是已履行的 Promise，以及多条链怎样交错。三段完整程序及原归档记录的 Node.js v26.11.1 CommonJS 历史输出，现归入[回调、Promise 与 async 函数怎样组合异步工作？](../../../frontend/javascript/asynchronous-javascript.md#Promise%20%E5%A4%84%E7%90%86%E5%99%A8%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E4%BA%A4%E9%94%99%EF%BC%9F)。本轮另在 Node.js v26.13.0 CommonJS 逐段复跑，输出相同。
 
 | 归档程序 | 重放输出 |
 | --- | --- |

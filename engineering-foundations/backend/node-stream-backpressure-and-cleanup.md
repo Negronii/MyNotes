@@ -1,6 +1,6 @@
 # Node.js 流如何传播背压？
 
-**案例接续 acct-17：** [Node.js 运行时章的导出任务](node-js-fundamentals.md#node-工作线程如何接收任务并回传数据)从数据库逐批读取账户活动行，工作线程用同步增量压缩器生成字节，再写入本作业的临时文件。这里有意缩小并切换实现：用 Node.js 原生 `Readable → Transform → Writable` 管线处理同一账户的三条教学报表行，观察缓冲、backpressure（背压）、文件结束和取消。这个小例子使用 `node:zlib` 的 `createGzip()`，不代表运行时章选择的压缩执行位置，也不模拟对象存储的发布确认。
+**案例接续 acct-17：** [Node.js 运行时章的导出任务](node-js-fundamentals.md#Node%20%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E5%A6%82%E4%BD%95%E6%8E%A5%E6%94%B6%E4%BB%BB%E5%8A%A1%E5%B9%B6%E5%9B%9E%E4%BC%A0%E6%95%B0%E6%8D%AE%EF%BC%9F)从数据库逐批读取账户活动行，工作线程用同步增量压缩器生成字节，再写入本作业的临时文件。这里有意缩小并切换实现：用 Node.js 原生 `Readable → Transform → Writable` 管线处理同一账户的三条教学报表行，观察缓冲、backpressure（背压）、文件结束和取消。这个小例子使用 `node:zlib` 的 `createGzip()`，不代表运行时章选择的压缩执行位置，也不模拟对象存储的发布确认。
 
 ## 什么状态表示写入方该等一等？
 
@@ -198,7 +198,7 @@ event-3,acct-17,-2
 
 本例把同一个 signal 传给 `pipeline()`，并在 `await cursor.next()` 之后检查它。模拟 `close()` 会成功；若真实 driver 的关闭操作失败，本例的 `finally` 只保证调用并等待它，不把 `AbortError` 分支当成成功释放的证明。`--abort-replay` 用一个真实挂起的 `next()` 重放在途取消：20 ms 时触发 abort，100 ms 时释放模拟查询；观察到生成器的 `finally` 和 `pipeline()` 的 `AbortError` 都在查询释放后出现。真实数据库驱动是否有可用的取消 API、取消何时确认，要以该驱动的契约为准。
 
-文件写流遇到取消或错误时，已写出的部分内容仍可能留在文件中。本例先用 `mkdtemp()` 创建本次运行独占的临时目录，再写入其中；只在管线 Promise 拒绝且其流已停止后删除这个目录，正常完成则打印并保留产物路径。这里没有实现重命名或业务发布。本地文件使用本次 attempt 独占的临时路径；数据处理和写入完成后，是否通过 `rename` 发布由作业协调者裁决。生产对象存储则使用本次 attempt 独占的私有对象键；完整上传后，仍须由当前 attempt 在数据库中按条件提交结果引用并将 job 置为 `succeeded`，对象上传成功本身不等于任务已完成。取消/普通错误时的本地清理不会覆盖进程崩溃；强杀也可能留下本例的本地临时目录或生产上传的私有对象。生产环境中遗留的私有对象应由独立回收责任方处理：只有 attempt 已被接管或 job 已终结、持久状态确认没有结果引用，且有界的上传时限与额外安全宽限期都已过去，才可删除，见[工作进程重试怎样避免旧结果覆盖新结果](../architecture/system-design-fundamentals.md#工作进程重试怎样避免旧结果覆盖新结果)。若一次远端写入结果未知，不能因本地 Promise 被取消就假设远端未生效；要用专属对象键、幂等标识或服务端状态查询来确认。已持久接受的 acct-17 job 也不应仅因最初 HTTP 请求断开就自动取消。作业取消与发布竞争的顺序见[何时选线程、进程或异步 I/O？](../operating-systems/processes-threads-and-concurrency.md)，HTTP 服务在 SIGTERM 下如何等待流和工作退出见[Node.js 服务如何排空并关闭？](node-service-shutdown.md)。
+文件写流遇到取消或错误时，已写出的部分内容仍可能留在文件中。本例先用 `mkdtemp()` 创建本次运行独占的临时目录，再写入其中；只在管线 Promise 拒绝且其流已停止后删除这个目录，正常完成则打印并保留产物路径。这里没有实现重命名或业务发布。本地文件使用本次 attempt 独占的临时路径；数据处理和写入完成后，是否通过 `rename` 发布由作业协调者裁决。生产对象存储则使用本次 attempt 独占的私有对象键；完整上传后，仍须由当前 attempt 在数据库中按条件提交结果引用并将 job 置为 `succeeded`，对象上传成功本身不等于任务已完成。取消/普通错误时的本地清理不会覆盖进程崩溃；强杀也可能留下本例的本地临时目录或生产上传的私有对象。生产环境中遗留的私有对象应由独立回收责任方处理：只有 attempt 已被接管或 job 已终结、持久状态确认没有结果引用，且有界的上传时限与额外安全宽限期都已过去，才可删除，见[工作进程重试怎样避免旧结果覆盖新结果](../architecture/system-design-fundamentals.md#%E5%B7%A5%E4%BD%9C%E8%BF%9B%E7%A8%8B%E9%87%8D%E8%AF%95%E6%80%8E%E6%A0%B7%E9%81%BF%E5%85%8D%E6%97%A7%E7%BB%93%E6%9E%9C%E8%A6%86%E7%9B%96%E6%96%B0%E7%BB%93%E6%9E%9C%EF%BC%9F)。若一次远端写入结果未知，不能因本地 Promise 被取消就假设远端未生效；要用专属对象键、幂等标识或服务端状态查询来确认。已持久接受的 acct-17 job 也不应仅因最初 HTTP 请求断开就自动取消。作业取消与发布竞争的顺序见[何时选线程、进程或异步 I/O？](../operating-systems/processes-threads-and-concurrency.md)，HTTP 服务在 SIGTERM 下如何等待流和工作退出见[Node.js 服务如何排空并关闭？](node-service-shutdown.md)。
 
 **接下来：** 这章跟踪一条流内部的缓冲、收尾和清理；HTTP 请求、worker 和持久队列的并发上限见[如何估算并限制异步工作管线？](../reliability/api-capacity-and-backpressure.md)。
 

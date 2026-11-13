@@ -227,7 +227,7 @@ Content-Type: application/json
 
 若请求没有经过认证或不满足 `Seller` 策略，认证/授权中间件在 action 前返回 401 或 403；起拍价 0 会在 `[ApiController]` 模型验证阶段返回 400，也不会进入 `Add`。约束错误发生在数据库事务中时，支持事务的 provider 会回滚本次 `SaveChangesAsync` 中的整组改动。fixture 的 SQLite 触发器拒绝起拍价 200，实际得到 500、没有 `Location`，数据库中也没有留下该请求的 Auction 或 Item。
 
-提交事务期间若连接断开，客户端可能无法知道提交是否完成；没有收到 `201` 不足以证明没有写入。应按应用幂等契约查证结果或恢复，不要盲目重放请求，见[HTTP 错误契约中的未知写入结果](../../engineering-foundations/backend/http-api-contracts.md#错误契约怎样保留机器可判定的含义)。无论错误发生在哪个提交阶段，当前 action 不会继续构造成功响应；合成测试认证和错误处理中间件仅用于隔离验证，不是生产认证配置。
+提交事务期间若连接断开，客户端可能无法知道提交是否完成；没有收到 `201` 不足以证明没有写入。应按应用幂等契约查证结果或恢复，不要盲目重放请求，见[HTTP 错误契约中的未知写入结果](../../engineering-foundations/backend/http-api-contracts.md#%E9%94%99%E8%AF%AF%E5%A5%91%E7%BA%A6%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%9C%BA%E5%99%A8%E5%8F%AF%E5%88%A4%E5%AE%9A%E7%9A%84%E5%90%AB%E4%B9%89%EF%BC%9F)。无论错误发生在哪个提交阶段，当前 action 不会继续构造成功响应；合成测试认证和错误处理中间件仅用于隔离验证，不是生产认证配置。
 
 上下文保存本次工作单元的实体跟踪与变更状态；它不是可跨请求共享的缓存，也不应被并发线程同时访问。EF Core 默认在每次数据库操作前打开、完成后关闭连接；Npgsql 默认开启连接池，关闭连接通常归还池中，因此 scoped DbContext 不会一直占住一个连接。显式保持连接打开或较长事务才会跨操作延长占槽时间，区别见[怎样限定对象关系映射会话并排查连接池耗尽？](../../engineering-foundations/backend/data-access-and-connection-pools.md)。AutoMapper 15 起 `AddAutoMapper` 要求配置回调；16.3.0 的许可密钥可从配置或环境变量提供，未设置密钥时会记录警告，但不改变映射运行行为。不要把密钥写入源码。
 

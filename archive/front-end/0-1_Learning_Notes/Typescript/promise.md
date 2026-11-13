@@ -48,7 +48,7 @@ showExamples();
 
 `parseReport` 里的 `as` 只是类型断言：它让编译器允许读取 `id` 和 `title`，这两个字段的类型仍是 `unknown`；紧接着的 `typeof` 检查才会检查运行时实际值。第一段输入经 `JSON.parse` 得到的值仍先以 `unknown` 保存；`parseReport` 逐字段检查后才返回 `ReportData`，所以 `readReport` 的成功结果确实符合本例的结构。第二段是语法合法的 JSON，但 `id` 是字符串，因此校验器抛出 `TypeError`，`readReport` 返回的 Promise 被拒绝。若 JSON 语法本身有误，`JSON.parse` 会先抛 `SyntaxError`，校验器不会运行；在 `async` 函数中两类异常都会使 Promise 被拒绝，调用方可用 `try` / `catch` 处理。`Promise<ReportData>` 只让后续成功路径按 `ReportData` 检查，不承诺不拒绝，也不给拒绝原因一个专属类型。
 
-Promise 的状态转换、链式传值、并发组合与 `async`/`await` 怎样传播拒绝，见[回调、Promise 与 async 函数怎样组合异步工作？](../../../../frontend/javascript/asynchronous-javascript.md#typescript-的-promise-类型能保证什么)。计时器由浏览器或 Node.js 等宿主提供；把定时器结果包装成 Promise 不会改变其宿主调度或产生自动取消能力，亦见该章的[定时器和超时说明](../../../../frontend/javascript/asynchronous-javascript.md#定时器和超时究竟能取消什么)。
+Promise 的状态转换、链式传值、并发组合与 `async`/`await` 怎样传播拒绝，见[回调、Promise 与 async 函数怎样组合异步工作？](../../../../frontend/javascript/asynchronous-javascript.md#TypeScript%20%E7%9A%84%20Promise%20%E7%B1%BB%E5%9E%8B%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。计时器由浏览器或 Node.js 等宿主提供；把定时器结果包装成 Promise 不会改变其宿主调度或产生自动取消能力，亦见该章的[定时器和超时说明](../../../../frontend/javascript/asynchronous-javascript.md#%E5%AE%9A%E6%97%B6%E5%99%A8%E5%92%8C%E8%B6%85%E6%97%B6%E7%A9%B6%E7%AB%9F%E8%83%BD%E5%8F%96%E6%B6%88%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 > [!info]- 来源
 > - 类型注解编译后擦除、不能改变运行时行为：[TypeScript Handbook — Erased Types](https://www.typescriptlang.org/docs/handbook/2/basic-types.html#erased-types)，核对 2026-11-12；`unknown` 需先缩小类型再使用：[TypeScript Handbook — Narrowing](https://www.typescriptlang.org/docs/handbook/2/narrowing.html)，核对 2026-11-12。

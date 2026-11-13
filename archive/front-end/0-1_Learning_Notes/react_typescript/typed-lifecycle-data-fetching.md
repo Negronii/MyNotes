@@ -125,7 +125,7 @@ export class ReportSnapshot extends Component<Props, State> {
 
 状态的 `status` 与数据分开，所以语法正确的 JSON `null` 表示“没有快照”，而不是“仍在加载”。`response.json()` 先解析 JSON 语法；语法错误会在这一步拒绝。成功得到的值仍是 `unknown`，`parseSnapshot` 再检查应用结构并提取字段；形状错误则在第二步抛出。两种失败都进入当前请求的错误状态，但不是同一种解析步骤。把 `response.json()` 结果赋给 `Snapshot` 类型注解并不会验证运行时正文；不可信 JSON 的类型边界见[TypeScript 不可信 JSON 入口](../../../../frontend/typescript/advanced-typescript.md)。这里先检查 HTTP `response.ok`，因为 Fetch 会对 404/500 兑现 Promise；HTTP 错误、JSON 语法错误与 JSON 结构错误分别在不同步骤出现。
 
-React 仍支持这类类组件，但当前文档建议新代码用函数组件。维护类组件时，把启动、属性变化后的同步与清理分别放在 `componentDidMount`、带条件的 `componentDidUpdate` 和 `componentWillUnmount`；不要把网络副作用放进 `render`。函数组件中的请求轮次见[Axios 如何连接 React 报表界面的 HTTP 请求？](axios-in-react.md)，当前 Effect 的 setup/cleanup 说明见[React Effect 更新轮次](../../../../frontend/frameworks/react-basics.md#effect在提交后同步外部系统)。
+React 仍支持这类类组件，但当前文档建议新代码用函数组件。维护类组件时，把启动、属性变化后的同步与清理分别放在 `componentDidMount`、带条件的 `componentDidUpdate` 和 `componentWillUnmount`；不要把网络副作用放进 `render`。函数组件中的请求轮次见[Axios 如何连接 React 报表界面的 HTTP 请求？](axios-in-react.md)，当前 Effect 的 setup/cleanup 说明见[React Effect 更新轮次](../../../../frontend/frameworks/react-basics.md#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。
 
 > [!info]- 来源
 > - 类组件仍受支持但不建议用于新代码；挂载、属性更新、卸载与 Strict Mode 开发期的挂载—清理—再挂载：[React 19.3 Component](https://react.dev/reference/react/Component#componentdidmount)，核对日期：2026-11-13。

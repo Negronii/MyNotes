@@ -132,7 +132,7 @@ export function ExampleForm() {
 }
 ~~~
 
-`preventDefault()` 阻止这个教学表单按浏览器默认动作导航或刷新；`console.log` 只展示提交时的 state 快照。真实应用还要决定如何做输入校验、显示错误并保存数据。控件的可见标签、单选组名称和错误反馈语义见[语义化 HTML 表单如何支持键盘与辅助技术用户？](../../../../frontend/html-css/accessible-html-forms.md#让控件名称提交值和动作明确)。
+`preventDefault()` 阻止这个教学表单按浏览器默认动作导航或刷新；`console.log` 只展示提交时的 state 快照。真实应用还要决定如何做输入校验、显示错误并保存数据。控件的可见标签、单选组名称和错误反馈语义见[语义化 HTML 表单如何支持键盘与辅助技术用户？](../../../../frontend/html-css/accessible-html-forms.md#%E8%AE%A9%E6%8E%A7%E4%BB%B6%E5%90%8D%E7%A7%B0%E3%80%81%E6%8F%90%E4%BA%A4%E5%80%BC%E5%92%8C%E5%8A%A8%E4%BD%9C%E6%98%8E%E7%A1%AE)。
 
 > [!info]- 来源
 > - 状态 setter 请求下一次 render，当前处理器读取本轮状态快照：[React — State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)，React 19.3 文档，核验日期：2026-11-12。

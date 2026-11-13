@@ -2,7 +2,7 @@
 
 CSS Sprite（雪碧图）把小图排在同一张图集中，再移动背景图，只让目标区域出现在小盒子内。以一张按 `64 × 32 CSS px` 显示、每格 `16 × 16` 的图集为例：第二行第三列的左上角是 `(32, 16)`。在没有 padding 或 border 的 `16 × 16` 盒子中，设 `background-repeat: no-repeat`，并把背景定位为 `-32px -16px`，就会露出这一格。负值移动的是整张背景图，不是让元素本身向左上移动。缩放图集时，格子大小和偏移也要按同一比例调整。
 
-图集坐标图与完整 CSS 见[CSS Sprite 怎样裁出图集中的一格](../../../../frontend/performance/css-sprites-and-image-caching.md#css-sprite-怎样裁出图集中的一格)。选择图集、独立图片还是 SVG，要同时比较资源复用、传输与更新成本；图集并不自动更快。
+图集坐标图与完整 CSS 见[CSS Sprite 怎样裁出图集中的一格](../../../../frontend/performance/css-sprites-and-image-caching.md#CSS%20Sprite%20%E6%80%8E%E6%A0%B7%E8%A3%81%E5%87%BA%E5%9B%BE%E9%9B%86%E4%B8%AD%E7%9A%84%E4%B8%80%E6%A0%BC%EF%BC%9F)。选择图集、独立图片还是 SVG，要同时比较资源复用、传输与更新成本；图集并不自动更快。
 
 下方是旧横幅页面的静态截图：左侧有一项青绿色高亮的分类导航，右侧是中秋主题横幅和左右箭头。它不是上述图集；截图只能展示布局，不能说明箭头实际可操作。
 

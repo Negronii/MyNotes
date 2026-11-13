@@ -140,7 +140,7 @@ $$
 \approx1.213212.
 $$
 
-以学习率 $\eta=0.01$ 做 SGD 梯度上升：$\theta'=\theta+\eta\,\partial\mathcal{J}_{i,t}/\partial\theta\approx-1.253534$。再代回二元 softmax，$p'_\theta=\sigma(\theta')=e^{\theta'}/(e^{\theta'}+1)\approx0.222089$，即目标 token 概率从 $0.220000$ 升到约 $0.222089$。这是忽略其他 token、KL、梯度裁剪和优化器状态的一维示意。真实模型把本批中每个有效 token 的优势项对同一共享参数求梯度，再沿共享计算图聚合，由所选优化器更新启用训练的参数；一条序列的 log 概率是这些条件 token log 概率之和，故 token 级梯度汇成轨迹级更新信号。本步更新后的参数会作为下一批生成的策略；采样时缓存旧策略对已选 token 的概率，随后当前策略在相同前缀上重算该 token 的概率。若把目标写成最小化 loss，则使用 $L=-\mathcal{J}$。完整矩阵反向传播和 AdamW/Muon 怎样把梯度变成参数值，见[训练梯度与优化器](../foundations/training-gradients-and-optimizers.md#adamw-和-muon-怎样使用已经算好的梯度)。
+以学习率 $\eta=0.01$ 做 SGD 梯度上升：$\theta'=\theta+\eta\,\partial\mathcal{J}_{i,t}/\partial\theta\approx-1.253534$。再代回二元 softmax，$p'_\theta=\sigma(\theta')=e^{\theta'}/(e^{\theta'}+1)\approx0.222089$，即目标 token 概率从 $0.220000$ 升到约 $0.222089$。这是忽略其他 token、KL、梯度裁剪和优化器状态的一维示意。真实模型把本批中每个有效 token 的优势项对同一共享参数求梯度，再沿共享计算图聚合，由所选优化器更新启用训练的参数；一条序列的 log 概率是这些条件 token log 概率之和，故 token 级梯度汇成轨迹级更新信号。本步更新后的参数会作为下一批生成的策略；采样时缓存旧策略对已选 token 的概率，随后当前策略在相同前缀上重算该 token 的概率。若把目标写成最小化 loss，则使用 $L=-\mathcal{J}$。完整矩阵反向传播和 AdamW/Muon 怎样把梯度变成参数值，见[训练梯度与优化器](../foundations/training-gradients-and-optimizers.md#AdamW%20%E5%92%8C%20Muon%20%E6%80%8E%E6%A0%B7%E4%BD%BF%E7%94%A8%E5%B7%B2%E7%BB%8F%E7%AE%97%E5%A5%BD%E7%9A%84%E6%A2%AF%E5%BA%A6)。
 
 > [!info] 为什么结果分数会影响整条序列？
 > 一条回答的概率是各个条件 token 概率相乘，取对数后连乘变成相加：`log π(o_i|q) = Σ_t log π(o_{i,t}|q,o_{i,<t})`。若暂时固定其他位置的条件概率，`14` 这一处从 `0.22` 升到约 `0.222089`，整条 D 的概率就乘上约 `0.222089/0.22 = 1.0095`。真实模型会通过共享参数同时改变多个位置，不能直接把这个倍率当成训练结果。终局奖励经这条计算链提供轨迹级更新信号，没有给每一步单独贴上正确或错误标签。

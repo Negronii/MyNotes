@@ -19,7 +19,7 @@ Webpack 5.109 的 `auto` 先用 `/file.html`、`/file.css` 或 `/file.module.css
 
 在 Webpack 5.109.0 中，`compiler.hooks.emit` 在 compilation 封存、所有 `processAssets` stage 结束后、资源交给配置的输出系统前运行。默认 `experiments.futureDefaults: false`（因而 `experiments.backCompat: true`）时，此后写入 `Compilation.assets` 会触发弃用警告；关闭 backCompat 后，封存的资源对象会被冻结，写入会被拒绝。无论哪种模式，修改都会错过已经结束的资源处理阶段；较晚运行的 `emit` tap 仍可看到较早 tap 的修改。输出完成后 `afterEmit` 仍会收到 compilation，但那不意味着钩子里的修改会回写已输出资源。`emit` 生命周期钩子本身没有整体弃用：读取已有资源仍可用；需要写入或变换的资源应提前放进 `processAssets`。
 
-Webpack 的 loader、plugin 与资源处理边界见[构建工具中的 loader 与 plugin 分别处理什么](../../../frontend/tooling/build-tools.md#webpack-的模块加载器与插件分别处理什么)。source map 的完整选项差异保留在[Webpack source map 预设对照](./webpack-source-map-presets.md)。
+Webpack 的 loader、plugin 与资源处理边界见[构建工具中的 loader 与 plugin 分别处理什么](../../../frontend/tooling/build-tools.md#Webpack%20%E7%9A%84%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%99%A8%E4%B8%8E%E6%8F%92%E4%BB%B6%E5%88%86%E5%88%AB%E5%A4%84%E7%90%86%E4%BB%80%E4%B9%88%EF%BC%9F)。source map 的完整选项差异保留在[Webpack source map 预设对照](./webpack-source-map-presets.md)。
 
 > [!info]- 来源
 > - `processAssets` 与 stage 顺序：[Compilation Hooks](https://webpack.js.org/api/compilation-hooks/#choosing-a-stage)。默认 backCompat 下封存资源的写入警告、关闭后冻结：[Webpack 5.109.0 defaults.js backCompat default](https://github.com/webpack/webpack/blob/v5.109.0/lib/config/defaults.js#L623), [CSS auto rule probe](https://github.com/webpack/webpack/blob/v5.109.0/lib/config/defaults.js#L649-L669)、[Compilation.js](https://github.com/webpack/webpack/blob/v5.109.0/lib/Compilation.js)。emit/afterEmit 及输出顺序：[Compiler Hooks](https://webpack.js.org/api/compiler-hooks/#emit)、[Webpack 5.109.0 Compiler.js](https://github.com/webpack/webpack/blob/v5.109.0/lib/Compiler.js)。核对日期：2026-11-11。

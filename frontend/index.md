@@ -5,7 +5,7 @@
 ## 从问题开始
 
 - [浏览器如何把 URL 变成第一帧？](browser/browser-basics.md)——建议先读，沿同一个报表页面从地址栏走到画面出现。
-- [一次操作怎样变成界面更新？](../review/index.md#一次操作怎样变成界面更新)——先看原生事件与调度，再切换到同一筛选意图的 React 实现，沿状态提交走到下一帧。
+- [一次操作怎样变成界面更新？](../review/index.md#%E4%B8%80%E6%AC%A1%E6%93%8D%E4%BD%9C%E6%80%8E%E6%A0%B7%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)——先看原生事件与调度，再切换到同一筛选意图的 React 实现，沿状态提交走到下一帧。
 - [页面已经可见，为什么操作还很慢？](performance/performance-metrics-and-analysis.md)——从性能录制定位延迟落在哪一段。
 
 ## Reading order / 阅读顺序

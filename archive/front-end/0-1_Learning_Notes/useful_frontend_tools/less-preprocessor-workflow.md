@@ -118,7 +118,7 @@ npx --yes --package less@4.9.1 lessc card-vw.less dist/css/card-vw.css
 
 在这个测试条件下，把视口设为 375px 或 450px，rem 卡片的边框盒都为 68px；视口版本在 375px 时为 68px，在 450px 时约为 81.6px。前者随固定根字号换算，后者直接随视口宽度同比缩放；项目若用不同的根字号、断点或容器规则，结果也会不同。
 
-原课程还用一组文件名说明样式职责：`base.less` 或 `base.css` 放基础样式与重置；`normalize.less` 或 `normalize.css` 放浏览器样式归一化；`index.less` 或 `index.css` 放首页专属样式。`normalize` 可以减少部分默认样式差异，但不能保证处理所有浏览器兼容问题。这是课程中的组织示例，不是每个项目都必须采用的结构。Sass 是另一种预处理器；Webpack 中 Sass 与 PostCSS 的 loader（加载器）顺序见[构建工具章节的 Sass 配置](../../../../frontend/tooling/build-tools.md#webpack-的模块加载器与插件分别处理什么)。
+原课程还用一组文件名说明样式职责：`base.less` 或 `base.css` 放基础样式与重置；`normalize.less` 或 `normalize.css` 放浏览器样式归一化；`index.less` 或 `index.css` 放首页专属样式。`normalize` 可以减少部分默认样式差异，但不能保证处理所有浏览器兼容问题。这是课程中的组织示例，不是每个项目都必须采用的结构。Sass 是另一种预处理器；Webpack 中 Sass 与 PostCSS 的 loader（加载器）顺序见[构建工具章节的 Sass 配置](../../../../frontend/tooling/build-tools.md#Webpack%20%E7%9A%84%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%99%A8%E4%B8%8E%E6%8F%92%E4%BB%B6%E5%88%86%E5%88%AB%E5%A4%84%E7%90%86%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 正式构建中怎样选择 loader、输出目录并检查资源，见[构建工具怎样把源码变成可发布产物？](../../../../frontend/tooling/build-tools.md)。
 

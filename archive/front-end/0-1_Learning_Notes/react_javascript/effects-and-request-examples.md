@@ -1,6 +1,6 @@
 # React Effect 如何清理请求与浏览器订阅？
 
-**案例背景。** 报表列表当前按 `recent` 排序。用户改选 `oldest` 后，组件需要读取相应数据；如果用户很快又改回 `recent`，两个请求可能乱序返回。此页用手写 Effect（副作用同步）演示如何清理旧请求、忽略过期结果，并保留一个浏览器事件订阅例子。Effect 的完整提交时序见[React 如何把一次用户操作变成界面更新？](../../../../frontend/frameworks/react-basics.md#effect在提交后同步外部系统)；要缓存、去重和协调服务端数据时，应接着看[React 如何维护服务端数据与乐观更新？](../../../../frontend/frameworks/react-server-state-and-optimistic-updates.md)。
+**案例背景。** 报表列表当前按 `recent` 排序。用户改选 `oldest` 后，组件需要读取相应数据；如果用户很快又改回 `recent`，两个请求可能乱序返回。此页用手写 Effect（副作用同步）演示如何清理旧请求、忽略过期结果，并保留一个浏览器事件订阅例子。Effect 的完整提交时序见[React 如何把一次用户操作变成界面更新？](../../../../frontend/frameworks/react-basics.md#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)；要缓存、去重和协调服务端数据时，应接着看[React 如何维护服务端数据与乐观更新？](../../../../frontend/frameworks/react-server-state-and-optimistic-updates.md)。
 
 Effect 用于让已提交的界面与 React 外部系统同步。由用户动作直接触发的工作通常放在事件处理器里；能由当前 props（属性）和 state（状态）算出的值则在 render（渲染）中计算。这里的 `sort` 是 prop，也可能因地址栏后退而改变，所以组件需要在它变化后读取对应报表。
 
@@ -116,7 +116,7 @@ function usePageVisibility() {
 }
 ~~~
 
-初始值不在 render 阶段读取 `document`，所以 server-side rendering（服务端渲染，SSR）的输出与浏览器首次 render 可以一致。首次渲染的值先是 `false`；hydration（水合）后，Effect 注册监听器并立即读取当前值，若文档可见就更新为 `true`。`removeEventListener` 使用与注册时相同的事件类型、回调身份和捕获选项；本例两处都省略 `capture`，所以采用默认的 `false`。窗口尺寸监听的同类 Hook 例子见[如何在 React 中组合组件与复用行为？](../../../../frontend/frameworks/react-component-composition.md#用自定义hook复用状态行为)。
+初始值不在 render 阶段读取 `document`，所以 server-side rendering（服务端渲染，SSR）的输出与浏览器首次 render 可以一致。首次渲染的值先是 `false`；hydration（水合）后，Effect 注册监听器并立即读取当前值，若文档可见就更新为 `true`。`removeEventListener` 使用与注册时相同的事件类型、回调身份和捕获选项；本例两处都省略 `capture`，所以采用默认的 `false`。窗口尺寸监听的同类 Hook 例子见[如何在 React 中组合组件与复用行为？](../../../../frontend/frameworks/react-component-composition.md#%E7%94%A8%E8%87%AA%E5%AE%9A%E4%B9%89Hook%E5%A4%8D%E7%94%A8%E7%8A%B6%E6%80%81%E8%A1%8C%E4%B8%BA)。
 
 > [!info]- 来源
 > - Effect 的依赖、建立/清理顺序、开发 StrictMode 检查、以及用户动作/派生值通常不需要 Effect：[React `useEffect`](https://react.dev/reference/react/useEffect)、[用 Effect 同步](https://react.dev/learn/synchronizing-with-effects)、[哪些情况不需要 Effect](https://react.dev/learn/you-might-not-need-an-effect)，React 19.3 文档，核验日期：2026-11-12。
