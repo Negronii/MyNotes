@@ -54,7 +54,7 @@ import java.util.UUID;
 public record Person(UUID id, String name) {}
 ~~~
 
-record（记录类）简化不可变值载体的声明。`@RequestBody` 让 HTTP 消息转换器把 JSON 变为请求对象；`@Valid` 触发 Bean Validation（Bean 校验），真正的条件来自 `@NotBlank`：名字不能为 `null`、空串或全空白。`@Valid` 本身没有定义“有效名字”是什么，静态空值注解也不能替代运行期校验约束。
+record（记录类）简化不可变值载体的声明。`@RequestBody` 让 HTTP 消息转换器把 JSON 变为请求对象；`@Valid` 触发 Bean Validation（Bean 校验），真正的条件来自 `@NotBlank`：名字不能为 `null`、空串或全空白。`@Valid` 本身没有定义“有效名字”是什么；JSpecify `@NonNull` 这类供编译期静态分析使用的空值注解，也不会在运行时拒绝请求，不能替代校验约束。
 
 ## DAO 契约怎样将保存行为与实现分开？
 
@@ -151,7 +151,7 @@ flowchart TD
     J -->|是| L[201；Location + Person JSON]
 ~~~
 
-绑定失败和校验失败都返回 400，但发生在不同阶段：坏 JSON 或字段类型、结构无法转换成 `CreatePersonRequest`，都在绑定时失败；语法正确也不保证能绑定，例如 `{"name":{"nested":true}}`。成功绑定后，若 `name` 为空白，才由 `@NotBlank` 校验失败；两类请求都不会进入 Controller 方法。要看到成功响应，请同时发送 `Content-Type: application/json` 并允许 `Accept: application/json`。若客户端只接受 `text/plain`，方法和 DAO 可能已执行，之后仍会因不能生成可接受的响应而得到 406。
+绑定失败和校验失败都返回 400，但发生在不同阶段：JSON 语法错误，或字段类型、结构无法转换成 `CreatePersonRequest`，都会在绑定时失败；JSON 语法正确也不保证能绑定，例如 `{"name":{"nested":true}}`。成功绑定后，若 `name` 为空白，才由 `@NotBlank` 校验失败；两类请求都不会进入 Controller 方法。要看到成功响应，请同时发送 `Content-Type: application/json` 并允许 `Accept: application/json`。若客户端只接受 `text/plain`，方法和 DAO 可能已执行，之后仍会因不能生成可接受的响应而得到 406。
 
 ~~~java
 package com.example.people;
@@ -188,7 +188,7 @@ public class PersonController {
 }
 ~~~
 
-`@RestController` 的返回值经消息转换器写入响应正文；`ResponseEntity` 还控制状态和头。`@PathVariable` 把路径中的 ID 转换为 UUID，不能解析的输入在进入查询之前失败。本轮运行的 Eclipse Temurin 17.0.21 中，Java 的 UUID 解析会接受某些非规范长度写法（例如 `1-1-1-1-1`）；这个路径参数转换只保证得到 UUID 值，不是严格的文本格式校验。若接口要求固定格式，应另行检查输入文本。查无记录用 404，不能返回一个未实现的 `null` 占位符。
+`@RestController` 的返回值经消息转换器写入响应正文；`ResponseEntity` 还控制状态和头。`@PathVariable` 把路径中的 ID 转换为 UUID，不能解析的输入在进入查询之前失败。在来源中记录的验证环境（Eclipse Temurin 17.0.21）里，Java 的 UUID 解析会接受某些非规范长度的写法（例如 `1-1-1-1-1`）；这个路径参数转换只保证得到 UUID 值，不是严格的文本格式校验。若接口要求固定格式，应另行检查输入文本。查无记录用 404，不能返回一个未实现的 `null` 占位符。
 
 > [!example] 同一请求在三个边界改变形态
 > `POST /api/v1/person`，JSON 为 `{"name":"James Bond"}`。
@@ -210,7 +210,7 @@ curl -i http://127.0.0.1:8080/api/v1/person \
 
 ## 打包后运行的是哪一份应用？
 
-在 POM 中声明 `spring-boot-maven-plugin`，并使用 Spring Boot starter parent 所提供的 `repackage` 执行配置，或自行显式把该 goal 绑定到构建生命周期后，项目自带 Maven Wrapper 时运行 `./mvnw package`，否则运行 `mvn package`，即可构建可执行 JAR。本例的 POM 将 `artifactId` 设为 `people`、`version` 设为 `0.0.1-SNAPSHOT`，所以可运行：
+要构建可执行 JAR，POM 中需声明 `spring-boot-maven-plugin`，并让它的 `repackage` goal 参与构建：继承 Spring Boot starter parent 时已有现成配置，否则要自己把该 goal 绑定到构建生命周期。之后运行 `mvn package` 即可；项目自带 Maven Wrapper 时改用 `./mvnw package`。本例 POM 的 `artifactId` 为 `people`、`version` 为 `0.0.1-SNAPSHOT`，所以可以运行：
 
 ~~~sh
 mvn package

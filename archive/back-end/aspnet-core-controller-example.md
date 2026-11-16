@@ -13,7 +13,7 @@ flowchart TD
     Policy -->|是| Continue[进入模型绑定]
 ~~~
 
-路由先选择操作，authentication（身份验证）建立声明主体 `ClaimsPrincipal`，authorization（授权）再检查 `Seller` 策略中的角色与主体 ID。challenge（认证挑战）与 forbid（授权拒绝）交给已配置的身份验证方案处理，因此具体响应并非所有应用都固定为 401 / 403：Cookie 方案可能对浏览器请求重定向；ASP.NET Core 10 识别为 API 的端点使用 Cookie 方案时默认返回 401 / 403。本例策略只要求 `NameIdentifier` claim 存在，不校验其格式；其值必须由可信身份提供方签发，并稳定地区分卖家。未认证或策略拒绝时，操作方法都不会运行。
+路由先选择操作，authentication（身份验证）建立声明主体 `ClaimsPrincipal`，authorization（授权）再检查 `Seller` 策略中的角色与主体 ID。challenge（认证挑战）与 forbid（授权拒绝）交给已配置的身份验证方案处理，因此具体响应并非所有应用都固定为 401 / 403：Cookie 方案可能对浏览器请求重定向；ASP.NET Core 10 识别为 API 的端点使用 Cookie 方案时默认返回 401 / 403。本例策略只要求 `NameIdentifier` 这项 claim（声明）存在，不校验其格式；其值必须由可信身份提供方签发，并稳定地区分卖家。未认证或策略拒绝时，操作方法都不会运行。
 
 隔离测试的认证处理器中，匿名请求收到 401；已有主体但缺少 `Seller` 角色或 `NameIdentifier` 的请求收到 403。这些状态表示测试方案的 challenge/forbid 结果，不替代应用对真实身份方案的配置。
 
@@ -31,9 +31,11 @@ flowchart TD
     State -->|是| Action[执行选中的操作]
 ~~~
 
-`ModelState`（模型状态）会收集两类错误：模型绑定的解析/类型转换错误，以及模型验证阶段的 DTO 约束错误。例如 `GET /api/auctions/not-a-guid` 的路径形状能匹配 `{id}`，但转成 `Guid` 失败；JSON 语法错误或字段不能转换为 DTO 目标类型也会记入绑定错误。`[Range]` 约束则在验证阶段产生错误。由于控制器标有 `[ApiController]`，两类无效状态都会在操作方法运行前自动返回 400。控制器构造器通过 dependency injection（依赖注入）取得 `AuctionDbContext`（EF Core 中用于查询、跟踪变更和提交数据库操作的对象）及映射器。这里的 400 阻止的是操作方法执行；控制器对象可以已经构造完成。输入有效时，操作方法使用已注入的对象调用数据库异步 API。
+`ModelState`（模型状态）会收集两类错误：模型绑定的解析/类型转换错误，以及模型验证阶段的 DTO 约束错误。例如 `GET /api/auctions/not-a-guid` 的路径形状能匹配 `{id}`，但转成 `Guid` 失败；JSON 语法错误或字段不能转换为 DTO 目标类型也会记入绑定错误。`[Range]` 约束则在验证阶段产生错误。由于控制器标有 `[ApiController]`，两类无效状态都会在操作方法运行前自动返回 400。
 
-本例假设应用已经配置并启用可用的认证方案；把已认证且带卖家角色和主体 ID 的调用方视为卖家。实际身份提供程序必须签发相应 claim（声明），应用再注册对应 policy（授权策略）：
+控制器的构造器通过 dependency injection（依赖注入）取得 `AuctionDbContext`（EF Core 中负责查询、跟踪变更和提交数据库操作的对象）和映射器。ASP.NET Core 先创建控制器再绑定参数，所以自动 400 阻止的只是操作方法的执行，控制器对象此时可能已经构造好。输入有效时，操作方法才用这些注入的对象调用数据库的异步 API。
+
+回到前面的授权步骤：本例假设应用已经配置并启用了认证方案，把已认证、带 `Seller` 角色且有主体 ID 的调用方视为卖家。实际的身份提供方必须签发相应的 claim，应用再注册对应的 policy（授权策略）：
 
 ~~~csharp
 using System.Security.Claims;

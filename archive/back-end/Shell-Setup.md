@@ -17,15 +17,15 @@ flowchart TD
 
 ## 启动文件不是同一个入口
 
-默认设置下，Zsh（Z shell，一种 Unix 命令行解释器）会读取 `.zshenv`；login shell（登录 shell）另外读取 `.zprofile`，interactive shell（交互式 shell）读取 `.zshrc`，登录 shell 最后还会读取 `.zlogin`。因此常见的交互式登录 shell 按 `.zshenv` → `.zprofile` → `.zshrc` → `.zlogin` 的顺序读取用户文件。各类文件有系统级和用户级版本，用户文件位于 `$ZDOTDIR`，仅在它未设置时才取 `$HOME`。终端窗口是否启动登录 shell 取决于终端配置，因此新终端不一定会按登录 shell 的路径配置启动。
+默认设置下，Zsh（Z shell，一种 Unix 命令行解释器）会读取 `.zshenv`；login shell（登录 shell）另外读取 `.zprofile`，interactive shell（交互式 shell）读取 `.zshrc`，登录 shell 最后还会读取 `.zlogin`。因此常见的交互式登录 shell 按 `.zshenv` → `.zprofile` → `.zshrc` → `.zlogin` 的顺序读取用户文件。每类文件都有系统级和用户级两个版本；用户级文件放在 `$ZDOTDIR` 中，只有它未设置时才使用 `$HOME`。新终端窗口是否启动登录 shell 取决于终端程序的设置，所以只写在 `.zprofile` 或 `.zlogin` 里的路径配置，在新终端中不一定生效。
 
 插件、提示符和键盘交互通常放在 `.zshrc`。脚本执行环境不能假定读过它，因此“终端能运行 pnpm”不代表 CI、编辑器启动的进程或非交互 shell 也有同一个 `PATH`。为运行程序配置明确的环境，不要把整个交互配置当作脚本依赖。
 
 ## 框架、插件文件和启用配置怎样衔接？
 
-Oh My Zsh 是可选的配置框架。先安装它和需要的插件，再通过 `source` 在当前 shell 执行其启动脚本。框架加载时读取 `plugins` 数组，因此必须先赋值。数组元素用空格分隔；内置 Git 插件的 `gst`、`gco` 只是 `git status`、`git checkout` 的 alias（别名）。它们没有创建新 Git 功能。
+Oh My Zsh 是可选的配置框架。先安装它和需要的插件，再在 `.zshrc` 中用 `source` 执行它的启动脚本。框架加载时读取 `plugins` 数组，所以数组必须在 `source` 之前赋值，元素之间用空格分隔。内置 Git 插件提供的 `gst`、`gco` 只是 `git status`、`git checkout` 的 alias（别名），并没有增加新的 Git 功能。
 
-外部的 `zsh-autosuggestions`、`zsh-syntax-highlighting`、`zsh-completions` 都需要各自的实际文件。只把名称写进数组不会安装插件。`zsh-completions` 的 Oh My Zsh 配方是把它的 `src` 目录放入 `fpath`，不要把它作为普通插件添加。下例假设 Oh My Zsh 已安装在所示目录、两个插件已放到框架可发现的位置，并把补全项目的路径替换成真实安装目录：
+外部的 `zsh-autosuggestions`、`zsh-syntax-highlighting`、`zsh-completions` 都需要各自的实际文件。只把名称写进数组不会安装插件。`zsh-completions` 的 Oh My Zsh 配方是把它的 `src` 目录放入 `fpath`，不要把它作为普通插件添加。下例假设 Oh My Zsh 已安装在所示目录，两个外部插件已克隆到框架会查找的 `$ZSH_CUSTOM/plugins` 下；补全项目的路径请换成真实安装目录：
 
 ~~~zsh
 export ZSH="$HOME/.oh-my-zsh"
@@ -44,7 +44,7 @@ Oh My Zsh 的启动脚本会运行 `compinit`；将补全目录放进 `fpath` �
 | `PATH` / Zsh 的 `path` 数组 | 外部可执行程序 | 查找 `pnpm`、`git` |
 | `fpath` | 可自动加载的 Zsh 函数文件 | 查找补全定义 |
 
-`fpath` 中的文件由 `compinit` 建立命令与补全函数之间的映射。例如，隔离测试用的 `_pnpm` 文件可以是：
+`compinit` 扫描 `fpath` 中的文件，建立命令与补全函数之间的对应关系。例如，在隔离环境中测试时，可以放一个这样的 `_pnpm` 文件：
 
 ~~~zsh
 #compdef pnpm
