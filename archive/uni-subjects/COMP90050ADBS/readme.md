@@ -1,6 +1,6 @@
 # COMP90050 高级数据库系统回答哪些问题？
 
-COMP90050 围绕访问成本、查询执行、并发控制和故障恢复展开。按下面四周的顺序阅读，可继续进入各主题的推导、算例和配图。
+COMP90050 围绕访问成本、查询执行、并发控制和故障恢复展开。建议按下面四周的顺序阅读；每周的概览页链接到各主题的推导、算例和配图。
 
 ## 课程顺序
 
@@ -39,4 +39,4 @@ COMP90050 围绕访问成本、查询执行、并发控制和故障恢复展开�
 
 ## 阅读边界
 
-通用机制可以先从[SQL 空值、连接与分组会怎样改变报表 42 的结果？](../../../engineering-foundations/databases/sql-null-joins-and-aggregates.md)、[如何用约束保护业务规则并为读取建立索引？](../../../engineering-foundations/databases/database-constraints-and-indexes.md)、[事务隔离与预写日志能保证什么？](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)进入；[两个请求争夺最后一件库存时，怎样保证只预留一次？](../../../engineering-foundations/databases/database-fundamentals.md)串起库存约束、并发提交与结果恢复；报表 SQL 另用客户与订单数据演算查询结果。
+通用机制可以先从[SQL 空值、连接与分组会怎样改变报表 42 的结果？](../../../engineering-foundations/databases/sql-null-joins-and-aggregates.md)、[如何用约束保护业务规则并为读取建立索引？](../../../engineering-foundations/databases/database-constraints-and-indexes.md)、[事务隔离与预写日志能保证什么？](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)进入；[两个请求争夺最后一件库存时，怎样保证只预留一次？](../../../engineering-foundations/databases/database-fundamentals.md)串起库存约束、并发提交与结果恢复；报表 SQL 一章则用客户与订单数据演算查询结果。
