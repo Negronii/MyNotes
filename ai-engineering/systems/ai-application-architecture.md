@@ -1,12 +1,12 @@
 # AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复？
 
-把一次逻辑任务的身份、权威状态和外部副作用保存在应用侧。HTTP（Hypertext Transfer Protocol，超文本传输协议）请求、事件流和 worker（工作进程）都只是完成或交付运行的参与者；任何一个断开，都不能单独证明运行已经停止，也不能证明一次写入没有生效。恢复时先读持久状态，再按操作契约查询、去重或对账。
+核心做法是：由应用自己保存一次逻辑任务的身份、权威状态和外部副作用记录。HTTP（Hypertext Transfer Protocol，超文本传输协议）请求、事件流和 worker（工作进程）都只是执行或交付这次运行的参与者；其中任何一个断开，都不能单独证明运行已经停止，也不能证明某次写入没有生效。恢复时先读持久状态，再按外部操作的契约去查询、去重或对账。
 
-本篇以[一条构建失败消息](from-message-to-answer.md)的合成 build 42 证据为起点，但新建运行 `run-r42-7`，不续接任何结果未知的旧运行。为走完长运行，案例增加请求“解释失败并准备缺陷单；提交前让我审核。”本次重新执行的 `read_build_log` 与 `c1` 的证据关联会在后文走一遍；新增的 `create_issue` 是本例应用工具，不是上游章节已有的接口。
+本篇沿用[从一条消息到完整回答](from-message-to-answer.md)中的合成案例：构建 build 42 的测试 `reject_empty_name` 预期 HTTP `400`，实际得到 `200`。为了演示一次需要审批和外部写入的长运行，用户这次的请求改为“解释失败并准备缺陷单；提交前让我审核。”服务为它新建运行 `run-r42-7`，不续接任何结果未知的旧运行。运行中会重新调用 `read_build_log` 读取日志，这次调用的 ID 是 `c1`，证据怎样与它关联见后文；用于提交缺陷单的 `create_issue` 是本例新增的应用工具，上游章节没有这个接口。
 
 ## 运行身份、持久状态和交付连接分别负责什么？
 
-每个逻辑任务使用稳定的 run ID（运行标识，字段名 `runId`）。客户端提交 idempotency key（幂等键）时，服务端将调用者、资源范围、键值和规范化请求摘要绑定：同一作用域、同一键且同一摘要的重试返回原有运行；同键但不同摘要应返回冲突，不能借用旧运行，也不能新建第二个动作。`runId` 标识逻辑任务，`tool_call_id`（工具调用 ID）关联模型请求与工具结果，worker attempt（工作进程执行尝试）标识一次获租执行；它们不能相互代替。
+每个逻辑任务使用稳定的 run ID（运行标识，字段名 `runId`）。客户端提交 idempotency key（幂等键）时，服务端将调用者、资源范围、键值和规范化请求摘要绑定：同一作用域、同一键且同一摘要的重试返回原有运行；同键但不同摘要应返回冲突，不能借用旧运行，也不能新建第二个动作。`runId` 标识逻辑任务，`tool_call_id`（工具调用 ID）关联模型的工具请求与工具结果，worker attempt（执行尝试）标识 worker 取得租约后的一次执行；三者不能相互代替。
 
 | 记录或通道 | 在本例中的内容 | 能证明什么 |
 |---|---|---|
@@ -17,17 +17,17 @@
 | model context（模型上下文）或 KV cache（键值缓存）/prompt cache（提示缓存） | 当前推理使用的对话和可重用计算 | 可能减少重复输入处理；不证明应用状态、审批或外部动作结果 |
 | 队列消息 | 某个运行可以被 worker 处理的唤醒信号 | 可被重投；不是运行状态的权威记录 |
 
-供应商消息 thread 也是交付/续接机制，不是应用的权威运行记录。以 Anthropic 当前 beta 的 Message Threads 为例，服务端可根据上一条 response ID 重建完整模型输入并减少后续历史的重复上传；它有短期保留期，应用仍需保存完整消息历史和自己的 `runId`、检查点与副作用状态，以便过期、修改或分支后重建请求。传输优化和当前 beta 限制见[AI 时延与成本优化](ai-latency-and-cost-optimization.md)。
+模型供应商提供的消息线程（thread）同样只是交付和续接机制，不是应用的权威运行记录。以 Anthropic 当前处于 beta 的 Message Threads 为例，后续请求只需带上上一条响应的 ID，服务端就能重建完整的模型输入，省去重复上传历史；但线程只短期保留，应用仍要保存完整的消息历史和自己的 `runId`、检查点与副作用状态，以便线程过期、需要修改或分支时重建请求。传输优化和当前 beta 限制见[AI 时延与成本优化](ai-latency-and-cost-optimization.md)。
 
 ## 接受请求后怎样保证最终入队？
 
-初始提交可能已成功写入运行记录，但响应尚未送到客户端；如果运行记录和队列发送不是一个原子动作，也可能在两者之间崩溃。常见做法是在同一数据库事务中写入运行记录和待发布的 outbox（事务发件箱）事件。发布器先持久化 `accepted` 到 `queued` 的状态变化，保留待发送事件，再投递队列消息；若在投递前崩溃，发布器仍能找到事件并重试，若投递后、标记已发送前崩溃，重复消息会唤醒同一个 `queued` 运行，由条件领取消重。这样 worker 收到消息时不会遇到尚未入队的 `accepted` 状态。若运行记录和 outbox 记录无法参加同一事务，就需要等价的可恢复入队协议与扫描修复任务。
+上一节说明了运行记录是权威状态，接下来的问题是：请求被接受后，怎样保证它一定会被某个 worker 处理。初始提交可能已经写入运行记录，但响应还没送到客户端；如果写运行记录和发送队列消息不是一个原子动作，进程还可能恰好在两者之间崩溃。常见做法是在同一数据库事务中写入运行记录和待发布的 outbox（事务发件箱）事件。发布器先持久化 `accepted` 到 `queued` 的状态变化，保留待发送事件，再投递队列消息；若在投递前崩溃，发布器重启后仍能找到这条事件并重试；若在投递后、标记已发送前崩溃，重复的消息会唤醒同一个 `queued` 运行，由 worker 的条件领取（下一节）去重。这样 worker 收到消息时不会遇到尚未入队的 `accepted` 状态。若运行记录和 outbox 记录无法参加同一事务，就需要等价的可恢复入队协议与扫描修复任务。
 
 本例只在请求摘要与运行记录、outbox 事件持久化后返回 `202 Accepted`。同一调用者在 `repository_id=build-service` 的 build 42 范围内用原键重试相同请求，会找到相同的 `runId`；若改了问题或目标，服务返回冲突。RFC 9110 中的 `202` 只表示请求已接受处理，业务的去重和队列恢复仍由应用实现。
 
 ## worker 崩溃后怎样让新尝试接手？
 
-队列消息只是唤醒运行。worker 用条件更新原子领取 `queued`，在持久记录中取得有期限的 lease（租约）和单调递增的 attempt/fencing token（尝试代次／栅栏令牌）。每次本地状态推进都先锁定运行记录，再用数据库实际时钟核验预期状态、当前 attempt、未过期 lease 和未取消标记。PostgreSQL 14.24 的复放显示，直接执行 `UPDATE ... WHERE lease_until > clock_timestamp()` 即使等待行锁后仍可能推进已过期租约；锁定该行后再读取 `clock_timestamp()`，才是在取得更新权时检查租约。事务必须短小，不在锁内等待模型或网络。lease 不会杀死旧进程或撤回远端请求；如果本地条件不再成立，旧 attempt 不能继续写运行记录。扫描器只落持久状态与 outbox，不能替 worker 领取下一代；收到唤醒的 worker 才能按当前状态和 attempt 条件原子领取新 lease。若原 attempt 在有效期内先提交，后续扫描读到该状态；若扫描与唤醒之后新 worker 先领取，旧 attempt 会因代次不符而失效。取消、审批和恢复都各有条件事务；`cancel_requested` 下只有当前对账 attempt 能写回已确认的只读结果。
+队列消息只负责唤醒运行，真正的执行权由数据库里的租约决定。worker 用条件更新原子地领取处于 `queued` 的运行，在持久记录中取得一个有期限的 lease（租约）和单调递增的 attempt/fencing token（尝试代次／栅栏令牌）。每次本地状态推进都先锁定运行记录，再用数据库实际时钟核验预期状态、当前 attempt、未过期 lease 和未取消标记。在 PostgreSQL 14.24 上复现可以看到，直接执行 `UPDATE ... WHERE lease_until > clock_timestamp()` 即使等待行锁后仍可能推进已过期租约；锁定该行后再读取 `clock_timestamp()`，才是在取得更新权时检查租约。事务必须短小，不在锁内等待模型或网络。lease 不会杀死旧进程或撤回远端请求；如果本地条件不再成立，旧 attempt 不能继续写运行记录。扫描器只落持久状态与 outbox，不能替 worker 领取下一代；收到唤醒的 worker 才能按当前状态和 attempt 条件原子领取新 lease。若原 attempt 在有效期内先提交，后续扫描读到该状态；若扫描与唤醒之后新 worker 先领取，旧 attempt 会因代次不符而失效。取消、审批和恢复都各有条件事务；`cancel_requested` 下只有当前对账 attempt 能写回已确认的只读结果。
 
 完成本次消息代表的步骤或写下暂停状态后，先持久化检查点再确认消息；若确认前崩溃，重投会从检查点恢复。确认后崩溃时，扫描器按持久状态分流，不把所有过期运行都放回普通 `queued`：只有 `running` 且操作账本确认没有任何发送意图的运行，才条件地改为 `queued` 并写普通 outbox；执行 worker 收到后原子领取下一 attempt。过期的 `effect_in_flight` 则由扫描器保留原操作键、载荷摘要和全部发送意图，条件转成 `effect_unknown` 并写对账 outbox。扫描器不增 attempt、不领 lease。
 
@@ -39,7 +39,7 @@
 
 本例从一个新建的合成运行 `run-r42-7` 开始，不续接任何结果未知的旧运行。客户端以 `build-42-triage-req-19` 提交“解释失败并准备缺陷单；提交前让我审核”，服务把调用者、`repository_id=build-service`、幂等键和本次提交摘要绑定到同一个 `runId`。这个 request digest（原始请求摘要，`request_digest`）只识别原始任务；之后审核的完整缺陷单另有 payload digest（动作载荷摘要，`payload_digest`），二者不能互相代替。
 
-普通 worker 持有 attempt 1 和有效 lease 时，应用本次执行 `read_build_log(repository_id="build-service", build_id=42)`。主机先检查调用者对该仓库中 build 42 的读取权限，再执行工具，并把模型给出的 `tool_call_id=c1`、工具名、完整参数与匹配的返回值一起保存：`unit-tests` 中 `reject_empty_name` 预期 HTTP `400`、实际 `200`，进程退出状态 `1`。只有这组证据关联持久化后，应用才把它交回模型。模型据此生成缺陷单完整草稿；应用保存正文或不可变引用，并为仓库、标题、正文和证据等全部获批字段计算 `payload_digest`。
+普通 worker 持有 attempt 1 和有效 lease 时，应用本次执行 `read_build_log(repository_id="build-service", build_id=42)`。应用先检查调用者对该仓库中 build 42 的读取权限，再执行工具，并把模型给出的 `tool_call_id=c1`、工具名、完整参数与匹配的返回值一起保存：`unit-tests` 中 `reject_empty_name` 预期 HTTP `400`、实际 `200`，进程退出状态 `1`。只有这组证据关联持久化后，应用才把它交回模型。模型据此生成缺陷单完整草稿；应用保存正文或不可变引用，并为仓库、标题、正文和证据等全部获批字段计算 `payload_digest`。
 
 ### 从请求到可发送意图
 
@@ -70,7 +70,7 @@
 
 ![发送意图后的崩溃、扫描器交接、只读对账与结果分支](resources/unknown-effect-reconciliation.svg)
 
-图中的崩溃情形是：请求到达服务并创建 `ISSUE-842`，worker 在写回回执前消失。扫描器将过期 `effect_in_flight` 条件转成 `effect_unknown` 并发只读唤醒；新的对账 worker 才领取 attempt 3 和 lease，再按原资源范围、操作键与摘要查询。活 worker 若等待远端时超时，只有在仍持当前有效 attempt/lease、预期状态仍为 `effect_in_flight` 时，才能在同一条件事务里转成 `effect_unknown`、写只读 outbox 并结束 lease；若 gate 检查失败，它不再写，等扫描器依到期分支接手。
+图中的崩溃情形是：请求到达服务并创建 `ISSUE-842`，worker 在写回回执前消失。扫描器将过期 `effect_in_flight` 条件转成 `effect_unknown` 并发只读唤醒；新的对账 worker 才领取 attempt 3 和 lease，再按原资源范围、操作键与摘要查询。另一种情形是 worker 仍在运行、只是等远端响应超时：只有当它仍持有当前有效的 attempt 和 lease、状态仍为 `effect_in_flight` 时，才能在同一条件事务里把状态转成 `effect_unknown`、写入只读对账的 outbox 并结束 lease；如果这项条件检查失败，它就不再写任何记录，等扫描器按租约到期的分支接手。
 
 查询授权、写入重放授权和向客户端披露结果是三次不同判断：
 
@@ -123,7 +123,7 @@ LangGraph 可以把运行过程表示成有状态的节点图。它的 `thread_i
 
 无密钥示例使用 LangGraph Python `1.2.20` 的 `StateGraph`、`InMemorySaver` 和 `interrupt()`。`observations` 的 reducer（归并函数）用 `operator.add` 将成功节点返回的新条目追加到已有列表。示例载荷为便于阅读只含仓库、标题和证据；生产请求还要绑定完整草稿正文，摘要覆盖实际获批的全部字段。动作载荷和摘要在暂停前固定，稳定操作键为 `run-r42-7:create-issue:v1`；示例没有在审批后修改内容。原版本尚未登记发送意图时，可以修改草稿、重新审批并使用新的操作版本；一旦登记了发送意图，就先保留原键和载荷对账。结果未知时不能换键发起新建；若已确认创建，应把修改既有工单作为单独审批的动作。fake remote（模拟接收服务）明确模拟按稳定操作键去重：同键同摘要返回同一工单 ID，同键不同摘要拒绝；它还假定去重记录至少保留到本例的重试完成。实际服务只有提供并兑现这一契约时，才有相同结果。
 
-表中的三次观察对应已复放的 LangGraph Python `1.2.20` 示例（Python `3.11.13`）。`InMemorySaver`、`journal` 和模拟接收端都在同一进程；第三行的 `graph.invoke(None, config)` 使用同一个 `thread_id` 继续检查点并重跑失败的写节点，不代表新进程重启或生产对账。只有节点成功返回的增量才进入 reducer：暂停和异常没有回执增量。
+表中的三次观察来自下面示例的实际运行（LangGraph Python `1.2.20`，Python `3.11.13`）。`InMemorySaver`、`journal` 和模拟接收端都在同一进程；第三行的 `graph.invoke(None, config)` 使用同一个 `thread_id` 继续检查点并重跑失败的写节点，不代表新进程重启或生产对账。只有节点成功返回的增量才进入 reducer：暂停和异常没有回执增量。
 
 | 同一进程中的阶段 | 节点与副作用变化 | 累计：审批节点 / 写节点 / 远端请求 / 新建工单 | `observations` reducer 的本次增量 |
 |---|---|---|---|
@@ -229,5 +229,5 @@ LangChain 的 Agent middleware（智能体中间件）属于常规模型—工�
 > - **运行态与人审恢复：** OpenAI，[Running agents](https://developers.openai.com/api/docs/guides/agents/running-agents) 与 [Guardrails and human review](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)，核对日期：2026-11-06；当前 Agents SDK 文档说明运行循环、可保存会话状态、暂停审批并恢复同一 run 的做法。具体 API 属于该 SDK。
 > - **模型上下文缓存的服务边界：** OpenAI，[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，核对日期：2026-11-06，“What is the prompt cache?”“Cache lifetime”和常见问题；说明可重用的是匹配前缀的 KV 张量，缓存按模型/配置过期且不能保证每次复用。Anthropic，[Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)，2025-09-29，“Compaction”“Structured note-taking”；讨论上下文整理与外部笔记。运行身份、外部动作和审批账本是本文的应用架构扩展。
 > - **LangGraph 图状态、中断、恢复与持久化：** LangGraph Python [1.2.20](https://pypi.org/project/langgraph/1.2.20/)；示例运行条件为 Python 3.11.13 与 LangGraph 1.2.20。[Define and update state](https://docs.langchain.com/oss/python/langgraph/graph-api-state) 的 State / Reducers、[Interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts) 的 Rules of interrupts / Side effects called before interrupt must be idempotent、[Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) 的 Checkpointer vs. store 与内存 saver 限制。模拟的远端去重与应用账本是本文明确声明的假设。
-> - **PostgreSQL 行锁与时钟：** PostgreSQL 14 官方 [Date/Time Functions](https://www.postgresql.org/docs/14/functions-datetime.html) 区分事务起始时的 `CURRENT_TIMESTAMP` 与调用时读取实际时间的 `clock_timestamp()`；[Explicit Locking](https://www.postgresql.org/docs/14/explicit-locking.html) 说明竞争事务可能等待行锁。本文的取锁后复核与行锁时序也在 PostgreSQL 14.24 上复放；这是本例持久状态事务的实现依据，不是远端副作用保证。
+> - **PostgreSQL 行锁与时钟：** PostgreSQL 14 官方 [Date/Time Functions](https://www.postgresql.org/docs/14/functions-datetime.html) 区分事务起始时的 `CURRENT_TIMESTAMP` 与调用时读取实际时间的 `clock_timestamp()`；[Explicit Locking](https://www.postgresql.org/docs/14/explicit-locking.html) 说明竞争事务可能等待行锁。本文的取锁后复核与行锁时序也在 PostgreSQL 14.24 上复现过；这是本例持久状态事务的实现依据，不是远端副作用保证。
 > - **middleware 和 Deep Agents 的层次与 factory 所属包：** LangChain，[Middleware overview](https://docs.langchain.com/oss/python/langchain/middleware/overview) 的 Agent loop / Use middleware inside a LangGraph workflow；Deep Agents，[Overview](https://docs.langchain.com/oss/python/deepagents/overview) 及 [Quickstart](https://docs.langchain.com/oss/python/deepagents/quickstart)，截至 2026-11-09 检查；`create_agent` 是 LangChain agent API，`from deepagents import create_deep_agent` 属于 Deep Agents SDK。
