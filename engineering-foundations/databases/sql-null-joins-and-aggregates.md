@@ -4,7 +4,7 @@
 
 语义以 PostgreSQL 18 官方文档核对，四客户 SQL 例另用本机 SQLite 3.51.0 复现；SQLite 对 `IS DISTINCT FROM` 的支持从 3.39.0 开始。
 
-Ava 有两笔订单，Ben 的地区和一笔订单金额未知，Cy 有一笔已付款订单，Dia 没有订单。追踪查询时，可以把它的**逻辑结果阶段**看成 `FROM / JOIN` 形成行、`WHERE` 筛行、`GROUP BY` 形成组、聚合计算、`HAVING` 筛组。它帮助解释 SQL 结果；PostgreSQL 计划器可以用不同的物理执行计划算出同一结果。
+Ava 有两笔订单，Ben 的地区和一笔订单金额未知，Cy 有一笔已付款订单，Dia 没有订单。追踪一条查询时，可以把它的**逻辑处理阶段**依次看成 `FROM / JOIN` 形成行、`WHERE` 筛行、`GROUP BY` 形成组、聚合计算、`HAVING` 筛组。这个顺序用来解释 SQL 结果，不是实际执行顺序；PostgreSQL 计划器可以用不同的物理执行计划算出同一结果。下面按这个顺序，先看输入里的 NULL，再看连接、聚合和分组筛选。
 
 ## 输入中的空值怎样影响比较？
 
@@ -35,7 +35,7 @@ INSERT INTO orders VALUES
     (104, 3, 500, 'paid');
 ~~~
 
-SQL 使用 three-valued logic（三值逻辑）：普通比较可能是 TRUE、FALSE 或 UNKNOWN。`NULL = NULL` 与 `NULL <> 'North'` 都是 UNKNOWN。`WHERE` 只留下 TRUE，因此 `region = NULL` 搜不到 Ben；空值判断要写 `IS NULL`。 在本页的 PostgreSQL 和 SQLite 文本列中，空字符串 `''` 是已知的空文本，`'' IS NULL` 为 FALSE；它与未知值 NULL 不同。
+SQL 使用 three-valued logic（三值逻辑）：普通比较可能是 TRUE、FALSE 或 UNKNOWN。`NULL = NULL` 与 `NULL <> 'North'` 都是 UNKNOWN。`WHERE` 只留下 TRUE，因此 `region = NULL` 搜不到 Ben；空值判断要写 `IS NULL`。在本页的 PostgreSQL 和 SQLite 文本列中，空字符串 `''` 是已知的空文本，`'' IS NULL` 为 FALSE；它与未知值 NULL 不同。
 
 本例中，`region <> 'North'` 单独用于 `WHERE` 时只选中 South；要连未知地区也纳入“不是 North 或未知”，再把 `IS NULL` 用 OR 合并：
 
@@ -172,9 +172,9 @@ ORDER BY c.customer_id;
 
 报表查询里 Dia 会保留，是因为 `LEFT JOIN` 先为她造出一行空扩展记录；因此 Dia 有组，`COUNT(*) = 1`，而非“订单表没有该组”的零行状态。
 
-这不是所有聚合函数都会丢弃 NULL：例如 PostgreSQL 的 `array_agg` 会把 NULL 收入数组。本例只有客户到订单这一层，一笔订单只进入所属客户组一次；若再连接一张按订单有多行的标签表，同一订单金额就会随标签行重复。
+并非所有聚合函数都忽略 NULL：例如 PostgreSQL 的 `array_agg` 会把 NULL 收入数组。本例只有客户到订单这一层，一笔订单只进入所属客户组一次；若再连接一张按订单有多行的标签表，同一订单金额就会随标签行重复。
 
-单独看这个重复风险：暂时只取 Ava 的两笔订单，并给它们补三个合成标签关联；这是 fan-out 的小例，不是报表 42 的新增业务表：
+单独看这个重复风险：暂时只取 Ava 的两笔订单，并给它们补三个合成标签关联；这是 fan-out（扇出，即连接后同一行被复制成多行）的小例，不是报表 42 的新增业务表：
 
 ~~~sql
 WITH ava_orders(order_id, amount_cents) AS (

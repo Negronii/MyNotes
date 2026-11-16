@@ -1,8 +1,8 @@
 # 如何用约束保护业务规则并为读取建立索引？
 
-**案例：** 报表服务接收账户 `acct-17`、主体 `user-17` 的幂等请求 `report-demo-208`，持久化任务 `job-demo-731`，之后按账户读取最近任务。数据库要保证库存不可为负、外键指向真实父行、同一作用域的报表键最多对应一行；读取任务列表时，索引则提供一个可能更省成本的路径。
+**案例：** 本页把两个业务放进同一个教学数据库：一是[库存篇](database-fundamentals.md)里的库存预留，二是一个报表服务。报表服务收到账户 `acct-17`、主体 `user-17` 的幂等请求，操作键为 `report-demo-208`，并把它持久化为任务 `job-demo-731`，之后按账户读取最近的任务。写入时，数据库要保证库存不为负、外键指向真实存在的父行、同一作用域的报表操作键最多对应一行；读取任务列表时，索引提供一条可能更省成本的访问路径。
 
-本页的业务 schema 与索引说明以 **PostgreSQL 18** 为准；前一篇库存事务明确使用 PostgreSQL 18 Read Committed。这里的 `report-demo-208` 是报表操作键，`reserve-demo-208` 是另一篇库存案例的操作键，两者只是合成标识，不代表同一次业务操作。约束是所有写入方共享的数据规则；索引是需额外维护的查询结构，是否采用由计划器按成本决定。
+本页的 schema 与索引说明以 **PostgreSQL 18** 为准，与库存篇使用的 PostgreSQL 18 Read Committed 一致。`report-demo-208` 是报表操作键，`reserve-demo-208` 是库存案例的操作键，两者都是合成标识，不代表同一次业务操作。两类机制的分工是：约束是所有写入方都必须遵守的数据规则；索引是需要额外维护的查询结构，查询是否使用它由计划器按成本决定。
 
 ## 先把不变量放在数据库边界
 
@@ -48,7 +48,7 @@ INSERT INTO inventory (sku, available) VALUES ('SKU-7', 1);
 
 ![关系图仅列出键和约束相关字段：账户与库存为父表，箭头指向预留或报表任务的外键列；reservations 的 principal_id 属于复合主键，report_jobs 的 principal_id 属于作用域唯一键，两者都没有主体外键](resources/database-constraints-and-indexes-schema.svg)
 
-约束分别保护不同的不变量：
+下表列出每类约束保护的不变量：
 
 | 要保护的事实 | 示例约束 | 它能保证什么 |
 | --- | --- | --- |
@@ -58,7 +58,7 @@ INSERT INTO inventory (sku, available) VALUES ('SKU-7', 1);
 | 每个作用域操作键最多保存一条记录 | 复合主键或 `UNIQUE` | `reservations` 用复合主键；`report_jobs` 用任务 ID 主键和操作作用域唯一约束。 |
 | 状态值来自允许集合 | `CHECK (status IN (...))` | 只限制当前值，不验证 `queued → running → succeeded` 之类的转移顺序。 |
 
-PostgreSQL 的 `UNIQUE` 默认把含 NULL 的键视作彼此不同；需要把 NULL 也视为相同键时可用 `NULLS NOT DISTINCT`。此 schema 中唯一键每列都声明为 `NOT NULL`，因此操作键比较没有这个歧义。主键和唯一约束会自动建立唯一 B-tree 索引，不要再为相同键重复建一个索引。外键会使用父表主键/唯一键的索引查找父行；PostgreSQL 不会自动为子表的外键列建索引。这里的 `reservations` 主键和 `report_jobs` 作用域唯一索引都以 `account_id` 开头，已有索引可用于账户前缀查找和父账户变更时的子行检查。`reservations.sku` 不在主键索引中；若按 SKU 查预留或删除/更新库存 SKU 时需检查大量子行，可按负载评估单独的 `reservations(sku)` 索引。
+PostgreSQL 的 `UNIQUE` 默认把含 NULL 的键视作彼此不同；需要把 NULL 也视为相同键时可用 `NULLS NOT DISTINCT`。此 schema 中唯一键每列都声明为 `NOT NULL`，因此操作键比较没有这个歧义。主键和唯一约束会自动建立唯一 B-tree 索引，不要再为相同键重复建一个索引。外键会使用父表主键/唯一键的索引查找父行；PostgreSQL 不会自动为子表的外键列建索引。本例 `reservations` 的主键和 `report_jobs` 的作用域唯一索引都以 `account_id` 开头，所以按账户前缀查找、以及父账户变更时检查子行，都能利用已有索引。`reservations.sku` 不在主键索引中；若按 SKU 查预留或删除/更新库存 SKU 时需检查大量子行，可按负载评估单独的 `reservations(sku)` 索引。
 
 CHECK 表达式检查的是当前行，不能可靠表达跨行或跨表不变量；应优先使用 UNIQUE、外键等约束，或把需要协调的写入放进合适的事务协议。`created_at TIMESTAMPTZ` 表示一个时间点：带时区的输入会换算后按 UTC 存储，原时区标签不保留，输出按会话时区显示；混合格式的本地时间文本不能直接当作可靠时间顺序。
 
@@ -66,7 +66,7 @@ CHECK 表达式检查的是当前行，不能可靠表达跨行或跨表不变�
 
 幂等键的唯一约束只裁决“最多一行”，本身不规定重放返回什么。报表 API 的应用契约是：成功持久化的任务才绑定键；已接受请求以相同键、相同参数重放时，返回已存任务 `job-demo-731` 及其当前状态查询入口；同键不同 `period` 或 `format` 则返回参数冲突。若并发请求先查无记录，那个语句快照只说明当时没有可见的已提交行，不能证明另一个事务尚未提交的任务不存在；最终由写入约束裁决。
 
-例如，任务首次写入时，下面的 `INSERT` 是一条语句，其 `$1` 到 `$5` 由该语句单独绑定：
+下面用两个并发请求 A、B 演示这个裁决过程。A 首次写入任务时执行下面的 `INSERT`，其 `$1` 到 `$5` 由这条语句单独绑定：
 
 ~~~sql
 BEGIN ISOLATION LEVEL READ COMMITTED;
@@ -111,7 +111,7 @@ WHERE account_id = $1
 COMMIT;
 ~~~
 
-这条 recovery `SELECT` 的绑定独立为 `$1 = acct-17`、`$2 = user-17`、`$3 = report-demo-208`。本例重放结论假定重放窗口内绑定行仍被保留、作用域键未变。A 已提交时读到的是现有 `job-demo-731`，不是第二条已提交记录；同指纹复用该任务，异指纹返回参数冲突。若 A 回滚，B 的 INSERT 可继续而无需读到 A 的记录。具体 HTTP 重放与响应丢失契约见[请求超时后如何确认结果并安全重试？](../reliability/api-reliability-and-async-delivery.md)；库存的键绑定和失败不占键见[两个请求争夺最后一件库存时，怎样保证只预留一次？](database-fundamentals.md)。
+这条回查 `SELECT` 的绑定独立为 `$1 = acct-17`、`$2 = user-17`、`$3 = report-demo-208`。本例重放结论假定重放窗口内绑定行仍被保留、作用域键未变。A 已提交时读到的是现有 `job-demo-731`，不是第二条已提交记录；同指纹复用该任务，异指纹返回参数冲突。若 A 回滚，B 的 INSERT 可继续而无需读到 A 的记录。具体 HTTP 重放与响应丢失契约见[请求超时后如何确认结果并安全重试？](../reliability/api-reliability-and-async-delivery.md)；库存的键绑定和失败不占键见[两个请求争夺最后一件库存时，怎样保证只预留一次？](database-fundamentals.md)。
 
 ## 复合索引怎样配合任务列表？
 
@@ -143,7 +143,7 @@ LIMIT 20;
 
 ## 计划器为什么有时不用已建索引？
 
-计划器比较不同访问路径的估算成本，不会因为索引存在就必定选它。前面的 PostgreSQL 列表索引已建好后，本机 PostgreSQL 14.24 两行小表的计划器估算后选择了顺序扫描加排序；数据、统计信息、目标版本都会影响计划。接着保留一个独立 SQLite 教学库：它的 `orders` 与下一篇 NULL / join 章节的同名表结构不同，需分别建表。这里合成 1,000 个订单，`customer_id = 17` 对应 10 行（`order_id` 为 17、117、……、917），再观察索引前后的查询计划。
+计划器比较不同访问路径的估算成本，不会因为索引存在就一定选它。下面两个折叠示例分别展示两种情况。第一个沿用上面的 `report_jobs` 和列表索引：表里只有两行时，本机 PostgreSQL 14.24 的计划器估算后选择了顺序扫描加排序；数据量、统计信息和数据库版本都会影响计划。第二个换成独立的 SQLite 教学库，合成 1,000 个订单，其中 `customer_id = 17` 对应 10 行（`order_id` 为 17、117、……、917），比较建索引前后的查询计划。它的 `orders` 与[SQL 空值与连接](sql-null-joins-and-aggregates.md)一章的同名表结构不同，需分别建表。
 
 > [!example]- 两行表上已有索引但仍选择顺序扫描（本地 PostgreSQL 14.24）
 > 下面的两条任务插入到前面刚创建的 `report_jobs` 教学表；复现时表中只有这两行，查询用字面量绑定账户值：

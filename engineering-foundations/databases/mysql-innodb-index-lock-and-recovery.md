@@ -1,12 +1,12 @@
 # InnoDB 怎样用索引记录、旧版本与日志处理库存事务？
 
-**案例背景。** 全局 `SKU-7` 库存只剩一件，`available = 1`，此前没有 `reserve-demo-208` 结果。账户 `acct-17`、主体 `user-17` 是预留请求的作用域，不是库存分区；A、B 是同一逻辑请求的两次尝试，操作键为 `reserve-demo-208`，指纹为 `fingerprint-A`。指纹应是规范化业务参数的稳定摘要；这里用 `fingerprint-A` 作符号标签，省略实际摘要编码。会话 A 开启可重复读（`REPEATABLE READ`）事务并先用普通读建立快照，看到 1；会话 B 用条件更新扣成 0，在同一事务保存该操作键和指纹后提交。A 之后的普通读仍可能看到旧值 1，但锁定读和更新会针对当前记录。要判断“能读旧值”是否意味着“还能安全扣减”，必须分清 InnoDB 的索引路径、一致性读、当前锁定读以及崩溃恢复决策。
+**案例背景。** 本页把[库存篇](database-fundamentals.md)的案例换到 MySQL/InnoDB 上。`SKU-7` 的全局库存只剩一件，`available = 1`，此前没有操作键 `reserve-demo-208` 的预留结果。账户 `acct-17`、主体 `user-17`（发起请求的已认证身份）只是预留请求的作用域，不用于划分库存。A、B 是同一逻辑请求的两次尝试，操作键为 `reserve-demo-208`，指纹为 `fingerprint-A`。指纹应是规范化业务参数的稳定摘要；这里只用 `fingerprint-A` 作符号标签，省略实际编码。会话 A 开启可重复读（`REPEATABLE READ`）事务并先用普通读建立快照，看到 1；会话 B 用条件更新扣成 0，在同一事务保存该操作键和指纹后提交。A 之后的普通读仍可能看到旧值 1，但锁定读和更新会针对当前记录。要判断“能读旧值”是否意味着“还能安全扣减”，必须分清 InnoDB 的索引路径、一致性读、当前锁定读以及崩溃恢复决策。
 
-本文以 MySQL 8.4 长期支持（LTS）版本、InnoDB 为准：普通事务默认隔离级别为可重复读（`REPEATABLE READ`），示例仍显式设定；`sku_id = 7` 表示 `SKU-7`。单条独立 SQL 使用自动提交（`autocommit=1`），需要跨语句加锁的片段会显式开启事务。事务隔离与预写日志（WAL）的通用语义见[事务隔离与预写日志能保证什么？](database-transactions-isolation-and-recovery.md)；这里的快照、索引锁范围和 `undo log`（回滚日志）/`redo log`（重做日志）是 InnoDB 具体行为。
+本文以 MySQL 8.4 长期支持（LTS）版本的 InnoDB 为准；2026-04 发布的 9.7 是更新的 LTS，本页涉及的快照、锁和 binlog 恢复机制已与 9.7 手册交叉核对。在 8.4 中，普通事务默认隔离级别为可重复读（`REPEATABLE READ`），示例仍显式设定；`sku_id = 7` 表示 `SKU-7`。单条独立 SQL 使用自动提交（`autocommit=1`），需要跨语句加锁的片段会显式开启事务。事务隔离与预写日志（WAL）的通用语义见[事务隔离与预写日志能保证什么？](database-transactions-isolation-and-recovery.md)；这里的快照、索引锁范围和 `undo log`（回滚日志）/`redo log`（重做日志）是 InnoDB 具体行为。
 
 ## 查询先走哪棵 InnoDB 索引？
 
-本例用主键点查 SKU-7，并另外建仓库库存二级索引。InnoDB 的主键组织为 clustered index（聚簇索引），叶记录保存整行；每个 secondary index（二级索引）叶项保存二级键列与该行主键。若二级索引查询还需要 `note` 这样的非索引列，InnoDB 会用叶项中的主键再回聚簇索引取行。投影列都在二级索引记录里时，查询在字段层面可被覆盖；但 multi-version concurrency control（多版本并发控制，MVCC）的可见性检查仍可能要查聚簇记录。
+判断一次读或写会看到什么、锁住什么，先要知道它走哪棵索引。本例用主键点查 SKU-7，另外再建一个按仓库查库存的二级索引。InnoDB 的主键组织为 clustered index（聚簇索引），叶记录保存整行；每个 secondary index（二级索引）叶项保存二级键列与该行主键。若二级索引查询还需要 `note` 这样的非索引列，InnoDB 会用叶项中的主键再回聚簇索引取行。投影列都在二级索引记录里时，查询在字段层面可被覆盖；但 multi-version concurrency control（多版本并发控制，MVCC）的可见性检查仍可能要查聚簇记录。
 
 > [!example]- 示例表结构和初始数据
 >
@@ -112,11 +112,11 @@ COMMIT;
 
 ![旧快照读、当前锁定读和条件更新的结果](resources/d4-innodb-snapshot-current-read.svg)
 
-这里的旧值是“普通读仍可见的版本”，不是可用来再次扣减的当前库存。读视图按事务可见性判断聚簇记录的版本；只要 A 的快照仍可能需要旧值，update undo 就不能清理。在本例 B 已提交、A 条件更新影响零行的顺序下，若 A 与 B 是不同操作键，A 在回滚后查不到自己的键，应报告本次库存不足；同键同指纹才返回 B 保存的结果，同键异指纹则返回冲突。若回查为空，也可能是同键竞争事务尚未结束，不能仅凭一次空结果断言对方失败。若 B 仍未提交而 A 先执行 `FOR UPDATE`，A 会等待 B 提交或回滚：在没有其他写入的本例中，B 提交则看到 0，B 回滚则看到 1。通常不应在 `REPEATABLE READ` 同一事务中随意混合普通快照读与锁定读；此处是为了展示两条读取路径为何得出不同值。完整的原请求重试与幂等键约定见[库存扣减与同键重试如何保证只生效一次？](database-fundamentals.md)。
+这里的旧值是“普通读仍可见的版本”，不是可用来再次扣减的当前库存。读视图按事务可见性判断聚簇记录的版本；只要 A 的快照仍可能需要旧值，update undo 就不能清理。在本例 B 已提交、A 条件更新影响零行的顺序下，若 A 与 B 是不同操作键，A 在回滚后查不到自己的键，应报告本次库存不足；同键同指纹才返回 B 保存的结果，同键异指纹则返回冲突。若回查为空，也可能是同键竞争事务尚未结束，不能仅凭一次空结果断言对方失败。若 B 仍未提交而 A 先执行 `FOR UPDATE`，A 会等待 B 提交或回滚：在没有其他写入的本例中，B 提交则看到 0，B 回滚则看到 1。通常不应在 `REPEATABLE READ` 同一事务中随意混合普通快照读与锁定读；此处是为了展示两条读取路径为何得出不同值。完整的原请求重试与幂等键约定见[两个请求争夺最后一件库存时，怎样保证只预留一次？](database-fundamentals.md)。
 
 ## 唯一命中与范围扫描为什么锁不同？
 
-InnoDB 的行锁实际落在索引记录上。若完整唯一索引等值条件只命中一条已存在记录，通常只锁该索引记录，不锁它前面的间隙。若排他搜索经二级索引完成，InnoDB 还会锁对应的聚簇索引记录。复合唯一索引如果只给部分键列，便不是完整唯一命中，可能需要扫描并锁定一段索引范围。
+上一节的 `FOR UPDATE` 和 `UPDATE` 都要加锁。InnoDB 的行锁实际落在索引记录上，所以锁住多大范围取决于语句走哪棵索引、是点查还是范围扫描。若完整唯一索引等值条件只命中一条已存在记录，通常只锁该索引记录，不锁它前面的间隙。若排他搜索经二级索引完成，InnoDB 还会锁对应的聚簇索引记录。复合唯一索引如果只给部分键列，便不是完整唯一命中，可能需要扫描并锁定一段索引范围。
 
 ~~~sql
 -- 独立示例一：完整主键点查，只锁 sku_id=7 记录。
@@ -150,7 +150,7 @@ COMMIT;
 
 ## 崩溃时 redo 和 undo 各做什么？
 
-redo log（重做日志）为页修改提供恢复记录，能把尚未写回表空间的变更前滚；它也可能记录后来被判为未提交的事务修改。undo log（回滚日志）一方面用于一致性读重建旧版本，另一方面用于撤销未完成事务。因此“redo 重放过页面变化”不等于“业务事务已经提交”。
+前两节讨论运行中的并发；本节看提交途中崩溃后，重启恢复怎样决定事务的去留。redo log（重做日志）为页修改提供恢复记录，能把尚未写回表空间的变更前滚；它也可能记录后来被判为未提交的事务修改。undo log（回滚日志）一方面用于一致性读重建旧版本，另一方面用于撤销未完成事务。因此“redo 重放过页面变化”不等于“业务事务已经提交”。
 
 本例假设 binary log（二进制日志，binlog）已启用，`innodb_flush_log_at_trx_commit = 1`、`sync_binlog = 1`，且文件系统、控制器与设备真实兑现 flush。MySQL 8.4 对启用 binlog 的 InnoDB 表使用隐式 XA two-phase commit（两阶段提交）来协调两个日志：事务执行完更新与预留插入后，InnoDB 的 `PREPARE` 将准备记录写入 redo 日志缓冲区，但调用本身不表示已持久化；组提交刷新阶段先持久化 prepare 及此前的 redo，再把完整事务和 transaction identifier（事务标识符，XID）写入并同步到 binlog；之后 InnoDB 才完成提交。XA 是服务器协调器内部使用的协议，不是应用发出 `XA` SQL。客户端可能在提交已形成后断线，所以是否收到 `COMMIT` 响应不能代替恢复时的日志决策。
 
@@ -177,7 +177,7 @@ MySQL 可在 redo 应用后尽早接受新连接，未完成事务回滚可能�
 
 > [!info]- 来源
 >
-> - 以 MySQL 8.4 LTS 手册和 8.4.13 源码为本页实现基线；另与 MySQL 9.7 手册交叉核对，不把 9.7 称为最新发行版。Oracle 已于 2026-10-20 发布 MySQL 26.10.0：[MySQL 26.10.0 Release Notes](https://dev.mysql.com/doc/relnotes/mysql/26.10/en/news-26-10-0.html)。本页关键声明核对于 2026-11-12。
+> - 以 MySQL 8.4 LTS 手册和 8.4.13 源码为本页实现基线；另与 MySQL 9.7 手册交叉核对。9.7.0 于 2026-04-21 作为新的 LTS 系列发布：[Changes in MySQL 9.7.0](https://dev.mysql.com/doc/relnotes/mysql/9.6/en/news-9-7-0.html)。Innovation 系列已改用日历版本号，Oracle 于 2026-10-20 发布 MySQL 26.10.0：[MySQL 26.10.0 Release Notes](https://dev.mysql.com/doc/relnotes/mysql/26.10/en/news-26-10-0.html)。本页关键声明核对于 2026-11-12，版本状态核对于 2026-11-16。
 >
 > - 聚簇索引保存完整行，二级索引叶项包含二级键和主键：[MySQL 8.4, Clustered and Secondary Indexes](https://dev.mysql.com/doc/refman/8.4/en/innodb-index-types.html) §17.6.2.1；二级项被删除标记或索引页含较新更新时，MVCC 可见性检查可能回到聚簇记录，因此覆盖索引只说明投影字段齐全：[InnoDB Multi-Versioning](https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html) §17.3。
 >
@@ -193,6 +193,6 @@ MySQL 可在 redo 应用后尽早接受新连接，未完成事务回滚可能�
 >
 > - binlog 与 InnoDB 隐式 XA 两阶段提交、恢复扫描完整 XID 并完成 prepared 事务：[MySQL 8.4, The Binary Log](https://dev.mysql.com/doc/refman/8.4/en/binary-log.html) §7.4.4；8.4.13 源码说明 `prepare()` 将记录先写入日志缓冲，再由组提交刷新阶段先刷新引擎日志：[sql/binlog.cc](https://github.com/mysql/mysql-server/blob/mysql-8.4.13/sql/binlog.cc#L8087-L8116)、[组提交 flush 阶段](https://github.com/mysql/mysql-server/blob/mysql-8.4.13/sql/binlog.cc#L8518-L8525)、[InnoDB redo flush](https://github.com/mysql/mysql-server/blob/mysql-8.4.13/storage/innobase/handler/ha_innodb.cc#L5903-L5940)。`innodb_flush_log_at_trx_commit=1`、`sync_binlog=1` 与 flush 设备假设：[InnoDB System Variables](https://dev.mysql.com/doc/refman/8.4/en/innodb-parameters.html) `innodb_flush_log_at_trx_commit`。同组事务可共用 binlog 同步，见 [Binary Logging Options and Variables](https://dev.mysql.com/doc/refman/8.4/en/replication-options-binary-log.html#sysvar_binlog_group_commit_sync_delay) 的 `binlog_group_commit_sync_delay` 和 `sync_binlog`。
 >
-> - MySQL 9.7 手册交叉核对 Repeatable Read 快照、索引锁策略与 binlog XID 恢复：[Transaction Isolation Levels](https://dev.mysql.com/doc/refman/9.7/en/innodb-transaction-isolation-levels.html) §17.7.2.1；[The Binary Log](https://dev.mysql.com/doc/refman/9.7/en/binary-log.html) §7.4.4，核对于 2026-11-12。此处将 9.7 仅作版本交叉核对；发行版本已到 MySQL 26.10.0。
+> - MySQL 9.7 手册交叉核对 Repeatable Read 快照、索引锁策略与 binlog XID 恢复：[Transaction Isolation Levels](https://dev.mysql.com/doc/refman/9.7/en/innodb-transaction-isolation-levels.html) §17.7.2.1；[The Binary Log](https://dev.mysql.com/doc/refman/9.7/en/binary-log.html) §7.4.4，核对于 2026-11-12。
 >
 > - PostgreSQL 同名级别使用不同并发行为的对照：[PostgreSQL 18, Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html) §13.2；具体比较见[事务隔离与预写日志能保证什么？](database-transactions-isolation-and-recovery.md)。
