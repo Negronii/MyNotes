@@ -1,10 +1,10 @@
 # 无人值守 Agent（智能体）怎样在用户授权内继续第三方操作？
 
-**案例背景。** 以下是合成教学案例。同一 run-r42-7 已用只读调用 c1 从 Model Context Protocol（MCP，模型上下文协议）日志服务取得 build 42 的观察：reject_empty_name 预期 HTTP 400、实际 200。用户要求应用解释失败，并为 repository_id=build-service 准备缺陷单，提交前让用户审批。工单服务的 OAuth（开放授权）提供方（provider）账号是用户的 OAuth 身份，build-service 是动作目标；两者不是同一个标识。运行时要用用户对工单 API（应用程序接口）的委托授权，但不能把创建权限交给模型，也不能把此前读日志的令牌拿去创建 issue（工单）。
+**案例背景。** 以下是合成教学案例，延续[MCP 工具连接](./mcp-tool-connections.md)一章的运行 run-r42-7：这次运行已用只读调用 c1，从 Model Context Protocol（MCP，模型上下文协议）日志服务取得 build 42 的观察——reject_empty_name 预期 HTTP 400、实际 200。用户要求应用解释失败，并为仓库 repository_id=build-service 准备一份缺陷单，提交前由用户审批。这里有两个容易混淆的标识：用户在工单服务（OAuth 提供方，provider）上的账号是一个 OAuth（开放授权）身份；build-service 则是缺陷单要写入的目标仓库。运行时要使用用户授予工单 API（应用程序接口）的委托授权，但不能把创建权限交给模型，也不能拿此前读日志的令牌去创建 issue（工单）。
 
 无人值守只表示用户不必为每个内部步骤重新登录；它不表示授权无限期有效，也不表示用户授予一个 API scope（权限范围）就批准了任意动作。完整链路要把用户会话、OAuth grant（授权）、动作批准和远端副作用记录分开保存。
 
-本例中的 `attempt`（执行代次）标识同一 run/action 内的一次 worker（工作进程）执行；它可以负责发送，也可以在恢复时只做对账。一次 HTTP 重试不一定产生新的 attempt。租约是 worker 暂时获准更新本地动作状态的资格，带有代次和到期时间。旧 worker 即使还活着，也不能在租约过期后提交状态；但本地租约不能阻止已经暂停的 worker 稍后把请求发到远端。
+后文会反复用到两个运行时概念。`attempt`（执行代次）标识同一 run/action 内的一次 worker（工作进程）执行；它可以负责发送，也可以在恢复时只做对账。一次 HTTP 重试不一定产生新的 attempt。lease（租约）是 worker 暂时获准更新本地动作状态的资格，带有代次和到期时间。旧 worker 即使还活着，也不能在租约过期后提交状态；但本地租约不能阻止已经暂停的 worker 稍后把请求发到远端。
 
 本章按三个阶段说明这条链：先把工单 provider 的 OAuth 授权安全地绑定到本地 grant；再让应用审批并提交一份精确的缺陷单；如果远端结果不确定，保留原操作状态并按合法读取能力恢复。日志令牌 `T_mcp` 与工单令牌 `T_issue` 始终面向各自的资源。
 
@@ -23,7 +23,7 @@
 | 动作审批 | repository_id=build-service、标题、正文和 c1 证据的精确摘要 | 用户批准本次明确预览；内容或目标改变时应重新审批 |
 | 远端操作键 | run-r42-7:create-issue:v1 | 接收端去重或查询这次副作用的稳定键；是否有效由接收端契约决定 |
 
-grant 记录保存 grantRef、用户/tenant、provider account、目标资源 resource（资源标识）URI 或令牌受众 audience（受众）、实际授予的 scope、到期与 refresh 状态，以及到加密秘密存储的凭据引用。运行、动作摘要、审批状态和操作键保存在各自的任务与动作记录中，并通过 grantRef 关联。本例 provider account=repo-owner-2 是 OAuth 身份，repository_id=build-service 是同一 run 的目标仓库；两者可以不同。`access token`（访问令牌）和 `refresh token`（刷新令牌）不进入 prompt（提示词）、模型消息、事件流、普通日志、tool result（工具结果）或 checkpoint（检查点）。access token 用于向目标 API 发请求；其有效期和是否能刷新由 provider 决定。只有 provider 实际发放 refresh token 时才保存它，并且只把它交给所属授权服务器的 token endpoint（令牌端点）换取新 access token。
+grant 记录保存 grantRef、用户/tenant、provider account、目标资源的 resource URI 或令牌的 audience、实际授予的 scope、到期与 refresh 状态，以及到加密秘密存储的凭据引用。运行、动作摘要、审批状态和操作键保存在各自的任务与动作记录中，并通过 grantRef 关联。本例 provider account=repo-owner-2 是 OAuth 身份，repository_id=build-service 是同一 run 的目标仓库；两者可以不同。`access token`（访问令牌）和 `refresh token`（刷新令牌）不进入 prompt（提示词）、模型消息、事件流、普通日志、tool result（工具结果）或 checkpoint（检查点）。access token 用于向目标 API 发请求；其有效期和是否能刷新由 provider 决定。只有 provider 实际发放 refresh token 时才保存它，并且只把它交给所属授权服务器的 token endpoint（令牌端点）换取新 access token。
 
 ## 两条 OAuth 链分别在谁和谁之间？
 
@@ -36,13 +36,15 @@ MCP 日志读取是 host/client（主机/客户端）到 MCP server 的受保护
 
 这里的 `T_mcp` 和 `T_issue` 是教学符号，不代表 token 必须是可供 client 解码的 JSON Web Token（JWT，JSON 网络令牌）。资源服务器要用它支持的验证方式确认令牌签发者、有效性、受众和权限；client 不能靠读取一个不透明 token 来替服务端完成授权检查。
 
-每个调用目标都要按其支持的方式校验收到的 token：是否来自预期 issuer（签发者）、是否仍有效、audience 是否覆盖这个 resource、scope 是否足够。授权服务器支持时，client 用 OAuth `resource` 参数请求目标资源；这不会令所有 provider 都返回同一种 access token。refresh token 只发给它所属的授权服务器 token endpoint，不能发给工单 API，更不能放进模型上下文。
+每个调用目标都要按其支持的方式校验收到的 token：是否来自预期 issuer（签发者）、是否仍有效、audience 是否覆盖这个 resource、scope 是否足够。授权服务器支持时，client 可以用 OAuth `resource` 参数指明要访问的目标资源；但不同 provider 返回的 access token 格式和受众表示仍可能不同。refresh token 只发给它所属的授权服务器 token endpoint，不能发给工单 API，更不能放进模型上下文。
 
 ## 一次长任务怎样在授权、刷新、审批和写入间前进？
 
 ### 先绑定 grant，再保存不含凭据的运行状态
 
-一次授权码流程在浏览器跳转前就先建立 PKCE 交易；授权码只在回调验证完成后兑换一次：
+授权码流程使用 PKCE（Proof Key for Code Exchange，授权码交换证明密钥）：应用在浏览器跳转前先建立一笔 PKCE 交易，授权码只在回调验证通过后兑换一次。
+
+**图 1：PKCE 交易、授权码兑换与 grant 绑定**
 
 ![PKCE 交易校验、一次 code 兑换、provider 账号确认与 grant 绑定](resources/delegated-oauth-grant.svg)
 
@@ -64,13 +66,17 @@ access token 可能早于长任务到期，任务也可能跨越多小时甚至�
 
 通过检查后，运行时取出或换取面向工单 API 的 access token，通过 TLS 保护的 HTTPS 请求发送，并在 HTTP `Authorization: Bearer <T_issue>` 请求头携带它；正文携带 issue 草稿，操作键则按接收端契约放在其规定的位置。MCP 入站的 `T_mcp` 不会转给工单服务；`T_issue` 也不会回传到模型。日志可记录用户/tenant、resource、scope、动作摘要、运行标识、审批 ID、操作键与结果状态，但不能记录 bearer 字符串、refresh token 或可还原它们的 URL。
 
+**图 2a：发送前的刷新复核、租约检查与发送意图持久化**
+
 ![审批后的刷新复核、租约检查与发送意图持久化](resources/delegated-oauth-pre-send-gate.svg)
 
-图 2a 的输出是已获批摘要和已持久化的发送意图；只有这条状态交给下图发送。拒绝、过期授权、草稿变化、取消或租约条件失败都在发送前停止。
+图 2a 的输出是已获批的动作摘要和已持久化的发送意图；只有到达这个状态，才交给图 2b 发送。拒绝、过期授权、草稿变化、取消或租约条件失败都在发送前停止。
 
 ### 发送意图持久化后怎样处理远端结果？
 
-本例发往工单 API 的请求通过 TLS 保护的 HTTPS 发送，`T_issue` 放在 HTTP `Authorization: Bearer` 请求头，操作键的位置由接收端契约决定。下面只跟踪发送之后的远端结果与本地写回。
+请求的传输方式已在上一节说明；本节只跟踪发送之后的远端结果与本地写回。
+
+**图 2b：发送后按响应和当前租约写回结果**
 
 ![发送意图持久化后按响应和当前租约写回结果](resources/delegated-oauth-result-writeback.svg)
 
@@ -79,7 +85,7 @@ access token 可能早于长任务到期，任务也可能跨越多小时甚至�
 >
 > 假设工单 API 返回 `{"id":"ISSUE-842","status":"created"}`，当前 attempt 仍持有有效租约，应用就条件写回 issue ID 与收据，并向用户显示“已创建 ISSUE-842：build 42：空名称测试未按预期拒绝请求”。这里的 `ISSUE-842` 是工单服务的合成回执；`actual=200` 是测试观察。
 
-发送前，worker 以条件事务核验当前 attempt、匹配的租约代次且租约尚未过期、预期运行与操作状态、获批动作摘要、当前写授权和取消标记，再持久化 `effect_in_flight`（副作用已进入发送流程）、原操作键与动作摘要；之后才发送请求。条件检查或更新失败时，必须停止且不得发送。这项事务只约束本地状态，不能向远端服务栅栏旧 worker：旧 worker 若在提交发送意图后暂停，即使租约已过期、恢复器已把状态转成 `effect_unknown`（远端结果未知），它恢复后仍可能发出请求。资源 API 的明确拒绝是否证明未产生副作用，要按 provider 的响应契约判断；超时、断连或无法确认的响应都不能一概解释为“没发生”。
+发送前，worker 以条件事务核验当前 attempt、匹配的租约代次且租约尚未过期、预期运行与操作状态、获批动作摘要、当前写授权和取消标记，再持久化 `effect_in_flight`（副作用已进入发送流程）、原操作键与动作摘要；之后才发送请求。条件检查或更新失败时，必须停止且不得发送。这项事务只约束本地状态，无法让远端服务拒绝旧 worker 的请求（即不能对远端做 fencing）：旧 worker 若在提交发送意图后暂停，即使租约已过期、恢复器已把状态转成 `effect_unknown`（远端结果未知），它恢复后仍可能发出请求。资源 API 的明确拒绝是否证明未产生副作用，要按 provider 的响应契约判断；超时、断连或无法确认的响应都不能一概解释为“没发生”。
 
 若收到成功响应，只有在条件事务确认当前 attempt 仍持有未过期租约时，worker 才能写回 issue ID、操作收据和动作结果。若运行带有 `cancel_requested`，应保留这项请求；当前恢复流程确认外部动作成功后，可按实际结果将运行转为 `completed` 并停止其余步骤。只有确认没有已发出或仍可能提交的副作用时，运行才终结为 `canceled`。条件失败的旧 worker 不得直接完成该运行，应把响应交由持有当前租约的恢复流程核对并条件写回。若发送超时，或 attempt 在记录终态前失联，先前写入的 effect_in_flight 无法证明请求没有发出；租约过期后，恢复器须保留原键和摘要、条件转入 effect_unknown，再按下文的受控重放或合法对账条件处理，不能退回普通草稿步骤。相反，若刷新返回 invalid_grant 或撤权发生在持久化发送意图之前，当前 worker 明确停止且没有更早的未结清 attempt，则停止新写入本身不构成 effect_unknown。
 
@@ -91,15 +97,25 @@ access token 可能早于长任务到期，任务也可能跨越多小时甚至�
 
 `effect_unknown` 表示请求可能已到远端，但运行时没有可判定的最终结果。先保留原操作键、动作摘要、attempt 与取消状态。原键受控重放要求原 grant 仍有当前写权限、精确审批仍有效、任务未取消、没有未结清或仍可能迟发的旧 attempt，且接收端仍在去重窗口内保证同键同载荷幂等。任一条件不满足就不新写；只有具备合法读取能力时才能查询对账，查询不确定时保持未知。
 
+**图 3a：结果未知时的同键重放或合法读取对账**
+
 ![effect_unknown 的安全同键重放与合法读取对账](resources/delegated-oauth-unknown-reconcile.svg)
 
-图 3a 选择原授权下的安全重放或合法读取对账。查询成功且权威地无结果后，还必须排除旧 attempt 迟发和接收端延迟提交；查询错误、结果不确定或不能排除时均保持 `effect_unknown`。只有“权威确认无副作用”这个输出进入下图；找到 issue 则按当前租约流程收尾。
+图 3a 在两条路径中选一条：原授权下的安全重放，或用合法读取能力对账。查询成功且权威地确认没有结果后，还必须排除旧 attempt 迟发和接收端延迟提交；查询出错、结果不确定或无法排除时，都保持 `effect_unknown`。只有“权威确认无副作用”这个结果进入图 3b；找到 issue 则按当前租约流程收尾。
 
 确认无副作用后，若要恢复写入，run 必须仍活动且未取消，当前 grant 必须有目标写权限，精确审批必须仍有效；换用新 grant 时须对同一精确草稿重新审批。旧 attempt 必须已结清且不可能迟发，接收端同键同载荷去重窗口仍须有效。更改目标或正文不得复用原操作键。
 
+**图 3b：权威确认无副作用后的恢复写入门槛**
+
 ![权威确认无副作用后的恢复写入门槛](resources/delegated-oauth-resume-after-no-effect.svg)
 
-用户主动在 provider 撤权、应用收到撤权通知或 refresh 返回 invalid_grant 时，运行时将 grant 标记为不可写，清除或撤销其秘密引用，并使依赖该 grant 的待审批草稿过期。若发送意图尚未持久化、当前 worker 已明确停止且没有更早的未结清 attempt，运行只有在未取消时才等待重新授权并重新核验；这本身不表示有远端副作用待核对。若动作已取消且没有旧 attempt，停止该动作，不能在重新授权后按原键提交一个此前未发送的效果。若旧 effect_in_flight attempt 失联，则不能据此推断请求未发出，恢复时按 effect_unknown 处理；撤权期间只允许合法查询和不会新建效果的对账，取得新 grant 后是否能恢复写入见下列条件。恢复器不得为已取消的运行发起新写入。若撤权后已发请求返回明确成功响应，仍须按前文相同的当前 attempt 与尚未过期租约条件写回 issue ID 和收据；失去资格的 worker 必须把回执交给当前租约恢复流程核对并条件写回。只有响应缺失或无法判定时才保持未知。RFC 7009 描述的是 client 通知授权服务器撤销 token；provider 可以同时影响同一 grant 的其他 token。资源服务器是否即时拒绝已经签发的 access token，取决于其验证和撤销机制。因此，撤权不会自动取消已在网络上的请求，也不能由 Agent 用一句“已取消”来代替状态对账。
+用户主动在 provider 撤权、应用收到撤权通知，或 refresh 返回 invalid_grant 时，运行时把 grant 标为不可写，清除或撤销其秘密引用，并让依赖该 grant 的待审批草稿过期。接下来按发送意图是否已持久化分情况处理：
+
+- **发送意图尚未持久化**，当前 worker 已明确停止，且没有更早的未结清 attempt：这不表示有远端副作用待核对。运行未取消时，等待用户重新授权并重新核验；动作已取消时直接停止，不能在重新授权后按原键补发一个从未发出的效果。
+- **旧的 effect_in_flight attempt 失联**：不能据此推断请求没发出，按 effect_unknown 恢复。撤权期间只允许合法查询和不会产生新效果的对账；取得新 grant 后能否恢复写入，见下文条件。恢复器不得为已取消的运行发起新写入。
+- **撤权后，已发出的请求返回明确成功**：仍按前文条件写回——只有当前 attempt 持有未过期租约时才写回 issue ID 和收据；失去资格的 worker 把回执交给持有当前租约的恢复流程核对并条件写回。只有响应缺失或无法判定时，才保持未知。
+
+撤权也不会立刻让所有令牌失效。RFC 7009 描述的是 client 通知授权服务器撤销 token；provider 可以同时让同一 grant 下的其他 token 失效，但资源服务器是否立即拒绝已签发的 access token，取决于它的验证和撤销机制。因此，撤权不会自动取消已在网络上的请求，Agent 也不能用一句“已取消”代替状态对账。
 
 当原 grant 或精确审批已失效，或同键同载荷重放条件不成立，而 `create_issue` 结果仍未知时，停止新写入并保留原操作键、请求摘要与取消状态；这条恢复路线只在仍有**合法且有效**的读取能力时查询同一操作键。若原 grant 和批准的动作仍有效、任务未取消、没有未结清或仍可能迟发的旧 attempt，且远端去重窗口仍开，可按图 3a 的安全条件重放原键和原载荷。原键不能配不同 payload：
 

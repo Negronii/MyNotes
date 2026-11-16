@@ -1,10 +1,12 @@
 # 主机怎样把 MCP 工具从发现接到有权限的执行？
 
-**案例背景。** 以下是合成教学案例。用户在应用已有的一次运行 `run-r42-7` 中询问 build 42 为什么失败。host 接入日志 MCP 服务、检查工具目录并把允许的输入结构交给模型后，模型提出只读调用 `read_build_log(build_id=42)`，调用标识为 `c1`。工具返回测试名、预期值和实际值；本篇走完从连接到结果进入下一次模型输入的过程。
+**案例背景。** 以下是合成教学案例。用户在应用的一次运行（运行 ID `run-r42-7`）中询问 build 42 为什么失败。host（承载模型的应用，下文详述）先接入日志 MCP 服务、检查工具目录，再把允许使用的工具输入结构交给模型；模型随后提出只读调用 `read_build_log(build_id=42)`，调用标识为 `c1`。工具返回测试名、预期值和实际值。本章走完整个过程：从建立连接，到工具结果进入下一次模型输入。
 
 Model Context Protocol（MCP，模型上下文协议）规定 host（承载模型的应用）、client（host 中负责 MCP 协议通信的连接器）和 server（提供工具、资源或提示的服务）之间如何交换 JSON-RPC（JSON 远程过程调用）消息。runtime（运行时）是 host 中实际执行请求并检查策略的部分。MCP 统一发现和传输格式，但不替 host 决定哪些工具可见，不替 server 验证某条业务记录属于哪个用户，也不替模型工具调用授予执行权。
 
-以下流程和本章协议细节采用 MCP 2026-07-28，并按两个阶段展开：先固定连接、发现并取得工具目录，再执行 `c1` 并把结果交给下一次模型请求。本例假设 `server/discover` 可公开访问，而第一个受保护请求 `tools/list` 返回 401；client 由此取得面向日志 MCP resource 的 `T_mcp`，再带令牌重发列举请求。每条含 JSON-RPC 请求的 HTTP 请求都独立携带协议元数据；只有访问受保护 resource 时，才附上适用于该 resource 的令牌。
+本章的流程和协议细节以 MCP 2026-07-28 版规范为准，分两个阶段展开：先固定连接、发现 server 并取得工具目录，再执行 `c1` 并把结果交给下一次模型请求。本例假设 `server/discover` 可公开访问，而第一个受保护请求 `tools/list` 返回 401；client 由此取得面向日志 MCP resource 的 `T_mcp`，再带令牌重发列举请求。每条含 JSON-RPC 请求的 HTTP 请求都独立携带协议元数据；只有访问受保护 resource 时，才附上适用于该 resource 的令牌。
+
+**图 1：发现 server、首次受保护 `tools/list` 收到 401、用户授权并带 `T_mcp` 重试**
 
 ![资源发现、首次受保护 tools/list 挑战、用户授权及 T_mcp 重试顺序](resources/mcp-tool-discovery-auth.svg)
 
@@ -77,7 +79,7 @@ Mcp-Method: server/discover
 
 示例的 clientCapabilities 是空对象，表示这次请求没有声明额外的 client 能力；它与 server 在响应中宣告的 tools 能力属于相反方向。
 
-HTTP transport 还把部分消息字段映射到请求头。对每条包含 JSON-RPC 请求的 POST，都要带 `Content-Type: application/json`、`Accept: application/json, text/event-stream`、`MCP-Protocol-Version` 和 `Mcp-Method`。协议版本头必须与请求体 `_meta` 的版本一致。`Mcp-Name` 仅对 `tools/call`、`resources/read` 和 `prompts/get` 这类带目标名称或 URI 的请求要求；`tools/list` 和 `server/discover` 没有这个头。本篇只展示包含 JSON-RPC 请求的 POST；客户端 notification 的头要求应查阅该版 Streamable HTTP 传输规范，不能从这些请求示例推断。stdio 传输没有这些 HTTP 头，但仍按每条 JSON-RPC 请求携带 `_meta`。
+HTTP transport 还把部分消息字段映射到请求头。对每条包含 JSON-RPC 请求的 POST，都要带 `Content-Type: application/json`、`Accept: application/json, text/event-stream`、`MCP-Protocol-Version` 和 `Mcp-Method`。协议版本头必须与请求体 `_meta` 的版本一致。`Mcp-Name` 仅对 `tools/call`、`resources/read` 和 `prompts/get` 这类带目标名称或 URI 的请求要求；`tools/list` 和 `server/discover` 没有这个头。本章只展示包含 JSON-RPC 请求的 POST；该版规范在 Streamable HTTP 上没有定义 client 发往 server 的核心 notification，也没有规定 notification POST 的请求头，不能从这些请求示例推断。stdio 传输没有这些 HTTP 头，但仍按每条 JSON-RPC 请求携带 `_meta`。
 
 ## host 怎样先列举工具？
 
@@ -140,9 +142,13 @@ Mcp-Method: tools/list
 
 图 1 输出的是 `tools/list` 的工具目录；本例首次访问受保护的目录时也已取得面向日志 MCP resource 的 `T_mcp`。host 再按可信来源与当前任务筛选工具，把 `read_build_log` 的输入 schema 映射给模型。只有在模型收到这项工具契约后，它才提出 `c1`。
 
+**图 2a：host runtime 放行与 resource 令牌检查**
+
 ![runtime 与 resource 令牌检查：失败交回 c1，令牌通过交图 2b](resources/mcp-tool-call-runtime-token.svg)
 
 图 2a 负责 host 放行和目标 resource 的令牌验证。runtime 拒绝、终态协议或传输错误、令牌无效且未恢复，都走同一个 `c1` 失败出口；工具级错误和具体失败原因保留在结果条目中。
+
+**图 2b：scope 与记录权限检查，通过后读取日志**
 
 ![scope 与记录权限通过后读取 build 42 日志；终态交图 3](resources/mcp-tool-call-read.svg)
 
@@ -197,13 +203,15 @@ Mcp-Name: read_build_log
 
 图 2a/2b 的每个终态都是图 3 的输入。有可匹配 id 的 JSON-RPC 响应时，client 按该 id 找回原请求。该版部分错误响应允许不带 id，例如 `HeaderMismatchError`；在本例一条 POST 对应一条 MCP 请求的 HTTP 路径中，host 可按原 HTTP 请求保存的上下文关联 `c1` 并构造失败条目。若响应 id 不匹配，也按该请求的协议故障处理，不能把它猜配给另一条工具调用。其他 host/runtime 终态失败同样关联仍待完成的 `c1`，保留错误来源。若 server 返回 `resultType: "input_required"`，`c1` 仍未结束；host 先按下文的 MRTR 流程继续，不能提前送入下一次模型请求。终态读取成功时，host 以 JSON-RPC `id=17` 找回对应模型调用 `c1`，并将经过约束的观察放入模型 API 要求的匹配工具结果条目。
 
+**图 3：把 MCP 响应或 host 失败关联回 `c1`，交给下一次模型输入**
+
 ![将 MCP 响应或 host 失败构造为匹配 c1 的结果并交下一次模型输入](resources/mcp-tool-result-correlation.svg)
 
 下一次请求的输入中应能看到类似这样的语义内容：`tool_result(call_id="c1", content="step=unit-tests; test=reject_empty_name; expected=400; actual=200; exit_status=1")`。这展示的是调用与结果的对应关系；各模型 API 的实际消息格式会不同。该值说明测试断言的预期与实际不同；它没有证明源代码中的根因。MCP 结果也不是模型的最终答复，更不是已授予后续写操作的批准。
 
 ## 工具调用需要客户端输入时怎样继续？
 
-本例的响应为 `resultType: "complete"`，可以直接配回模型的 `c1`。如果 MCP server 返回 `resultType: "input_required"`，这表示原请求尚未完成。2026-07-28 版的 Multi Round-Trip Requests（多轮往返，MRTR）可能提供 `inputRequests`（需要客户端处理的输入请求）和/或不透明的 `requestState`。client/runtime 按用户交互与能力策略处理 `inputRequests` 中的 elicitation（向用户询问输入）、sampling（请求客户端模型生成）或 roots（读取客户端提供的根目录），并把匹配的 `inputResponses` 带回原请求；若没有 `inputRequests`，client 可以直接重试。若有 `requestState`，client 必须原样回传，不能读取或修改；server 必须把它视为不可信输入，并在它会影响授权或业务逻辑时验证完整性。重试沿用同一原始方法和参数，但使用新的 JSON-RPC id；这些续接字段只属于该请求。host 仍须核验用户、目标和当前授权。只有最终完成的工具结果才作为 `c1` 的结果交给模型。若用户取消、未提供所需输入，或策略不允许续接，host 不再重试，明确结束 pending `c1`，并将取消或具体失败关联到 `c1`；后续若继续模型流程，必须传入与 `c1` 匹配的失败条目，不能伪造成功结果或让 `c1` 悬而未决。MCP server 的这段往返不会自动生成一条新的模型 tool call。
+本例的响应为 `resultType: "complete"`，可以直接配回模型的 `c1`。如果 MCP server 返回 `resultType: "input_required"`，表示原请求还没完成，server 需要 client 先提供输入。2026-07-28 版用 Multi Round-Trip Requests（多轮往返，MRTR）处理这种情况：旧版中 server 可以直接向 client 发请求，此版改为把需求嵌在结果里。结果中可能包含 `inputRequests`（需要客户端处理的输入请求）和/或不透明的 `requestState`。client/runtime 按用户交互与能力策略处理 `inputRequests` 中的 elicitation（向用户询问输入）、sampling（请求客户端模型生成）或 roots（读取客户端提供的根目录），并把匹配的 `inputResponses` 带回原请求；若没有 `inputRequests`，client 可以直接重试。若有 `requestState`，client 必须原样回传，不能读取或修改；server 必须把它视为不可信输入，并在它会影响授权或业务逻辑时验证完整性。重试沿用同一原始方法和参数，但使用新的 JSON-RPC id；这些续接字段只属于该请求。host 仍须核验用户、目标和当前授权。只有最终完成的工具结果才作为 `c1` 的结果交给模型。若用户取消、未提供所需输入，或策略不允许续接，host 不再重试，明确结束 pending `c1`，并将取消或具体失败关联到 `c1`；后续若继续模型流程，必须传入与 `c1` 匹配的失败条目，不能伪造成功结果或让 `c1` 悬而未决。MCP server 的这段往返不会自动生成一条新的模型 tool call。
 
 ## MCP 访问令牌为什么只能发给目标 MCP server？
 

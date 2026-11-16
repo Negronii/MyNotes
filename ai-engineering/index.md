@@ -4,13 +4,13 @@
 
 ## 从问题开始
 
-- [AI 服务如何将一条消息变成完整回答？](systems/from-message-to-answer.md) — 沿一个构建失败问题，走完模型推理、日志查询和返回解释的过程。
-- [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)——从同一构建已获授权的 `c1` 日志继续，检索现行 HTTP 合约与 CI 规则，判断预期状态码是否正确、失败是否该重跑。
+- [AI 服务如何将一条消息变成完整回答？](systems/from-message-to-answer.md)——跟随一个“构建为什么失败”的问题，走完模型推理、日志查询和返回解释的全过程。
+- [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)——接着上一条路线里的同一次构建：从已获授权读取的日志 `c1` 出发，检索现行 HTTP 契约与 CI 规则，判断预期状态码是否正确、失败是否该重跑。
 - [如何判断 AI 系统是否满足任务契约？](evaluation/llm-evaluation-methods.md)——用代表性任务对照基线和候选版本，再看生产结果。
 
 ## 论文与文章
 
-- [AI 好文集](../review/ai-literature-index.md) — 按主题查找值得读的来源，以及解释其贡献的笔记。
+- [AI 好文集](../review/ai-literature-index.md)——按主题查找值得读的来源，以及解释其贡献的笔记。
 
 ## Reading order / 阅读顺序
 
