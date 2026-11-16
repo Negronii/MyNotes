@@ -1,36 +1,36 @@
 # 报表任务的发布确认、消费者确认与业务完成各证明什么？
 
-案例中，账户 acct-17 发起 report 42 的 CSV 导出；断线后调用方仍要能查状态，并在成功后按授权下载私有对象。application programming interface（API，应用程序接口）在一个数据库事务里创建稳定 job ID（任务 ID）`job-demo-731`、待发布的 outbox（事务发件箱）意图和一个等待槽。等待槽是数据库中的准入计数：每个尚未领取的逻辑排队轮次占一个；领取后归还；重试或租约恢复器重新排队时再次预留；重复消息不增槽。它不是 RabbitMQ 的 consumer prefetch（消费者预取上限），也不是 BullMQ 的 job lock（任务锁）。客户端 idempotency key（幂等键）`report-demo-208`、报表 ID 42 与 job ID 是不同身份；读取报表状态、完成一个 job 和读取结果对象也是不同用户结果。
+**案例：** 账户 `acct-17` 发起报表 42 的 CSV 导出；调用方断线后仍要能查询状态，并在成功后按授权下载私有结果对象。API (应用程序接口) 在一个数据库事务里创建稳定的 job ID（任务 ID）`job-demo-731`、一条待发布的 outbox（事务发件箱）意图和一个等待槽。等待槽是数据库中的准入计数：每个尚未被领取的排队轮次占一个，被领取时归还；重试或租约恢复器重新排队时再预留一个；重复消息不占新槽。它既不是 RabbitMQ 的 consumer prefetch（消费者预取上限），也不是 BullMQ 的 job lock（任务锁）。客户端的 idempotency key（幂等键）`report-demo-208`、报表 ID 42 和 job ID 是三种不同的身份；读取报表状态、完成一个 job、读取结果对象，也是三种不同的用户结果。
 
-这条路径有三个能被不同组件观察的事实：数据库是否持久接受 job；broker（消息代理）是否按所配置的路由与持久性契约接受一次发布；应用是否提交了最终业务结果。relay（转发进程）把 outbox 意图发给 broker。publisher confirm（发布者确认）只证明 broker 侧的发布边界；consumer acknowledgement（消费者确认，ACK）只结束 broker 对当前 delivery（消息投递）的待确认状态。按应用的恢复合同，ACK 前还可以是成功、失败、取消等已提交终态，或已持久安排好的重试/接管路径；它本身不证明报表成功。只有 `succeeded` 与私有 object key（对象键）一起提交，才是本例的业务完成。各事实不能互相推导。
+这条路径上有三个分别由不同组件观察的事实：数据库是否持久接受了 job；broker（消息代理）是否按配置的路由与持久性约定接受了一次发布；应用是否提交了最终业务结果。relay（转发进程）负责把 outbox 意图发给 broker。publisher confirm（发布者确认）只证明 broker 接受了发布；consumer acknowledgement（消费者确认，ACK）只结束 broker 对当前 delivery（消息投递）的待确认状态。按本例的恢复约定，worker 在 ACK 之前必须已提交某个终态（成功、失败或取消），或已持久安排好重试或接管；因此 ACK 本身并不证明报表成功。只有 `succeeded` 与私有 object key（对象键）一起提交，才算本例的业务完成。这三个事实不能互相推导。
 
 ![outbox intent 从数据库经 relay 发布到 RabbitMQ；每条 publisher channel 同时只保留一条在途 publish，以当次 return 与 confirm 决定对应 intent 是否可标记 published](resources/queue-publish-confirm.svg)
 
-图一使用 RabbitMQ 的 mandatory 发布：如果整条路由没有 queue 接收，broker 会先发 `basic.return`，随后仍可能发 confirm ACK。因此，本例只有收到并核对本次 confirm ACK、没有本次 `basic.return`，且预期目标拓扑与持久性条件均满足，才将该 outbox intent 标为 `published`。每条 publisher channel 只有一次在途发送，使回执能对应到单次发布；未知时弃用旧 channel 再重发，具体关联方式在下一节展开。
+图一中的发布带有 RabbitMQ 的 `mandatory` 标志：如果没有任何 queue 能接收这条消息，broker 会先发回 `basic.return`，随后仍可能发出 confirm ACK。因此，本例只有在核对到本次的 confirm ACK、没有收到本次的 `basic.return`，且目标拓扑和持久性条件都符合预期时，才把这条 outbox 意图标为 `published`。每条 publisher channel 同时只有一次在途发送，这样回执才能对应到唯一一次发布；结果不明时，弃用旧 channel 再重发。具体的关联方式在下一节展开。
 
-`published` 是 relay 记录的发布结果，不是 worker 开始执行的前提。broker 可以先把消息交给 worker，relay 之后才收到 confirm、回写 outbox；图二从消息到达 worker 继续，不需要等待这次回写。
+`published` 只是 relay 记录的发布结果，不是 worker 开始执行的前提。broker 可能先把消息投递给 worker，relay 之后才收到 confirm 并回写 outbox；图二从消息到达 worker 开始，不需要等这次回写。
 
 ![成功分支中工作进程条件领取、持久业务结果与 ready 意图，再向 RabbitMQ ACK 的顺序](resources/queue-consumer-ack.svg)
 
-图二只画成功分支。worker（工作进程）先取得本进程物理执行槽，再在领取事务中同时递增 attempt（尝试号）、写入有界租约并归还逻辑等待槽；对象写好后，成功状态、对象引用与 `report.ready` outbox 意图在同一数据库事务提交，再按当前 RabbitMQ delivery tag 单条 ACK。取消、失败、持久重试和租约恢复分支见下文。
+图二只画成功分支。worker（工作进程）先取得本进程的一个物理执行槽（同时能运行的任务数上限），再在领取事务中递增 attempt（尝试号）、写入有期限的租约，并归还数据库里的等待槽；结果对象写好后，把成功状态、对象引用与 `report.ready` outbox 意图放在同一个数据库事务中提交，最后按当前 RabbitMQ delivery tag 单条 ACK。取消、失败、持久重试和租约恢复等分支见下文。
 
-没有数据库与 broker 共享的原子事务时，持久 outbox 消除“数据库已提交、但进程在发布前崩溃”的双写空档；relay 和 worker 仍须接受重复。这里不把“最终业务效果只发生一次”简称为 exactly-once（恰好一次）：它依赖应用状态条件、幂等键、远端效果契约和恢复路径，而不是 broker 的一次确认。
+数据库和 broker 之间没有共享的原子事务。持久 outbox 消除的是“数据库已提交、进程却在发布前崩溃”这一双写空档；relay 和 worker 仍然必须容忍重复。本文不把“最终业务效果只发生一次”简称为 exactly-once（恰好一次），因为它靠的是应用的状态条件、幂等键、远端的效果约定和恢复路径，而不是 broker 的某一次确认。
 
 ## 发布者确认只回答 broker 是否接收
 
-relay 先为发布 channel 启用 publisher confirms（AMQP 0-9-1 的 `confirm.select` 或客户端对应 API）；`mandatory` 本身不会开启 confirm，它只影响不可路由时是否退回消息。
+relay 先为发布用的 channel 开启 publisher confirms（AMQP 0-9-1 的 `confirm.select`，或客户端库的对应 API）。`mandatory` 本身不会开启 confirm，它只决定消息无法路由时是否退回。
 
-publisher confirm 覆盖 publisher（发布者）到 RabbitMQ 的通信。它不知道 worker 是否已收到、确认或完成消息。如果 broker 接收了 publish，但 confirm 在网络中丢失，relay 无法区分“broker 未收到”和“broker 已收到但回复丢失”，重发便可能为同一 job 产生重复载荷。outbox 每次调度意图有独立唯一 ID，relay 用这个 ID 更新相应的发布状态；消息载荷只需 job ID。
+publisher confirm 只覆盖 publisher（发布者）到 RabbitMQ 这一段，它不知道 worker 是否已经收到、确认或完成消息。如果 broker 已接收消息、confirm 却在网络中丢失，relay 无法区分“broker 没收到”和“已收到但回复丢了”，重发就可能为同一个 job 产生重复消息。每次调度产生的 outbox 意图都有独立的唯一 ID，relay 用它回写对应的发布状态；消息载荷里只需带 job ID。
 
-confirm 的含义还受消息和 queue（队列）类型影响。RabbitMQ exchange（交换器）按 binding（绑定）把 publish 路由到零个或多个 queue；publisher confirm 不是路由保证。mandatory 发布的不可路由消息会以该次 publish 的 basic.return（不可路由返回通知）先于 confirm ACK 返回，因此必须将同一次发布的 return 和 confirm 一起关联；即使有 confirm ACK 且没有 return，也只能说明至少路由到一个 queue。备用 exchange（alternate exchange）可能把消息送往别处，所以预先核验交换器、绑定和目标 queue，不能只以“没有 return”判断目标正确。普通 durable queue 中的 persistent 消息在持久数据写入磁盘后才确认；quorum queue 在 quorum 副本接受并确认后才确认。放在 durable queue 中的 transient 消息即使会写到磁盘，也会在节点重启时被丢弃；要保留重启后的消息，队列和消息持久性都要满足所需契约。
+confirm 的含义还取决于消息和 queue（队列）的类型。RabbitMQ 的 exchange（交换器）按 binding（绑定）把消息路由到零个或多个 queue，publisher confirm 并不保证路由成功。带 `mandatory` 的不可路由消息，会先收到该次发布的 `basic.return`（不可路由退回通知），再收到 confirm ACK，所以必须把同一次发布的 return 和 confirm 放在一起判断。即使收到 confirm ACK 且没有 return，也只说明消息至少进了一个 queue：alternate exchange（备用交换器）可能把它送到别处，所以要事先核验交换器、绑定和目标 queue，不能只凭“没有 return”判断目标正确。对于普通（classic）durable queue 中的 persistent 消息，broker 在数据写入磁盘后才确认；quorum queue 则在多数副本接受后才确认。放进 durable queue 的 transient 消息即使写过磁盘，节点重启时也会被丢弃；要让消息在重启后保留，队列和消息都必须是持久的。
 
-outbox relay 按 intent 读取待发记录，发布它指向的稳定 job ID；publish attempt 的 channel 与 confirm 序号只在内存里关联到这条发送，数据库回写仍以 intent ID 为条件。`basic.ack`/`basic.nack` 在 channel 上带发布序号，可能用 `multiple=true` 一次确认此前多个序号；单条在途约定下，relay 仍核对当前发送对应的 channel 和序号。`basic.return` 是另一条异步回执，不带 confirm 序号；RabbitMQ 保证 mandatory 且不可路由的 return 先于该 publish 的 confirm，单条在途约定让它对应当前唯一未决发送。只有本次 confirm ACK 已按 channel 和序号核实、没有本次 `basic.return`、目标拓扑已核验且所选队列的持久性条件已满足，才把该 intent 标为 `published`。NACK、return、channel 异常/关闭、confirm 缺失或结果未知时保留 intent；若结果未知，关闭并弃用旧 channel 后才由新 channel 重发。这样不能消除 broker 已接受但数据库尚未回写时的重复：RabbitMQ 不按业务 job ID 替应用去重。数据库事务和 RabbitMQ 事务不是一个原子事务，worker 必须按持久 job 状态幂等领取。账户报表如何把 job、outbox 和等待槽同事务提交见[怎样设计一个可持久查询的账户报表？](../architecture/system-design-fundamentals.md)。
+具体关联方式如下。relay 逐条读取待发的 outbox 意图，发布它指向的稳定 job ID；这次发送用的 channel 和 confirm 序号只保存在内存里，数据库回写仍以意图 ID 为条件。`basic.ack`/`basic.nack` 携带 channel 上的发布序号，也可能用 `multiple=true` 一次确认之前的多个序号；在“每条 channel 只有一次在途发送”的约定下，relay 仍要核对当前发送的 channel 和序号。`basic.return` 是另一条异步回执，不带 confirm 序号；RabbitMQ 保证带 `mandatory` 的不可路由消息先收到 return、再收到 confirm，而单条在途的约定让这个 return 只可能对应当前唯一的未决发送。只有本次 confirm ACK 已按 channel 和序号核实、没有本次的 `basic.return`、目标拓扑已核验、所选队列的持久性条件也满足，才把该意图标为 `published`。遇到 NACK、return、channel 异常或关闭、confirm 缺失或结果不明时，都保留这条意图；结果不明时，要先关闭并弃用旧 channel，再用新 channel 重发。这样仍无法消除“broker 已接受、数据库还没回写”造成的重复：RabbitMQ 不会按业务 job ID 替应用去重。数据库事务和 RabbitMQ 也不在同一个原子事务里，所以 worker 必须根据持久的 job 状态幂等地领取任务。账户报表如何把 job、outbox 和等待槽同事务提交见[怎样设计一个可持久查询的账户报表？](../architecture/system-design-fundamentals.md)。
 
 ## 消费者在业务结果持久后才 ACK
 
-本节标题概括成功路径；所有 ACK 都要求应用已持久化终态，或已提交可恢复的重试/接管路径。RabbitMQ AMQP 0-9-1 用当前接收 channel 上的 delivery tag 确认一条投递，不能拿业务 job ID 代替；并行处理时使用单条 ACK（multiple=false），若设 multiple=true，会一并确认该 channel 上更早的未确认 delivery，可能误确认尚未完成的工作。basic.ack 是发送给 broker 的单向方法，没有逐条 ACK 回执；连接在发送后断开时，ACK 是否到达 broker 是未知的，重投后仍按 job 状态判断。
+本节标题说的是成功路径；更一般地，任何 ACK 都要求应用已持久化终态，或已提交可恢复的重试或接管路径。RabbitMQ 的 AMQP 0-9-1 用接收该消息的 channel 上的 delivery tag 确认一条投递，不能用业务 job ID 代替。并行处理时要单条 ACK（`multiple=false`）；若设 `multiple=true`，会连带确认该 channel 上更早的所有未确认 delivery，可能把尚未完成的工作也确认掉。`basic.ack` 是发给 broker 的单向消息，broker 不会逐条回执；如果连接在发送后断开，ACK 是否到达就是未知的，消息重投后仍要按 job 状态判断。
 
-队列载荷只带稳定 job ID，不带 attempt（尝试号）。delivery 是唤醒 worker 查询权威 job 状态的线索，不能自行生成尝试。worker 先取得本进程的可用物理执行槽，再竞争数据库领取；领取事务只允许 `queued` 且 `available_at` 已到期的任务，把状态改为 `running`、增加 attempt、设置有界 `lease_expires_at`，并归还当前等待槽。首次任务可把 `available_at` 设为当前时刻；若需要延迟重试，就把它作为 job 的持久字段，并确保到期时有已提交的新 outbox intent 或其他可靠唤醒。
+消息载荷只带稳定的 job ID，不带 attempt。delivery 只是唤醒 worker 去查询权威 job 状态的线索，本身不能产生一次尝试。worker 先取得本进程的空闲物理执行槽，再去数据库竞争领取：领取事务只接受状态为 `queued` 且 `available_at` 已到的任务，把状态改为 `running`、attempt 加一、设置有期限的 `lease_expires_at`，并归还当前等待槽。首次执行时可把 `available_at` 设为当前时刻；需要延迟重试时，就把它作为 job 的持久字段，并确保到时有一条已提交的新 outbox 意图或其他可靠的唤醒方式。
 
 收到重复 delivery 后，先读权威 job，再决定是否能 ACK 当前这条消息：
 
@@ -42,11 +42,11 @@ outbox relay 按 intent 读取待发记录，发布它指向的稳定 job ID；p
 | 运行中租约过期 | `status='running'` 时 worker 不能自助领取下一代；到期只让独立恢复器有资格竞争接管。 | 恢复器把取消、尝试耗尽、容量失败或重新排队决定持久提交后，旧 delivery 才有可确认的终态或新唤醒路径；接管提交前不能把过期当作旧 attempt 已失权。 |
 | 已到终态 | `succeeded`、`failed` 或 `cancelled` 时不再计算；按既定清理和可查询结果策略处理。容量耗尽以 `failed` 加 `error_code='capacity_exhausted'` 表示，不另造状态。 | 终态、错误码及必要清理/保留决定已持久后可 ACK。 |
 
-取消也要按状态归还等待槽。API 取消一个仍为 `queued` 的 job 时，在一个条件事务中将其改为 `cancelled`、保存清理/保留决定，并只归还该排队轮次仍占有的槽；已发布或之后才发布的唤醒消息只会读到终态，不会领取或增加 attempt。领取与取消并发时由同一 job 行的条件更新决胜：若领取先提交，领取事务已归还等待槽，API 只能对 `running` 写 `cancel_requested=true`，不能再次归还等待槽；若取消先提交，worker 无法领取。
+取消同样要按当前状态处理等待槽。API 取消一个仍为 `queued` 的 job 时，在一个条件事务里把它改为 `cancelled`、保存结果对象的清理或保留决定，并归还这个排队轮次占着的槽；已经发布或之后才发布的唤醒消息只会读到终态，不会再领取或增加 attempt。领取与取消同时发生时，由同一 job 行上的条件更新决出胜负：若领取先提交，等待槽已在领取时归还，API 只能对 `running` 的 job 写入 `cancel_requested=true`，不能再归还一次；若取消先提交，worker 就领取不到。
 
-已领取当前 attempt 的 worker 要在有界工作步骤和成功提交前检查取消标志。看到 `cancel_requested=true` 时，由持有该 attempt 的 worker 以 `job_id`、`status='running'`、当前 attempt 和取消标志为条件提交 `cancelled` 与清理/保留决定；它不再归还共享等待槽，因为领取时已归还，只在停止执行时释放自己的物理槽。取消事务若先赢，成功更新将返回零行；若成功终态先赢，取消请求读到该终态，不改写它。若 worker 在持久取消终态前失联，保留可恢复信号，由租约到期后的恢复器先提交 `cancelled` 与同一清理/保留决定；delivery 仅在该决定持久后确认。
+持有当前 attempt 的 worker 要在每个有限的工作步骤之间、以及提交成功之前检查取消标志。看到 `cancel_requested=true` 时，由它以 `job_id`、`status='running'`、当前 attempt 和取消标志为条件，提交 `cancelled` 以及清理或保留决定。它不再归还共享等待槽（领取时已经归还），只在停止执行时释放自己的物理槽。如果取消事务先提交，成功更新会返回零行；如果成功终态先提交，取消请求会读到这个终态，不去改写它。如果 worker 在持久写入取消终态之前失联，就保留可恢复的信号，由租约到期后的恢复器提交 `cancelled` 和同样的清理或保留决定；这条 delivery 要等该决定持久化后才能 ACK。
 
-这里的 canonical 租期合同与下文独立 SQL 例的严格租期判断不同：领取时在同一事务中设置有界 `lease_expires_at`；到期只赋予数据库恢复器尝试接管的资格，不自动撤销旧 worker 的提交权。旧 worker 与恢复器以 job 当前状态、attempt 和 `cancel_requested` 条件竞争；谁先提交，谁决定后续状态。取消仍能单独阻止成功。只有恢复器接管事务先提交后，状态/代次栅栏才阻止旧 attempt 继续提交。领取、重试、恢复使用哪个 broker，也不改变数据库是业务状态权威这一点。
+本报表案例采用的租期约定（下文称 canonical 合同，以区别于后文独立 SQL 示例的严格租期变体）是：领取时在同一事务里设置有期限的 `lease_expires_at`；租约到期只让数据库恢复器获得尝试接管的资格，并不自动取消旧 worker 的提交权。旧 worker 与恢复器都以 job 的当前状态、attempt 和 `cancel_requested` 为条件竞争，谁先提交，谁决定后续状态；取消请求仍能单独阻止成功。只有恢复器的接管事务先提交后，状态和 attempt 构成的栅栏才会阻止旧 attempt 继续提交。无论领取、重试和恢复用的是哪种 broker，数据库都是业务状态的权威来源。
 
 把同一个 `job-demo-731` 的接管时序展开，就能看清过期、接管和 ACK 不是同一个事件：
 
@@ -59,9 +59,9 @@ outbox relay 按 intent 读取待发记录，发布它指向的稳定 job ID；p
 | 恢复器先提交、未取消、尚有尝试额度且有空槽 | 同一事务将 job 改回 `queued`，清除旧租约。 | 原子预留一个等待槽并插入新的 `pending` outbox；relay 后续重发该意图。 | 重排、槽位和唤醒意图均持久后，旧 delivery 可 ACK。 |
 | B 领取新唤醒 | `queued → running`，`attempt=2`，同一事务写新有界租约。 | B 领取时归还新排队轮次的等待槽。 | A 随后迟到的成功条件更新因状态或 attempt 不匹配而返回零行。 |
 
-若 A 与恢复器同时争夺有效状态，条件更新以行锁与提交顺序选出一个胜者。租约到期本身不等于恢复器已提交；worker 也不能只因时钟已过期就自助递增 attempt。对 `running` 的重复投递，仅在独立恢复器确实会在租约到期后持续接管时，才能安全 ACK；否则要保留唤醒信号。
+如果 A 与恢复器同时争夺状态，条件更新会靠行锁和提交顺序选出唯一的胜者。租约到期本身不等于恢复器已经提交接管；worker 也不能仅凭时钟显示已过期，就自己给 attempt 加一。对处于 `running` 的 job 收到的重复投递，只有在独立恢复器确实会在租约到期后可靠接管时，才能安全 ACK；否则要保留唤醒信号。
 
-对象存储不是数据库事务的一部分。worker 先写 attempt 专属的私有对象键，再以 `job_id`、`status='running'`、当前 attempt 和 `cancel_requested=false` 为条件提交 `succeeded` 与对象 key。为保证“已就绪”只对应实际成功的结果，job 更新和 `report.ready` outbox 也必须在同一数据库事务中提交。以下假定 `report_outbox.operation_key` 有唯一约束，outbox 还记录 attempt、正文字节摘要和待发布正文；示例正文是紧凑 UTF-8 JSON，摘要按正文这些字节计算：
+接下来看成功提交本身。对象存储不在数据库事务之内，所以 worker 先把结果写到这个 attempt 专属的私有对象键，再以 `job_id`、`status='running'`、当前 attempt 和 `cancel_requested=false` 为条件，提交 `succeeded` 与对象键。为了保证“已就绪”通知只对应真正成功的结果，job 更新和 `report.ready` outbox 也必须在同一个数据库事务中提交。下面假定 `report_outbox.operation_key` 有唯一约束，outbox 还记录 attempt、正文的 SHA-256 摘要和待发布正文；示例正文是紧凑的 UTF-8 JSON，摘要按这些字节计算：
 
 ~~~sql
 BEGIN;
@@ -85,7 +85,7 @@ RETURNING operation_key, attempt;
 COMMIT;
 ~~~
 
-只有 `INSERT ... RETURNING` 得到一行且应用确认 `COMMIT` 成功后，才能 ACK 当前 delivery；此时状态、私有对象引用和 ready 意图来自同一次提交。若 CTE 没有完成行，INSERT 也没有 ready 行，worker 必须按零行分支重新读 job 和 outbox。若 `COMMIT` 已发出但结果未观察到，持久结果未知，不能 ACK 或宣称回滚；可用新数据库连接查 job 与 ready 意图，或让 broker 重投后按权威状态恢复。**零行结果不能按普通成功 ACK，也不能与领取时遇到重复 delivery 混为一谈。** worker 重新读取 job 与 outbox，判定后续工作是否已由数据库持久接管：
+只有 `INSERT ... RETURNING` 返回一行、且应用确认 `COMMIT` 成功后，才能 ACK 当前 delivery；这时状态、私有对象引用和 ready 意图来自同一次提交。若名为 `completed` 的 CTE（`WITH` 子句）没有更新任何行，INSERT 也不会写出 ready 行，worker 必须走下面的零行分支，重新读取 job 和 outbox。若 `COMMIT` 已发出却没收到结果，持久结果就是未知的，既不能 ACK，也不能宣称已回滚；可以用新的数据库连接查询 job 和 ready 意图，或者等 broker 重投后按权威状态恢复。**零行结果不能当作普通成功去 ACK，也不要和领取时遇到的重复 delivery 混为一谈。** worker 要重新读取 job 与 outbox，判断后续工作是否已由数据库持久接管：
 
 - 若 job 已是成功、失败或取消终态，且结果/清理策略已持久，当前 delivery 已无待办工作，可 ACK。
 - 若恢复器已将旧 attempt 原子重排为 `queued`，等待槽和新 outbox intent 都已提交，旧 delivery 可 ACK；relay 按 `available_at` 到期发布新唤醒，领取谓词阻止旧消息提前运行。
@@ -103,39 +103,39 @@ COMMIT;
 | 数据库已提交 `succeeded`，ACK 是否到达未知 | delivery 可再次到达 | 后继 worker 读到终态后 ACK，不重复生成/覆盖结果。 |
 | 先 ACK，再提交结果前崩溃 | broker 可删除 delivery，不会因这条消息自动重投 | 任务是否可恢复只取决于独立、持久的租约扫描和重排；没有它，job 可能永久滞留。 |
 
-若对象已写而数据库提交失败，会留下不可见对象。使用 attempt 隔离的不可变 key；清理时逐个检查候选对象键不被任何已提交 job 结果引用，而不要求整个 job 没有结果——例如 B 的不同键已成为结果，A 的键仍是孤儿。
+如果对象已经写入、数据库提交却失败，就会留下一个没人引用的对象。因此对象键要按 attempt 区分且不可覆盖；清理时逐个检查候选键是否被任何已提交的 job 结果引用，而不是要求整个 job 没有结果。例如 B 的对象键已成为结果，A 的对象键仍是需要清理的孤儿。
 
-清理计时从数据库提交 attempt 已不再当前的栅栏或 job 终态开始，不从租约过期开始。只有运行环境能保证旧 attempt 此后不能再发起 PUT，且 fence 时已开始的 PUT 有最大持续时间，才能在此上界、对象存储传播余量和安全宽限都过去后执行一次清扫。若停顿的旧进程仍可能在 fence 后开始 PUT，单轮扫描不足以证明它不会再出现；旧写入能力被撤销或到期后，还要从最后可能开始 PUT 的时刻等待最大上传时长与宽限，再做最终清扫。权限未设有限失效时间时，持续重扫候选键；每次删除前重查该键是否仍被结果引用。
+清理的计时起点，是数据库提交了“该 attempt 已不再是当前 attempt”的栅栏或 job 终态的时刻，而不是租约过期的时刻。只有当运行环境能保证旧 attempt 之后不会再发起 PUT，且栅栏生效时已在进行的 PUT 有最长耗时上限，才能在这个上限、对象存储的传播余量和安全宽限都过去后，做一次清扫。如果停顿的旧进程仍可能在栅栏之后才开始 PUT，单轮扫描就无法保证孤儿对象不会再出现；要等旧进程的写入权限被撤销或过期，再从它最后可能开始 PUT 的时刻起，等过最长上传时间和宽限期，再做最终清扫。若写入权限没有设定失效时间，就要持续重扫候选键；每次删除前都重新确认该键没有被结果引用。
 
-数据库成功提交而 ACK 是否到达未知时，job 终态和 attempt 条件要让重复 handler 只确认已完成，不能再次产生业务副作用或覆盖引用。
+数据库已成功提交、但不知道 ACK 是否送达时，job 终态和 attempt 条件要保证重复到来的处理器只确认“已完成”，不会再产生业务副作用或覆盖结果引用。
 
 ## 重试、并发窗口与顺序会改变负载
 
-RabbitMQ 4.4 的手动确认模式下，未 ACK 的 delivery 在 channel 或 connection 关闭后可被重新排队；这是 RabbitMQ 的行为，不能推广到所有 broker。automatic acknowledgement（自动确认）模式在 broker 发送后就视为已交付，worker 若尚未持久结果便崩溃，broker 不会为这条 delivery 自动重投。可靠工作使用手动 ACK，并在 ACK 前持久化终态或可恢复的后续路径。发送后 ACK 是否到达 broker 是未知的网络结果；basic.ack 不会再得到逐条 ACK 回执。
+前面的分支都假设 broker 会重投未确认的消息。在 RabbitMQ 4.4 的手动确认模式下，未 ACK 的 delivery 会在 channel 或 connection 关闭后重新入队；这是 RabbitMQ 的行为，不能推广到所有 broker。automatic acknowledgement（自动确认）模式则在 broker 发出消息时就视为已交付，worker 若在持久化结果前崩溃，broker 不会重投这条 delivery。所以可靠的任务处理要用手动 ACK，并在 ACK 之前持久化终态或可恢复的后续路径。
 
-当前 attempt 遇到不可重试的业务错误时，以仍持有该 `running` attempt、且未请求取消为条件，先持久写入 `failed` 和有界错误码，再 ACK。若取消已请求或其他状态转移先赢，则重读 job，走相应的取消或恢复分支。
+当前 attempt 遇到不可重试的业务错误时，以 job 仍是该 attempt 的 `running` 状态且未请求取消为条件，先持久写入 `failed` 和取值有限的错误码，再 ACK。如果取消已被请求，或其他状态转移先提交了，就重新读取 job，走相应的取消或恢复分支。
 
-worker 遇到可重试的瞬时错误时，不能只对旧 delivery 执行 nack(requeue=true) 并期望它自然成为下一 attempt：job 若仍在 running，条件领取仍会拒绝它，快速重排还可能形成热循环。先按 job/attempt 条件锁定并重读取消状态：若已请求取消，持久写 `cancelled` 并完成清理决定；若尝试耗尽，持久写 `failed` 和有界错误码；若没有可预留的等待槽，在本例 240 个共享槽的上限下持久写 `status='failed'`、`error_code='capacity_exhausted'`。只有未取消、仍可重试且有容量时，才在同一数据库事务中把 job 改回 `queued`、写 `available_at=next_retry_at`、清除旧 lease、重新预留一个等待槽并插入新的 pending outbox intent。新时间、槽位和唤醒意图提交后才 ACK 旧 delivery；relay 在时间到期后发布，worker 领取条件再次核验数据库时钟。格式错误、无法映射有效 job 的消息不能无限重排；将它隔离到配置好的 dead-letter queue（死信队列，DLQ）或可告警拒绝路径。
+worker 遇到可重试的瞬时错误时，不能只对旧 delivery 执行 `nack(requeue=true)`，指望它自然变成下一次 attempt：job 仍处于 `running`，条件领取会拒绝它，快速重排还可能形成热循环。正确做法是先按 job/attempt 条件锁定该行，重新读取取消状态：若已请求取消，持久写 `cancelled` 并完成清理决定；若尝试耗尽，持久写 `failed` 和有界错误码；若没有可预留的等待槽，在本例 240 个共享槽的上限下持久写 `status='failed'`、`error_code='capacity_exhausted'`。只有未取消、仍可重试且有容量时，才在同一数据库事务中把 job 改回 `queued`、写 `available_at=next_retry_at`、清除旧 lease、重新预留一个等待槽并插入新的 pending outbox intent。新的可执行时间、槽位和唤醒意图都提交后，才 ACK 旧 delivery；relay 在时间到后发布新意图，worker 领取时再按数据库时钟核验一次。格式错误或对应不到有效 job 的消息不能无限重排，应隔离到配置好的 dead-letter queue（死信队列，DLQ），或走会触发告警的拒绝路径。
 
-RabbitMQ 的 consumer prefetch（消费者预取上限）限制尚未 ACK 的 delivery 数，决定 broker 可提前压到 worker 缓冲区多少任务。对 Advanced Message Queuing Protocol 0-9-1（高级消息队列协议，AMQP 0-9-1），`basic.qos(count)` 在 RabbitMQ 中按每个 consumer 分别施加；例如同一 channel 上三个 consumer 各设 4，可同时各有 4 条未确认消息。值 `0` 表示无限；若消费者没显式配置，broker 也可应用管理员设置的默认值。全局 per-channel QoS 从 RabbitMQ 4.3 起弃用并默认禁用。预取不是业务并发保证：还要看 handler 并发、进程内队列、数据库/对象存储容量和可用执行槽；过大预取会把等待从 broker 搬进 worker 内存，也延长停机时未确认工作的回收。
+重试和重投都会增加负载，broker 侧能限制的是预取量。RabbitMQ 的 consumer prefetch（消费者预取上限）限制每个 consumer 未 ACK 的 delivery 数，也就决定了 broker 能提前把多少任务塞进 worker 的缓冲区。在 RabbitMQ 的 AMQP 0-9-1（Advanced Message Queuing Protocol，高级消息队列协议）实现中，`basic.qos(count)` 按每个 consumer 分别生效；例如同一 channel 上三个 consumer 各设 4，就能各自同时持有 4 条未确认消息。值 `0` 表示不限；consumer 没有显式设置时，broker 也可能套用管理员配置的默认值。按整个 channel 计算的 global QoS 从 RabbitMQ 4.3 起已弃用并默认禁用。预取量不等于业务并发度：还要看处理器并发数、进程内队列、数据库和对象存储容量，以及可用的执行槽。预取过大只会把等待从 broker 挪进 worker 内存，并让 worker 停机时有更多未确认工作需要回收。
 
-若业务要求按账户、订单或报表顺序处理，先定义顺序键与所需的提交顺序。first-in, first-out（先进先出，FIFO）队列只能描述某些消息的排队/交付次序；多个 consumer 并行执行时，较早 delivery 仍可能较晚完成。要保持业务完成顺序，需按键串行处理、单一有序分区，或用持久序号条件更新拦住越序提交。
+如果业务要求按账户、订单或报表的顺序处理，先定义顺序键和需要保证的提交顺序。first-in, first-out（先进先出，FIFO）队列只描述消息的排队和投递次序；多个 consumer 并行执行时，较早投递的消息仍可能较晚完成。要保证业务完成顺序，需要按键串行处理、使用单一有序分区（见 [Kafka 分区与偏移量](kafka-partitions-and-offsets.md)），或用持久序号做条件更新，拦住越序的提交。
 
 ## BullMQ 的租锁失效为什么会让任务重复执行？
 
-BullMQ 6.7.5（2026-11-11 发布）将 job 状态存于 Redis。若 PostgreSQL job 行仍是报表状态、attempt、租期和结果引用的权威来源，BullMQ 只负责唤醒与调度。每条 outbox 意图有稳定 UUID；将 `outbox-` 前缀与该 UUID 拼成 BullMQ custom job ID 可避开纯数字和冒号。相同意图重发复用该 ID，恢复器生成的新 outbox 意图使用新 ID。BullMQ 6.7.5 官方文档要求 custom job ID 不能只由数字组成，也不能包含冒号；版本源码的校验会拒绝 `42` 和带冒号的 `a:b`，但前导零数字串 `0042` 会通过该校验块，因此不要依赖源码边缘行为，始终添加非数字前缀。custom ID 仅在该 queue 内唯一，job 保留时重复 add 被忽略，移除或自动清理后同 ID 可再次添加。
+前面以 RabbitMQ 为例；换成基于 Redis 的 BullMQ，重复执行的来源有所不同。BullMQ 6.7.5（2026-11-11 发布）把 job 状态存放在 Redis 中。如果报表状态、attempt、租期和结果引用仍以 PostgreSQL 的 job 行为准，BullMQ 就只负责唤醒和调度。每条 outbox 意图都有稳定的 UUID，在前面加上 `outbox-` 作为 BullMQ 的自定义 job ID，就能避开纯数字和冒号。同一条意图重发时复用这个 ID，恢复器生成的新意图使用新 ID。BullMQ 6.7.5 官方文档要求自定义 job ID 不能只由数字组成，也不能含冒号；该版本源码的校验会拒绝 `42` 和 `a:b`，但带前导零的 `0042` 能通过，所以不要依赖这种边缘行为，始终加上非数字前缀。自定义 ID 只在所属 queue 内唯一：job 还保留着时，重复 add 会被忽略；job 被移除或自动清理后，同一 ID 可以再次添加。
 
-BullMQ worker 领取 job 后取得有时限的 Redis lock，并需在处理期间续租。进程异常退出、Redis 连接故障或 Node.js 事件循环被 CPU 密集工作占满，都可能使续租未及时到达；stalled checker（停滞任务检查器）随后把 job 放回 waiting 让 worker 重跑，超过 maxStalledCount 后转入 failed 集合。BullMQ 6.7.5 默认 maxStalledCount 为 1；普通处理器异常的 attempts/backoff 重试与锁丢失后的 stalled 恢复计数是两条路径。观察 stalled 事件并让 CPU 工作周期性把控制权交还事件循环；调大 lock duration 会延迟识别真实崩溃，单独调时间不会阻止业务副作用重复。
+BullMQ worker 领取 job 时会取得一把有时限的 Redis lock，处理期间要不断续期。进程异常退出、Redis 连接故障，或 Node.js 事件循环被 CPU 密集工作占满，都可能让续期没有按时完成；随后 stalled checker（停滞任务检查器）会把 job 放回 waiting，让 worker 重新执行，停滞次数超过 `maxStalledCount` 后转入 failed。BullMQ 6.7.5 的 `maxStalledCount` 默认为 1。处理器抛出普通异常时按 attempts/backoff 重试，锁丢失则走 stalled 恢复，两者分别计数。应监控 stalled 事件，并让 CPU 密集工作定期把控制权交还事件循环；调大 lock duration 会推迟发现真正的崩溃，单靠调整时间也无法阻止业务副作用重复发生。
 
-在本报表合同中，Redis lock 只影响 BullMQ 何时重新投递，不授予或撤销报表写权限。每个外部业务意图仍绑定 job、attempt、请求摘要和数据库状态栅栏；对象键带 attempt，由当前状态/attempt 的数据库条件提交决定哪个对象引用生效。外部操作键应以权威且唯一的 job ID 与操作类型组成，例如 job-demo-731:report-ready:v1；客户端幂等键 report-demo-208 可能只在账户/主体范围内唯一，不能未经范围限定就假设全局唯一。该外部 operation key 可以包含冒号，但不能直接用作 BullMQ job ID。远端按稳定操作键与相同请求摘要去重，并提供按键查询或明确保留期：查询确认完成就记录并停止；结果仍未知（包括查询不可用）且同键同摘要保证仍有效，才可重试原键；否则保留未知并对账，不换新键盲目再发。BullMQ/Redis 的持久化需由部署显式配置；若允许已确认 job 丢失，运维还须从长期停滞的数据库 queued job 发现并重建唤醒。通用未知效果边界见[请求超时后如何确认结果并安全重试？](api-reliability-and-async-delivery.md)。
+在本报表的约定中，Redis lock 只影响 BullMQ 何时重新投递，既不授予也不撤销报表的写权限。每个外部业务意图仍绑定到 job、attempt、请求摘要和数据库状态栅栏；对象键带有 attempt，哪个对象引用生效，由按当前状态和 attempt 做条件提交的数据库事务决定。外部操作键应由权威且唯一的 job ID 加操作类型组成，例如 `job-demo-731:report-ready:v1`；客户端幂等键 `report-demo-208` 可能只在账户或主体范围内唯一，不加范围限定时不能假设它全局唯一。这类外部操作键可以含冒号，但不能直接用作 BullMQ job ID。远端服务应按稳定的操作键和相同的请求摘要去重，并提供按键查询或明确的保留期：查询确认已完成，就记录结果并停止；结果仍未知（包括查询不可用），且同键同摘要的去重保证仍然有效，才可以用原键重试；否则保留未知状态并人工对账，不要换个新键盲目重发。BullMQ/Redis 的持久化需要部署时显式配置；如果允许已确认的 job 丢失，运维还要能发现数据库里长期停在 `queued` 的 job，并重建唤醒。通用未知效果边界见[请求超时后如何确认结果并安全重试？](api-reliability-and-async-delivery.md)。
 
 ## SQL job 表怎样短时领取并阻止过期 worker 回写？
 
-若任务状态已经权威地保存在 PostgreSQL，也可把 job 表用作 queue-like（类似队列的）工作池。FOR UPDATE SKIP LOCKED 让并发领取者跳过当前被其他事务锁住的候选行，避免把同一个候选同时发给多个 worker；它刻意返回不完整视图，只适合这种竞争领取，不适合作为普通一致性读取。领取事务选一行、提交 running 与递增 attempt/lease 后立即释放行锁；昂贵工作在事务外执行，短事务降低锁等待。这个选择把轮询、候选扫描和行锁压力留在数据库；需要观察空轮询、领取时延与锁等待，负载升高时再决定是否需要独立 broker。
+既然任务状态本来就以 PostgreSQL 为准，也可以干脆不用 broker，把 job 表直接当作类似队列的工作池。`FOR UPDATE SKIP LOCKED` 让并发的领取者跳过已被其他事务锁住的候选行，避免同一行同时交给多个 worker；它有意返回不完整的视图，只适合这种竞争领取，不适合普通的一致性读取。领取事务选中一行，提交 `running`、attempt 加一和新租约后立即释放行锁；耗时的工作在事务之外执行，短事务能减少锁等待。代价是轮询、候选扫描和行锁的压力都落在数据库上，需要观察空轮询、领取延迟和锁等待，负载升高后再决定是否引入独立的 broker。
 
-以下独立 SQL 合成任务 ID 为 `pg-job-demo-42`，与上方 RabbitMQ 报表 `job-demo-731` 无关。代码可在 PostgreSQL 14+ 的单个 `psql` 会话从头运行；`psql` 默认每条独立语句自动提交，显式 `BEGIN/COMMIT` 块是示例事务边界，临时表仅在该会话有效。本例使用 PostgreSQL 默认的 `READ COMMITTED`；每条新语句取得新快照，所以在锁住 job 行的事务中，后续 `record_processing` 命令按当时已提交的状态判断当前写权。所有能写同一 job 意图的 worker 都必须先锁该 job 行，避免唯一键冲突来自绕过状态门的并发写入。若系统采用 `REPEATABLE READ` 或 `SERIALIZABLE`，必须按该隔离级别处理并发异常并在需要时重试整笔事务，不能假设仍看到同一结果。表结构故意缩小到 attempt、租约与意图，未建模 canonical 案例的账户授权、共享 240 等待槽或外部 broker。
+下面的独立 SQL 示例使用合成任务 ID `pg-job-demo-42`，与上文 RabbitMQ 案例的 `job-demo-731` 无关。代码可以在 PostgreSQL 14 及以上版本的单个 `psql` 会话中从头运行：`psql` 默认每条语句自动提交，显式的 `BEGIN/COMMIT` 块标出示例的事务边界，临时表只在该会话内有效。本例使用 PostgreSQL 默认的 `READ COMMITTED` 隔离级别，每条语句都取新快照，所以在已锁住 job 行的事务里，后面的 `record_processing` 会按当时已提交的状态判断当前是否有写权。所有能为同一 job 写入意图的 worker 都必须先锁住该 job 行，以免绕过状态检查的并发写入引发唯一键冲突。若系统使用 `REPEATABLE READ` 或 `SERIALIZABLE`，就要按该隔离级别处理并发异常，必要时重试整个事务，不能假设结果不变。表结构有意只保留 attempt、租约和意图，没有建模上文案例中的账户授权、240 个共享等待槽或外部 broker。
 
-这个 SQL 示例**特意采用严格租期变体**：每次领取写入 `lease_expires_at`；成功写入还要求条件 UPDATE 执行时租期仍有效，到期即拒绝旧 worker，即使恢复器尚未接管。`report.processing` 是示例中允许在最终结果前发送的事实，用来演示当前 attempt 下的唯一键与摘要判断；它与同一 job 的完成通知不同。前文 `job-demo-731` 的 canonical 合同不同：到期只让恢复器获得竞争接管资格，旧 worker 仍可在恢复器提交前先完成。一个系统必须为同一 job 状态选定一种合同，不能把两套条件混用。
+这个 SQL 示例**特意采用严格租期变体**：每次领取都写入 `lease_expires_at`，成功写入时还要求条件 UPDATE 执行的那一刻租约仍然有效；租约一到期就拒绝旧 worker，即使恢复器还没接管。这与前文 `job-demo-731` 的 canonical 合同不同：那里租约到期只让恢复器获得竞争接管的资格，旧 worker 仍可能在恢复器提交前抢先完成。一个系统必须为同一种 job 状态选定一种约定，不能混用两套条件。示例中的 `report.processing` 是允许在最终结果之前发送的“处理中”通知，用来演示当前 attempt 下的唯一键与摘要判断；它不同于完成通知 `report.ready`。
 
 先沿一次执行读结果，再按需展开后面的完整 SQL：
 
@@ -147,9 +147,9 @@ BullMQ worker 领取 job 后取得有时限的 Redis lock，并需在处理期�
 | B 正常完成 | 同一事务写 `succeeded`、`reports/42/attempt-2` 与唯一 `report.ready` 意图。 |
 | A 迟到 | attempt 与状态条件均不满足，更新零行，不覆盖 B 的对象引用。 |
 
-这个变体仍把 `report.ready` 与成功状态及对象引用放在同一 PostgreSQL 事务中。worker 先写 attempt 专属私有对象；只有成功条件更新影响一行，job 转为 `succeeded`，结果 key 与 ready outbox 意图才一起提交。若 UPDATE 返回零行，CTE `completed` 没有行，INSERT 也不写意图；因此后来失败或被取消的 attempt 不会发送“已就绪”通知。若 COMMIT 已提交但客户端没读到确认，应用应在新连接上查询持久的 job 与 outbox 表；本示例用临时表，只能在当前 `psql` 会话展示 COMMIT 后两行同时可见，连接结束后临时表也会消失。读取两行是核实事务结果，不是再次发通知。运行中的 B 若随后失联，ready 意图只会由 relay 在成功事务提交后发布；若业务终态是 `failed` 或 `cancelled`，同一事务从未创建 ready。
+这个变体同样把 `report.ready` 与成功状态、对象引用放在同一个 PostgreSQL 事务里。worker 先写入 attempt 专属的私有对象；只有成功条件更新命中一行、job 转为 `succeeded` 时，结果键和 ready outbox 意图才会一起提交。若 UPDATE 返回零行，`completed` 为空，INSERT 也不写意图，所以失败或被取消的 attempt 不会发出“已就绪”通知。若 COMMIT 已执行但客户端没收到确认，应用应在新连接上查询持久的 job 表和 outbox 表；本示例用的是临时表，只能在当前 `psql` 会话里展示 COMMIT 后两行同时可见，连接一断，临时表也随之消失。读取这两行是为了核实事务结果，不是再发一次通知。如果 B 提交成功后失联，ready 意图仍由 relay 发布；如果业务终态是 `failed` 或 `cancelled`，就从未创建过 ready 意图。
 
-`record_processing` 的结果列依次是 `authorized`、`inserted`、`existing_intent`、`same_request`。`authorized=false` 时，查询结果不返回 outbox 摘要或比较结果；worker 没有写权，必须停止本次操作。`authorized=true, inserted=true` 表示这次事务新建意图，提交后由 relay 发布。`authorized=true, inserted=false, existing_intent=true` 才表示本次有权查看已存在的唯一键：同摘要是同一持久意图，异摘要是冲突，均不新增或覆盖行。相同摘要只确认意图内容，不授予 worker 绕过 outbox 直接发送或提交 job 的权力；实际发布仍由 relay 按自己的持久状态完成。若授权成立、没有插入但也找不到既有行，说明唯一键/保留假设被破坏，应回滚并告警，不能把 NULL 当成成功。
+完整 SQL 中的预备语句 `record_processing` 负责登记 `report.processing` 意图，结果列依次是 `authorized`、`inserted`、`existing_intent`、`same_request`。`authorized=false` 表示 worker 没有写权，查询结果不会透露 outbox 摘要或比较结果，worker 必须停止本次操作。`authorized=true, inserted=true` 表示本事务新建了意图，提交后由 relay 发布。`authorized=true, inserted=false, existing_intent=true` 表示该唯一键已有意图且本次有权查看：摘要相同就是同一条持久意图，摘要不同就是冲突，两种情况都不新增或覆盖行。摘要相同只确认意图内容一致，并不允许 worker 绕过 outbox 直接发送或提交 job；实际发布仍由 relay 按自己的持久状态完成。如果有写权、没有插入、却也找不到已有行，说明唯一键或保留期的假设被破坏，应回滚并告警，不能把 NULL 当作成功。
 
 示例查询结果如下；`NULL` 表示本次没有读摘要：
 
@@ -161,11 +161,11 @@ BullMQ worker 领取 job 后取得有时限的 Redis lock，并需在处理期�
 | B 租约已过期或已请求取消 | `false, false, false, NULL` | 无写权；查询结果不返回摘要或比较结果 |
 | B 已领取 attempt 2 后的 A attempt 1 | `false, false, false, NULL` | 查询结果不返回 B 的摘要或比较结果，也不提交旧 attempt |
 
-若直接 `INSERT` 抛唯一约束异常，PostgreSQL 当前事务已失败，先回滚再在新事务核查，不能在失败事务里继续 `SELECT`。
+如果不用 `ON CONFLICT`、直接 `INSERT` 而触发唯一约束异常，PostgreSQL 的当前事务就已失败，要先回滚，再在新事务里核查，不能在失败的事务里继续 `SELECT`。
 
-`report.processing` 是可在任务完成前发出的事实，与最终的 `report.ready` 分开；后者只由成功状态更新原子生成。成功后的重投只能只读查看既有 ready 意图。若同一 operation key 的摘要不同，它是数据冲突，不能覆盖旧意图或再次发布。外部副作用仍需远端按稳定 operation key 与同一请求摘要去重；远端结果未知且没有仍有效的去重保证时，保留未知并人工对账。
+`report.ready` 只会随成功状态更新原子生成；任务成功后再收到的重投，只能只读地查看已有的 ready 意图。同一操作键若出现不同摘要，就是数据冲突，不能覆盖旧意图，也不能再次发布。外部副作用仍要靠远端按稳定的操作键和相同请求摘要去重；远端结果未知、又没有仍然有效的去重保证时，保留未知状态并人工对账。
 
-SQL 租期续期也须在锁定 job 行后，以新鲜 clock_timestamp() 检查当前状态、attempt 和未过期 lease；否则已过期 worker 可能等待锁后还把自己的租约续活。严格 SQL 变体里的租期谓词不适用于上方 canonical 报表案例。canonical 接管的完整选择、等待槽与旧 worker 时序见前文，另有[持久报表任务的状态与恢复合同](../architecture/system-design-fundamentals.md)。
+续租同样要在锁住 job 行之后，用当下的 `clock_timestamp()` 检查当前状态、attempt 和租约是否未过期；否则一个已过期的 worker 可能等到锁之后，又把自己的租约续活。严格变体里的租期条件不适用于上文的 canonical 报表案例；后者的接管选择、等待槽与旧 worker 时序见前文，以及[持久报表任务的状态与恢复合同](../architecture/system-design-fundamentals.md)。
 
 > [!example]- 完整 SQL：严格租期下的领取、意图去重与完成
 >
@@ -414,9 +414,9 @@ SQL 租期续期也须在锁定 job 行后，以新鲜 clock_timestamp() 检查�
 
 ## 观测每个交接点，不能只数 ACK
 
-单独记录 publish 尝试、confirm/return、queue depth 和 oldest-message age、unacked 数、重投、重试、ACK、DLQ、job succeeded/failed 及对象引用提交。oldest-message age 持续增长表示结果延迟，即使队列还在接受消息。broker 继续接收并不代表 worker 有容量；worker 发 ACK 也只表示应用确认到达选择的处理边界，不等于用户后来成功下载了报告。更完整的事故定位见[如何从报表服务信号定位发布故障？](observability-slos-and-incident-response.md)。
+既然每个确认只证明一段交接，观测也要分段记录：publish 尝试次数、confirm/return、queue depth（队列深度）和 oldest-message age（最老消息等待时长）、未确认数、重投、重试、ACK、DLQ、job 的 succeeded/failed，以及对象引用的提交。即使队列还在接收消息，最老消息等待时长持续增长，也说明结果在延迟。broker 还在接收，不代表 worker 有处理能力；worker 发出 ACK，也只表示应用到达了自己选定的处理边界，不等于用户后来成功下载了报表。更完整的事故定位见[怎样从报表服务信号定位发布后的故障？](observability-slos-and-incident-response.md)。
 
-调用方断线后仍从持久 job 行查询进度；只有 job 到达 `succeeded`，API 才按当前主体权限提供私有结果对象的授权下载。
+回到开头的调用方：断线后，它仍从持久的 job 行查询进度；只有 job 到达 `succeeded`，API 才按当前主体的权限提供私有结果对象的授权下载。
 
 > [!info]- 来源
 > - RabbitMQ 4.4.0（官方 Release Information 标为 2026-10-20 发布；当前文档版本为 4.4，核对于 2026-11-12）：[Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms)，publisher confirm 与 consumer ACK 的方向、delivery tag 的 channel 范围、发布序号与 `multiple` 确认、持久消息/queue 与 quorum queue 的确认责任、unroutable 消息在 confirm ACK 前发 `basic.return`、手动/自动确认及关闭 channel/connection 后的未确认消息处理；[AMQP 0-9-1 extended specification](https://github.com/rabbitmq/amqp-0.9.1-spec/blob/main/xml/amqp0-9-1.extended.xml)，`basic.return` 的方法字段不含 confirm 序号；[Java client unroutable handling](https://www.rabbitmq.com/client-libraries/java-api-guide#unroutable)，return callback 接收退回消息属性与正文；[Reliability Guide](https://www.rabbitmq.com/docs/reliability)，故障中途状态与重发；[Consumer Prefetch](https://www.rabbitmq.com/docs/consumer-prefetch)，RabbitMQ 的 per-consumer QoS、`0` 无上限、可配置默认值和 4.3 起 per-channel global QoS 弃用/默认关闭；[Release Information](https://www.rabbitmq.com/release-information)，当前维护版本。队列副本、持久性、exchange/binding/alternate exchange 和客户端 API 仍须按实际部署核实。
