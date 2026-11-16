@@ -1,8 +1,8 @@
 # Cookie 会话与 OIDC 令牌怎样建立身份？
 
-**合成案例。** `user-17` 打开 `https://reports.example.test`，准备读取租户 `tenant-a` 的报表 `42`（`Service health`）。报表应用由 Backend for Frontend（服务于前端的后端，BFF）处理浏览器请求；资源 API 位于 `api.reports.example.test`，Identity Provider（身份提供方，IdP）的固定签发者是 `https://idp.identity.test`。本例的 BFF client ID 固定为 `reports-bff-client`，IdP metadata 声明支持 RFC 9207 的 authorization-response `iss` 参数。该 IdP 签发的 ID Token 中，`iss`（签发者）是 `https://idp.identity.test`，代表用户的 `sub`（主体）是 `idp-user-4821`；应用把 `(iss, sub)` 映射到本地账户 `user-17`。这些标识和主机名都是虚构的；能否读取报表 42 仍由 API 按当前成员关系和资源状态逐次授权，见[如何逐次授权租户内的报表资源？](web-security-and-authentication.md)。
+**合成案例。** `user-17` 打开 `https://reports.example.test`，准备读取租户 `tenant-a` 的报表 `42`（`Service health`）。报表应用由 Backend for Frontend（服务于前端的后端，BFF）处理浏览器请求；资源 API 位于 `api.reports.example.test`，Identity Provider（身份提供方，IdP）的固定签发者是 `https://idp.identity.test`。本例的 BFF 在 IdP 登记的 client ID 固定为 `reports-bff-client`；IdP 的元数据（metadata）声明支持 RFC 9207 定义的授权响应 `iss` 参数，登录流程第 3 步会用到它。该 IdP 签发的 ID Token 中，`iss`（签发者）是 `https://idp.identity.test`，代表用户的 `sub`（主体）是 `idp-user-4821`；应用把 `(iss, sub)` 映射到本地账户 `user-17`。这些标识和主机名都是虚构的；能否读取报表 42 仍由 API 按当前成员关系和资源状态逐次授权，见[如何逐次授权租户内的报表资源？](web-security-and-authentication.md)。
 
-这几种凭据回答不同的问题：浏览器 Cookie 让报表应用找到自己的本地会话；OAuth 授权码流程让应用向授权服务器请求 API 访问权限；OpenID Connect（OIDC）ID Token（身份令牌）把身份提供方的认证结果交给登录客户端。ID Token 不替 API 授权，浏览器会话也不是 API Access Token（访问令牌）；访问令牌必须由授权服务器按 API 资源配置签发。本例选用后端代理浏览器请求的 BFF：Access Token 和 Refresh Token 保存在服务端，浏览器日常请求只持有不透明会话 Cookie。若用户请求可选 IdP 退出，浏览器顶层导航会附带已验证的 ID Token hint；它不是 API 凭据。
+登录过程中会出现几种凭据，它们回答不同的问题：浏览器 Cookie 让报表应用找到自己的本地会话；OAuth 授权码流程让应用向授权服务器请求 API 访问权限；OpenID Connect（OIDC）ID Token（身份令牌）把身份提供方的认证结果交给登录客户端。ID Token 不替 API 授权，浏览器会话也不是 API Access Token（访问令牌）；访问令牌必须由授权服务器按 API 资源配置签发。本例选用后端代理浏览器请求的 BFF：Access Token 和 Refresh Token 保存在服务端，浏览器日常请求只持有不透明会话 Cookie。只有在用户选择同时退出 IdP 时，浏览器才会通过顶层导航把已验证的 ID Token 作为提示（hint）带给 IdP；它不是 API 凭据（见“调用、刷新与退出”一节）。
 
 ## 登录后，Cookie 会话怎样识别请求？
 
@@ -12,7 +12,9 @@
 Set-Cookie: __Host-session=<random-opaque-id>; Path=/; Secure; HttpOnly; SameSite=Lax
 ~~~
 
-这里的 `__Host-` 前缀要求 `Secure`、`Path=/` 且不带 `Domain`。因此这个 Cookie 由 `reports.example.test` 设置并限定在该主机；它不会随发往 `api.reports.example.test` 的请求发送。`HttpOnly` 阻止脚本通过非 HTTP API 读取 Cookie，`SameSite=Lax` 允许合适的跨站顶层安全导航，但不允许它代替 CSRF 防护。RFC 10017 §6.1.3.2 推荐 host-only、HTTP-only 的会话 Cookie 配置；本例通过 `__Host-` 前缀和显式 `HttpOnly` 属性实现。确需在跨站嵌入请求中附带 Cookie 时，`SameSite=None` 必须与 `Secure` 同用；浏览器的第三方 Cookie 策略仍可能阻止它。本例的匿名事务 Cookie 也设为 `Lax`，这样 IdP 的跨站顶层 GET callback 才会带回浏览器绑定值。BFF 指南对会话 Cookie 建议 `SameSite=Strict`；本例为保留外部顶层导航使用 `Lax`，因此对所有改变状态的请求仍检查 CSRF token，并校验精确的 `Origin`。若部署能使用 `Strict`，应按实际登录回跳路径验证体验；同站的兄弟子域也可能发起跨源请求，不能只靠 SameSite。
+这里的 `__Host-` 前缀要求 `Secure`、`Path=/` 且不带 `Domain`。因此这个 Cookie 由 `reports.example.test` 设置并限定在该主机；它不会随发往 `api.reports.example.test` 的请求发送。`HttpOnly` 阻止脚本通过 `document.cookie` 等非 HTTP 接口读取 Cookie；`SameSite=Lax` 允许跨站的顶层安全方法导航（如点击链接的 GET）携带 Cookie，但不能代替 CSRF 防护。
+
+RFC 10017 §6.1.3.2 推荐 host-only、HTTP-only 的会话 Cookie 配置；本例通过 `__Host-` 前缀和显式 `HttpOnly` 属性实现。确需在跨站嵌入请求中附带 Cookie 时，`SameSite=None` 必须与 `Secure` 同用；浏览器的第三方 Cookie 策略仍可能阻止它。登录流程第 1 步的匿名事务 Cookie 也设为 `Lax`，这样 IdP 的跨站顶层 GET callback 才会带回浏览器绑定值。RFC 10017 对 BFF 会话 Cookie 建议 `SameSite=Strict`；本例为保留外部顶层导航使用 `Lax`，因此对所有改变状态的请求仍检查 CSRF token，并校验精确的 `Origin`。若部署能使用 `Strict`，应按实际登录回跳路径验证体验；同站的兄弟子域也可能发起跨源请求，不能只靠 SameSite。
 
 请求到达 BFF 后，服务端查找对应的会话记录，并检查服务端保存的过期时间、撤销状态和账户状态。Cookie 只是 HTTP 字段，有 Cookie 本身不代表请求已认证；同一机制也可承载偏好等非身份数据。此例的 Cookie 只带随机标识，不包含 `user-17`、角色或租户权限；认证成功后，会话映射到本地账户。自建会话 ID 应由密码学安全随机数生成器生成，至少有 128 位熵；业务身份和会话状态保存在服务器端，而不是从 ID 中解码。
 
@@ -51,7 +53,7 @@ OAuth 2.0 是授权框架；只有请求 OIDC 的 `openid` scope 并按 OIDC 验
 
 通过回调校验后，BFF 才拿同一事务保存的 verifier 进入后端兑换；拿到令牌后还要验证身份，才建立应用会话。
 
-4. **兑换 code。** callback 只处理固定参数并返回到固定的应用内路径，不把 `return_to` 等未验证值作为外部重定向地址。BFF 通过已验证的传输层安全（TLS）后端连接调用 Token Endpoint，发送 `grant_type=authorization_code`、code、相同的 `redirect_uri`、秘密 verifier 和 confidential client authentication。IdP 验证 code 尚未使用、绑定到该 client/redirect URI、PKCE challenge 匹配后，返回 ID Token、Access Token 以及可能的 Refresh Token。PKCE 把 code 兑换限制在持有 verifier 的本次事务；`state` 把浏览器回调绑回发起的事务；`nonce` 把 ID Token 绑回这次身份认证。三者目的不同，不能把任一响应值直接当作已验证输入。 RFC 9700 允许在确认授权服务器支持 PKCE 时依靠 PKCE 保护授权回调免受 CSRF；本例仍显式绑定并检查 Cookie、state 和 nonce。这个协议端点的保护不能代替报表业务变更请求的防伪检查。
+4. **兑换 code。** callback 只处理固定参数并返回到固定的应用内路径，不把 `return_to` 等未验证值作为外部重定向地址。BFF 通过已验证的传输层安全（TLS）后端连接调用 Token Endpoint，发送 `grant_type=authorization_code`、code、相同的 `redirect_uri`、秘密 verifier 和 confidential client authentication。IdP 验证 code 尚未使用、绑定到该 client/redirect URI、PKCE challenge 匹配后，返回 ID Token、Access Token 以及可能的 Refresh Token。PKCE 把 code 兑换限制在持有 verifier 的本次事务；`state` 把浏览器回调绑回发起的事务；`nonce` 把 ID Token 绑回这次身份认证。三者目的不同，不能把任一响应值直接当作已验证输入。RFC 9700 允许在确认授权服务器支持 PKCE 时依靠 PKCE 保护授权回调免受 CSRF；本例仍显式绑定并检查 Cookie、state 和 nonce。这个协议端点的保护不能代替报表业务变更请求的防伪检查。
 5. **验证身份并绑定本地账户。** BFF 在使用 ID Token 中的身份前，按 OIDC 规则验证签名和受信算法（或适用时使用下方所述的 Token Endpoint TLS 例外）、精确 issuer、`aud`、有效期和本次事务的 `nonce`；若请求包含 `max_age`，也检查 `auth_time`。本例的唯一受信 audience 是 `reports-bff-client`，因此 `aud` 必须只含此 client；若另一部署允许额外 audience，必须逐个明确列入信任配置并拒绝其他值。`azp` 仅在启用产生该 claim 的扩展/profile 时按其规则验证。再用稳定键 `(iss, sub)` 查找本地身份绑定。本例只有查到 `(https://idp.identity.test, idp-user-4821) → user-17` 时才识别成本地用户；不要仅凭可能变化或未验证的 email 自动合并账户。若这是把 IdP 账户链接到一个已登录的本地账户，应另外要求该本地账户的有效近期认证和明确确认，再建立唯一的 `(iss, sub)` 绑定。
 6. **建立新会话。** BFF 将身份、会话 ID、有效时间和 API grant 关联保存在服务器端，销毁匿名上下文及任何登录前 session ID，然后签发全新的 `__Host-session` Cookie。匿名 session ID 不得升级后继续复用。ID Token 用来验证面向 BFF 的身份；API Access Token 必须面向报表 API。若 IdP 没有为该 API 签发匹配 audience 和 scope 的令牌，BFF 不得把 ID Token 或其他 audience 的 Access Token 送给 API。
 
@@ -73,7 +75,9 @@ BFF 建成自己的会话后，用户才有了访问报表应用的登录态。�
 
 ![浏览器用 Cookie 调用 BFF，BFF 再用 API Access Token 调用报表 API](resources/web-sessions-and-oidc-api-call.svg)
 
-**刷新令牌。** BFF 在第一次发送 API 请求前发现 Access Token 已到期，就按同一授权 grant 取得刷新锁或合并为一个 in-flight 刷新；其他 worker 的请求等待后重新读取会话，避免并发发送同一旧 Refresh Token。持锁的请求才通过可信 TLS 连接向固定 Token Endpoint 发送 Refresh Token，并用 confidential client authentication。成功后，BFF 仍须以“会话有效且 grant/版本仍与发起刷新时相符”为条件，在释放锁前原子保存新的 Access Token；若 IdP 返回轮换的 Refresh Token，也在同一次更新中替换旧值。条件不符就丢弃结果并停止本次调用，不能因迟到的刷新响应恢复已退出或已撤销的会话。只有条件写回成功，才用新 Access Token 首次发送原 API 请求。这个并发写入约束由 BFF 实现；本地退出不能追溯取消已提交给远端的请求。若没有 Refresh Token，或 IdP 明确返回 `invalid_grant` 表示 grant/token 已无效、过期或撤销，本例停止 API 调用并要求重新授权；因为此案例把 API grant 与 BFF 会话绑定，失效 grant 也会结束这条令牌会话。若产品分开保存本地身份会话和 API grant，可只停用 grant、保留有效 Cookie，但仍须拒绝本次 API 调用。网络超时、5xx、其他不表示 grant 失效的错误或结果不明时，只失败本次 API 调用；不能据此推断 grant 已失效，也不要盲目重发旧 Refresh Token，应按错误和 IdP 恢复/幂等策略处理。IdP 可能仍保有 SSO session，因此新的授权流程不一定要求重新输入密码。Refresh Token 永不发给浏览器或 API。
+**刷新令牌。** 若 BFF 在发送 API 请求前发现 Access Token 已到期，就以该授权 grant 为单位取得刷新锁，或把并发请求合并到同一次进行中的刷新；BFF 其他进程上的请求等待刷新结束后重新读取会话，避免多个请求并发提交同一个旧 Refresh Token。持锁的请求才通过可信 TLS 连接向固定 Token Endpoint 发送 Refresh Token，并用 confidential client authentication。成功后，BFF 仍须以“会话有效且 grant/版本仍与发起刷新时相符”为条件，在释放锁前原子保存新的 Access Token；若 IdP 返回轮换的 Refresh Token，也在同一次更新中替换旧值。条件不符就丢弃结果并停止本次调用，不能因迟到的刷新响应恢复已退出或已撤销的会话。只有条件写回成功，才用新 Access Token 首次发送原 API 请求。这个并发写入约束由 BFF 实现；本地退出不能追溯取消已提交给远端的请求。
+
+刷新失败要按原因区分。若没有 Refresh Token，或 IdP 明确返回 `invalid_grant` 表示 grant/token 已无效、过期或撤销，本例停止 API 调用并要求重新授权；因为此案例把 API grant 与 BFF 会话绑定，失效 grant 也会结束这条令牌会话。若产品分开保存本地身份会话和 API grant，可只停用 grant、保留有效 Cookie，但仍须拒绝本次 API 调用。网络超时、5xx、其他不表示 grant 失效的错误或结果不明时，只失败本次 API 调用；不能据此推断 grant 已失效，也不要盲目重发旧 Refresh Token，应按错误和 IdP 恢复/幂等策略处理。IdP 可能仍保有 SSO session，因此新的授权流程不一定要求重新输入密码。Refresh Token 永不发给浏览器或 API。
 
 ![Access Token 到期时，BFF 在服务端刷新并处理拒绝分支](resources/web-sessions-and-oidc-refresh.svg)
 
