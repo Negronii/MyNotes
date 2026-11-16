@@ -1,20 +1,22 @@
 # 报表 API 与异步 worker 应由什么运行时承接？
 
-上一章从已检查的源码提交 `c4f2a91` 构建镜像，并将经过远端清单核验的 registry（镜像仓库）摘要交给后续环境。本章直接承接该摘要作为 application programming interface（应用程序接口，API）与 worker（工作进程）的运行产物；二者可以用不同启动命令运行，不重新构建。outbox relay（事务发件箱转发进程）是另一独立进程；只有实际镜像包含它的执行入口时才可复用该摘要，否则须交接 relay 自己经过核验的镜像摘要。本章说明这些运行角色怎样分别配置网络、身份、容量与停止行为。API 经 Hypertext Transfer Protocol Secure（超文本传输安全协议，HTTPS）入口提供服务；生产预发布、授权冒烟和逐步切流由[如何晋级并回滚已验证的报表服务产物？](application-deployment-and-ci-cd.md)继续说明。
+[Docker 如何把报表服务的源码构建成可运行镜像？](docker-operations.md)从已检查的源码提交 `c4f2a91` 构建镜像，并把经过远端清单核验的 registry（镜像仓库）摘要交给后续环境。本章直接用这个摘要运行 application programming interface（应用程序接口，API）和 worker（工作进程）：两者只是启动命令不同，不重新构建。outbox relay（事务发件箱转发进程）是另一个独立进程；只有镜像里确实包含它的执行入口时才能复用同一摘要，否则要交接 relay 自己核验过的镜像摘要。本章说明这些运行角色怎样分别配置网络、身份、容量和停止行为。API 经 Hypertext Transfer Protocol Secure（超文本传输安全协议，HTTPS）入口对外服务；预发布、授权冒烟检查和逐步切流见[如何晋级并回滚已验证的报表服务产物？](application-deployment-and-ci-cd.md)。
 
-合成例中，tenant-a 读取 report 42 应得到 200 和预期内容，tenant-b 猜中同一报表 ID 应得到 404。acct-17 的调用者先通过当前身份认证，并被确认属于该账户且有 `report:export` 权限；`report:read` 只允许读取，不能替代导出授权。通过授权后，API 使用 idempotency key（幂等键）`report-demo-208`，在同一个数据库事务中写入 job（任务）`job-demo-731`、transactional outbox（事务发件箱，outbox）意图，并预留一个等待槽。新任务只有在事务提交后才返回 `202 Accepted`（已受理）、稳定 job ID 和 Uniform Resource Locator（统一资源定位符，URL）形式的状态查询地址；202 只表示任务意图已受理，不表示报表已经完成或最终必然成功。每次重复请求也先重新授权，同一账户、主体和规范化请求的幂等键重放会返回原 job，不再预留新槽，同键对应不同报表参数则冲突。之后查询状态或下载结果时仍按当前调用者重新授权；排队期间 worker 也要在读取报表前复核发起人当前的导出权限。
+本章的合成案例有两类请求。**读取：**tenant-a 读取 report 42 应得到 200 和预期内容；tenant-b 即使猜中同一报表 ID，也应得到 404。**导出：**某个调用者要求导出账户 acct-17 的报表数据。它先通过身份认证，再被确认属于 acct-17 且拥有 `report:export` 权限；只有 `report:read` 不够，读取权限不能代替导出授权。
 
-等待槽是数据库维护的排队准入额度：每个未领取的排队轮次占一个，接管重排时重新预留，领取时释放；它不是 broker（消息代理）的 prefetch（预取）或锁。relay（转发进程）读取待发意图并发布到 queue（队列）；worker（工作进程）领取任务、计算结果、写入私有对象，成功时在持久提交对象引用和任务状态后才发送 consumer acknowledgement（消费者确认，ACK）。只读请求的授权结果与导出任务的成功或失败是两种不同的用户结果。本文的账号、ID 和数据均为教学用合成值。
+导出请求通过授权后，API 带着 idempotency key（幂等键）`report-demo-208`，在同一个数据库事务中写入三样东西：job（任务）`job-demo-731`、一条 transactional outbox（事务发件箱，outbox）待发意图，以及一个等待槽（下一段解释）。事务提交后，API 才返回 `202 Accepted`（已受理）、稳定的 job ID 和一个 Uniform Resource Locator（统一资源定位符，URL）形式的状态查询地址。202 只表示任务意图已被受理，不表示报表已经生成，也不保证最终一定成功。客户端重发请求时，API 同样先重新授权：同一账户、同一主体、规范化后相同的请求带着同一个幂等键重放，返回原来的 job，不再预留新槽；同一个键对应不同的报表参数，则报告冲突。之后查询状态或下载结果，也按当前调用者重新授权；任务排队期间，worker 在读取报表前还要复核发起人当前是否仍有导出权限。
+
+等待槽是数据库维护的排队准入额度，用来限制排队中的任务数：每个尚未被领取的排队轮次占一个，恢复器接管并重新排队时重新预留，worker 领取任务时释放。它不是 broker（消息代理）的 prefetch（预取），也不是锁。任务之后的流转是：relay 读取待发意图并发布到 queue（队列）；worker 领取任务、计算结果并写入私有对象存储，成功时先持久提交对象引用和任务状态，再向 broker 发送 consumer acknowledgement（消费者确认，ACK）。注意读取请求的授权结果和导出任务的成败是两种不同的用户结果。本文的账号、ID 和数据都是教学用的合成值。
 
 job、outbox 和等待槽在同一数据库事务提交，但该事务不包含 broker 写入。relay 只有在所选 broker 的发布确认、路由和持久性条件都满足后，才把对应 outbox 意图记为 `published`；这个状态只表示发送端完成发布步骤，不表示 worker 已处理或 job 已成功。broker 可在 relay 更新 outbox 行之前就投递消息，worker 也可能先完成领取，所以 `published` 不是 worker 可见消息的前置状态。若 broker 已接收消息而 relay 在更新数据库前崩溃，重试可能再次发布。队列只携带稳定 job ID，worker 仍要从数据库条件领取当前 attempt（尝试）；重复消息不能仅凭消息本身启动并行 attempt。发布者确认、消费者 ACK 和业务 job 终态是三个不同边界；本例的状态细节见[怎样设计一个可持久查询的账户报表？](../architecture/system-design-fundamentals.md)与[报表任务的发布确认、消费者确认与业务完成各证明什么？](../reliability/queue-delivery-and-acknowledgement.md)。
 
 ![浏览器经可选 content delivery network（内容分发网络，CDN）访问 API；下载时 API 授权并签发短期 URL，浏览器须能到达 Amazon Simple Storage Service（Amazon S3）HTTPS 端点且对象策略允许该请求。](resources/runtime-network-and-identities.svg)
 
-图中的 API 入口与异步任务由不同进程承接。CDN 可选：不使用时浏览器直接到 load balancer（负载均衡器）入口。应用的公共入口只提供 HTTPS（超文本传输安全协议）；下载是另一条直达对象端点的 HTTPS 路径：只有任务结果和对象引用已持久、API 按当前用户授权后，API 才签发短期 URL，浏览器随后直接向 Amazon S3 请求对象，不经过 API 数据路径。私有 bucket（存储桶）仍须允许浏览器所在网络到达 S3 端点，并在 bucket 和访问控制策略中允许该签名请求；若策略只允许来自指定 Virtual Private Cloud（虚拟私有云，VPC）endpoint（端点）的请求，未经过该端点的浏览器即使拿到正确签名也会被拒绝。对象访问 URL 是持有者即可使用的 bearer token（持有者令牌），不能当成可公开缓存的普通地址。
+图中的 API 入口与异步任务由不同进程承接。CDN 可选，不用时浏览器直接访问 load balancer（负载均衡器）入口。应用的公共入口只提供 HTTPS；下载走另一条直达对象存储端点的 HTTPS 路径：只有任务结果和对象引用已持久、API 按当前用户授权后，API 才签发短期 URL，浏览器随后直接向 Amazon S3 请求对象，不经过 API 数据路径。私有 bucket（存储桶）仍须允许浏览器所在网络到达 S3 端点，并在 bucket 和访问控制策略中允许该签名请求；若策略只允许来自指定 Virtual Private Cloud（虚拟私有云，VPC）endpoint（端点）的请求，未经过该端点的浏览器即使拿到正确签名也会被拒绝。对象访问 URL 是持有者即可使用的 bearer token（持有者令牌），不能当成可公开缓存的普通地址。
 
 ## 网络路径和身份策略分开
 
-网络路由、防火墙或安全组决定“谁能连到哪个地址”；工作负载身份和资源策略决定“该服务主体能对哪个资源做什么”；API 的业务授权再决定“当前用户能否读取 tenant-a 的 report 42、是否能导出 acct-17 的数据”。三者不能互相替代。HTTPS 加密浏览器到应用入口之间的传输，却不会替代 API 对当前主体的授权；Hypertext Transfer Protocol（超文本传输协议，HTTP）请求如何从浏览器到达响应见[浏览器请求如何到达 HTTP 响应？](../networking/http-protocols-and-websockets.md)。常见拓扑只公开应用的 HTTPS 入口；API 只接受负载均衡器送来的应用请求；数据库只允许 API、worker、outbox relay 和数据库租约恢复器各自的私有网络身份进入，例如为恢复器单独配置安全组或等效网络规则。恢复器再使用独立的数据库主体（例如 `runtime_recovery`），不借用 worker 或 relay 的凭据。浏览器直达 S3 的签名下载是独立的 HTTPS 端点，端点可达与对象授权都必须成立。各服务的数据库网络白名单仍要配合最小 SQL 权限：relay 只操作 outbox 发布意图；恢复器只读取扫描和争用所需的 job 标识、状态、attempt、lease 截止时间与取消标志，并以条件事务接管匹配 job、原子预留等待槽、写入 recovery outbox 或持久化终态。该主体不能读取报表内容，也不获准发布 broker 消息或代替 API 做用户授权。
+上图涉及三层不同的控制，它们不能互相替代：网络路由、防火墙或安全组决定“谁能连到哪个地址”；工作负载身份和资源策略决定“这个服务主体能对哪个资源做什么”；API 的业务授权决定“当前用户能否读取 tenant-a 的 report 42、能否导出 acct-17 的数据”。HTTPS 加密浏览器到应用入口之间的传输，但不能代替 API 对当前主体的授权；Hypertext Transfer Protocol（超文本传输协议，HTTP）请求如何从浏览器到达响应见[浏览器请求如何到达 HTTP 响应？](../networking/http-protocols-and-websockets.md)。常见拓扑只公开应用的 HTTPS 入口；API 只接受负载均衡器转来的应用请求；数据库只允许 API、worker、outbox relay 和数据库租约恢复器（后文“领取、恢复和 ACK”一节介绍，负责接管 worker 失联后过期的任务）各自的私有网络身份接入，例如为恢复器单独配置安全组或等效的网络规则。恢复器还使用独立的数据库主体（例如 `runtime_recovery`），不借用 worker 或 relay 的凭据。浏览器直达 S3 的签名下载走另一个 HTTPS 端点，端点可达和对象授权两者都要成立。数据库的网络白名单还要配合最小 SQL 权限：relay 只操作 outbox 发布意图；恢复器只读取扫描和争用所需的 job 标识、状态、attempt（尝试）、lease（租约）截止时间与取消标志，并用条件事务接管匹配的 job、原子地预留等待槽、写入恢复用的 outbox 意图或持久化终态。恢复器的主体不能读取报表内容，没有发布 broker 消息的权限，也不能代替 API 做用户授权。
 
 | 请求或进程 | 网络上需要到达 | 身份与数据权限边界 |
 |---|---|---|
@@ -56,7 +58,6 @@ ACK 的依据取决于数据库已持久化的结果：成功或业务失败/取
 
 “托管”减少平台运维，但不会替工作负载选择安全配置。托管数据库不会修复缺索引查询或连接风暴；托管队列也不会使非幂等 worker 在重试时安全。
 
-
 ## 按任务时长、并发和停止行为选择运行时
 
 运行时选择不是按“云上”或“无服务器”作标签，而要看工作何时开始、最长会运行多久、并发怎样到达、能否安全重试、需要哪些连接和状态，以及平台停止进程时能否完成当前交接。
@@ -73,9 +74,9 @@ ACK 的依据取决于数据库已持久化的结果：成功或业务失败/取
 
 在报表例中，HTTP API 要持续接收读请求；worker 则常驻等待队列，再访问数据库和对象存储，且在停止时要完成当前任务或安全交还 delivery（消息投递）。因此可将 API、outbox relay 与 worker 作为分开的可扩缩容服务运行；API 与 worker 可沿用 Docker 交付的同一镜像摘要并设置不同启动命令、网络和身份。relay 是否能复用该摘要取决于镜像是否包含其执行入口；若是独立构建，就要交接 relay 自己经过核验的摘要。API 与 worker 要单独配置并发和容量；relay 也独立控制，避免把它错误地包进 API 健康状态或 worker 的消息暂停开关。只有当导出任务可被拆成明确有界的事件步骤，且平台触发、重试、最大时长和连接约束都适合时，才把计算阶段拆成函数。已归档的[托管函数取舍笔记](../../archive/front-end/Deprecated_Interview_Notes/hosted-functions-tradeoffs.md)保留了旧代 Cloud Run 的历史比较；当前产品限制应以相应平台的现行文档为准。
 
-容量规划要同时核算逻辑等待槽、worker 物理执行槽和每个进程的连接池。一个教学部署若有 4 个 worker 副本、每副本 2 个进程、每进程 8 个 attempt 执行槽，则有 `4 × 2 × 8 = 64` 个物理执行槽；worker 不能靠增加 prefetch 把这 64 个槽伪装成更多并行能力。若 API 和 worker 也各按 4 副本 × 2 进程运行、每进程连接池上限为 `8 + 2`，两组分别最多占 80 个数据库连接。容量例把其他共用服务预留 40 个，配置上限为 200；在假设预算 240 下只余 40。relay、数据库恢复器、迁移工具若未纳入这 40，就必须另列预算。扩 worker 副本会同时扩执行槽和连接池上限，不能只看队列排空时间。
+容量规划要同时核算三样东西：逻辑等待槽、worker 的物理执行槽和每个进程的连接池。假设一个教学部署有 4 个 worker 副本、每副本 2 个进程、每进程 8 个 attempt 执行槽，则共有 `4 × 2 × 8 = 64` 个物理执行槽；调大 prefetch 不能让这 64 个槽变成更多的并行能力。再假设 API 和 worker 都是 4 副本 × 2 进程、每进程连接池上限为 `8 + 2 = 10`，则两组各最多占 `4 × 2 × 10 = 80` 个数据库连接，合计 160；再给其他共用服务预留 40 个，配置上限合计为 200。假设数据库连接预算为 240，还剩 40 个余量。relay、数据库恢复器和迁移工具如果不在那 40 个预留里，就要从剩余的 40 个中另行列出预算。扩容 worker 副本会同时增加执行槽和连接池上限，不能只看队列多快排空。
 
-进程收到停止信号后，各服务应立即在自己的控制面开始关闭，不等待入口传播或其他服务先结束：
+选定运行时之后，还要设计停止行为：扩缩容、部署和故障替换都会停止进程。进程收到停止信号后，各服务应立即在自己的控制面开始关闭，不等入口路由更新传播完，也不等其他服务先结束：
 
 - **API：**进程收到通知即关闭本地业务门闩，拒绝开始新业务操作，并开始排空已在途请求；同时让 readiness probe（就绪探针）返回未就绪，让平台异步更新常规路由目标。路由摘除传播期间仍可能有请求抵达，所以本地门闩不能依赖探针传播；已开始的请求须在宽限期内完成或按应用契约安全中止。然后关闭数据库连接池、线程、临时文件与 telemetry exporter（遥测导出器）。
 - **worker：**独立停止领取新的 delivery（消息投递），并对运行中 attempt 与已预取但未启动的投递分别处理。运行中的 attempt 能在截止前完成时，先持久提交业务结果再 ACK；否则不 ACK，让 broker 重新投递，数据库恢复器按租约规则接管。尚未启动的投递要按 broker 的关闭/归还契约重排。readiness probe 不会替 worker 暂停队列。
@@ -89,7 +90,7 @@ Amazon Elastic Container Service（Amazon ECS）只有在 service task 配置了
 
 ## worker 凭据怎样注入、轮换并撤销？
 
-先区分三类授权。本节从报表服务的 AWS 工作负载身份，切换到另一个独立 sender/receiver 工作负载，用一个合成 Webhook（回调通知）协议说明共享密钥轮换；它不是报表导出 worker 的职责或凭据。300 秒的签名新鲜度窗口与 `createdAt + 30 天` 投递截止时间都是该合成协议的教学常数，不是 Webhook 通用标准，也不是所有提供方的默认值。协议载荷、身份映射、重试和时间规则见[合成 Webhook 接收方如何验证并可靠受理？](../reliability/webhook-delivery-and-verification.md)。
+进程能安全停止和替换，凭据轮换才有可能：大多数注入的凭据要靠替换进程才能更新。本节先区分三类凭据，再离开报表服务，换到一个独立的 sender/receiver 工作负载，用一个合成的 Webhook（回调通知）协议说明共享密钥怎样轮换；这个 Webhook 密钥不是报表导出 worker 的职责或凭据。300 秒的签名新鲜度窗口与 `createdAt + 30 天` 投递截止时间都是该合成协议的教学常数，不是 Webhook 通用标准，也不是所有提供方的默认值。协议载荷、身份映射、重试和时间规则见[合成 Webhook 接收方如何验证并可靠受理？](../reliability/webhook-delivery-and-verification.md)。
 
 | 凭据 | 谁获授权、用来做什么 | 谁有权读取或验证 | 撤销边界 |
 |---|---|---|---|
@@ -97,13 +98,13 @@ Amazon Elastic Container Service（Amazon ECS）只有在 service task 配置了
 | Webhook HMAC（基于哈希的消息认证码）密钥 | 独立的 Webhook sender（发送端）对消息签名、receiver（接收端）验证对应来源 | 同一端点/来源的两端必须持有同一个共享密钥。ECS 启动注入时由 task execution role（任务执行角色）授权 ECS agent 读取指定 Secret ARN；task role（任务角色）只控制应用代码的运行期 AWS API 权限，不是此注入授权的来源 | 接收端停用 keyId、部署移除旧值，并停止旧 sender/receiver 进程 |
 | 用户 OAuth 2.0 grant（用户授权） | 某用户允许应用访问特定下游资源和权限范围 | 只在绑定的用户/租户/受众/scope 上下文中使用 | 用户撤权、授权到期或 provider 撤销语义；不应影响其他用户的 grant |
 
-以 ECS 为一个具体例子，容器镜像只包含代码，task definition（任务定义）引用 Secrets Manager 中的 Secret Amazon Resource Name（Amazon 资源名称，ARN），不写密钥值。task execution role（任务执行角色）授予 ECS agent 启动任务时读取对应 Secret ARN 的 `secretsmanager:GetSecretValue` 权限；若使用客户自管 AWS Key Management Service（AWS KMS，密钥管理服务）key 解密，还需要该 key 上的 `kms:Decrypt`。这项权限供 ECS agent 在启动阶段取值并注入，不直接提供给应用代码；应用自己的 task role（任务角色）只控制运行期 AWS API 动作。sender 和 receiver 可各自引用一份只含本工作负载配置的 Secret，并使用分开的 execution role 与 task role：execution role 限制 agent 能取哪些 ARN，task role 限制应用运行期能做什么。两端 Secret 中代表同一来源的 HMAC key 值仍须相同；分角色不能把共享密钥变成单向能力。
+以 ECS 为例，容器镜像只包含代码，task definition（任务定义）引用 Secrets Manager 中的 Secret Amazon Resource Name（Amazon 资源名称，ARN），不写密钥值。task execution role（任务执行角色）授予 ECS agent 启动任务时读取对应 Secret ARN 的 `secretsmanager:GetSecretValue` 权限；若使用客户自管 AWS Key Management Service（AWS KMS，密钥管理服务）key 解密，还需要该 key 上的 `kms:Decrypt`。这项权限供 ECS agent 在启动阶段取值并注入，不直接提供给应用代码；应用自己的 task role（任务角色）只控制运行期 AWS API 动作。sender 和 receiver 可各自引用一份只含本工作负载配置的 Secret，并使用分开的 execution role 与 task role：execution role 限制 agent 能取哪些 ARN，task role 限制应用运行期能做什么。两端 Secret 中代表同一来源的 HMAC key 值仍须相同；分角色不能把共享密钥变成单向能力。
 
 本例明确选用相互独立的 Linux Fargate task。Fargate 在 task 间提供隔离边界，但同一个 task 内多个容器共享该 task 的权限，不应把互不信任的应用放进同一 task。ECS on EC2 中同一宿主机上的并置 task 与宿主机访问边界不同；ECS 官方明确说明容器本身不是安全边界，严格隔离应按当前 launch type 配置和平台文档复核。task role 提供短期工作负载凭据；ECS 将凭据 URI 交给容器，支持的 AWS software development kit（软件开发工具包，SDK）标准 credential provider 可自动取得并更新凭据。应用不应把临时凭据复制成长期静态密钥。
 
 HMAC 是共享密钥消息认证码：同一 endpoint/source 的 sender 和 receiver 必须用相同 keyId 对应的同一个密钥值。持有该密钥的任一方都能计算有效签名，因此 sender/receiver 分成独立进程、execution role 与 task role 有助于限制其他 Secret 和业务动作的暴露面，却不能在密码学上保证 receiver 只能验证、不能签名。若业务要求签名权与验证权真正分离，应选用非对称签名方案。本例将 sender 的 `keyId` 与 key、receiver 的整张验证映射分别存成完整 JSON Secret；两端配置中同一 `keyId` 对应的密钥值必须一致，Secret JSON 整体内容并不相同。
 
-接收服务把整份允许的 keyId→密钥映射 Secret 注入单一环境变量 `WEBHOOK_VERIFY_KEYS_JSON`；sender 则把整份 `{"keyId":"…","key":"…"}` 配置 Secret 注入单一环境变量 `WEBHOOK_SIGNING_CONFIG_JSON`，由应用从同一份 JSON 解析 ID 与密钥。这样不会在分别注入两个值期间遇到 `AWSCURRENT` 移动，形成新 key 配旧 keyId。task execution role 只读取对应工作负载的 Secret ARN；应用 task role 不承担读取这次启动注入 Secret 的工作。ECS `valueFrom` 也允许引用完整 secret、JSON key、version-stage 或 VersionId；没有指定 stage/VersionId 时默认读取 `AWSCURRENT`，两种版本选择不能同时指定。本例跟随 `AWSCURRENT`，但每个进程只取一个完整 JSON Secret 值。对 Linux Fargate，注入特定 JSON key 或版本要求平台版本 1.4.0 或更高；注入完整 secret 至少需要 1.3.0。Secret 在 task 启动时注入，移动 staging label 不会更新在运行任务中的环境变量；必须启动新 task 或强制服务滚动部署。若固定 VersionId，则先发布引用新版本的 task definition revision，再替换 task。容器内应用、日志和调试工具都可能读环境变量，因此不要 dump 环境、在异常里回显配置，也不要把密钥放进镜像层、版本库、命令参数、前端 bundle、请求日志或模型 prompt/checkpoint。
+接收服务把整份允许的 keyId→密钥映射 Secret 注入单一环境变量 `WEBHOOK_VERIFY_KEYS_JSON`；sender 则把整份 `{"keyId":"…","key":"…"}` 配置 Secret 注入单一环境变量 `WEBHOOK_SIGNING_CONFIG_JSON`，由应用从同一份 JSON 解析 ID 与密钥。如果把 keyId 和 key 分成两个值分别注入，两次读取之间 `AWSCURRENT` 可能恰好移动，结果新 key 配上旧 keyId；放在同一个 JSON 值里就避免了这种错配。task execution role 只读取对应工作负载的 Secret ARN；应用 task role 不承担读取这次启动注入 Secret 的工作。ECS `valueFrom` 也允许引用完整 secret、JSON key、version-stage 或 VersionId；没有指定 stage/VersionId 时默认读取 `AWSCURRENT`，两种版本选择不能同时指定。本例跟随 `AWSCURRENT`，但每个进程只取一个完整 JSON Secret 值。对 Linux Fargate，注入特定 JSON key 或版本要求平台版本 1.4.0 或更高；注入完整 secret 至少需要 1.3.0。Secret 在 task 启动时注入，移动 staging label 不会更新在运行任务中的环境变量；必须启动新 task 或强制服务滚动部署。若固定 VersionId，则先发布引用新版本的 task definition revision，再替换 task。容器内应用、日志和调试工具都可能读环境变量，因此不要 dump 环境、在异常里回显配置，也不要把密钥放进镜像层、版本库、命令参数、前端 bundle、请求日志或模型 prompt/checkpoint。
 
 正常轮换按“接收端先兼容、发送端再切换、接收端最后移除旧键”进行。本合成 Webhook outbox 保存未签名正文，sender 每次新投递才签名：
 
@@ -120,7 +121,6 @@ HMAC 是共享密钥消息认证码：同一 endpoint/source 的 sender 和 rece
 
 把 Secret 读取与业务 API 调用分开审计。Secrets Manager 的 `GetSecretValue` 会生成 CloudTrail 事件；该事件可用于调查哪个授权主体请求了哪个 Secret ARN，但不能假设它带有 taskArn 或 API 响应中的 VersionId。GetSecretValue API 响应本身含 VersionId，敏感的 SecretString/SecretBinary 值不会进入 CloudTrail。把读取事件与 task definition revision、task 启动和部署控制面记录关联：固定 VersionId 时 revision 记录期望版本；跟随 `AWSCURRENT` 时另保存 staging label 移动和滚动部署的时间线。若必须证明每个运行 task 实际解析的版本，应固定 VersionId，或使用平台确实提供的非敏感解析版本证据；仅凭 revision 与标签时间线不能断言竞态期间每个 task 实际读到哪一版。应用以 task role 调用 AWS API 的 CloudTrail session 可带 taskArn；这条业务调用审计不能替代 Secret 注入审计。所有自建日志也不能记录密钥、完整签名头或正文。审计轨迹说明谁在何时请求或启用了凭据，但不能单独证明 IAM policy 与对象前缀已最小化。
 
-
 ## 用失败信号和成本边界检查组件
 
 | 边界 | 计划中的失败 | 观察信号 | 成本/限制 |
@@ -132,7 +132,7 @@ HMAC 是共享密钥消息认证码：同一 endpoint/source 的 sender 和 rece
 | outbox relay | relay 停摆、确认缺失、pending 意图反复重试 | 最老 pending outbox 年龄、认领过期数、发布确认失败 | relay 运行时间、数据库扫描与发布请求 |
 | 队列 / worker | 重复/延迟投递、毒消息、积压上升、执行槽耗尽、过期租约接管 | 最老消息年龄、队列深度、未确认数、死信队列、物理执行槽、过期 lease 与恢复结果 | 保留消息、worker 计算、积压排空与孤儿对象清理 |
 
-平台容量与业务结果要分开观察。CPU 不高并不能证明 report 42 可正确读取；queue 有消费者也不代表报表已经成功。组件信号还要与用户的 service level indicator（服务等级指标，SLI）和 request/job 结果连接；报表服务如何定义目标结果并定位发布故障，见[怎样从报表服务信号定位发布后的故障？](../reliability/observability-slos-and-incident-response.md)。
+上表的信号只反映平台和组件的状态，所以平台容量与业务结果要分开观察。CPU 不高并不能证明 report 42 可正确读取；queue 有消费者也不代表报表已经成功。组件信号还要与用户的 service level indicator（服务等级指标，SLI）和 request/job 结果连接；报表服务如何定义目标结果并定位发布故障，见[怎样从报表服务信号定位发布后的故障？](../reliability/observability-slos-and-incident-response.md)。
 
 > [!info]- 来源
 > - **HTTP 异步受理状态。** [IETF RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html) §15.3.3 定义 `202 Accepted` 表示请求已接受处理但尚未完成；本文在此基础上要求只有 job/outbox/等待槽事务提交后才回 202，后者是本案例的持久受理契约，不是 RFC 单独规定的数据库实现；checked 2026-11-12。
