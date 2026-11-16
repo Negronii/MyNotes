@@ -26,7 +26,9 @@
 
 ## URL 查询怎样变成当前页行？
 
-本例把已提交的 URL 作为列表查询输入。`useSearchParams()` 返回当前地址中的 `URLSearchParams`；参数对象先复制再修改，避免直接改动路由提供的可变对象。因为本例要保留 `#summary`，更新时用 `useNavigate()` 一次提交 path、search、hash 三部分；只导航到新查询字符串不会自动带回旧片段。组件解析并验证 `sort ∈ {recent, oldest}`、`status ∈ {published, open}`、正整数 `page`，无效值回退到安全默认值或替换为规范地址。筛选变更还会将页码重置为 1，并在同一事件中派发 `selectionCleared()`。但清空不能只依赖按钮事件：浏览器历史也会改变筛选。本例把当前选择范围记为账户与 status；点选时报表 ID 集合属于该范围。已提交地址的范围变化时，表格用 `useLayoutEffect` 清空 Redux ID 集合并更新范围；新范围的首次渲染先按范围是否匹配来派生计数和可操作 ID，避免旧 ID 在 layout effect 前短暂可用。初次挂载也建立范围并清理无法证明归属的旧 ID：
+本例把已提交的 URL 作为列表查询输入。`useSearchParams()` 返回当前地址中的 `URLSearchParams`；参数对象先复制再修改，避免直接改动路由提供的可变对象。因为本例要保留 `#summary`，更新时用 `useNavigate()` 一次提交 path、search、hash 三部分；只导航到新查询字符串不会自动带回旧片段。组件解析并验证 `sort ∈ {recent, oldest}`、`status ∈ {published, open}`、正整数 `page`，无效值回退到安全默认值或替换为规范地址。
+
+筛选变更还会将页码重置为 1，并在同一事件中派发 `selectionCleared()`。但清空不能只依赖按钮事件：浏览器历史也会改变筛选。本例把当前选择范围记为账户与 status；点选时报表 ID 集合属于该范围。已提交地址的范围变化时，表格用 `useLayoutEffect` 清空 Redux ID 集合并更新范围；新范围的首次渲染先按范围是否匹配来派生计数和可操作 ID，避免旧 ID 在 layout effect 前短暂可用。初次挂载也建立范围并清理无法证明归属的旧 ID：
 
 ~~~tsx
 const currentScope = { accountId, status };
@@ -99,9 +101,9 @@ TanStack Query 的数据状态与网络读取状态分开：`status` 表示查�
 
 ## 打开编辑器后怎样隔离基线和草稿？
 
-工具栏只从当前账户/status 范围内的已选集合取稳定字符串 ID。用户切换记录前先处理未保存草稿：留下、保存或明确丢弃。随后在发 GET 之前创建打开意图 {sessionId, accountId, reportId}，立即把抽屉置为 loading；同一意图还绑定详情查询键。A 与 B 依次打开时，即使 A 的 GET 晚于 B 返回，只有仍匹配当前意图的响应能把抽屉从 loading 变成可编辑状态；关闭、切账户或改开另一 ID 会同步使旧意图失效。旧响应最多写入自己的 account/ID 缓存，不能初始化新抽屉。
+工具栏只从当前账户/status 范围内的已选集合取稳定字符串 ID。用户切换记录前先处理未保存草稿：留下、保存或明确丢弃。随后在发 GET 之前创建打开意图 `{sessionId, accountId, reportId}`，立即把抽屉置为 loading；同一意图还绑定详情查询键。例如先后打开报表 A 和 B，即使 A 的 GET 晚于 B 返回，只有仍匹配当前意图的响应能把抽屉从 loading 变成可编辑状态；关闭、切账户或改开另一 ID 会同步使旧意图失效。旧响应最多写入自己的 account/ID 缓存，不能初始化新抽屉。
 
-加载、重试和错误是独立抽屉状态。首次 GET 失败、详情 JSON 结构错误、ID 不匹配或 ETag 无效时，不建立可编辑基线；仍匹配的错误抽屉显示固定提示与重试/关闭入口。重试沿用当前打开意图并重新核验响应；如果用户期间关闭或改开另一条，重试结果同样因意图不匹配而不能生效。详情读取消费 AbortSignal；开始一轮确认为当前版本的读取前先取消并等待同一详情键旧请求，再发使用 HTTP 缓存重新验证的 GET，避免把开始更早的在途读当作冲突后的当前值。
+加载、重试和错误是独立抽屉状态。首次 GET 失败、详情 JSON 结构错误、ID 不匹配或 ETag 无效时，不建立可编辑基线；仍匹配的错误抽屉显示固定提示与重试/关闭入口。重试沿用当前打开意图并重新核验响应；如果用户期间关闭或改开另一条，重试结果同样因意图不匹配而不能生效。详情读取消费 AbortSignal。每次要读取并确认当前版本时，先取消并等待同一详情键上的旧请求，再发一条要求 HTTP 缓存重新验证的 GET，避免把更早开始、仍在途中的读取当作冲突后的当前值。
 
 同一详情键的读写还需要一个跨编辑器挂载周期的协调边界：若该账户/报表仍有旧 PATCH 未结算，包括它的缓存回调，新的打开意图先显示等待，不启动详情 GET。调用方等旧 mutation 完全结算，再核对打开意图仍有效，才调用下面的 `loadOpenIntent`。这样旧成功回调取消同键 GET 时，不会取消新抽屉刚启动的读取；这份协调状态不能随旧组件卸载而消失。不同详情键可以独立读取。
 
@@ -176,7 +178,7 @@ fetchQuery 使用 account/ID 独立键；Fetch 的 `cache: "no-cache"` 在 HTTP 
 
 **步骤 1：通知方式与收件人**编辑 channel 和动态收件人；按“继续”时先复制包含 sessionId 与校验依赖的当前步骤快照，并同步取得会话级 attempt 闩锁，再做同步检查与该快照的异步校验。
 
-步骤校验与最终保存共享同一闩锁：Continue 持有 `kind="step"` 时，保存和异步校验重试入口都返回 busy；保存持有 `kind="save"` 时，Continue 同样返回 busy。校验期间，UI 禁用并且事件处理器同步拒绝编辑、第二次 Continue、保存和 Retry；attempt owner 一直持有到结果已经提交到界面状态才释放。因此步骤 gen 1 与保存 gen 2 不会并行争同一行 ticket，也不会由保存抢占步骤校验。await 后再次核对 owner、session 与快照，只有仍归属的结果能推进步骤或显示错误；过期或取消的结果不会前进。关闭、离开抽屉或切账户会使当前步骤 attempt 和相关 ticket 失效；网络校验失败显示可重试状态，不把它当作通过。错误时留在步骤 1、关联错误并聚焦首个错误控件。
+这里的“闩锁”是编辑会话内唯一的尝试所有者（owner，下文代码中的 `formAttemptGate`）：同一时刻只允许一次步骤校验或一次保存在进行，后来者立即得到 busy。步骤校验与最终保存共享同一闩锁：Continue 持有 `kind="step"` 时，保存和异步校验重试入口都返回 busy；保存持有 `kind="save"` 时，Continue 同样返回 busy。校验期间，UI 禁用并且事件处理器同步拒绝编辑、第二次 Continue、保存和 Retry；attempt owner 一直持有到结果已经提交到界面状态才释放。因此步骤校验和保存不会为同一收件人行同时发起两张校验票据（ticket，下一节解释），保存也不会抢占步骤校验。await 后再次核对 owner、session 与快照，只有仍归属的结果能推进步骤或显示错误；过期或取消的结果不会前进。关闭、离开抽屉或切账户会使当前步骤 attempt 和相关 ticket 失效；网络校验失败显示可重试状态，不把它当作通过。错误时留在步骤 1、关联错误并聚焦首个错误控件。
 
 **步骤 2：备注与确认**编辑可选 note，并摘要展示通知方式、收件人和备注；“返回”回步骤 1 但保留同一草稿和基线。“保存”从任一步都执行整份草稿最终校验；如果收件人错误则回步骤 1，如果 note 等其它字段错误则回步骤 2。title 在本合成表单中只读，用于展示服务端同时更新字段时的冲突比较。
 
@@ -190,13 +192,13 @@ fetchQuery 使用 account/ID 独立键；Fetch 的 `cache: "no-cache"` 在 HTTP 
 
 API 使用字符串数组，动态输入行另有只存在于客户端的 `clientId`。添加时生成一次，行移动、删除或显示错误时继续用于 React `key` 和焦点关联；它不是邮箱或服务器 ID，不序列化到请求。
 
-校验分同步与异步两层：提交前先检查字段是否适合当前模式，例如 email 至少一条地址；客户端快速格式检查改善反馈，但服务端验证仍是最终裁决。可用性接口的异步结果绑定 `sessionId + clientId + generation + snapshot`，快照包含 trim 后的地址和 `organizationId` 等依赖。本例在输入值或校验依赖变化的同一事件中，以新快照立即调用 `validateRecipient` 来替换旧 ticket，不等 blur 或提交才发现变化；切换到 download、删除行或关闭会话时调用 `invalidate` 作废 ticket。只有仍为当前会话、最新代次且快照匹配的响应能改写字段错误。网络失败显示“暂时无法验证”，保留草稿并允许重试，不能当作字段有效。
+校验分同步与异步两层：提交前先检查字段是否适合当前模式，例如 email 至少一条地址；客户端快速格式检查改善反馈，但服务端验证仍是最终裁决。可用性接口的每次异步请求都发一张 ticket（校验票据），绑定 `sessionId + clientId + generation + snapshot`；generation（代次，表中简写为 gen）每次重新校验或作废时加 1，快照包含 trim 后的地址和 `organizationId` 等依赖。本例在输入值或校验依赖变化的同一事件中，以新快照立即调用 `validateRecipient` 来替换旧 ticket，不等 blur 或提交才发现变化；切换到 download、删除行或关闭会话时调用 `invalidate` 作废 ticket。只有仍为当前会话、最新代次且快照匹配的响应能改写字段错误。网络失败显示“暂时无法验证”，保留草稿并允许重试，不能当作字段有效。
 
 | 事件 | `recipient-1` 当前归属 | 可接受的响应 |
 |---|---|---|
 | 输入旧地址并请求校验 | `edit-A / recipient-1 / gen=1 / old@example.test / org-a` | 仅匹配 gen 1 与该快照的结果有效。 |
 | 改成新地址，第二次请求先返回 | `edit-A / recipient-1 / gen=2 / reader@example.test / org-a` | gen 2 更新当前错误；gen 1 即使更晚返回也被忽略。 |
-| 切到 download | 收件人隐藏；会话同步递增代次并删除 ticket | 请求 1、2 都不能再改写隐藏字段的错误。 |
+| 切到 download | 收件人隐藏；`invalidate` 把代次递增到 3 并删除 ticket | 请求 1、2 都不能再改写隐藏字段的错误。 |
 | 切回 email | 以当前草稿值创建新的 gen 4 校验 | 只接受这次快照；此前响应仍然过期。 |
 | 关闭并重开 | `edit-B / recipient-1`，即使复用相同 clientId | `edit-A` 的 Promise 不能写入新会话。 |
 
@@ -309,7 +311,7 @@ async function onPatchSuccess(saved: Detail, vars: PatchVars) {
 
 ## 412 时如何比较三份值并让用户确认？
 
-编辑器最初读取 v7。用户在 delivery.email 下新增地址 analyst 并把 note 改成 “Send after review”；另一位管理员先把 title 改为 “Monthly summary — May”、note 改为 “Reviewed”，当前 ETag 成为 v8。第一次 PATCH 的 If-Match v7 收到 412 后，写请求已经在客户端结算。客户端先调用 readCurrentDetail：取消并等待同一详情键旧 GET，再发 HTTP cache no-cache 的新 GET，读取这次响应的表示与 ETag。它不把缓存中的 v7 或更早启动但尚未结束的读当成冲突基线。
+编辑器最初读取 v7。用户在邮件模式下新增收件人 analyst@example.test，并把 note 改成 “Send after review”；另一位管理员先把 title 改为 “Monthly summary — May”、note 改为 “Reviewed”，当前 ETag 成为 v8。第一次 PATCH 的 If-Match v7 收到 412 后，写请求已经在客户端结算。客户端先调用 readCurrentDetail：取消并等待同一详情键旧 GET，再以 Fetch `cache: "no-cache"` 发新 GET，读取这次响应的表示与 ETag。它不把缓存中的 v7 或更早启动但尚未结束的读当成冲突基线。
 
 下表用 R 表示 reader@example.test，A 表示 analyst@example.test，逐项比较三份值：
 
