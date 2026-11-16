@@ -1,10 +1,10 @@
 # 流式报表断线重连后，界面怎样保留正确状态？
 
-**合成案例。** 用户打开报表 42，页面读到同一服务端读取时点的状态与事件位置：`id=42, version=9, status=running, progress=0%, event_cursor="103"`。随后页面订阅 Server-sent Events (服务器发送事件，SSE) 进度流；连接在事件 104 后中断，浏览器自动重连，服务再发送事件 105。页面要保留最后有效状态、正确合并更新，并把传输连接与报表运行分开显示。初始快照和事件沿用[实时更新该选哪种传输？](../../engineering-foundations/networking/real-time-web-updates.md)中的公开 application programming interface (应用程序编程接口，API) 案例；所有 ID 与响应均为教学用合成数据。
+**合成案例。** 用户打开报表 42。页面先取得一份快照，其中的报表状态和事件位置来自服务端同一时刻的读取：`id=42, version=9, status=running, progress=0%, event_cursor="103"`。随后页面订阅 Server-sent Events (服务器发送事件，SSE) 进度流；连接在收到事件 104 后中断，浏览器自动重连，服务端接着发送事件 105。页面要做到三件事：断线期间保留最后一份有效状态，正确合并后续更新，并把“连接是否正常”与“报表运行到哪一步”分开显示。初始快照和事件沿用[实时更新该选哪种传输？](../../engineering-foundations/networking/real-time-web-updates.md)中的公开 application programming interface (应用程序编程接口，API) 案例；所有 ID 与响应均为教学用合成数据。
 
-同一个案例里有三个不同位置：快照字段 `id=42` 标识报表；状态字段 `version=9` 是报表视图的单调修订号；`event_cursor="103"` 和 SSE 帧的 `id: 104` 是同一报表事件日志的续读位置。它们分别回答“哪个资源”“页面已有哪个状态”“从日志哪里继续”，不可互相比较。服务端需在同一一致性点返回快照及其游标；若两者独立读取，期间写入的新事件可能落在二者之间而被跳过。
+这个案例里有三种容易混淆的编号：快照字段 `id=42` 标识是哪张报表；`version=9` 是报表视图的修订号，只增不减；`event_cursor="103"` 和 SSE 帧里的 `id: 104` 则是该报表事件日志中的位置，用来决定从哪里继续读。三者分别回答“哪个资源”“页面已有哪一版状态”“从日志哪里继续”，不能互相比较。服务端必须在同一个一致性点读出快照和游标；如果分两次读取，两次之间写入的新事件可能既不在快照里，也不在游标之后，从而被漏掉。
 
-主线先完整跟完报表 42 的 SSE 恢复。最后的 Fetch 小节是延伸：换用一个独立的 NDJSON 作业例子，说明自行读取字节流时，字符、完整记录、应用游标和本地取消还需要哪些处理；它不改变前面的报表接口。
+正文先完整走一遍报表 42 的 SSE 恢复过程。最后的 Fetch 小节是延伸：它换用一个独立的 newline-delimited JSON (按行分隔的 JSON，NDJSON) 作业例子，说明页面自己读取字节流时，还要处理字符解码、记录组帧、应用游标和本地取消；它不改变前面的报表接口。
 
 ## 页面要显示两种状态
 
@@ -19,21 +19,25 @@
 | `running` | 意外 `CLOSED` | 浏览器不会再自动重连；应用按有限策略重取快照或提示恢复失败 |
 | `running` | 旧 EventSource 已关闭、快照 GET 正在进行 | 保留最后有效进度，连接显示关闭；另显示“正在恢复快照” |
 
-`error` 事件不能一概当成运行失败。若 `readyState` 回到 `CONNECTING`，浏览器还会重连；若状态是 `CLOSED`，它已停止重试。原生事件对象也不把 HTTP 响应状态和正文交给页面；标准规定 HTTP `204 No Content` 可以要求 EventSource 停止重连。本文的应用在意外关闭后最多做一次快照恢复；HTTP 204 不是浏览器自动触发的快照恢复。
+`error` 事件不能一概当成运行失败。若 `readyState` 回到 `CONNECTING`，浏览器还会重连；若状态是 `CLOSED`，它已停止重试。`error` 事件对象也不会把 HTTP 状态码和响应正文交给页面。按标准，服务端可以用 HTTP `204 No Content` 让 EventSource 停止重连；这时浏览器只是不再重连，并不会替页面重新取快照。快照恢复由应用自己负责：本文的应用在意外关闭后最多自动恢复一次。
+
+下面两张图跟踪同一个案例。先看首次订阅：
 
 ![报表 42 从一致快照的游标 103 开始订阅，收到事件 104 后应用版本 10](resources/streaming-ux-resume.svg)
 
-现在连接在事件 104 之后中断。页面保留已经收到的 v10，而原 EventSource 用浏览器记录的位置续连：
+然后连接在事件 104 之后中断。页面保留已经收到的 v10，原 EventSource 则从浏览器记录的位置续连：
 
 ![断线后保留 v10，原连接用 Last-Event-ID 104 续读事件 105，应用 v11 后关闭订阅](resources/streaming-ux-reconnect.svg)
 
-这两张图从同一个快照接续：页面先请求 `after=103`，收到事件 `id: 104` 后把视图应用到版本 10；连接中断时保留 v10。浏览器重连同一 EventSource URL，并自动附上 `Last-Event-ID: 104`。本例服务端契约优先使用这个有效请求头，从游标 104 之后续读 `id: 105`。事件 105 将完整页面视图更新为版本 11 的 `ready`，页面显示完成后关闭订阅。`event_cursor` 只由首次或恢复快照提供；后续解析位置由 EventSource 自己记录，页面不必逐帧改写订阅 URL。浏览器负责解析 `text/event-stream` 帧；页面仍须解析 JavaScript Object Notation (JavaScript 对象表示法，JSON)、检查资源 ID、字段类型和版本，再投影到界面。
+两张图接续同一份快照：页面先请求 `after=103`，收到 `id: 104` 的事件后把视图更新到版本 10；连接中断时保留 v10。浏览器重连同一个 EventSource URL，并自动附上 `Last-Event-ID: 104`。本例服务端约定优先使用这个请求头（只要它有效），从 104 之后续读，发出 `id: 105`。事件 105 把页面视图整体更新为版本 11、状态 `ready`，页面显示完成后关闭订阅。
+
+`event_cursor` 只来自首次快照或恢复快照；之后读到哪一条，由 EventSource 自己记录，页面不必每收到一帧就改写订阅 URL。分工上，浏览器负责解析 `text/event-stream` 帧；页面仍要解析 JavaScript Object Notation (JavaScript 对象表示法，JSON)，检查报表 ID、字段类型和版本，再更新界面。
 
 ## 怎样合并状态并从游标恢复？
 
-Server-sent Events 的 `id` 供浏览器重连时发送 `Last-Event-ID`；URL 中的 `after` 是本例服务端 API 约定，因为原生 `EventSource` 初连不能设置任意请求头或请求正文。标准先更新 EventSource 的 last-event-ID，再排入 JavaScript 事件分发任务，所以它表示浏览器解析到哪里，不是应用处理器已经完成渲染、写本地存储或提交副作用的 acknowledgment (确认，ACK)。服务端可在 `retry:` 字段给出重连等待毫秒数提示；浏览器网络与实现仍会影响实际恢复时间，页面不应假定固定间隔。若本地要可靠处理每条事件，必须另有持久确认位置；只要求最新报表视图时，可以用完整快照校正状态。
+上一节的恢复依赖两种位置。SSE 帧的 `id` 由浏览器记住，重连时作为 `Last-Event-ID` 发出；URL 里的 `after` 则是本例服务端 API 自己的约定，因为原生 `EventSource` 首次连接时不能设置任意请求头或请求正文。按标准，浏览器先更新 EventSource 的 last-event-ID，再排队派发 JavaScript 事件，所以这个值只表示浏览器解析到了哪里，不是应用已完成渲染、写入本地存储或提交副作用的 acknowledgment (确认，ACK)。服务端可在 `retry:` 字段给出重连等待毫秒数提示；浏览器网络与实现仍会影响实际恢复时间，页面不应假定固定间隔。若本地要可靠处理每条事件，必须另有持久确认位置；只要求最新报表视图时，可以用完整快照校正状态。
 
-报表服务按 `version` 而非 SSE `id` 合并业务视图。本例 `report.updated` 每帧携带页面需要的完整状态，因此收到更高版本可以替换当前视图，低版本或重复版本忽略。若另一个 API 发的是依赖前序状态的 patch，则只接受下一个连续版本；发现 v10 后直接收到 v12 时不能把 v12 patch 套到旧状态，应从权威快照重建。
+页面按 `version` 而不是 SSE `id` 合并报表视图。本例 `report.updated` 每帧都携带页面需要的完整状态，所以收到更高版本时直接替换当前视图，低版本或重复版本则忽略。若另一个 API 发的是依赖前序状态的 patch，则只接受下一个连续版本；发现 v10 后直接收到 v12 时不能把 v12 patch 套到旧状态，应从权威快照重建。
 
 ```http
 GET /api/reports/42 HTTP/1.1
@@ -76,7 +80,7 @@ data: {"report_id":42,"version":11,"status":"ready","progress":100}
 
 ```
 
-`event` 字段决定命名事件的监听器（缺省是 `message`），`data` 字段构成 `event.data`。空行结束一条 SSE 事件；没有 `data` 字段就不会派发事件，而显式的 `data:` 即使值为空也会被派发为 `event.data === ""`。因此游标过期时可发送 `event: reset\ndata: {}\n\n`；`reset` 是服务端与页面协商的事件名，不是浏览器的内建状态。收到它时，页面关闭旧 EventSource，再取一个**状态快照与游标一致**的响应，从新游标重新订阅。若恢复快照已是 v11 / `ready`，页面显示终态并停止；若仍是 `running`，则用返回的新游标继续订阅。应用也可在发现坏 JSON、无效字段时走同一恢复路径；只有改用依赖前序状态的 patch 时，才需在应用层检查版本缺口。
+`event` 字段决定命名事件的监听器（缺省是 `message`），`data` 字段构成 `event.data`。空行结束一条 SSE 事件；没有 `data` 字段就不会派发事件，而显式的 `data:` 即使值为空也会被派发为 `event.data === ""`。所以当游标过期（服务端日志已不保留该位置）时，服务端可以发送 `event: reset\ndata: {}\n\n`，用显式的 `data:` 保证事件会被派发；`reset` 是服务端与页面协商的事件名，不是浏览器的内建状态。收到它时，页面关闭旧 EventSource，再取一个**状态快照与游标一致**的响应，从新游标重新订阅。若恢复快照已是 v11 / `ready`，页面显示终态并停止；若仍是 `running`，则用返回的新游标继续订阅。应用也可在发现坏 JSON、无效字段时走同一恢复路径；只有改用依赖前序状态的 patch 时，才需在应用层检查版本缺口。
 
 ![浏览器重连、应用检测到坏数据以及意外 CLOSED 分别通向正确的恢复分支](resources/streaming-ux-recovery.svg)
 
@@ -194,7 +198,7 @@ data: {"report_id":42,"version":11,"status":"ready","progress":100}
 >   }
 >   recoveryAttempts += 1;
 >   recoveryBusy = true;
->   showRefreshProgress(reason); // show only after the budget check, immediately before the actual snapshot GET
+>   showRefreshProgress(reason); // 通过预算检查后、真正发出快照 GET 前才显示
 >   let nextCursor;
 >   try {
 >     const body = await readSnapshot();
@@ -214,7 +218,7 @@ data: {"report_id":42,"version":11,"status":"ready","progress":100}
 >     showRefreshUnavailable(reason); // 保留最后一份有效 report
 >   } finally {
 >     recoveryBusy = false;
->     clearRefreshProgress(); // the GET has resolved or failed; a resumed stream has its own connection state
+>     clearRefreshProgress(); // GET 已成功或失败；恢复后的新流有自己的连接状态
 >   }
 >   if (nextCursor !== undefined) subscribe(nextCursor);
 > }
@@ -239,9 +243,13 @@ data: {"report_id":42,"version":11,"status":"ready","progress":100}
 > void start();
 > ~~~
 
-代码里的 `renderReport`、`showConnectionState`、`showRefreshProgress`、`clearRefreshProgress`、`showRefreshUnavailable` 和 `showInitialUnavailable` 是应用的显示函数。本例约定恢复提示共用一个区域：`showRefreshProgress` 用进度替换原来的不可用提示；`showRefreshUnavailable` 用错误替换进度；`clearRefreshProgress` 只清除仍在显示的进度，不擦掉错误提示。这样手动重试成功会清掉旧错误，失败则保留新的不可用提示。创建 EventSource 时先显示 `connecting`，`open` 只表示传输已连上，不代表服务端回放已追平。恢复路径先将当前 EventSource 从活动引用中移除并关闭，再检查恢复预算；只有预算允许实际 GET 时才显示“正在恢复快照”，并在 GET 成功或失败后明确清除该提示。失败会显示“恢复不可用”；成功且仍在运行则清除恢复提示后显示新流的 `connecting`。所以连接标签为 `closed` 与恢复提示是不同状态，后者只覆盖真实进行中的快照请求。自动恢复 GET 失败时，旧流已关闭且没有新流，页面只保留最后有效视图并提供显式重试。恢复最多尝试一次；收到并应用版本较新的有效 `report.updated` 事件后才重置自动恢复预算。`retryAfterUserAction()` 只接受“恢复不可用”状态，且要求没有活动流、没有正在进行的恢复、当前报表非终态；因此重复点击或在活动连接上调用都不会另建一个未跟踪的 EventSource。生产 API 还应通过认证、授权和游标保留策略保护每次 GET/订阅；游标本身不是凭证。
+代码里的 `renderReport`、`showConnectionState`、`showRefreshProgress`、`clearRefreshProgress`、`showRefreshUnavailable` 和 `showInitialUnavailable` 是应用自己的显示函数。本例让恢复提示共用一个区域：`showRefreshProgress` 用进度替换原来的不可用提示；`showRefreshUnavailable` 用错误替换进度；`clearRefreshProgress` 只清除仍在显示的进度，不擦掉错误提示。这样手动重试成功会清掉旧错误，失败则显示新的不可用提示。
 
-若应用只需最新视图，按业务版本合并完整快照并在 reset 后恢复即可。若一条日志事件代表必须完成的副作用，浏览器解析位置不够：`Last-Event-ID` 可能比应用完成位置更靠后，应持久记录连续 ACK、按事件 ID 幂等处理，并处理 ACK 与副作用之间的崩溃窗口；细节见[实时更新中快照恢复与逐事件确认的区别](../../engineering-foundations/networking/real-time-web-updates.md#断线后，客户端要重建状态还是补齐每条事件？)。
+连接标签和恢复提示是两种不同状态。创建 EventSource 时连接标签先显示 `connecting`；`open` 只表示传输已连上，不代表服务端回放已经追平。进入恢复路径时，代码先把当前 EventSource 从活动引用中移除并关闭（连接标签变为 `closed`），再检查恢复预算；只有预算允许真正发出 GET 时才显示“正在恢复快照”，GET 结束后无论成败都清除该提示。失败则显示“恢复不可用”：此时旧流已关闭、没有新流，页面只保留最后有效视图并提供手动重试；成功且报表仍在运行，则用新游标订阅，连接标签重新显示 `connecting`。
+
+自动恢复最多尝试一次，只有在收到并应用了一个版本更新的有效 `report.updated` 事件后才重置预算。`retryAfterUserAction()` 只在“恢复不可用”状态下生效，并要求没有活动流、没有进行中的恢复、报表尚未到终态；因此重复点击，或在连接仍活动时调用，都不会另建一个无人跟踪的 EventSource。生产 API 还应在每次 GET 和订阅时做认证、授权，并规定游标保留多久；游标本身不是凭证。
+
+若应用只需要最新视图，按业务版本合并完整快照、收到 reset 后重新恢复就够了。若每条日志事件都代表必须完成的副作用，浏览器的解析位置就不够用了：`Last-Event-ID` 可能比应用完成位置更靠后，应持久记录连续 ACK、按事件 ID 幂等处理，并处理 ACK 与副作用之间的崩溃窗口；细节见[实时更新中快照恢复与逐事件确认的区别](../../engineering-foundations/networking/real-time-web-updates.md#断线后，客户端要重建状态还是补齐每条事件？)。
 
 ## Fetch 自定义流和 SSE 有什么不同？
 
@@ -252,16 +260,18 @@ data: {"report_id":42,"version":11,"status":"ready","progress":100}
 | 断线恢复 | 可恢复的断开会自动重连并维护 `Last-Event-ID`；到 `CLOSED` 则不再自动重连，服务还须实现可读游标 | 没有 EventSource 式自动续读；应用按自己的 `runId` / `seq` 重连、去重与补缺 |
 | 适合本例 | 订阅报表状态变化 | 提交带授权字段或正文的异步作业，并读取自定义响应协议 |
 
-若 API 需要自定义请求头或 POST 查询，再考虑 Fetch 响应流。`reader.read()` 给出的是任意字节块，不保证一个块刚好是一条记录；UTF-8 字符和 JSON 记录都可能跨块。需要自己持续解码、缓冲到完整分隔符、校验字段和终止条件。传输方式比较见上述实时更新说明；本节聚焦界面和 parser (解析器) 的责任。
+只有当 API 需要自定义请求头、请求正文或 POST 时，才值得改用 Fetch 响应流。代价是 `reader.read()` 给出的是任意字节块，不保证一块恰好是一条记录；UTF-8 字符和 JSON 记录都可能跨块。应用要自己持续解码、缓冲到完整分隔符，再校验字段和终止条件。各种传输方式的取舍见开头链接的实时更新章节；本节只讲界面和 parser (解析器) 的责任。
 
-现在切换到一个独立的合成作业案例：自定义 newline-delimited JSON (按行分隔的 JSON，NDJSON) 作业协议模型。它不再是报表 42 的 SSE 服务：模型中的 `runId` 标识一次生成作业，`seq` 是该私有日志的应用游标；它既不是 SSE 的 `id`，也不是报表 `version`。客户端用幂等键提交作业并获得稳定 `runId`，续读时带已接受的 `seq`；旧序号可重放并丢弃，跳号则拒绝，作业最终状态仍以状态接口为准。该模型限制单条帧为 8,192 个 UTF-16 代码单元、可见输出为 64 Ki 代码单元，并覆盖坏 JSON、提早 EOF、超时和本地取消；end-of-file (文件结束，EOF) 本身不等于收到终态。为看清字节和消息的区别，先缩小为同一 `run-7` 的两帧：`seq=1` 输出“你好”，`seq=2` 宣告完成。UTF-8 将“好”编码为三个字节 `E5 A5 BD`；网络可能先给出 `E5`，下次才给出 `A5 BD`。单独一个 `E5` 还不能解成字符，增量 `TextDecoder` 会暂存它，等字节完整才输出“好”。字符解出来后仍不能立刻 `JSON.parse`：还要等完整 JSON 行和换行符。
+下面切换到一个独立的合成案例：一个自定义的 NDJSON 作业协议。它不再是报表 42 的 SSE 服务。协议里的 `runId` 标识一次生成作业，`seq` 是该作业私有日志中的应用游标；它既不是 SSE 的 `id`，也不是报表 `version`。客户端用幂等键提交作业，得到一个稳定的 `runId`；续读时带上已接受的最后一个 `seq`。服务端重放的旧序号直接丢弃，跳号则拒绝；作业的最终状态仍以状态查询接口为准。
+
+这个模型把单条帧限制为 8,192 个 UTF-16 代码单元、可见输出限制为 64 Ki 个代码单元，并处理坏 JSON、提前出现的 end-of-file (文件结束，EOF)、超时和本地取消；读到 EOF 本身不等于收到了终态。为看清字节与消息的区别，先缩小到同一个 `run-7` 的两帧：`seq=1` 输出“你好”，`seq=2` 宣告完成。UTF-8 将“好”编码为三个字节 `E5 A5 BD`；网络可能先给出 `E5`，下次才给出 `A5 BD`。单独一个 `E5` 还不能解成字符，增量 `TextDecoder` 会暂存它，等字节完整才输出“好”。字符解出来后仍不能立刻 `JSON.parse`：还要等完整 JSON 行和换行符。
 
 ![同一作业的字节块怎样先变成字符、再组成完整记录，并在应用成功后推进游标](resources/streaming-ux-framing.svg)
 
 图里一条记录完整应用后，游标才从 0 到 1；缓冲中的下一条终帧通过校验后才结束消费。只收到“你好”就断流，会保留文本并报告本地读取失败，不能猜测服务器已完成。下面折叠的协议示例保留较长的英文输出与三帧序列，parser 的分块测试使用上图这组较小的中文输入；它们遵循同一条按序接受规则。
 
 > [!example]- 自定义 Fetch/NDJSON 作业 parser 与断线案例
-> 此实现是 Node Web Streams 与 Response API 上的合成协议模型，不是浏览器端到端或生产服务测试；十六组断言覆盖 UTF-8 与帧跨块、CRLF 分块边界、MIME 精确匹配、合并帧、重放与跳号、服务端错误、格式错误、提前结束、断线、超时、本地中止、回调竞争，以及终态后的已解码余文与未完成 UTF-8 字节。
+> 此实现是在 Node 的 Web Streams 与 Response API 上运行的合成协议模型，不是浏览器端到端测试或生产服务测试（2026-11-16 在 Node 22 上运行，16 组测试全部通过）。这 16 组测试覆盖 UTF-8 与帧跨块、CRLF 分块边界、MIME 精确匹配、合并帧、重放与跳号、服务端错误、格式错误、提前结束、断线、超时、本地中止、回调竞争，以及终态后的已解码余文与未完成 UTF-8 字节。
 >
 > ~~~text
 > POST /api/runs
@@ -716,7 +726,11 @@ data: {"report_id":42,"version":11,"status":"ready","progress":100}
 
 若一个读取块里已经同时缓冲终帧和后续的已解码内容，parser 在转入终态前拒绝它；也会 flush fatal `TextDecoder`，避免当前 `read()` 尾部未完成的 UTF-8 字节藏在解码器状态里。接受终帧后会取消 reader，不再读取未来网络数据，因此它不能证明服务端之后没有再发送内容；服务端协议仍须规定终帧后关闭流。
 
-本地 `AbortController.abort()` 或取消 reader 只会结束当前页面对响应体的读取，不证明服务端工作停止。若产品允许取消作业，还要发取消请求并查询权威作业状态，直到服务端报告终态。`onText` 成功返回表示整帧文本已完整接收并应用，只有此后才推进 `sequence` 和输出长度；回调若先应用部分文本再拒绝，就无法安全确定续读点。解析器在等待 `onText` 时不能强行打断任意 Promise，回调必须有界并自行响应传入的取消信号，或让其完成后再处理中止。示例的竞争测试仅证明渲染回调返回后，中止会阻止消费同一缓冲区里的终态帧。解析器等待回调完成也形成背压：若回调将 Document Object Model (文档对象模型，DOM) 写入排入队列，应在队列保持较小时再读取下一块；可以用 `requestAnimationFrame` 合并可见更新，但它不提供恢复保证。路由卸载时释放 reader 和事件源，保留有用但不完整的文本，并将其标为部分结果。将收到的状态先交给本地 reducer 或事件总线再更新多个视图时，监听器重入也可能改变处理顺序；见[事件总线重入案例](./event-bus-and-observer-patterns.md)。
+本地 `AbortController.abort()` 或取消 reader 只会结束当前页面对响应体的读取，不证明服务端工作停止。若产品允许取消作业，还要发取消请求并查询权威作业状态，直到服务端报告终态。
+
+`onText` 成功返回表示整帧文本已完整接收并应用，只有此后才推进 `sequence` 和输出长度；回调若先应用部分文本再拒绝，就无法安全确定续读点。解析器在等待 `onText` 时不能强行打断任意 Promise，回调必须有界并自行响应传入的取消信号，或让其完成后再处理中止。示例的竞争测试只证明：渲染回调返回后发生的中止，会阻止 parser 继续消费同一缓冲区里的终态帧。
+
+解析器等待回调完成，也就形成了背压：若回调将 Document Object Model (文档对象模型，DOM) 写入排入队列，应在队列保持较小时再读取下一块；可以用 `requestAnimationFrame` 合并可见更新，但它不提供恢复保证。路由卸载时释放 reader 和事件源，保留有用但不完整的文本，并将其标为部分结果。将收到的状态先交给本地 reducer 或事件总线再更新多个视图时，监听器重入也可能改变处理顺序；见[事件总线重入案例](./event-bus-and-observer-patterns.md)。
 
 渲染本身也应有界：把同一帧中到达的文本增量合并后每帧更新一次，而不是每个 token 都刷新 DOM；输出很长时限制缓冲或只渲染可见窗口。状态区域可以用 `role="status"` 播报连接、完成或失败；它隐含 polite live-region 语义，不要逐字播报每个 token。
 

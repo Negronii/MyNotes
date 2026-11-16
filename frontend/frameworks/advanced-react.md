@@ -1,25 +1,26 @@
 # 如何让报表筛选在昂贵更新时保持响应？
 
-**案例背景。** 报表页已经收到 May、April 两条数据，当前列表可按日期排序。用户在搜索框输入标题时，输入框应立即显示新字符；如果报表结果很多，列表可以稍后跟上。用户点击“查看摘要”时，也希望保留当前列表，等摘要代码准备好再切换。下面分别跟踪输入筛选和摘要切换，区分紧急更新、可延后的 render（渲染）、commit（提交）、Transition（过渡更新）和 Suspense（挂起边界）。这些 API 调整 React 的工作优先级，不会把 JavaScript 移到另一个线程，也不设固定毫秒延迟。
+**案例背景。** 报表页已经取到两条报表，标题分别是 May 和 April，列表可以按日期排序。用户在搜索框输入标题时，输入框应立即显示新字符；如果报表很多，结果列表可以稍后跟上。用户点击“查看摘要”时，也希望先保留当前列表，等摘要模块的代码加载好再切换。下面分别跟踪输入筛选和摘要切换这两个场景，借此区分紧急更新、可延后的 render（渲染）、commit（提交）、Transition（过渡更新）和 Suspense（挂起边界）。这些 API 只调整 React 安排工作的优先级，不会把 JavaScript 移到另一个线程，也不会设置固定的毫秒延迟。
 
-以下行为按 React 19.3 与 React DOM 19.3 核验。先看同一次输入如何产生两轮更新，再看等待摘要代码时如何保留当前界面。状态快照见[React 更新轮次](./react-basics.md)，服务端查询仍由[服务端状态章节](./react-server-state-and-optimistic-updates.md)管理。本章省略 URL 与 Back 接线，见[浏览器历史栈机制](../browser/browser-navigation-and-history.md#让排序状态跟随地址栏与前进后退)。
+以下行为按 React 19.3 与 React DOM 19.3（2026-11 的当前版本）核验。先看同一次输入怎样产生两轮更新，再看等待摘要代码时怎样保留当前界面。状态快照见[React 更新轮次](./react-basics.md)，服务端查询仍由[服务端状态章节](./react-server-state-and-optimistic-updates.md)管理。本章省略 URL 与 Back 接线，见[浏览器历史栈机制](../browser/browser-navigation-and-history.md#让排序状态跟随地址栏与前进后退)。
 
 > [!info]- 挂载方式与版本前提
 >
-> 本例从空挂载点创建客户端界面，使用 `createRoot`。若服务端已经输出 React HTML，应以首轮内容匹配的 `hydrateRoot` 接管。文本或 DOM 结构不匹配可能使 hydration（客户端接管）失败并转为客户端渲染：错误位于 Suspense 边界内时可从最近边界重建，没有边界时会重建整个根。属性值不匹配的处理不同，React 不保证修补属性。
+> 本例在一个空的挂载点上创建客户端界面，所以使用 `createRoot`。如果服务端已经输出了 React 生成的 HTML，应改用 `hydrateRoot` 接管，并保证客户端首轮渲染的内容与服务端 HTML 一致。文本或 DOM 结构不匹配可能使 hydration（客户端接管）失败并转为客户端渲染：错误位于 Suspense 边界内时可从最近边界重建，没有边界时会重建整个根。属性值不匹配的处理不同，React 不保证修补属性。
 >
-> `useDeferredValue` 和 `useTransition` 自 React 18 提供；React 19 支持异步 Transition Action（动作），跨 `await` 的状态更新限制在后文说明。若查旧资料，React 18 的 `ReactDOM.render` 使用接近 React 17 的旧根兼容模式；React 19 已移除此 API，当前入口使用 `createRoot`。
+> `useDeferredValue` 和 `useTransition` 自 React 18 提供；React 19 支持异步 Transition Action（动作），跨 `await` 的状态更新限制在后文说明。查旧资料时注意：React 18 中 `ReactDOM.render` 仍可用但已弃用，它按 React 17 的旧模式运行，不启用并发特性；React 19 已移除此 API，当前入口是 `createRoot`。
+
 ## 输入保持即时，结果视图可以延后
 
-这里把搜索框的 `query` 作为紧急状态，把 `useDeferredValue` 返回的 `deferredQuery` 交给结果组件 `ReportResults`。用 `isStale = query !== deferredQuery` 判断列表是否尚未跟上输入，并据此显示等待提示。列表子组件用 `memo`（记忆化组件）包住；示例的 `reports` 数组来自已经取得的一份数据集，在输入变化期间保持同一引用且不原地改写。否则子组件收到新数组时仍会重渲染，不能用这个例子说明如何跳过旧查询的列表工作。
+这里把搜索框的 `query` 作为紧急状态，把 `useDeferredValue` 返回的 `deferredQuery` 交给结果组件 `ReportResults`。用 `isStale = query !== deferredQuery` 判断列表是否还没跟上输入，并据此显示等待提示。列表子组件用 `memo`（记忆化组件）包住。示例中的 `reports` 数组来自已经取得的一份数据，输入变化期间保持同一个引用，也不被原地修改；如果每次都传入新数组，子组件仍会重渲染，这个例子就无法说明怎样跳过旧查询的列表工作。
 
-假设初始搜索词为空，列表显示 May、April。用户一次把搜索框填成 `apr` 时，`onChange` 处理器排入新的 `query` 更新；setter 不会改写本轮仍读到的状态快照。下一轮紧急 render 得到新 `query`，但 `deferredQuery` 仍可能为空。下面按 React 实际提交顺序展开。
+假设初始搜索词为空，列表显示 May、April。用户一次性把搜索框填成 `apr`（例如粘贴）时，`onChange` 处理器排入新的 `query` 更新；setter 不会改写本轮已经读到的状态快照。下一轮紧急 render 拿到新的 `query`，但 `deferredQuery` 仍可能是空串。
 
-render（渲染）按状态快照计算下一份界面。React 采用计算结果时，commit（提交）才把必要的 DOM 改动应用到页面。下面把事件处理器安排更新与之后的提交分开：
+先区分两个阶段：render 按状态快照计算下一份界面；React 决定采用计算结果后，commit 才把必要的 DOM 改动应用到页面。下表按 React 实际的提交顺序，把事件处理器安排更新与之后的各轮 render、commit 分开：
 
 | 次序 | 本例发生什么 |
 | --- | --- |
-| 1. 输入事件 | 用户一次把搜索框填成 `apr`；处理器排入 `query` 更新。 |
+| 1. 输入事件 | 用户把搜索框填成 `apr`；处理器排入 `query` 更新。 |
 | 2. 紧急 render / commit | render 得到 `query="apr"`、`deferredQuery=""`、`isStale=true`。提交后输入显示 `apr`、等待提示出现；列表 DOM 仍是 May、April，`ReportResults` 的 props 未变，可跳过这轮工作。 |
 | 3. 后台 render | React 尝试用 `deferredQuery="apr"` 计算新列表；此时旧列表仍是已提交的画面。中途有更紧急更新时，可放弃这轮并按最新输入重试。 |
 | 4. 后台 commit | 若 `apr` 这一轮被采用，新结果提交为 April，`isStale` 转为 `false`，等待提示消失。 |
@@ -87,9 +88,9 @@ render（渲染）按状态快照计算下一份界面。React 采用计算结�
 > });
 > ~~~
 
-## 用Transition标记非紧急的界面切换
+## 用 Transition 标记非紧急的界面切换
 
-第二个问题是用户点击“查看摘要”后，摘要模块可能尚未下载。这个独立例子从清空搜索框、已选 oldest 的列表开始，行顺序为 April、May；下面只处理从列表切换到摘要。`useTransition` 把 `view` 更新标为非紧急 Transition，并提供 `isPending`（仍在等待）反馈。调用 `startTransition` 时，包住的函数会立即运行；它标记其中的 state 更新，而不是延迟执行事件处理器。Transition 不能用来控制受控文本输入；这里用它处理的是一整块摘要视图。
+第二个场景：用户点击“查看摘要”时，摘要模块的代码可能还没下载。这是一个独立的例子，起点是搜索框为空、列表按日期从早到晚排序（April 在前、May 在后）；下面只处理从列表切换到摘要。`useTransition` 把 `view` 更新标为非紧急 Transition，并提供 `isPending`（仍在等待）反馈。调用 `startTransition` 时，包住的函数会立即运行；它标记其中的 state 更新，而不是延迟执行事件处理器。Transition 不能用来控制受控文本输入；这里用它处理的是一整块摘要视图。
 
 本例首次挂载时 `view="rows"`，先显示 April、May；摘要模块即使尚未下载，也不会让当前列表挂起。点击把 `view` 设为 `"summary"` 后，React 才需要那个模块来呈现摘要。假定此时模块仍未就绪，同一个 Suspense 边界会因已有内容和更新方式不同而呈现不同结果；模块准备好后，摘要显示“当前共有 2 条报表”：
 
@@ -99,9 +100,9 @@ render（渲染）按状态快照计算下一份界面。React 采用计算结�
 | 对照：若把同次点击改为紧急更新 `view` | 用 fallback（备用界面）替换列表 | 重试 render，提交摘要 |
 | 首次直接挂载摘要，还没有已提交内容 | 显示 fallback，没有旧内容可保留 | 首次提交摘要 |
 
-这解释了为什么“资源还没加载完”不必等于“把已有页面换成加载提示”。快速加载时，用户也可能看不到等待提示。
+所以“资源还没加载完”不一定意味着“把已有页面换成加载提示”。如果模块很快加载完成，用户也可能根本看不到等待提示。
 
-Suspense 可以等待多种资源，但等待资源不代表每次都会显示 fallback；当前边界是否已有内容以及更新优先级会影响呈现。这里用 `lazy` 加载组件代码。读取数据时，可用 React 19 的 `use(promise)` 读取跨重渲染复用的 Promise，例如由服务端组件传来的 Promise，也可使用集成 Suspense 的数据框架。传给 `use` 的数据 Promise 必须能跨重渲染复用，不能每次 render 都新建；带 `precedence` 的样式表也能让边界等待样式表加载，但不适用 Promise 身份缓存条件。普通 `fetch` 放在 `useEffect` 或事件处理器里，不会自动触发边界；这类工作需要自己的加载状态。模块加载或数据读取失败时，最近的错误边界/查询错误状态负责显示错误。同一个 `lazy` 声明会缓存 loader Promise，重置错误边界不会再次调用 loader；产品可提供刷新页面的恢复入口，让新页面重新尝试加载模块，前提是发布资源或网络已经恢复。
+Suspense 可以等待多种资源，但等待资源不代表每次都会显示 fallback；当前边界是否已有内容以及更新优先级会影响呈现。这里用 `lazy` 加载组件代码。读取数据时，可用 React 19 的 `use(promise)`，例如读取服务端组件传来的 Promise，也可使用集成了 Suspense 的数据框架。传给 `use` 的 Promise 必须在多次 render 之间复用同一个对象，不能每次 render 都新建。带 `precedence` 属性的样式表也能让边界等待其加载完成，这种情况不涉及 Promise 复用的要求。普通 `fetch` 放在 `useEffect` 或事件处理器里，不会自动触发边界；这类工作需要自己的加载状态。模块加载或数据读取失败时，最近的错误边界/查询错误状态负责显示错误。同一个 `lazy` 声明会缓存 loader Promise，重置错误边界不会再次调用 loader；产品可提供刷新页面的恢复入口，让新页面重新尝试加载模块，前提是发布资源或网络已经恢复。
 
 若使用 TanStack Query v5（最低要求 React 18），数据挂起读取采用专用 `useSuspenseQuery`、`useSuspenseInfiniteQuery` 等 Hook（钩子）；不要照搬 v4 的 `useQuery({ suspense: true })` 选项，v5 移除了旧的布尔开关。普通 `useQuery` 的 pending 状态不会自行让 React Suspense 边界显示 fallback。`useSuspenseQuery` 的初次加载错误需要错误边界；后台刷新失败可以保留已有缓存，重试还需要错误边界重置或查询层的恢复机制。
 
@@ -173,8 +174,7 @@ Suspense 可以等待多种资源，但等待资源不代表每次都会显示 f
 > }
 > ~~~
 
-Transition 表示渲染优先级，不会把模块请求移到后台线程，也不自动保证自定义异步请求的完成顺序。React 19 的 `useTransition` 可以接收异步 Action（动作），并在 Action 等待期间维持 pending 状态。单次刷新可以在 `startTransition` 中等待 `fetchSummary()`：等待期间保留当前 `summary` 文本，显示正在刷新提示。成功后，再用一次 `startTransition` 包住状态更新，用返回文本更新 `summary` 并清除 `error`，继续把结果渲染标为非紧急；失败时只更新 `error`，保留已有摘要。
-
+摘要显示出来以后，用户还可能要刷新摘要数据，这就涉及异步请求。Transition 只表示渲染优先级，不会把请求移到后台线程，也不会自动保证自定义异步请求的完成顺序。React 19 的 `startTransition` 可以接收异步 Action（动作），Action 等待期间 `isPending` 保持为 `true`。一次刷新可以在 `startTransition` 里等待 `fetchSummary()`：等待期间保留当前 `summary` 文本，并显示“正在刷新”提示。成功后，`await` 之后的状态更新要再用一次 `startTransition` 包住（React 目前不会自动把 `await` 之后的更新算进 Transition），用返回文本更新 `summary` 并清除 `error`；失败时只更新 `error`，保留已有摘要。
 
 为避免这个单按钮入口重复发请求，下面的完整示例在 pending 时禁用按钮，结束后恢复。若界面允许前一轮结束前再次触发（例如重新启用同一按钮或提供其他入口），请求可能乱序返回；仍要用请求编号、取消或数据层排序规则避免旧结果覆盖新选择。React 的 `useActionState`、`<form>` Action 与 Server Functions 会在各自适用的工作流中处理请求顺序；`useTransition` 本身主要负责非紧急 render。
 

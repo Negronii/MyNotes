@@ -1,10 +1,10 @@
 # WebView 怎样安全地开放原生能力并更新页面包？
 
-**合成案例。** 报表应用把页面包 **report-web-17** 放在 Android 或 Apple 的 WebView 中。用户在报表 42 上点“打开详情”，页面想请宿主显示原生详情界面；稍后，服务器发布页面包 **report-web-18**，它要求 bridge API **2.1**，而当前原生应用只实现 **2.0**。本章沿两次信任判断走完：页面请求怎样被确认、授权、执行并回传；更新包怎样验证、兼容、切换或拒绝。版本、来源和返回值都是公开教学用合成数据。
+**合成案例。** 一个报表 App 把网页包（页面包）**report-web-17** 放在 Android 或 Apple 的 WebView 里运行，原生 App 本身称为宿主。用户在报表 42 上点“打开详情”，页面想请宿主显示原生详情界面。稍后服务器发布了页面包 **report-web-18**，它要求 bridge (桥接) API **2.1**，而当前原生 App 只实现了 **2.0**。本章沿着两次信任判断展开：第一，页面的请求怎样经过来源确认、授权、执行并把结果传回；第二，下载的更新包怎样经过验证和兼容检查，最后被切换上线或被拒绝。版本、来源和返回值都是公开教学用合成数据。
 
-这里有两个不同的版本号：bridge API 2.0/2.1 表示页面可调用的宿主能力契约；消息里的 `protocolVersion: 1` 表示 `{id, operation, payload}` 这套 envelope 字段格式。兼容的 API 版本不自动保证消息格式兼容，反过来也一样。
+这里有两个不同的版本号：bridge API 2.0/2.1 是宿主向页面开放哪些能力的约定；消息里的 `protocolVersion: 1` 则是 `{id, operation, payload}` 这套 envelope (消息信封) 的字段格式。API 版本兼容不代表消息格式兼容，反过来也一样。
 
-WebView 提供网页运行环境，原生 API 由宿主显式接入。来源检查回答“哪一个网页上下文发来消息”，参数校验回答“请求是什么”，授权回答“当前用户此刻能否做这件事”；这三项不能互相替代。Android 与 Apple WebKit 的桥接接口也不能拼成一个假想的统一 API。
+WebView 只提供网页运行环境，网页能用哪些原生 API，要由宿主显式接入。宿主收到消息时要做三项检查：来源检查回答“哪个网页上下文发来的消息”，参数校验回答“请求的是什么”，授权回答“当前用户此刻能不能做这件事”；三者不能互相替代。另外，Android 与 Apple WebKit 的桥接接口差异很大，下文分别说明，不把它们拼成一个并不存在的统一 API。
 
 ## 一条消息怎样变成原生操作？
 
@@ -19,7 +19,7 @@ WebView 提供网页运行环境，原生 API 由宿主显式接入。来源检�
 }
 ~~~
 
-id 只用于把回复关联回这次等待中的页面请求；它不是身份凭证，也不代表调用已获准。宿主从 WebView 回调取得来源和 frame 元数据，不能接受正文中的 origin、isMainFrame 或 userId 来证明这些事实。
+`id` 只用来把回复对应到页面上正在等待的那次请求；它不是身份凭证，也不表示调用已获准。来源和 frame 信息由宿主从 WebView 回调参数中取得；即使消息正文里写了 `origin`、`isMainFrame` 或 `userId`，也不能拿来证明这些事实。
 
 | 平台 | 桥接形状 | 一项关键边界 |
 |---|---|---|
@@ -29,17 +29,17 @@ id 只用于把回复关联回这次等待中的页面请求；它不是身份�
 
 Android 现代入口是 AndroidX WebKit 的 `WebViewCompat.addWebMessageListener()`。它从 AndroidX WebKit 1.3.0 起提供，但应用还须在运行时用 `WebViewFeature.WEB_MESSAGE_LISTENER` 确认当前 WebView 支持，并在 `loadUrl()` 等导航前注册对象。没有该能力时可以禁用原生功能或走不含桥接的网页路径，不能静默降级为无来源检查的旧接口。对象会注入所有匹配来源的 frame；`allowedOriginRules` 匹配 scheme、host、port，不匹配 path，所以每条消息仍要拒绝非主 frame。回调提供 `sourceOrigin`、`isMainFrame`、消息和 `JavaScriptReplyProxy`。
 
-旧入口 `addJavascriptInterface()` 把带 `@JavascriptInterface` 的方法放到网页可见对象上。Android 4.2/API 17 起、且应用 target API 17 或更高时，只有带此标注的方法可从 JavaScript 调用；面向更旧 target 的应用可能暴露更多 Java 方法。无论哪种情况，对象都对 WebView 里的 frame 可见，平台不给逐消息来源身份；Java 方法在后台线程执行，而调用 JavaScript 会同步等待其返回。只适用于内容与导航都由宿主严格控制的遗留 WebView。
+旧入口 `addJavascriptInterface()` 把带 `@JavascriptInterface` 的方法放到网页可见对象上。Android 4.2/API 17 起、且应用 target API 17 或更高时，只有带此标注的方法可从 JavaScript 调用；面向更旧 target 的应用可能暴露更多 Java 方法。无论哪种情况，对象都对 WebView 里的 frame 可见，平台不给逐消息来源身份；Java 方法在 WebView 的后台线程执行，发起调用的 JavaScript 会同步等待它返回。因此这个旧入口只适合内容与导航都由宿主严格控制的遗留 WebView。
 
 Apple 在创建 `WKWebView` 前把 `WKUserContentController` 放入 configuration，再注册具名 `WKScriptMessageHandler` 或 `WKScriptMessageHandlerWithReply`。WithReply 和按 `WKContentWorld` 指定 handler 的注册方式要求 iOS 14/macOS 11 或更新系统；较旧系统应关闭这条回复式能力，或另行定义并审查一个平台专属通道，不能把新 API 当成可用。普通 `WKScriptMessageHandler` 只通知宿主，不返回值；WithReply 的 `postMessage(body)` 返回属于本次调用的 Promise。Apple 没有 Android 那样的注册时 origin allowlist，因此宿主从 `WKScriptMessage.frameInfo` 读取来源与 frame，并逐次检查。
 
 ![报表页面在 Android 本地 HTTPS 来源或 Apple reportassets 自定义 scheme 中向宿主发送 openReport；两端分别用平台元数据校验 origin 与主 frame，再按请求 ID 回传](resources/webview-bridge-roundtrip.svg)
 
-**先用宿主元数据过来源门。** Android `allowedOriginRules` 可用精确规则 `https://reports.example`；不要用 `*`。规则只看 scheme、host 和 port，不看 path；同一个来源下的 `/app/report-web-17/` 与其他路径仍是同一 origin。对象也会被提供给匹配规则的子 frame，因此回调里的 `isMainFrame` 还要为真。Apple 在 handler 回调内读取 `frameInfo.securityOrigin` 的 scheme、host、port，并检查 `frameInfo.isMainFrame`；本例注册自定义 `reportassets` handler，页面实际入口为 `reportassets://bundle/<bundleId>/index.html`，只接受 `(reportassets, bundle, 无端口)`；本例把 `WKSecurityOrigin.port` 的 0 规范成无端口。比较 HTTPS origin 时按有效端口规范化，不能把该默认值表示直接和 443 作字面比较。`WKFrameInfo` 是当前回调的瞬时资料，不是可存起来代表该 frame 永远不变的身份。
+**先用宿主元数据过来源门。** Android `allowedOriginRules` 可用精确规则 `https://reports.example`；不要用 `*`。规则只看 scheme、host 和 port，不看 path；同一个来源下的 `/app/report-web-17/` 与其他路径仍是同一 origin。对象也会被提供给匹配规则的子 frame，因此回调里的 `isMainFrame` 还要为真。Apple 在 handler 回调内读取 `frameInfo.securityOrigin` 的 scheme、host、port，并检查 `frameInfo.isMainFrame`；本例注册自定义 `reportassets` handler，页面实际入口为 `reportassets://bundle/<bundleId>/index.html`，只接受 `(reportassets, bundle, 无端口)`；`WKSecurityOrigin.port` 为 0 表示没有显式端口，本例把它规范成“无端口”。若比较的是 HTTPS origin，应先换算成有效端口，不能把 0 直接与 443 做字面比较。`WKFrameInfo` 是当前回调的瞬时资料，不是可存起来代表该 frame 永远不变的身份。
 
-更新包下载自 `https://updates.example/packages/<bundleId>.zip`，但下载地址不会成为 WebView 的文档 origin。这里先以已经完成稳定启动握手的 report-web-17 解释业务调用；实际资源装载、`bridgeHello` 和新包试启在下一节展开。
+注意，更新包从 `https://updates.example/packages/<bundleId>.zip` 下载，但这个下载地址不会成为 WebView 中文档的 origin。本节假定 report-web-17 已经完成启动握手（页面载入后发出 `bridgeHello`，宿主检查通过后才开放业务操作），只解释业务调用；资源怎样装载、`bridgeHello` 怎样工作、新包怎样试启，在下一节展开。
 
-这道检查确认的是“被允许的来源文档中的主 frame 发来消息”。在该文档里执行的每段脚本都会处于同一来源和 frame 权限下，origin/frame 不是逐段脚本的身份检查；页面供应、导航策略、第三方脚本和 XSS 因而属于桥接可信边界。若同一个 WebView 还要装载不受宿主控制的同源内容，应把它隔离到另一来源或另一 WebView，或不给它原生能力。
+这道检查只能确认“消息来自允许来源的文档主 frame”。该文档里执行的任何脚本都拥有同样的来源和 frame，origin/frame 检查分辨不出是哪段脚本发的消息；因此页面内容由谁提供、导航策略、第三方脚本和 XSS 漏洞，都落在桥接的可信边界之内。若同一个 WebView 还要装载不受宿主控制的同源内容，应把它隔离到另一来源或另一 WebView，或不给它原生能力。
 
 Apple 的 WKContentWorld 可以隔离宿主脚本与网页脚本的 JavaScript 变量；它不隔开 DOM，也不能代替 frame/origin 判断。页面要主动调用的 handler 必须安装在网页可调用的 content world。Android 来源规则或 Apple 内容世界解决的是接口暴露范围，不表示该网页能执行任意操作。
 
@@ -47,7 +47,7 @@ Apple 的 WKContentWorld 可以隔离宿主脚本与网页脚本的 JavaScript �
 
 1. 来源必须等于当前 WebView 的平台配置 origin，且消息来自主 frame；不符合就不执行操作。
 2. 限制消息大小和字段，解析 protocolVersion、id、operation、payload；拒绝未知协议版本和错误类型。
-3. 在业务门打开前只接受受限的 `bridgeHello` 引导操作：它必须使用协议 1、有效 id，并且自报 bundleId 与宿主绑定的实际包一致。宿主仍以实际装载记录为准。
+3. 业务门（宿主内存中的 `businessReady` 标志）打开前，只接受受限的 `bridgeHello` 引导操作：它必须使用协议 1、有效 id，并且自报 bundleId 与宿主绑定的实际包一致。宿主仍以实际装载记录为准。
 4. `openReport` 等业务操作还要求宿主已置 `businessReady=true`，并只接受一个正的安全整数 reportId。拒绝任意类名、方法名、URL、文件路径、JavaScript 字符串或通用 evaluate 请求。
 5. 从原生登录态取当前主体，检查该主体当前是否能执行 report:read 并访问请求中的报表 ID（本例是 42）。正文中的用户 ID、隐藏按钮和难猜的报表编号都不能授权。
 6. 通过后才调用一个固定原生方法；再把规范化结果或稳定错误码回到同一个请求 ID。
@@ -95,9 +95,9 @@ Apple 的 WKContentWorld 可以隔离宿主脚本与网页脚本的 JavaScript �
 请求 ID 还负责异步顺序。页面可能先发 request-17 和 request-18，宿主处理耗时不同，response-18 可以先到；页面应按 ID 找到对应的等待项，而不是按“最早发出的请求”接收。未知 ID、已超时 ID 和重复回复都忽略。ID 只做关联，不防重放；会改变状态的操作还须在宿主按调用 ID 或业务幂等键限制重复执行。
 
 > [!example]- 页面端请求等待与清理
-> 下例的 transport.send() 是每个平台各自实现的适配器：Android 调用注入对象的 postMessage(JSON.stringify(envelope))，并把其 message 事件交给 bridge.receive(event.data)；Apple 只调用 window.webkit.messageHandlers.reportBridge.postMessage(envelope)，并把返回的原生 Promise 直接交给 request()。request() 用本次请求的 ID 检查 Promise 结果；不要在 Apple 适配器再调用一次通用 receive()。这段通用代码管理页面侧的请求 ID、乱序、超时和离页清理；它不实现原生授权，也不是 Native API 运行桩。
+> 下例的 `transport.send()` 是每个平台各自实现的适配器：Android 调用注入对象的 `postMessage(JSON.stringify(envelope))`，并把该对象的 `message` 事件交给 `bridge.receive(event.data)`；Apple 只调用 `window.webkit.messageHandlers.reportBridge.postMessage(envelope)`，并把返回的原生 Promise 直接交给 `request()`。`request()` 会用本次请求的 ID 检查 Promise 结果，所以 Apple 适配器不要再调用一次通用的 `receive()`。这段通用代码负责页面侧的请求 ID、乱序、超时和离页清理；它不实现原生授权，也不是原生 API 的模拟实现。
 > 上面的 `web-17:request-17` 是便于追踪的一次合成 ID；代码实际拼出 `generation:递增序号`。协议不要求固定字符串格式，只要求每个未完成请求能被唯一关联。
-> 调用时传入当前文档新建的 generation；在安全上下文且 `crypto.randomUUID` 可用时，可用它生成代号，否则由宿主或 `crypto.getRandomValues` 提供新值。这个代号只减少复用传输通道时的 ID 碰撞，不是身份凭证。
+> 调用时传入当前文档新建的 generation（页面实例代号）；在安全上下文且 `crypto.randomUUID` 可用时，可用它生成代号，否则由宿主或 `crypto.getRandomValues` 提供新值。这个代号只减少复用传输通道时的 ID 碰撞，不是身份凭证。
 >
 > ~~~javascript
 > function createPageBridge(transport, generation, timeoutMs = 8000) {
@@ -187,14 +187,22 @@ Apple 的 WKContentWorld 可以隔离宿主脚本与网页脚本的 JavaScript �
 
 ## 下载更新包怎样进入桥接信任区？
 
-页面包里的 HTML、JavaScript、CSS 和图片看似资源文件，但 WebView 执行其中的 JavaScript 后就可能调用已经开放的原生能力。包完整性、包与当前 bridge API 的兼容性、每条请求的授权是三道独立检查；签名通过不能代替 bridge 权限，bridge 权限也不能证明包来源可信。
+上一节默认页面包可信。但页面包里的 HTML、JavaScript、CSS 和图片不只是静态资源：WebView 执行其中的 JavaScript 后，就能调用已经开放的原生能力。所以更新包本身也要过信任检查。包完整性、包与当前 bridge API 的兼容性、每条请求的授权是三道独立检查；签名通过不能代替 bridge 权限，bridge 权限也不能证明包来源可信。
 
-本例在原生 bridge API 2.0 下运行 report-web-17。更新清单含不可变包 ID、所需 bridge API 范围、入口文件与资源列表、每个文件的大小和摘要。活动指针只说明宿主选中了哪个目录，不证明当前 WebView 真正在执行该目录的文件。这里的宿主装载器从选中的不可变目录读取入口 HTML、JavaScript 和其他可执行资源；包内找不到脚本或其他包资源就加载失败，不回源到同域网络。本例的内容策略也不载入包外可执行脚本；若产品需要远程脚本，该脚本供应方同样进入可信边界，不能算作已由本地包摘要验证。带原生能力的 WebView 同时限制主 frame 导航，只装载宿主认可的包入口。本例每次换包或重新载入均创建独立 WebView 和 handler，handler 捕获包 ID 与该实例的代号；宿主只接受仍然有效、且等于当前绑定的回调。切换或销毁前先关闭旧业务门、使旧绑定失效，旧实例迟到的消息不能使用新实例的权限。主 frame 导航只允许约定入口；需要重新载入时也重新建立绑定和启动握手。实际载入后，宿主把该 WebView 选中的包 ID 与消息回调上下文绑定；页面在握手里报出的包 ID 只用于发现不匹配，不单独证明脚本来源。握手通过前不开放业务方法。若产品还需在同一 origin 装载普通网页，应把它隔离到另一 WebView/来源，不能仅凭同源和主 frame 检查就授予原生能力。
+本例在原生 bridge API 2.0 下运行 report-web-17。更新清单（manifest）包含不可变的包 ID、所需 bridge API 范围、入口文件与资源列表，以及每个文件的大小和摘要。宿主用一个活动指针记录选中了哪个包目录，但指针只说明“选中了哪个目录”，不能证明 WebView 实际执行的就是该目录里的文件。所以装载方式也要受控。
+
+本例的宿主装载器从选中的不可变目录读取入口 HTML、JavaScript 和其他可执行资源；包内找不到脚本或其他包资源就加载失败，不回源到同域网络。本例的内容策略也不载入包外可执行脚本；若产品需要远程脚本，该脚本供应方同样进入可信边界，不能算作已由本地包摘要验证。带原生能力的 WebView 同时限制主 frame 导航，只装载宿主认可的包入口。
+
+本例每次换包或重新载入均创建独立 WebView 和 handler，handler 捕获包 ID 与该实例的代号；宿主只接受仍然有效、且等于当前绑定的回调。切换或销毁前先关闭旧业务门、使旧绑定失效，旧实例迟到的消息不能使用新实例的权限。主 frame 导航只允许约定入口；需要重新载入时也重新建立绑定和启动握手。
+
+实际载入后，宿主把该 WebView 选中的包 ID 与消息回调上下文绑定；页面在握手里报出的包 ID 只用于发现不匹配，不单独证明脚本来源。握手通过前不开放业务方法。若产品还需在同一 origin 装载普通网页，应把它隔离到另一 WebView/来源，不能仅凭同源和主 frame 检查就授予原生能力。
+
+有了这些前提，下面按时间顺序走一遍更新流程：前四步得到一个可信且兼容的候选包，后两步试启并确认它。
 
 1. **先恢复或启动稳定版本。** 应用启动时读持久化的稳定包记录。若上一次宿主进程退出时仍有待确认的试启记录，先恢复上一个稳定包，再创建有桥接能力的 WebView；否则启动当前稳定包。网络更新在后台进行，不阻挡首屏。
 2. **从允许的更新源取独立候选。** 本例通过 `https://updates.example/packages/<bundleId>.zip` 获取包并按策略限制重定向；这是下载端点，不是 Android 或 Apple 回调应匹配的文档 origin。本例还用原生应用内信任锚验证发布者签名，覆盖 CDN/源站被攻陷的威胁；同一未认证响应里带的 hash 只比对字节，不独立证明发布者身份。
 3. **临时下载并逐文件验证。** 将清单和资源写入候选目录，核对签名、不可变包 ID、文件大小和摘要；全部通过前不改变正在运行的稳定目录。签名或资源不匹配就删除候选，继续使用 report-web-17。
-4. **逐个候选检查 API 范围。** `report-web-18` 的最低要求是 2.1，而宿主实现 2.0，因此拒绝它。`report-web-18a` 是更新源提供的另一个独立包，它有自己的清单、签名和资源摘要；其兼容范围包括 2.0，所以才有资格进入试启。不是把已拒绝的 18 改名成 18a。
+4. **逐个候选检查 API 范围。** `report-web-18` 的最低要求是 2.1，而宿主实现 2.0，因此拒绝它。`report-web-18a` 是更新源提供的另一个独立包，它有自己的清单、签名和资源摘要；其兼容范围包括 2.0，所以才有资格进入试启。18a 并不是把被拒绝的 18 改个名字。
 
 ![更新源分别提供 report-web-18 与 report-web-18a：前者最低需要 API 2.1 而被拒绝；后者单独通过完整性校验且兼容 API 2.0，才进入试启](resources/webview-bundle-compatibility.svg)
 
@@ -203,7 +211,9 @@ Apple 的 WKContentWorld 可以隔离宿主脚本与网页脚本的 JavaScript �
 5. **持久化试启状态再切换。** 在启动 18a 前，先可靠持久化 `{ stable: "report-web-17", trial: "report-web-18a", pending: true }`，确认该记录已写入后再原子选择 18a。若进程在晋升提交前退出，下一次启动必须先读 pending 并恢复 17，不能仅因 18a 的文件验签通过就把它当成健康稳定包。
 6. **绑定当前文档并完成握手。** 从 18a 的已验证清单取出兼容范围，按各平台的精确入口装载并建立上述宿主绑定。页面通过同一个消息入口发出 `bridgeHello`；来源、主 frame、实际文档绑定、协议和 ID 都通过校验后，才进入宿主健康检查。这时业务门仍然关闭，`openReport` 不能执行。
 
-页面加载后先请求 `bridgeHello`，例如 `{ protocolVersion: 1, id: "web-18a:hello-1", operation: "bridgeHello", payload: { bundleId: "report-web-18a" } }`。Android 通过同一 message event 按 ID 等待；Apple 的 WithReply handler 以这次 `postMessage()` 的 Promise 回复。宿主不在握手开始时先回 API 选择结果；它让该请求等待健康检查，并且只在检查通过、原子晋升完成后回完整成功 envelope：`{ protocolVersion: 1, id: "web-18a:hello-1", ok: true, payload: { bridgeApi: "2.0", businessReady: true } }`。页面的 `request()` 先匹配这次调用的 ID，随后仅当 `payload.businessReady === true` 时开放“打开详情”入口。若宿主在 hello 中途回退，它会在可用时用同一 ID 返回错误；页面计时器只结束页面等待，宿主自己的 15 秒 deadline 才负责恢复稳定包。普通业务请求仍用默认 8 秒计时器；启动握手把页面等待设为 20 秒，给宿主在 15 秒恢复后回传错误或销毁旧页面留出时间。
+页面加载后先发出 `bridgeHello` 请求，例如 `{ protocolVersion: 1, id: "web-18a:hello-1", operation: "bridgeHello", payload: { bundleId: "report-web-18a" } }`。Android 通过同一 message event 按 ID 等待；Apple 的 WithReply handler 以这次 `postMessage()` 的 Promise 回复。宿主不在握手开始时先回 API 选择结果；它让该请求等待健康检查，并且只在检查通过、原子晋升完成后回完整成功 envelope：`{ protocolVersion: 1, id: "web-18a:hello-1", ok: true, payload: { bridgeApi: "2.0", businessReady: true } }`。页面的 `request()` 先匹配这次调用的 ID，随后仅当 `payload.businessReady === true` 时开放“打开详情”入口。
+
+超时由两端分别处理。若宿主在 hello 中途回退，它会在可用时用同一 ID 返回错误；页面计时器只结束页面等待，宿主自己的 15 秒 deadline 才负责恢复稳定包。普通业务请求仍用默认 8 秒计时器；启动握手把页面等待设为 20 秒，给宿主在 15 秒恢复后回传错误或销毁旧页面留出时间。
 
 ![report-web-18a 按 Android HTTPS 与 Apple 自定义 scheme 的实际 origin 装载；同 ID bridgeHello 在 15 秒宿主限时内完成健康检查，原子晋升后才报告 businessReady；提交前加载、握手、探测或晋升失败回退 17，晋升提交前进程退出由 pending 启动恢复](resources/webview-bundle-trial-recovery.svg)
 
@@ -215,7 +225,7 @@ Apple 的 WKContentWorld 可以隔离宿主脚本与网页脚本的 JavaScript �
 
 握手只证明所选 WebView 文档与宿主对话时使用了匹配的 envelope，并且宿主协商的 API 版本与候选清单兼容；可信内容身份来自宿主对入口与可执行资源的实际装载控制，不来自页面自报字段。页面通过试启后仍逐次验证来源、frame、操作 schema 和当前权限。若更新包切到新 origin，宿主须在导航和桥接配置中明确允许那个 origin；不要为了版本滚动而放宽成任意来源。
 
-资源装载也因平台而异。Android `WebViewAssetLoader` 把本例已验证目录映射到 `https://reports.example/app/<bundleId>/index.html`；它本身不验证更新包签名，而且默认 path-handler 未命中可回退到网络，因此持有原生能力的装载器必须对包内资源未命中 fail closed。Apple `WKURLSchemeHandler` 只服务 WebKit 不原生处理的自定义 scheme，不能注册 `https`；本例用 `reportassets://bundle/<bundleId>/index.html`，并在 handler 中从对应不可变目录读取入口与资源。在固定 WebKit Cocoa 分支中，旧链接行为在 URL 有效且通过 no-access 检查后直接返回非 opaque；新链接行为则要求自定义 scheme 已注册 handler，本例的 `reportassets` 满足此条件，也返回非 opaque。因此在这两种分支及本例前置条件下，`WKSecurityOrigin` 可对应 `(reportassets, bundle, 无端口)` tuple；错误或 opaque/null 回调仍须拒绝。宿主要在目标 app SDK/系统组合中实测。若改为 `loadFileURL`，它的回调 origin 不能沿用上面的 custom-scheme tuple，也不能假设是 Android 的 HTTPS origin。每个平台都把选中的实际文档、入口和可执行资源绑定到具体 WebView；更新源的 HTTPS 仅负责下载，不是页面来源门的值。
+资源装载也因平台而异。Android `WebViewAssetLoader` 把本例已验证目录映射到 `https://reports.example/app/<bundleId>/index.html`；它本身不验证更新包签名，而且默认 path-handler 未命中可回退到网络，因此持有原生能力的装载器必须对包内资源未命中 fail closed。Apple `WKURLSchemeHandler` 只服务 WebKit 不原生处理的自定义 scheme，不能注册 `https`；本例用 `reportassets://bundle/<bundleId>/index.html`，并在 handler 中从对应不可变目录读取入口与资源。自定义 scheme 页面的 origin 是否 opaque，取决于 WebKit 的 Cocoa 实现（见来源中固定提交的 `SecurityOriginData.cpp`），它按 App 链接的 SDK 分两种行为：按旧 SDK 链接时，只要 URL 有效且通过 no-access 检查，就直接得到非 opaque origin；按新 SDK 链接时，还要求该自定义 scheme 已注册 handler，本例的 `reportassets` 满足这一条件，同样得到非 opaque origin。因此在本例前提下，`WKSecurityOrigin` 可以对应 `(reportassets, bundle, 无端口)`；回调中的 origin 若不符或为 opaque/null，仍须拒绝。宿主应在目标 SDK 与系统版本组合上实测。若改为 `loadFileURL`，它的回调 origin 不能沿用上面的 custom-scheme tuple，也不能假设是 Android 的 HTTPS origin。每个平台都把选中的实际文档、入口和可执行资源绑定到具体 WebView；更新源的 HTTPS 仅负责下载，不是页面来源门的值。
 
 应用商店分发政策还会约束下载并执行页面代码。Apple 当前审核指南限制下载或执行会改变 App 功能的代码；若产品属于指南列出的 HTML5/JavaScript 小程序等软件类别，还适用额外规则，其中包括未经 Apple 事先许可不得向这些软件开放原生平台 API。Google Play 对解释执行代码另有适用条件：JavaScript 在 WebView 中属于解释执行例外的一种，但解释代码仍不得造成违反 Play 政策的功能；这不是任意热更新的批准。原子切换、签名或桥接白名单解决的是工程信任问题，不能替代对目标分发政策的适用性判断。
 
