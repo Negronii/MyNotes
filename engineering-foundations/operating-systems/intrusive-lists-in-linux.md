@@ -1,14 +1,16 @@
 # Linux 内核为什么把链表节点嵌入对象？
 
-假设内核要把一个 work item（工作项）放进待处理队列，同时还要把同一对象放进审计队列。Linux 内核的 `struct list_head` 是一对 `next`、`prev` 链接；把它作为成员嵌进工作项，就能让通用链表代码只修改链接，不必为每种关系再分配独立包装节点。
+假设内核模块要把一个 work item (工作项) 放进待处理队列，同时还要把同一个对象放进审计队列。Linux 内核的 `struct list_head` 只含 `next`、`prev` 两个指针；把它作为成员嵌进工作项，通用链表代码就只需修改这些指针，不必为对象参加的每种关系另外分配一个包装节点。
 
-本例中，`ready_items` 与 `audit_items` 本身也是 `struct list_head`，各自充当环形链表的 head（头节点/哨兵）；空表时 head 的两个指针都指向自身。教学地址约定为 A 的基址 `0x1000`、B 的基址 `0x2000`、两个 head 分别为 `0x8000` 和 `0x9000`；因此 A.ready 为 `0x1008`、A.audit 为 `0x1018`，B.ready 为 `0x2008`。链中的指针值指向嵌入的 `list_head` 成员，例如 `0x1008` 是 A 的 `ready_link` 地址，不是外层 A 的起始地址。下图先给出对象布局和成员地址；假设指针为 8 B、`u64` 为 8 B 且结构体无填充，所有地址均为合成值。
+本章的例子有两个工作项 A 和 B。每个 `struct work_item` 先放一个 `u64 id`，再嵌入两个钩子：`ready_link` 用于待处理队列，`audit_link` 用于审计队列（完整定义见下一节代码）。下文用 A.ready、A.audit 分别简称 A 的这两个成员。两个队列的表头 `ready_items` 与 `audit_items` 本身也是 `struct list_head`，各自充当环形链表的 head (头节点，即哨兵)；空表时 head 的两个指针都指向自己。
+
+为了能逐个核对指针，本例使用合成地址，并假设指针和 `u64` 都占 8 B、结构体没有填充：A 的基址为 `0x1000`，B 为 `0x2000`，两个 head 分别在 `0x8000` 和 `0x9000`。于是 A.ready 位于 `0x1008`，A.audit 位于 `0x1018`，B.ready 位于 `0x2008`。链中的指针指向嵌入的 `list_head` 成员，而不是外层对象：例如 `0x1008` 是 A 的 `ready_link` 地址，不是 A 的起始地址。下图给出对象布局和成员地址。
 
 ![64 位无填充教学模型中 work_item A 的字段地址、成员偏移与 container_of 地址还原](resources/intrusive-lists-in-linux-object-layout.svg)
 
 ## container_of 怎样从钩子找到对象？
 
-Linux 链表节点不是一个含 payload 指针的单独 wrapper。`struct list_head` 本身就放在被链接的结构体内；`container_of(ptr, type, member)` 根据成员偏移，概念上从钩子地址减去 `offsetof(type, member)`，还原出外层对象地址。`list_entry()` 建立在这一机制上，`list_for_each_entry()` 则直接让循环变量指向外层结构体。
+既然链表指针指向的是对象内的钩子，遍历时就要从钩子地址找回外层对象。Linux 链表节点不是一个另外分配、再用指针指向数据的包装节点，`struct list_head` 本身就放在被链接的结构体内；`container_of(ptr, type, member)` 根据成员偏移，概念上从钩子地址减去 `offsetof(type, member)`，还原出外层对象地址。`list_entry()` 建立在这一机制上，`list_for_each_entry()` 则直接让循环变量指向外层结构体。
 
 ~~~c
 #include <linux/list.h>
@@ -34,15 +36,15 @@ static void inspect_ready_items(void)
 
 这要求传入的指针确实指向指定类型中的那个成员；成员名和外层类型必须匹配。`container_of` 做的是地址计算，不会寻找节点，也不消除遍历时读取 `next` 的依赖。它是 Linux 内核提供的宏，不是标准 C 设施；当前 mainline 的 `container_of()` 会丢弃 `const`，新代码应优先使用保留限定符的 `container_of_const()`。链表迭代宏仍使用同一成员偏移关系。
 
-对象入链期间不能改换存放地址：邻接钩子仍会指向旧地址。对已入链对象做浅拷贝也不会把副本加入链表，更不会让邻接节点改指副本。副本逐字段复制原钩子的指针值：例如 A 已入 ready 时，A 的副本会得到 `next=0x2008`、`prev=0x8000`，但 ready 邻居仍指向原 A 的 `ready_link @ 0x1008`。若要独立使用副本，先对副本自己的每个 `list_head` 调用 `INIT_LIST_HEAD`，再分别加入需要的链表。释放原对象前仍要摘掉原对象的全部钩子。
+由于邻居保存的是钩子地址，对象入链期间不能搬到别的地址，否则邻接钩子仍会指向旧地址。对已入链对象做浅拷贝也不会把副本加入链表，更不会让邻接节点改指副本。副本只是逐字段复制了原钩子的指针值：例如 A、B 已依次入 ready 时，A 的副本会得到 `next=0x2008`、`prev=0x8000`，但 ready 中的邻居仍指向原 A 的 `ready_link @ 0x1008`。若要独立使用副本，先对副本自己的每个 `list_head` 调用 `INIT_LIST_HEAD`，再分别加入需要的链表。释放原对象前仍要摘掉原对象的全部钩子。
 
-上面的遍历片段是独立示意：`list_for_each_entry` 按 `ready_link` 的成员偏移把每个钩子还原为 `work_item`；走到 `ready_items` head 就停止，所以空表不会进入循环体，head 也不会被当成工作项累加。该片段假设队列在遍历期间不会被并发修改，而且对象始终存活。共享队列的锁定与 A/B 调用顺序见下一个独立示例。
+本节开头的遍历片段是独立示意：`list_for_each_entry` 按 `ready_link` 的成员偏移把每个钩子还原为 `work_item`；走到 `ready_items` head 就停止，所以空表不会进入循环体，head 也不会被当成工作项累加。该片段假设队列在遍历期间不会被并发修改，而且对象始终存活。共享队列的锁定与 A/B 调用顺序见下一个独立示例。
 
 ## 插入、遍历和摘除分别改变什么？
 
-下面是独立的内核风格示例：A/B 的 `id` 在对象创建时设好，再初始化两个钩子；之后按 A、B 的顺序尾插 ready，并把 A 插入 audit。两个 head 都用代码中的名字 `ready_items` 和 `audit_items`。调用者必须让传入对象在函数等待互斥锁以及整个调用期间保持存活；锁保护链表和锁内读取，不会替正在等锁的参数保活。
+下面是独立的内核风格示例：A、B 的 `id` 在创建对象时设好（4 和 7），再初始化两个钩子；之后按 A、B 的顺序尾插 ready，并把 A 插入 audit。调用者必须保证传入的对象在函数等待互斥锁及整个调用期间都存活；锁保护的是链表和锁内的读取，不会替还在等锁的参数保活。
 
-这段 driver 假设两张静态表从空表开始，仅顺序运行这一轮操作，没有其他调用者在步骤之间插入或摘除节点。
+驱动函数 `run_example_once()` 假设两张静态表从空表开始，只顺序运行这一轮操作，期间没有其他调用者插入或摘除节点。
 
 ~~~c
 #include <linux/list.h>
@@ -159,11 +161,11 @@ static bool run_example_once(void)
 
 嵌入链表不会自动管理外层对象的生命周期。释放对象前，需要摘掉所有仍挂入链表的钩子，并确认没有其他读者或引用者还会访问对象。一个工作项在待处理队列中已摘除、但仍留在审计队列时，仍然不能释放。
 
-普通链表操作本身不负责并发安全。多个线程或 CPU 并发修改同一链表时通常要用合适的锁。读多写少时，RCU（read-copy-update，读-复制-更新）可以让读者在 `rcu_read_lock()` 与 `rcu_read_unlock()` 之间用 `list_for_each_entry_rcu()` 遍历，而不持有写者的互斥锁；写者之间仍须用锁或既有协议串行化。Linux RCU 文档的审计规则示例允许读者短暂看到刚删除的规则；若不能接受旧项，内核也展示了用每项 `deleted` 标记和自旋锁拒绝它的做法，因此“容忍陈旧结果”是最简单的 RCU 用法，不是使用 RCU 的唯一条件。
+普通链表操作本身不负责并发安全。多个线程或 CPU 并发修改同一链表时通常要用合适的锁。读多写少时，RCU（read-copy-update，读-复制-更新）可以让读者在 `rcu_read_lock()` 与 `rcu_read_unlock()` 之间用 `list_for_each_entry_rcu()` 遍历，而不持有写者的互斥锁；写者之间仍须用锁或既有协议串行化。Linux RCU 文档以内核 audit 子系统的规则表为例，允许读者短暂看到刚删除的规则；若不能接受旧项，内核也展示了用每项 `deleted` 标记和自旋锁拒绝它的做法，因此“容忍陈旧结果”是最简单的 RCU 用法，不是使用 RCU 的唯一条件。
 
 普通清空用 `list_del_init()` 立即把摘下的钩子重置为自指；RCU 清单不能这样做。`list_del_rcu()` 会从当前环中摘除钩子，但保留 `next` 前向链接供已经走到该节点的读者继续前进（当前 mainline 会标记 `prev` 为 poison）。它不会把钩子重置成可再次入链的空钩子，所以在宽限期结束前不能对同一钩子调用 `INIT_LIST_HEAD`、按普通 `list_del_init` 图示自指，或重新插入。`synchronize_rcu()` 会等待先前的读侧临界区结束；`call_rcu()` 只负责登记回调，必须等回调在宽限期后执行，才能回收或复用对象及钩子。若 RCU 版本还要保留本例的 FIFO 尾插顺序，应配对使用 `list_add_tail_rcu()`；`list_add_rcu()` 是插到 head 后面。
 
-RCU 是读侧与生命周期协议，不是把普通 `list_for_each_entry_safe` 换个名字。内核互斥锁是可睡眠锁，不能用于硬件或软件中断上下文。
+RCU 是读侧与对象生命周期的协议，不是普通 `list_for_each_entry_safe` 的另一个名字。
 
 ## 内嵌节点什么时候划算？
 
