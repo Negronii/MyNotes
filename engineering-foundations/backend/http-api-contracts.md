@@ -2,7 +2,7 @@
 
 API 契约说明调用方怎样构造请求、怎样识别成功和失败、怎样继续读取集合。HTTP 提供通用方法和状态语义；API 定义领域输入、返回结构、错误类别、分页规则与兼容政策。文档、类型注解、OpenAPI 描述和运行中的实现是不同层：写出 schema（结构模式）不证明已部署行为符合它。
 
-**案例：** 浏览器向独立教学源站 `api-contracts.example` 请求 `GET /api/reports/42`。这个合成报表与网络协议章的 `reports.example` 报表不是同一个资源；编号、正文和 ETag 也彼此独立。报表存在且当前主体获准读取时，API 返回稳定 JSON；编号格式错误、报表不存在、认证缺失或访问被拒，各有调用方能识别的结果。列表按 ID 排序并显式给出下一页游标。正文还用同一独立 API 说明带 ETag 的编辑与 201/202 的后续状态。
+**案例：** 浏览器向独立教学源站 `api-contracts.example` 请求 `GET /api/reports/42`。这个合成报表与网络协议章的 `reports.example` 报表不是同一个资源；编号、正文和 ETag 也彼此独立。报表存在且当前主体获准读取时，API 返回稳定 JSON；编号格式错误、报表不存在、认证缺失或访问被拒，各有调用方能识别的结果。列表按 ID 排序，并显式给出下一页游标。后文还用这个 API 说明怎样用 ETag（entity tag，实体标签：服务端为资源某一版本表示生成的标识）防止两个人的编辑互相覆盖，并对比创建资源的 201 与受理后台作业的 202。
 
 示例域名、报表标识、内容和响应值都是教学数据；应用层政策会在正文中单独标明。
 
@@ -41,7 +41,9 @@ Content-Type: application/problem+json
 
 客户端可依赖稳定的 `type` 或扩展错误码，而不应解析供人阅读的 `title`、`detail`。若正文含 `status`，它须与实际 HTTP 状态相同。不要回显秘密、内部异常栈或 SQL 文本。
 
-本端点先验证认证凭据；因此未认证请求即使带非数字报表 ID 也返回 401。对象可见性按租户范围检查；报表不存在和主体无权读取都返回同一个 404 `type` 与中性详情。本端点选择隐藏式 404，不返回 403。其他允许披露资源存在的端点，可以用 403 表示已识别身份但拒绝访问。对处理请求正文之前就能确定的失败（例如未认证或对象不可见），先返回该失败；隐藏对象带陈旧标签仍为 404，不用 412 暗示对象存在。RFC 9110 的条件请求优先级说的是这类无需处理正文即可确定的失败，不表示所有字段级领域验证都必须先于 `If-Match`。已认证且对象可见时，不支持的媒体类型也在读取正文前确定，所以它与过时标签同时出现时先返回 415；缺少 `If-Match` 时也先处理此媒体类型失败。
+本端点先验证认证凭据，所以未认证的请求即使带了非数字的报表 ID，也返回 401。对象可见性在租户范围内检查：报表不存在和主体无权读取，都返回同一个 404 `type` 和中性详情。本端点选择用 404 隐藏对象，而不返回 403；允许披露资源存在的其他端点，可以用 403 表示“已识别身份，但拒绝访问”。
+
+错误同时出现时还要规定先报哪一个。下文的编辑请求会用 `If-Match` 头携带之前读到的 ETag，标签过时则返回 412。凡是不处理请求正文就能确定的失败（例如未认证、对象不可见），都先返回；所以一个隐藏对象即使带着过时标签，仍返回 404，不用 412 暗示对象存在。RFC 9110 的条件请求优先级只针对这类无需处理正文即可确定的失败，并不要求所有字段级领域校验都先于 `If-Match`。已认证且对象可见时，不支持的媒体类型同样在读取正文前就能确定，因此它与过时标签同时出现时先返回 415；缺少 `If-Match` 时也先返回这个 415。
 
 | 条件 | 本例的结果 | 补充约定 |
 | --- | --- | --- |
@@ -63,7 +65,7 @@ Content-Type: application/problem+json
 
 ## 如何用条件 PATCH 防止覆盖别人更新？
 
-本例的编辑端点只返回一种规范 JSON 表示，而且任一可见字段变更都会推进资源版本，因此它可以用 `"api-contracts-report-42-v7"` 标记该表示。强 ETag（实体标签）必须随它所标记的表示数据变化；若内容协商或内容编码产生字节不同的表示，服务须给每种表示生成可区分的强标签，并让每个标签映射到用于原子写入检查的资源版本。压缩与未压缩表示不能共用同一个强标签。下面先读取唯一的 JSON 表示：
+本例的编辑端点只返回一种规范 JSON 表示，而且任一可见字段变更都会推进资源版本，因此它可以用 `"api-contracts-report-42-v7"` 标记该表示。强 ETag 必须随它所标记的表示数据一起变化；若内容协商或内容编码产生字节不同的表示，服务须给每种表示生成可区分的强标签，并让每个标签映射到用于原子写入检查的资源版本。压缩与未压缩表示不能共用同一个强标签。下面先读取唯一的 JSON 表示：
 
 ~~~http
 GET /api/reports/42 HTTP/1.1
@@ -155,7 +157,7 @@ Content-Type: application/json
 {"id":44,"title":"Weekly overview","status":"queued"}
 ~~~
 
-若请求创建的是可能较久才完成的独立作业，账户报表案例按应用契约使用幂等键（`Idempotency-Key`）重复识别同一提交：
+如果请求创建的是可能要较久才完成的独立作业，就是另一种契约。下面借用[怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md)中的导出接口（路径前缀 `/v1`，与本章 `/api` 示例是不同的 API）：它按应用契约用幂等键（`Idempotency-Key`）识别同一次提交的重复请求：
 
 ~~~http
 POST /v1/accounts/acct-17/reports HTTP/1.1
@@ -175,7 +177,7 @@ Content-Type: application/json
 
 ## 分页怎样给出明确结束条件？
 
-集合可能很大或持续变化，契约须规定页大小、确定性排序和结束信号。本例假设报表 ID 唯一，默认 `limit=2`、最大 100，按 ID 升序；`next_cursor` 是必返回字段，最后一页明确返回 JSON `null`。这是本 API 的表示选择：分页规范也可用不透明的 next-page token 表示结束。本例允许后续页在 1–100 范围内更改 `limit`；游标只定位下一项，筛选条件和排序若有变化则应重新开始列表。
+集合可能很大或持续变化，契约须规定页大小、确定性排序和结束信号。本例假设报表 ID 唯一，默认 `limit=2`、最大 100，按 ID 升序；`next_cursor` 是必返回字段，最后一页明确返回 JSON `null`。这是本 API 的表示选择；其他规范可能用别的方式表示结束，例如 Google AIP-158 在最后一页返回空字符串 `next_page_token`。本例允许后续页在 1–100 范围内更改 `limit`；游标只定位下一项，筛选条件和排序若有变化则应重新开始列表。
 
 ~~~http
 GET /api/reports?limit=2 HTTP/1.1
@@ -208,7 +210,7 @@ Accept: application/json
 
 OpenAPI 记录操作路径、参数、请求/响应媒体类型、成功与错误响应、响应头及 schema，使人和工具可据此调用服务。框架可从请求/响应模型生成结构；自定义异常处理器也要在相应操作里声明错误响应。schema 可表达的约束要与运行时一致，例如仅含普通空格的标题既应在 `CreateReport` 的 JSON Schema 中被拒绝，也应在运行时返回 422；请求媒体类型和认证/授权等运行边界则要对照实际处理器单独核验。检查时按操作核对真实路径、状态码、媒体类型、创建响应的 `Location`、Problem `type`、分页字段必填性，以及 `next_cursor` 的 JSON Schema 是否同时允许字符串和 `null`。
 
-下面的 FastAPI 复现定义裸应用前缀 `/api`，演示 GET/POST、验证、分页和 OpenAPI；它不实现上一节的 PATCH、Merge Patch、认证/租户授权、数据库唯一性或 ETag 并发写入。PATCH 合同使用 `/api/reports/42` 和 `Monthly summary` 的独立详情表示；可运行 fixture 是另一份独立最小数据集，GET 42 固定返回 `Service health` 摘要。创建路由用自定义 `APIRoute` 在 FastAPI 读取或解码正文前只接受 `application/json`，因此不支持的媒体类型即使正文不是合法 JSON，也先返回 415；支持的 JSON 媒体类型但正文格式错误才返回 400。媒体类型比较忽略大小写和参数。仅含普通空格的标题由请求 JSON Schema 的 `pattern` 与运行时校验共同拒绝。正文 `{"title":"   "}` 得到 422 Problem `type=.../validation`。fixture 不能证明 PATCH 表示、授权或并发写入；这些边界不能由 OpenAPI 生成结果替代。标题校验也有一个跨实现边界：JSON Schema 的 ECMAScript 正则与 Python `.strip()` 对 Unicode whitespace 的集合不同。例如以 ECMAScript 引擎执行此 `pattern` 时，单字符 `U+0085` 通过 `\S`，却被此 Python 运行时拒绝；`U+FEFF` 的结果相反。普通空格和长度样例通过，不等于 schema 与运行时对所有输入都一致。
+下面的 FastAPI 复现只是一个以 `/api` 为路由前缀的最小应用，演示 GET/POST、验证、分页和 OpenAPI；它不实现上一节的 PATCH、Merge Patch、认证/租户授权、数据库唯一性或 ETag 并发写入。前文 PATCH 契约中的 `/api/reports/42` 是标题为 `Monthly summary` 的详情表示；这里的可运行 fixture（测试夹具数据）是另一份独立的最小数据集，GET 42 固定返回标题为 `Service health` 的摘要。创建路由用自定义 `APIRoute` 在 FastAPI 读取或解码正文前只接受 `application/json`，因此不支持的媒体类型即使正文不是合法 JSON，也先返回 415；支持的 JSON 媒体类型但正文格式错误才返回 400。媒体类型比较忽略大小写和参数。仅含普通空格的标题由请求 JSON Schema 的 `pattern` 与运行时校验共同拒绝。正文 `{"title":"   "}` 得到 422 Problem `type=.../validation`。fixture 不能证明 PATCH 表示、授权或并发写入；这些边界不能由 OpenAPI 生成结果替代。标题校验也有一个跨实现边界：JSON Schema 的 ECMAScript 正则与 Python `.strip()` 对 Unicode whitespace 的集合不同。例如以 ECMAScript 引擎执行此 `pattern` 时，单字符 `U+0085` 通过 `\S`，却被此 Python 运行时拒绝；`U+FEFF` 的结果相反。普通空格和长度样例通过，不等于 schema 与运行时对所有输入都一致。
 
 > [!example]- 可运行的 FastAPI 契约复现
 > 运行环境已核验：FastAPI 0.128.0、Pydantic 2.11.7、Starlette 0.47.2、httpx 0.28.1；本环境的 `app.openapi()` 生成 OpenAPI 3.1.0。OpenAPI 文档版本以运行时字段为准。
@@ -545,7 +547,7 @@ function ReportDetailsLink({ report }: { report: Report }) {
 > - PATCH 的方法语义、整份补丁原子应用及 `Accept-Patch`：[IETF RFC 5789, PATCH Method for HTTP](https://www.rfc-editor.org/rfc/rfc5789.html)，§2、§3.1，2010-03；核对于 2026-11-12。
 > - `application/merge-patch+json` 的成员省略、`null` 删除和整体数组值语义：[IETF RFC 7396, JSON Merge Patch](https://www.rfc-editor.org/rfc/rfc7396.html)，§2，2014-10；核对于 2026-11-12。JSON Patch 的操作媒体类型与操作数组见 [IETF RFC 6902](https://www.rfc-editor.org/rfc/rfc6902.html)，§3–§4，2013-04；核对于 2026-11-12。
 > - 操作、参数、媒体类型、响应和 schema 的接口描述：[OpenAPI Specification v3.2.1](https://spec.openapis.org/oas/v3.2.1.html)，2026-09-10，§4–§5；核对于 2026-11-12。代码环境当前生成 3.1.0；运行时版本由 `app.openapi()['openapi']` 决定，规范文件描述契约但不保证实现遵循它。
-> - 不透明 page token、除 page size 外的续页参数一致，以及短页不代表结束：[Google AIP-158, Pagination](https://google.aip.dev/158)，2019-02-18，Guidance；核对于 2026-11-12。
+> - 不透明 page token、除 page size 外的续页参数一致、集合结束时 `next_page_token` 必须为空，以及短页不代表结束：[Google AIP-158, Pagination](https://google.aip.dev/158)，2019-02-18，Guidance；核对于 2026-11-12。
 > - FastAPI 请求模型、响应模型、自定义错误处理，以及用 `APIRoute.get_route_handler()` 在原请求处理器前检查请求：[Request Body](https://fastapi.tiangolo.com/tutorial/body/)、[Response Model](https://fastapi.tiangolo.com/tutorial/response-model/)、[Handling Errors](https://fastapi.tiangolo.com/tutorial/handling-errors/)、[Custom Request and APIRoute](https://fastapi.tiangolo.com/how-to/custom-request-and-route/)，官方文档核对于 2026-11-12。代码运行环境为 FastAPI 0.128.0、Starlette 0.47.2、HTTPX 0.28.1；运行回放另核验了媒体类型优先级与 OpenAPI 输出。
 > - Pydantic 2.11 的前置字段校验器及 JSON Schema 生成：[Validators](https://docs.pydantic.dev/2.11/concepts/validators/)、[JSON Schema](https://docs.pydantic.dev/2.11/concepts/json_schema/)，官方版本文档核对于 2026-11-12；代码运行环境为 Pydantic 2.11.7。
 > - REST 超媒体约束及由表示提供状态转移：[Roy Fielding, Architectural Styles and the Design of Network-based Software Architectures, §5.1.5](https://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm)，2000；核对日期：2026-11-12。

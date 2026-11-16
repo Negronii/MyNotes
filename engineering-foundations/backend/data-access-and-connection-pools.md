@@ -1,6 +1,6 @@
 # 怎样限定对象关系映射会话并排查连接池耗尽？
 
-**案例：** 请求读取账户 `acct-17` 的报表 42；worker 也可能为已接受的 `job-demo-731` 分页读取活动。本文用 SQLAlchemy 2.0 和 PostgreSQL 说明四种不同边界：`Session`（会话）跟踪本次对象工作，transaction（事务）界定一组 SQL 的提交或回滚，connection（连接）承载数据库通信，connection pool（连接池）限制并复用并发连接。池耗尽时，先查连接借出多久、为什么没归还，再判断查询或池容量；“数据库慢”不能直接说明是哪一段在慢。
+**案例：** 一个 HTTP 请求读取账户 `acct-17` 的报表 42；另一条路径上，后台 worker（工作进程）为已被接受的导出任务 `job-demo-731` 分页读取该账户的活动记录（任务如何被接受见[怎样设计可持久查询的账户报表？](../architecture/system-design-fundamentals.md)）。本文用 SQLAlchemy 2.0 和 PostgreSQL 说明四种不同边界：`Session`（会话）跟踪本次工作涉及的对象，transaction（事务）界定一组 SQL 的提交或回滚，connection（连接）承载数据库通信，connection pool（连接池）限制并复用并发连接。池耗尽时，先查连接借出多久、为什么没归还，再判断查询或池容量；“数据库慢”不能直接说明是哪一段在慢。
 
 ~~~mermaid
 flowchart TD
@@ -23,7 +23,7 @@ flowchart TD
 
 事务是数据库原子操作的边界。`flush()`（刷新）把 Session 中待写入的变化发成 SQL，但仍处于当前事务；正常离开 `session.begin()` 时提交，异常离开时回滚。若数据库在 INSERT 时生成主键，flush 后通常能在对象上读到这个 ID；但在提交前回滚，新增行仍不会成为已提交数据。若 flush 异常从 `session.begin()` 向外传播，事务上下文在退出时回滚；若代码捕获异常后还要复用同一 Session，必须先显式回滚，或关闭并丢弃这个 Session。
 
-`Engine` 长期保存数据库方言、连接建立方式和进程内连接池。Session 一般先保存逻辑事务状态，第一次真正需要数据库连接时，才向 Engine 借一条 DBAPI 连接；本例由执行 SELECT 触发，但调用 `Session.connection()` 也可以在业务 SQL 发出前借出。事务结束后连接归还池。一个 Session 可以先后运行多笔事务，但每笔事务都有自己的结束点；本例每段请求读取或 worker 页使用一个新的 Session，并在此后才交付响应或进入下一页。`Session.close()` 会结束未完成的事务并归还连接；关闭 Session 不等于关闭数据库服务器。
+`Engine` 长期保存数据库方言、连接建立方式和进程内连接池。Session 一般先保存逻辑事务状态，第一次真正需要数据库连接时，才向 Engine 借一条 DBAPI 连接；本例由执行 SELECT 触发，但调用 `Session.connection()` 也可以在业务 SQL 发出前借出。事务结束后连接归还池。一个 Session 可以先后运行多笔事务，但每笔事务都有自己的结束点。本例中，每次请求读取和 worker 读取的每一页都使用新的 Session，并在它结束后才交付响应或进入下一页。`Session.close()` 会结束未完成的事务并归还连接；关闭 Session 不等于关闭数据库服务器。
 
 仓库中的 [ASP.NET Core 与 EF Core 示例](../../archive/back-end/ASP.NET-Core.md) 用 `DbContext` 展示相近的对象跟踪与请求作用域。换 ORM 后，仍要分别找出对象跟踪、事务提交和驱动连接归还的边界；某框架默认的 Web 作用域不是数据库本身的规则。
 
@@ -91,13 +91,13 @@ def load_account_page(account_id, start_at, end_at, after=None, limit=100):
         ).all()
 ~~~
 
-第一条路径先验证主体，再同时按可信 `account_id` 和 `report_id` 取资源；只用报表 ID 会漏掉账户边界。事务上下文在正常返回时提交、异常时回滚，外层 Session 上下文随后关闭。SQLAlchemy 默认在提交时令已加载的 ORM 属性过期；提交后在 Session 仍打开时读取 `report.status`，可能重新发起数据库访问；提交并关闭后再访问，则可能因对象已脱离 Session 而触发 `DetachedInstanceError`。所以响应字段须在事务提交前复制出来。读取通常不需要为“成功”额外写入；这里显式结束事务，是为了把连接归还点放在返回给客户端之前。
+第一条路径先验证主体，再同时按可信 `account_id` 和 `report_id` 取资源；只用报表 ID 会漏掉账户边界。事务上下文在正常返回时提交、异常时回滚，外层 Session 上下文随后关闭。SQLAlchemy 默认在提交时令已加载的 ORM 属性过期；提交后在 Session 仍打开时读取 `report.status`，可能重新发起数据库访问；提交并关闭后再访问，则可能因对象已脱离 Session 而触发 `DetachedInstanceError`。所以响应字段须在事务提交前复制出来。只读请求本来没有需要提交的写入；这里仍用 `session.begin()` 显式结束事务，是为了让连接在响应返回客户端之前就归还。
 
 第二条路径按 Q2 的 `[2026-04-01T00:00:00Z, 2026-07-01T00:00:00Z)` 取一页。排序键 `(occurred_at, event_id)` 由时间戳和唯一事件 ID 组成；本例要求这两列非空，事件写入后不再修改这两个值。若多行同一时间，ID 再给出稳定次序。SQL 返回列顺序是 `event_id, occurred_at`，构造游标时需按排序键重排字段，不能直接把整行当作游标。范围、游标与页大小均绑定为参数；动态拼接的片段只有固定 SQL 条件，不含调用者提供的 SQL。
 
 为看清游标，先把合成教学数据的页大小从 worker 固定预算 100 缩小为 2；SQL 与排序不变。若第一页返回 `(100, 10:00)`、`(101, 10:00)`，游标是 `(10:00, 101)`，下一页只返回 `(102, 10:01)`；这一页仅有 1 行，小于页大小 2，于是读取完成。若游标错用 `(10:00, 100)`，下一页会重复返回 `101`，这说明同时间戳时唯一的第二排序键不可省略。
 
-实际 worker 使用从已接受 job 读取的可信账户、Q2 起止时间和页数预算；本例 job 预算为 12 页，服务端硬上限也是 12。它按 `after=None → 每页读取 → 用最后一行排序键推进` 顺序开启新事务，每页开始新的 Session。下面的调用器只展示分页和结束条件；`load_authorized_export_job` 会从数据库取 job 并复查 `report:export` 权限，写 CSV 的细节省略。
+实际 worker 使用从已接受 job 读取的可信账户、Q2 起止时间和页数预算；本例 job 预算为 12 页，服务端硬上限也是 12。它从 `after=None` 开始，每读一页就开启新的 Session 和事务，再用该页最后一行的排序键推进游标。下面的调用器只展示分页和结束条件；`load_authorized_export_job` 会从数据库取 job 并复查 `report:export` 权限，写 CSV 的细节省略。
 
 ~~~python
 PAGE_SIZE = 100
@@ -136,7 +136,7 @@ def iter_job_pages(job_id):
 > [!example] 一槽连接如何让后续请求在 SQL 之前超时
 > 合成配置：`pool_size=1`、`max_overflow=0`、`pool_timeout=2` 秒。A 在 `t=0` 借到唯一连接，查完报表后还在事务内等待远端服务 3 秒。B 在 `t=0.1` 到达并请求连接；它的 SQL 只需 10 毫秒，但连接一直被 A 占着，B 约在 `t=2.1` 池等待超时，尚未执行自己的 SQL。A 到 `t=3` 归还连接已经救不了 B。把远端等待移出事务，或在发起远端调用前结束数据库工作，才会提前释放槽位。
 
-要让一次故障能分流，为每次申请记录 request/job attempt ID、进程标识、Engine/pool 标识和申请时刻；成功 checkout/checkin 事件另带连接标识、事件时刻和 checkout 时的持有者 attempt ID。应用计时从调用可能借出连接的操作之前开始。SQLAlchemy 的 `PoolEvents.checkout` 只在连接成功取出后触发，超时者 B 不会有 checkout，不能拿 B 的 attempt ID 直接找 A。先在 B 所在的同一进程、同一 pool 中，找出 **B 等待期间仍处于 checked-out 且尚未 checkin 的连接**，包括 B 开始等待之前就已 checkout 的连接；再按该连接持有者 A 的 request/job attempt ID 查应用 trace。要关联 PostgreSQL activity 时，再记录或匹配 backend PID。物理建连失败、池等待超时和 SQL 执行超时分别计数。`PoolEvents.connect` 标记某条物理连接成功创建，能帮助判断 checkout 是否伴随新建，但单个事件不能量出建连耗时；若需建连用时，在驱动执行物理 connect 调用前后分别计时。
+池等待超时后，要能找出是谁占着连接。为此，每次申请连接都记录 request/job attempt ID、进程标识、Engine/pool 标识和申请时刻；成功 checkout/checkin 事件另带连接标识、事件时刻和 checkout 时的持有者 attempt ID。应用计时从调用可能借出连接的操作之前开始。SQLAlchemy 的 `PoolEvents.checkout` 只在连接成功取出后触发，超时者 B 不会有 checkout，不能拿 B 的 attempt ID 直接找 A。先在 B 所在的同一进程、同一 pool 中，找出 **B 等待期间仍处于 checked-out 且尚未 checkin 的连接**，包括 B 开始等待之前就已 checkout 的连接；再按该连接持有者 A 的 request/job attempt ID 查应用 trace。要关联 PostgreSQL activity 时，再记录或匹配 backend PID。物理建连失败、池等待超时和 SQL 执行超时分别计数。`PoolEvents.connect` 标记某条物理连接成功创建，能帮助判断 checkout 是否伴随新建，但单个事件不能量出建连耗时；若需建连用时，在驱动执行物理 connect 调用前后分别计时。
 
 | 观察结果 | 可以得出的判断 | 下一步 |
 |---|---|---|

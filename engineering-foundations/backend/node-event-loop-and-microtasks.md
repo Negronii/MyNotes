@@ -1,8 +1,8 @@
 # Node.js 事件循环阶段与微任务队列如何交互？
 
-**合成案例：** Node.js 服务收到 GET /api/reports/42。请求处理函数（handler）启动异步报表读取、安排一个计时器回调，然后返回。为让例子可以离线运行，下面用 CLI 主模块顶层代码代演 handler 同步发起工作并返回的部分，再用读取脚本文件的 I/O callback 展示读取完成后的调度。顶层 timeout 与 immediate 只校准 CLI 入口的顺序，不代表 HTTP handler 内的顺序。
+**合成案例：** Node.js 服务收到 GET /api/reports/42。请求处理函数（handler）启动异步报表读取、安排一个计时器回调，然后返回。为了能离线运行，下文不启动 HTTP 服务器，而是用 `node` 命令直接运行的脚本（CLI 主模块）的顶层代码扮演 handler 同步发起工作并返回的部分，再用读取脚本自身的 I/O callback 代表“报表读取完成”。脚本顶层另外登记的 timeout 与 immediate 只用来对照入口处的顺序，不代表 HTTP handler 内的顺序。
 
-Node.js 的事件循环（event loop）按阶段安排 I/O 回调和计时器，但主 JavaScript 线程一次只运行一个同步调用栈。调用异步 I/O API 后，函数可以先返回；数据就绪时，Node 再把回调交给该隔离环境（isolate）。底层 I/O 由驱动、操作系统和 libuv（Node.js 使用的跨平台 I/O 库）具体完成，不能仅凭返回 Promise 推断某个数据库驱动的实现。
+Node.js 的事件循环（event loop）按阶段安排 I/O 回调和计时器，但主 JavaScript 线程一次只运行一个同步调用栈。调用异步 I/O API 后，函数可以先返回；数据就绪时，Node 再把对应的回调安排到这条主线程上运行。底层 I/O 由驱动、操作系统和 libuv（Node.js 使用的跨平台 I/O 库）具体完成，不能仅凭返回 Promise 推断某个数据库驱动的实现。
 
 ## I/O 回调、定时器和 setImmediate() 何时推进？
 
@@ -23,7 +23,7 @@ Node.js 的事件循环（event loop）按阶段安排 I/O 回调和计时器，
 
 从 libuv 1.45.0 起（该版本随 Node.js v20.3.0 引入），默认循环模式在 poll 之后检查到期 timer；为兼容旧行为，进入默认循环前仍有一次预检查。较早版本每轮 poll 前也会检查 timer。无论版本如何，阶段名不能当作精确时钟：setTimeout(fn, 0) 在 Node.js v26.13.0 中按 1 毫秒门槛处理；计时器不会切断正在运行的回调，也不保证在指定毫秒恰好运行。
 
-**最小可运行回放。** 为避免连接真实数据库，以下 CLI 主模块同步发起异步工作，代演 handler 发起读取后返回的部分；它的顶层 timer/immediate 仅用于校准 CLI 入口顺序。读取本脚本文件的 `fs.readFile` callback 代表“报表读取已完成”，只用来展示 I/O callback 返回时的队列交接，不模拟数据库驱动的底层传输或耗时。I/O callback 失败时只输出错误并结束该分支；成功时才登记后续队列：
+**最小可运行回放。** 按开头约定，下面脚本的顶层代码扮演 handler，`fs.readFile` 读取脚本自身的 callback 代表“报表读取已完成”。它只展示 I/O callback 返回时的队列交接，不模拟数据库驱动的底层传输或耗时。callback 收到错误时只输出错误并结束该分支；成功时才登记后续的 nextTick、微任务、timer 和 immediate：
 
 ~~~javascript
 // 保存为 node-event-loop-io-demo.cjs；使用 Node.js v26.13.0 运行
@@ -159,7 +159,7 @@ Promise.resolve().then(() => {
 
 输出是 microtask A、microtask B、queueMicrotask C、nextTick X。A 运行时把 B 和 C 放进当前微任务队列，又把 nextTick X 单独排队；当前微任务队列先排空，Node 才处理新排入的 nextTick。不能把“nextTick 先于 Promise”推广到所有正在执行的上下文。
 
-Node.js v26.13.0 将 process.nextTick() 标为历史状态（Legacy），并建议多数用户代码优先用 queueMicrotask()。旧库可能依赖 nextTick 的排序或额外参数，因此迁移时要保留并检查其既有调用契约。若递归调用 nextTick 不断制造工作，Node 会持续清空队列，迟迟不能进入 poll，I/O 回调也就无法推进。对一般可移植的同步调用后延续，用 queueMicrotask() 更合适。
+Node.js v26.13.0 将 process.nextTick() 标为历史状态（Legacy），并建议多数用户代码优先用 queueMicrotask()。旧库可能依赖 nextTick 的排序或额外参数，因此迁移时要保留并检查其既有调用契约。若递归调用 nextTick 不断制造工作，Node 会持续清空队列，迟迟不能进入 poll，I/O 回调也就无法推进。如果只是想让一段代码在当前同步代码结束后立刻接着运行，并希望它在其他 JavaScript 环境（如浏览器）中行为一致，用 queueMicrotask() 更合适。
 
 一种仍可能需要兼容的旧 API 约定是：工厂函数先返回事件发射器（emitter），再于当前调用栈退栈后发出 ready，让调用方来得及注册监听器。callback API 也曾用 nextTick 延后交付同步发现的验证错误。下面只演示前一种顺序，不表示新代码应普遍选择 nextTick：
 
