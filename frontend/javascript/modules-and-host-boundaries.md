@@ -1,6 +1,6 @@
 # ECMAScript 模块与 CommonJS（Node.js 模块格式）在语法、加载和运行时有什么不同？
 
-**案例背景。** 本章使用合成的月报页面。把数据读取、数字格式化和页面入口拆到不同文件后，写下 `import` 并不等于浏览器或 Node.js 已经知道去哪找文件。读者要分清三层：ECMAScript module（ECMAScript 模块，ESM）语法声明依赖与导出；宿主（浏览器或 Node.js）依各自规则定位、加载并执行文件；bundler（打包器）还能在构建时改写依赖图。下面沿报表页面从入口到数据响应，再切换到 Node.js 模块格式，追踪每一层接手的输入和交出的结果。
+**案例背景。** 本章以一个合成的月报页面为例。把数据读取、数字格式化和页面入口拆到不同文件后，写下 `import` 并不意味着浏览器或 Node.js 已经知道去哪里找文件。这里要分清三层：ECMAScript module（ECMAScript 模块，ESM）的语法只声明依赖和导出；宿主（浏览器或 Node.js）按各自的规则定位、加载并执行文件；bundler（打包器）还可以在构建时改写整个依赖图。下面先沿报表页面从入口走到数据响应，再切换到 Node.js 的模块格式，追踪每一层接收什么、交出什么。
 
 | 这一层 | 它决定什么 | 报表例子 |
 | --- | --- | --- |
@@ -10,9 +10,13 @@
 
 ## ESM 静态导入怎样描述报表模块之间的依赖？
 
-ECMAScript 2015（ES2015）定义了这种模块格式。static import（静态导入）与 `export` 声明依赖和公开名称；它们不规定浏览器要发哪个 HTTP 请求，也不规定 Node.js 要用哪个文件系统路径。静态依赖在模块代码运行前就能从语法结构中识别，因此宿主可先建立 module graph（模块图），再把导入名连到导出绑定。
+ESM 由 ECMAScript 2015（ES2015）引入。static import（静态导入）与 `export` 声明依赖和公开的名称，但不规定浏览器要发哪个 HTTP 请求，也不规定 Node.js 读哪个文件路径。静态依赖不必运行代码，从语法结构就能识别，所以宿主可以先建立 module graph（模块图），再把各个导入名连接到对应的导出。
 
-下面的浏览器入口需要 HTML 和四个模块文件：让本地 HTTP 服务器以 `examples/browser/` 为文件根目录，并把 JavaScript 文件作为 `text/javascript` 返回，因为浏览器模块脚本要求 JavaScript MIME 类型；页面先加载 `reports/report-page.js`，import map（导入映射表）把 `@reports/` 指向同源 `reports/` 目录，入口再用相对说明符导入读取函数、用映射名导入格式化函数。服务器让 `/api/reports?month=2026-10` 返回含有限数值 `total: 1200` 的 JSON，页面便从“读取中”更新为 `1,200`。经典脚本的独立支线会另取 `lazy-tip.js` 并打印提示。模块不能从 `file:` 路径直接这样加载；入口用 top-level await（顶层 await，ES2022）等待读取结果。
+下面的浏览器示例由一个 HTML 文件和四个模块文件组成。运行前提和流程如下：
+
+- **服务器**：模块不能从 `file:` 路径直接加载，需要本地 HTTP 服务器以 `examples/browser/` 为根目录，并以 `text/javascript` 类型返回 JavaScript 文件（浏览器要求模块脚本使用 JavaScript MIME 类型）。服务器还要让 `/api/reports?month=2026-10` 返回含数值 `total: 1200` 的 JSON。
+- **模块加载**：页面加载入口 `reports/report-page.js`。入口用相对说明符 `./report-api.js` 导入读取函数，用 `@reports/report-format.js` 导入格式化函数；后者由 import map（导入映射表）把 `@reports/` 映射到同源的 `reports/` 目录。
+- **结果**：入口用 top-level await（顶层 await，ES2022）等待读取结果，页面从“读取中”更新为 `1,200`。另有一段经典脚本独立地按需加载 `lazy-tip.js` 并打印提示。
 
 **文件：** `examples/browser/index.html`
 
@@ -87,9 +91,15 @@ export function message() {
 
 入口中的 `loadReport` 是 named export（命名导出），名称要与导入列表对应；`formatTotal` 是 default export（默认导出），导入方可自选本地名字。单个模块最多有一个默认导出，也可以同时有多个命名导出；导入方可用 `as` 为命名导入另取本地名字。API 响应经 `response.json()` 得到的是运行时数据；JavaScript 不会因为变量名或 TypeScript 类型声明就替服务端验证结构，TypeScript 类型也不会凭空成为 JavaScript 运行时导出，所以入口显式检查 `total` 是数值后才格式化。
 
-若没有 `type="importmap"`，浏览器不能仅凭 `@reports/report-format.js` 猜测 Node Package Manager（npm）的包目录；映射表为 bare module specifier（裸模块说明符）提供目标 URL。相对导入则相对当前导入者的模块 URL 解析。HTML 中入口的 `src` 相对文档 base URL（基准 URL）解析。浏览器里的 `fetch("/api/...")` 也按当前 Window 环境的 API base URL 解析；它通常是文档 base URL，而文档若含跨源 `<base href>`，根相对路径会落到该 base 所在源，不一定与页面源相同；此时请求也受 CORS 限制。本例没有 `<base>`，所以请求落在提供页面的本地站点。Node.js 的 `fetch()` 没有浏览器文档基准，直接传 `"/api/..."` 会因缺少绝对基准 URL 而失败。模块文件定位与应用数据请求不要混作一回事。
+`@reports/report-format.js` 不以 `/`、`./` 或 `../` 开头，也不是完整 URL，属于 bare module specifier（裸模块说明符）。浏览器不会像 Node.js 那样去 npm 包目录里找它；没有 `type="importmap"` 提供的映射，导入就会失败。三种地址各有自己的解析基准：
 
-导入会建立到导出绑定的连接（live binding，实时绑定），而不是在导入时复制一个值。导入方可以读取导出方之后写入的值，但不能直接给导入名赋值。下面两个文件演示读取同一绑定在更新前后的当前值：`before` 是普通变量，保存第一次读到的字符串；再次读取 `selectedMonth` 才会得到更新后的字符串。
+- 相对导入 `./report-api.js` 相对**导入它的模块**的 URL 解析。
+- HTML 中入口脚本的 `src` 相对**文档的 base URL** 解析。
+- `fetch("/api/...")` 是应用发出的数据请求，不是模块加载，按当前窗口的 API base URL 解析，通常就是文档 base URL。若文档含有跨源的 `<base href>`，根相对路径会指向那个源，而不是页面所在的源，请求也要受 CORS 限制。本例没有 `<base>`，所以请求发往提供页面的本地站点。
+
+Node.js 的 `fetch()` 没有文档基准，直接传 `"/api/..."` 会因缺少绝对 URL 而失败。
+
+导入建立的是到导出变量的 live binding（实时绑定），而不是在导入时复制一个值。导入方能读到导出方之后写入的新值，但不能直接给导入名赋值。下面两个文件演示同一绑定在更新前后的值：`before` 是普通变量，保存第一次读到的字符串；更新后再读 `selectedMonth`，得到的是新字符串，输出 `["2026-10","2026-11"]`。
 
 **文件：** `examples/esm-binding/month-state.js`
 
@@ -112,7 +122,7 @@ console.log(JSON.stringify([before, selectedMonth]));
 // selectedMonth = "2026-12"; // 导入绑定不能由此模块写入
 ~~~
 
-默认导出也只是 ESM 公开接口的一种写法，不代表模块本身只返回一个值。ESM 可以保留一个明确的默认名称，同时具名暴露其他能力：
+默认导出只是 ESM 公开接口的一种写法，不代表模块只能导出一个值。一个模块可以有一个默认导出，同时提供其他命名导出：
 
 **文件：** `examples/esm-binding/report-format.js`
 
@@ -137,7 +147,7 @@ console.log(JSON.stringify([monthLabel("2026-10"), formatTotal(1200)]));
 // ["2026年10月","1,200"]
 ~~~
 
-静态 `import` 声明必须位于模块顶层，不适合放进条件分支；要按用户选择延后读取某项功能，可用 dynamic import（动态导入）`import()`。它在调用处发起异步模块加载并返回 Promise，成功后兑现为模块命名空间对象；同一宿主此前已加载的模块可能被复用，因此调用不保证每次都重新取回文件。它不是静态导入声明。浏览器经典脚本、Node.js CommonJS 和 ESM 都可以调用动态导入，但是否被 bundler 拆成独立 chunk（代码块）取决于构建配置。
+静态 `import` 声明只能写在模块顶层，不能放进条件分支。要等用户需要时才加载某项功能，可用 dynamic import（动态导入）`import()`：它在执行到调用处时异步加载模块，返回一个 Promise，成功后兑现为模块命名空间对象。已加载过的模块会被复用，所以并非每次调用都重新取回文件。浏览器经典脚本、Node.js 的 CommonJS 文件和 ESM 都可以调用 `import()`；它是否被 bundler 拆成独立的 chunk（代码块），取决于构建配置。
 
 **文件：** `examples/esm-binding/load-optional.js`
 
@@ -157,11 +167,11 @@ export function renderChart() {
 }
 ~~~
 
-ES2022 起，ESM 顶层可以使用 `await`。浏览器示例中的 `report-page.js` 在顶层等待数据；在本文无环依赖图中，依赖它的导入者要等它成功完成后才开始执行自己的模块体。独立依赖分支仍可继续求值。Promise continuation 与其他任务在事件循环中的顺序见[浏览器 JavaScript 何时运行，画面何时更新？](../runtime/event-loop.md)。
+回到浏览器示例中的顶层 `await`（ES2022 起可用）：`report-page.js` 在顶层等待数据。在本文这种无环的依赖图里，导入它的模块要等它求值完成，才开始执行自己的模块体；与它无关的其他依赖分支则可以继续求值。Promise continuation 与其他任务在事件循环中的顺序见[浏览器 JavaScript 何时运行，画面何时更新？](../runtime/event-loop.md)。
 
 ### 目录入口怎样重新导出一个模块的公开接口？
 
-barrel（聚合导出模块）是用 `export` 转发其他模块接口的 ESM 文件。它把报表目录要公开的名称集中到一个入口，不会自动创建组件、切换宿主或保证减少最终文件：
+barrel（聚合导出模块）是只用 `export ... from` 转发其他模块接口的 ESM 文件。它把报表目录要公开的名称集中到一个入口；它只转发名称，不会改变模块的加载方式，也不保证最终产物变小：
 
 **文件：** `examples/barrel/reports/index.mjs`
 
@@ -190,11 +200,11 @@ export class ReportTable {}
 export class ReportToolbar {}
 ~~~
 
-导出列表应有意挑选，避免无意公开内部模块。内部模块若又从同一聚合入口导入彼此，依赖图可能形成循环；同目录实现通常直接导入具体文件更清楚。若多个 `export *` 路径导出同名但指向不同绑定，该名称会有歧义；若它们最终解析到同一绑定，则不因此产生歧义。显式重导出或改名可让接口意图更清楚。barrel 仍会静态依赖被重导出的模块；最终可以删掉哪些未用代码，还取决于打包器怎样分析导出与副作用，见下文的 tree shaking（摇树优化）。
+使用 barrel 时要注意几点。导出列表应有意挑选，避免意外公开内部模块。目录内的模块若又通过这个聚合入口互相导入，依赖图可能形成循环，所以同目录的实现通常直接导入具体文件。若多个 `export *` 都导出某个名字、但指向不同的绑定，这个名字会产生歧义；若它们最终指向同一个绑定，则没有歧义。显式重导出或改名能让接口意图更清楚。此外，barrel 仍静态依赖所有被重导出的模块；最终能删掉哪些未用代码，取决于打包器怎样分析导出与副作用，见下文的 tree shaking（摇树优化）。
 
 ## CommonJS 与 ESM 的加载和文件识别有什么区别？
 
-CommonJS（Node.js 模块格式，简称 CJS）是 Node.js 的包装函数与 `require()` / `module.exports` 机制；它不是另一套 ECMAScript 语言规范。ESM 在浏览器与 Node.js 都有模块语法，但文件解析、资源定位、取回规则仍由宿主决定。先看语言层面的差异，再分别看浏览器执行模式和 Node.js 文件格式，才能判断相同一行代码在哪个环境成立。
+CommonJS（简称 CJS）是 Node.js 早期采用的模块格式，由包装函数和 `require()` / `module.exports` 实现，不属于 ECMAScript 语言规范。ESM 在浏览器和 Node.js 中语法相同，但文件怎样解析、定位、取回仍由宿主决定。下面先对比两种格式在语言层面的差异，再分别看浏览器的两种脚本和 Node.js 的文件格式判定，这样才能判断同一行代码在哪个环境里成立。
 
 | 关注点 | ESM | CJS（Node.js） |
 | --- | --- | --- |
@@ -204,7 +214,7 @@ CommonJS（Node.js 模块格式，简称 CJS）是 Node.js 的包装函数与 `r
 | 顶层 `await` | 支持 | CJS 源文件不能直接使用；`import()` 可以加载异步 ESM |
 | 解析者 | 浏览器或 Node.js 宿主 | Node.js 或构建工具 |
 
-这里的 `require()` 是代码运行到调用表达式时才同步执行；静态 `import` 则在模块体运行前建立依赖。`import()` 是运行时异步加载，不会改变当前 CJS 文件格式。Node.js 26 另允许 `require()` 同步加载没有顶层 `await` 的 ESM 依赖图；这一互操作边界稍后单独核对。
+`require()` 在代码运行到调用处时才同步执行；静态 `import` 则在模块体运行前就建立依赖。在 CJS 文件中调用 `import()` 是运行时的异步加载，不会让该文件变成 ESM。Node.js 26 还允许用 `require()` 同步加载不含顶层 `await` 的 ESM 依赖图，这一互操作规则在后文单独说明。
 
 ### 浏览器 classic script（经典脚本）与 module script（模块脚本）
 
@@ -213,7 +223,7 @@ CommonJS（Node.js 模块格式，简称 CJS）是 Node.js 的包装函数与 `r
 | 经典脚本 `<script>`：不能写静态 `import` / `export`，但可调用 `import()`。普通外部脚本在解析器遇到时暂停 HTML 解析，直到取回并执行；`async` 并行取回、完成后尽快执行；`defer` 并行取回，在文档解析后按顺序执行。 | 多个经典脚本在同一页面全局环境中运行；顶层 `this` 是页面全局 `this`。顶层 `var` 可成为 `window` 属性；`let` / `const` 是全局词法绑定。 |
 | 模块脚本 `<script type="module">`：随 HTML 解析取回入口，并逐步发现、并行取回静态依赖；默认在文档解析完成后求值，`async` 在模块图就绪后可提前执行，`defer` 不改变时机。跨源模块请求需通过 CORS；裸模块说明符须由 import map 映射。 | 每个模块有自己的模块环境；模块自动处于 strict mode，顶层 `this` 为 `undefined`，顶层 `var` / `let` / `const` 不成为 `window` 属性。 |
 
-两行分别对应 `<script>` 与 `<script type="module">`。两种脚本共用 JavaScript 引擎，但脚本类型会改变解析语法、名称环境和执行调度。把 `type="module"` 去掉，不只是改了请求方式：静态 `import` 语法也不再属于有效的经典脚本。
+两种脚本由同一个 JavaScript 引擎执行，但脚本类型决定了允许的语法、顶层名字放在哪里以及何时执行。所以去掉 `type="module"` 不只是改变加载方式：静态 `import` 在经典脚本里是语法错误。
 
 ### Node.js 怎样判定文件格式与解析说明符？
 
@@ -237,13 +247,13 @@ Node.js 同时支持 CJS 与 ESM。以下规则对应 Node.js 26.13.x；当模�
 }
 ~~~
 
-syntax detection（语法探测）在 Node.js 22.7.0 与 20.19.0 起默认开启；Node.js 26.13.1 官方文档仍标为 Release candidate（候选稳定阶段），并指出对歧义文件扫描语法会有额外开销。它会识别静态 `import` / `export`、`import.meta`、顶层 `await`，以及对包装器参数的顶层词法重声明（例如 `const require = 1`）等无法作为 CJS 执行的语法；`import()` 表达式也可用于 CJS，因此单独出现 `import()` 不会把 `.js` 文件改判为 ESM。新项目应在最近的 `package.json` 明确写 `"type"`，或使用 `.mjs` / `.cjs`，让宿主和构建工具不必猜测。
+上表最后一行的 syntax detection（语法探测）从 Node.js 22.7.0 与 20.19.0 起默认开启；Node.js 26.13.1 的官方文档仍把它标为 Release candidate（候选稳定阶段），并指出扫描歧义文件的语法有额外开销。它识别的是无法在 CJS 中执行的语法：静态 `import` / `export`、`import.meta`、顶层 `await`，以及在顶层用 `const`/`let` 重新声明包装器参数（例如 `const require = 1`）。`import()` 表达式在 CJS 中本来就合法，所以文件里只出现 `import()` 不会被判为 ESM。新项目应在最近的 `package.json` 明确写 `"type"`，或使用 `.mjs` / `.cjs`，让宿主和构建工具不必猜测。
 
-`require()` 走 CommonJS 的解析与同步调用路径；Node.js 26 满足条件时也可通过它同步加载 ESM。`import()` 走 ESM 的加载路径。CommonJS 的相对 `require()` 从当前文件出发解析，支持扩展名补全和目录/包入口；Node ESM 的相对路径也从导入者位置解析，但要求写出扩展名，也不能省略目录的 `index.js`。裸包名在 Node 中按 Node 的包查找规则解析，并可能受 `package.json` 的 `exports` 映射限制；浏览器则用 URL 和 import map。`fetch()` 又是应用发出的数据请求，不能因文件用了 ESM 就期待 Node 把 `"/api/..."` 自动补成某个服务器地址；Node 侧应传绝对 URL，或用已知的 API 基址创建 `new URL("/api/...", base)`。
+判定格式之后，还要解析说明符。`require()` 走 CommonJS 的同步解析路径（Node.js 26 在满足条件时也能借它同步加载 ESM）；`import()` 和静态 `import` 走 ESM 的加载路径。两者的相对路径都从当前文件所在位置解析，但 CJS 会自动补全扩展名、查找目录下的 `index.js` 或包入口，而 Node 的 ESM 要求写出完整扩展名，也不能省略目录的 `index.js`。裸包名在 Node 中按包查找规则解析，并可能受 `package.json` 的 `exports` 字段限制；浏览器则只认 URL 和 import map。至于 `fetch()`，它是应用的数据请求，文件用了 ESM 也不会让 Node 把 `"/api/..."` 补成某个服务器地址；Node 侧应传绝对 URL，或用已知的 API 地址构造 `new URL("/api/...", base)`。
 
 ### CJS 包装函数如何影响顶层绑定与 this？
 
-Node.js 会把每个 CJS 文件的内容放进类似下面的函数包装器中执行，并把 `exports`、`require`、`module`、`__filename` 与 `__dirname` 作为局部参数提供。月报税前金额 `100` 与税率 `0.08` 经 `read-math.cjs` 调用后得到 `108`。`exports` 起初只是与 `module.exports` 指向同一对象的局部快捷变量，因此给 `exports.totalWithTax` 赋属性会公开这个函数；重新给 `exports` 赋新值只改局部变量，替换模块导出必须给 `module.exports` 赋值。下例是真正可运行的 `.cjs` 文件：
+Node.js 把每个 CJS 文件的内容放进一个函数包装器里执行，并把 `exports`、`require`、`module`、`__filename` 与 `__dirname` 作为这个函数的参数传入，所以它们在文件里像局部变量一样可用。`exports` 起初只是与 `module.exports` 指向同一对象的快捷变量：给 `exports.totalWithTax` 添加属性就能公开这个函数；但给 `exports` 本身重新赋值只改变局部变量，要替换整个模块导出，必须给 `module.exports` 赋值。下面的 `.cjs` 文件可以直接运行：`read-math.cjs` 用税率 `0.08` 计算税前金额 `100`，得到 `108`。
 
 **文件：** `examples/node-commonjs/math.cjs`
 
@@ -290,11 +300,11 @@ console.log(JSON.stringify(checks));
 
 最终 `require()` 交给调用者的是 C；改变局部变量或替换模块导出，都不会把已经固定的顶层 `this` 改成 C。
 
-`taxRate` 只在这个包装函数里可见。包装函数最初收到的 `exports` 对象同时是顶层 `this`；`replace-exports.cjs` 把 `module.exports` 换成另一个对象后，顶层 `this` 仍指向初始对象。ESM 不使用这个包装器：顶层声明是模块绑定，顶层 `this` 为 `undefined`，而模块自动处在严格模式。
+同理，`math.cjs` 里的 `taxRate` 只在包装函数内可见，不会成为全局变量。ESM 不使用这个包装器：顶层声明是模块作用域的绑定，顶层 `this` 为 `undefined`，模块自动处于严格模式。
 
 ### `require()` 第一次调用怎样执行模块，第二次又返回什么？
 
-CJS 的 `require()` 是运行到调用处时才执行的同步调用表达式，可放在条件或函数里；它不是静态依赖声明。普通无环首次加载时，Node 解析目标文件、执行包装函数，完成后把当时的 `module.exports` 值交回调用者。之后再次 `require()` 同一解析文件时，Node 不重新执行模块体，而是从缓存的模块记录读取此刻的 `module.exports`；若它未被替换，本例才会再次得到同一个对象。下例让已返回的对象把模块导出替换为另一个对象：
+`require()` 是普通的同步函数调用，可以放在条件分支或函数里，不是静态依赖声明。在无循环依赖的情况下，第一次 `require()` 某个文件时，Node 解析出文件路径、执行包装函数，然后把此时的 `module.exports` 返回给调用者。之后再次 `require()` 同一个文件，Node 不会重新执行模块体，而是从缓存的模块记录中返回**此刻**的 `module.exports`；只有它没被替换过，才会再次得到同一个对象。下例故意在第一次加载后替换模块导出：
 
 **文件：** `examples/node-commonjs/load-once.cjs`
 
@@ -319,7 +329,7 @@ const result = [first === second, first.month, second.month];
 console.log(JSON.stringify(result));
 ~~~
 
-运行 `use-cache.cjs` 时，输出顺序是调用前日志、模块体日志、首次调用返回后的日志、`[false,"October","November"]`；第二次调用没有再次打印 `module evaluated`。第一个变量仍引用旧对象，缓存中的模块记录则已指向新导出。清除缓存或解析到不同文件会改变是否命中同一项的前提。
+运行 `use-cache.cjs`，依次输出 `before first require`、`module evaluated`、`after first require` 和 `[false,"October","November"]`；第二次调用没有再打印 `module evaluated`。变量 `first` 仍引用旧对象，而缓存中的模块记录已指向新的导出对象。若清除了缓存，或路径解析到了另一个文件，就不会命中这条缓存。
 
 ### Node.js 里 CJS 与 ESM 怎样互操作？
 
@@ -329,7 +339,7 @@ console.log(JSON.stringify(result));
 | CJS 用 `import()` 导入 ESM | 可异步导入，得到 Promise；适用于含顶层 `await` 的 ESM。 |
 | CJS 用 `require()` 导入 ESM | Node 26 默认可同步加载没有顶层 `await` 的 ESM 依赖图，通常返回 module namespace object（模块命名空间对象）；默认导出位于 `.default`。若依赖图有顶层 `await`，抛出 `ERR_REQUIRE_ASYNC_MODULE`，改用 `import()`。 |
 
-下面的 `.mjs` 明确没有顶层 `await`，所以 `use-modules.cjs` 可同步 `require()` 并得到命名空间对象；异步模块仍可通过 `import()` 读取。运行该文件时，第一行立即输出 `["October","1,200","legacy CJS"]`，随后显示 `ERR_REQUIRE_ASYNC_MODULE`，最后异步分支输出 `ready`。
+下面的 `modern-report.mjs` 没有顶层 `await`，所以 `use-modules.cjs` 可以同步 `require()` 它并得到命名空间对象；含顶层 `await` 的 `async-report.mjs` 则只能通过 `import()` 读取。运行 `use-modules.cjs`，依次输出 `["October","1,200","legacy CJS"]`、`ERR_REQUIRE_ASYNC_MODULE`，最后异步分支输出 `ready`。
 
 **文件：** `examples/node-interop/modern-report.mjs`
 
@@ -374,7 +384,7 @@ try {
 import("./async-report.mjs").then(({ ready }) => console.log(ready));
 ~~~
 
-Node.js 的 ESM 默认导入 CJS 时，默认值就是 `module.exports`；这个值不保证是对象。先看上面的对象导出，再看下面把数字 `42` 直接赋给 `module.exports`、由 ESM 默认导入读取：
+反方向，ESM 默认导入 CJS 时，得到的默认值就是 `module.exports`，而它不一定是对象。下面先默认导入上面导出对象的 `legacy-report.cjs`，再默认导入一个把数字 `42` 直接赋给 `module.exports` 的文件：
 
 **文件：** `examples/node-interop/use-legacy.mjs`
 
@@ -396,7 +406,9 @@ import value from "./number.cjs";
 console.log(typeof value, value); // number 42
 ~~~
 
-ESM 还可以显式写 `export { value as "module.exports" }`，让 CJS 的 `require()` 直接返回 `value`；这种兼容写法会替代命名空间对象，其他具名导出也不会自动并入该值。上面的 `.mjs` 默认导入直接读取 `module.exports`。ESM 导入 CJS 时，Node 会尝试从 CJS 源码静态探测部分命名导出；这是启发式互操作，不是 ECMAScript 保证。Node 先静态扫描可能的命名导出，在执行或复用 CJS 后，用当时的 `module.exports` 初始化这些命名导出的值；若 CJS 文件已被 `require()` 并修改属性，命名导入读到的是初始化这些命名导出时的值，之后的属性改动不会同步到它。这个例子先以 CJS 读出 `October`，在 ESM 导入发生前改为 `November`，导入完成后再改为 `December`：
+另一个方向也有兼容写法：ESM 可以写 `export { value as "module.exports" }`，让 CJS 的 `require()` 直接返回 `value`，而不是命名空间对象；此时其他命名导出不会自动并入这个值。
+
+ESM 导入 CJS 时还能使用命名导入。Node 会静态扫描 CJS 源码，猜出可能的命名导出；这是启发式的互操作功能，不是 ECMAScript 的保证。CJS 模块执行（或从缓存复用）之后，Node 用**当时**的 `module.exports` 属性值初始化这些命名导出，此后对属性的修改不会同步过去。下例中，CJS 先把 `month` 从 `October` 改为 `November`，然后 ESM 导入它，导入完成后再改为 `December`：
 
 **文件：** `examples/node-interop/mutable-month.cjs`
 
@@ -425,13 +437,13 @@ import("./read-month.mjs").then((namespace) => {
 });
 ~~~
 
-运行该文件输出 `["December","November"]`：默认导入仍引用那个对象，因此能读到后来改成的 `December`；命名导入是在 ESM 为 CJS 初始化命名导出时取到的 `November`，不会跟着后续修改。
+运行 `use-months.cjs` 输出 `["December","November"]`：默认导入引用的是 `module.exports` 对象本身，因此读到后来改成的 `December`；命名导入 `month` 是初始化时取到的 `November`，不随后续修改变化。
 
-跨格式接口应以 Node.js 当前版本文档为准；要让应用在多个 Node 主版本或打包器间保持稳定，清晰声明文件格式并用实际目标运行时回放。
+跨格式互操作的细节随 Node.js 版本变化，应以所用版本的文档为准；要让应用在多个 Node 主版本或打包器之间表现一致，就明确声明文件格式，并在实际目标运行时上验证。
 
 ## 为什么 ESM 并不自动保证 tree shaking？
 
-tree shaking（摇树优化）是 bundler（打包器）尝试删除未使用导出或模块的优化，不是 ESM 运行时保证。静态 `import` / `export` 让工具可以分析依赖与被引用的名字，但工具仍需判断模块执行是否有 side effect（副作用）。例如，一个已进入应用依赖图、需要靠它注册事件监听器或加载 CSS 的模块，即使没有被引用的导出，也必须保留其副作用；若包把它误标为 `sideEffects: false`，打包器可能删除该模块，导致监听器未注册或样式缺失。构建器输出的仍可能是 ESM、浏览器脚本或 CJS；最终产物由相应宿主按自己的规则加载。
+最后回到 bundler 这一层。tree shaking 是 bundler 删除未使用的导出或模块的优化，不是 ESM 在运行时提供的保证。静态 `import` / `export` 让工具能分析依赖关系和被引用的名字，但工具还要判断执行模块是否有 side effect（副作用）。例如，某个模块靠执行来注册事件监听器或加载 CSS，即使它的导出没人引用，也必须保留；若包在 `package.json` 里误标了 `sideEffects: false`，打包器可能删掉这个模块，导致监听器没注册或样式缺失。打包输出的可能是 ESM、浏览器脚本或 CJS，最终仍由相应宿主按自己的规则加载。
 
 barrel 能集中公开名字，但静态重导出仍会把上游纳入待分析的依赖图；它本身不保证减包。是否拆成独立 chunk、哪些未用导出能被删、怎样尊重副作用声明，都由具体构建工具、配置、包元数据和输出目标决定。开发服务器和生产构建的差异、构建器怎样生成最终产物，见[构建工具怎样把源码变成可发布产物？](../tooling/build-tools.md)。
 

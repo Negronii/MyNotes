@@ -1,6 +1,6 @@
 # 何时使用 Map、Set 或普通对象？
 
-报表导入按输入顺序逐条读取业务记录；同一个 `reportId` 可能出现重试。程序既要用 `Map`（映射）保留同一 `reportId` 最后读到的记录，也要为某个对象实例保存临时状态。选择数据结构前，先确定“相同”指什么、键需要什么类型，以及数据是否要按插入顺序遍历。对象字段与身份的比较规则见[JavaScript 值如何转换、比较，并成为属性键？](./javascript-types.md)。
+**案例背景：**报表导入按输入顺序逐条读取业务记录，同一个 `reportId` 可能因重试出现多次。程序有两类需求：按 `reportId` 只保留最后读到的那条记录；以及为某个具体的记录对象保存临时状态（例如是否被选中）。选择数据结构前，先确定三件事：“相同”指什么、键需要什么类型、是否要按插入顺序遍历。对象字段与身份的比较规则见[JavaScript 值如何转换、比较，并成为属性键？](./javascript-types.md)。
 
 用一次导入中的两条记录说明这些选择：
 
@@ -14,9 +14,9 @@ const retry = {
 };
 ~~~
 
-两条记录的 `reportId` 和 `owner` 字段内容相同，但记录对象和 `owner` 对象的身份都不同。
+两条记录的 `reportId` 相同，`owner` 字段内容也相同，但两条记录是不同的对象，两个 `owner` 也是不同的对象。
 
-后文的覆盖策略只保留输入顺序最后读到的一条；若业务要比较事件时间或版本号，必须先按该规则判断是否覆盖，`Map.set` 不会自行判断哪条记录更新。
+后文的覆盖策略是“按输入顺序，后读到的覆盖先读到的”。若业务要按事件时间或版本号决定哪条更新，必须先自行比较再决定是否写入，`Map.set` 不会替你判断。
 
 ## 先按数据形状选择
 
@@ -25,11 +25,11 @@ const retry = {
 | `Map`（映射） | 任意键值对、对象身份键、需要直接遍历或 `size` | 键可以是任意值；按首次插入顺序遍历 |
 | `Set`（集合） | 唯一成员或反复进行成员查询 | 按插入顺序保存；成员按相等规则去重 |
 | `Array`（数组） | 有位置、重复项或要按索引访问的数据 | 每个位置独立，即使值相同也可重复 |
-| 普通对象 | 固定字段的记录，或确实需要字符串 / `Symbol` 属性键的字典 | 其他输入需先转换成字符串或 `Symbol`，转换也可能抛错；普通原型行为仍然存在 |
+| 普通对象 | 固定字段的记录，或键本来就是字符串 / `Symbol` 的字典 | 其他类型的键会先被转换成字符串或 `Symbol`，转换还可能抛错；默认继承 `Object.prototype` 上的属性 |
 
 ## Map 的键按值或身份匹配
 
-`Map` 键可以是任意值。相同对象身份能查到原条目；字段完全相同但分别创建的两个对象是不同键。数字 `7` 和字符串 `"7"` 也不同。更新已有键只替换值，不移动其遍历位置；删除后重新插入才会移到末尾。
+`Map` 的键可以是任意值。用同一个对象作键能查到原条目；字段完全相同、但分别创建的两个对象是两个不同的键。数字 `7` 和字符串 `"7"` 也是不同的键。更新已有键只替换值，不改变它的遍历位置；删除后重新插入，才会移到末尾。
 
 ~~~javascript
 const byId = new Map();
@@ -52,7 +52,7 @@ byObject.set(firstKey, "reselected"); // 删除后再插入，位于末尾
 [...byObject.keys()]; // ["next", firstKey]
 ~~~
 
-`Map` 使用 `SameValueZero`（同值零）：`NaN` 与 `NaN` 匹配，`+0` 与 `-0` 视为同一个键；对象则按身份匹配。常用操作是 `set`、`get`、`has`、`delete`、`clear` 和 `size`。`keys()`、`values()`、`entries()` 返回迭代器；默认迭代器产出 `[key, value]`；`forEach` 的参数顺序为 `(value, key, map)`。
+`Map` 用 `SameValueZero`（同值零）规则比较键：`NaN` 与 `NaN` 匹配，`+0` 与 `-0` 视为同一个键，对象按身份匹配。常用操作是 `set`、`get`、`has`、`delete`、`clear` 和 `size`。`keys()`、`values()`、`entries()` 返回迭代器；默认迭代器产出 `[key, value]`；`forEach` 的参数顺序为 `(value, key, map)`。
 
 `get(key)` 返回 `undefined` 既可能表示没有该键，也可能表示键存在且保存了 `undefined`；需要区分这两种状态时，再用 `has(key)`。
 
@@ -71,7 +71,7 @@ for (const [id, person] of byName) {
 }
 ~~~
 
-例如，两个输入对象可以描述同一个 `reportId`，但其对象身份仍不同。按业务 id 索引要把字段作为键；若要区分具体对象实例，则直接以对象作键：
+回到导入案例的两类需求：按业务 ID 保留最后一条记录时，用 `reportId` 字段作键；为具体记录对象保存状态时，直接用对象作键：
 
 ~~~javascript
 const rowById = new Map();
@@ -88,7 +88,7 @@ metadataByRow.has(retry); // false：重试记录是另一个对象
 
 ## Set 按相等规则保留唯一值
 
-`Set`（集合）保存唯一成员并按插入顺序遍历。删除后再次添加可以移动顺序。它也使用 `SameValueZero`（同值零），因此 `NaN` 只保留一次、有符号零合并，而两个对象即使字段相同仍是两个成员。
+`Set` 保存不重复的成员，按插入顺序遍历；删除后再添加，成员会移到末尾。它同样用 `SameValueZero` 判断重复，因此 `NaN` 只保留一次，`+0` 与 `-0` 合并，而两个字段相同的对象仍是两个成员。
 
 ~~~javascript
 const tags = new Set(["js", "runtime", "js"]);
@@ -108,9 +108,9 @@ selectedRows.size; // 2：对象身份不同
 
 常用操作是 `add`、`has`、`delete`、`clear` 和 `size`。`keys()` 与 `values()` 产出相同成员；`entries()` 为 `Map` 兼容性产出 `[value, value]`；`forEach` 的参数为 `(value, value, set)`。
 
-ECMAScript 2025 标准化 `Set` 的 `union`、`intersection`、`difference`、`symmetricDifference`、`isSubsetOf`、`isSupersetOf` 和 `isDisjointFrom`。运算接收者必须是真正的 `Set`；另一侧可用类 Set 对象（Set-like object），但要遵守成员接口：`size` 报告成员数，`has(value)` 判断成员，`keys()` 返回逐个产出成员的迭代器。
+ECMAScript 2025 为 `Set` 加入了集合运算方法：`union`（并）、`intersection`（交）、`difference`（差）、`symmetricDifference`（对称差）、`isSubsetOf`、`isSupersetOf` 和 `isDisjointFrom`。调用方法的对象（接收者）必须是真正的 `Set`；参数可以是 Set-like object（类 Set 对象），但必须提供三个成员：`size` 报告成员数，`has(value)` 判断成员，`keys()` 返回逐个产出成员的迭代器。
 
-规范先把 `size` 转成数值，若为 `NaN` 就抛 `TypeError`；其余数值转为整数或无穷，结果为负就抛 `RangeError`。仅能被 `for...of` 读取的数组不满足这个接口，数组也没有成员语义所需的 `size` 和 `has`；而 `keys()` 直接返回一个数组也不行，因为该算法要求它返回迭代器对象。`Map` 满足这组接口并按键参与运算。面向旧运行时仍需检查支持。
+规范会先检查这个接口：`size` 转成数值后为 `NaN` 就抛 `TypeError`，为负数就抛 `RangeError`；`has` 或 `keys` 不可调用也抛 `TypeError`。所以数组不能直接作参数：它虽然可用 `for...of` 遍历，却没有 `size` 和 `has`。`keys()` 直接返回数组也不行，算法要求它返回带 `next` 方法的迭代器对象。`Map` 满足这组接口，按键参与运算。这些方法自 2024 年起已在主流浏览器的当前版本中可用，面向旧运行时仍需检查支持。
 
 ~~~javascript
 const enabled = new Set(["search", "export"]);
@@ -142,11 +142,11 @@ try {
 }
 ~~~
 
-`intersection` 根据接收者大小与参数 `size` 报告值选择迭代来源：接收者大小小于或等于该值时按接收者顺序检查；接收者较大时按参数 `keys()` 的成员迭代器顺序检查。因此结果 Set 的插入顺序不一定沿用接收者。三对二的例子按 `supported` 的顺序产生；同大小的例子按接收者顺序产生。若结果顺序用于展示，应显式确定排序规则。
+上例的结果顺序有讲究。`intersection` 会遍历较小的一侧：接收者的成员数小于或等于参数的 `size` 时，按接收者顺序逐个用参数的 `has` 检查；接收者较大时，改按参数 `keys()` 的顺序逐个检查。所以结果的顺序不一定沿用接收者：`requestedInOrder`（3 个成员）与 `supported`（2 个成员）求交时按 `supported` 的顺序产出，两个同为 2 个成员的集合求交时按接收者顺序产出。最后的 `arrayAsKeys` 报告 `size` 为 2，小于接收者的 3，因此算法会调用它的 `keys()`，并因返回值不是迭代器而抛错。若结果顺序用于展示，应显式排序。
 
 ## 普通对象仍适合固定字段与字典
 
-记录 `{ reportId, amount, owner }` 的属性有固定名称时，用普通对象表达最清楚。属性键只能是字符串或 `Symbol`；把数字或对象等其他值放在方括号中时，JavaScript 会先执行属性键转换。数字 `123` 和字符串 `"123"` 因而会撞到同一个属性；若对象无法转换成原始值，访问会抛 `TypeError`。`Object.create(null)` 仅去掉继承原型，不会改变键转换。
+像 `{ reportId, amount, owner }` 这样字段名固定的记录，用普通对象表达最清楚。普通对象的属性键只能是字符串或 `Symbol`；把数字、对象等其他值放进方括号时，JavaScript 会先把它转换成属性键。因此数字 `123` 和字符串 `"123"` 会落到同一个属性上；对象若无法转换成原始值，访问会抛 `TypeError`。`Object.create(null)` 只是去掉了继承的原型，不会改变键转换规则。
 
 ~~~javascript
 const dictionary = Object.create(null);
@@ -167,9 +167,9 @@ function lookupDictionary(key) {
 lookupDictionary(Object.create(null)); // "TypeError"：对象键无法转换成原始值
 ~~~
 
-`Object.hasOwn` 可区分自有和继承属性，也不会因对象覆盖了 `hasOwnProperty` 而失效。需要精确说明哪些属性可枚举、如何复制，请看[JavaScript 值如何转换、比较，并成为属性键？](./javascript-types.md#枚举与复制属性时，先看%20API%20选中了什么)。
+`Object.hasOwn` 能区分自有属性和继承属性，对象即使覆盖了 `hasOwnProperty` 或没有原型，它也照常工作。哪些属性会被枚举、怎样复制，见[JavaScript 值如何转换、比较，并成为属性键？](./javascript-types.md#枚举与复制属性时，先看%20API%20选中了什么)。
 
-属性遍历顺序也与 `Map` 不同：`Object.keys` 先按数值顺序列出可枚举的自有数组索引键，再按创建顺序列出其他可枚举的自有字符串键；它不列 `Symbol` 键。若用对象表达字典，且处理结果依赖插入顺序，先确认代码实际采用的枚举 API 和键类型。
+普通对象的遍历顺序也与 `Map` 不同：`Object.keys` 先按数值升序列出数组索引形式的键，再按创建顺序列出其他字符串键，且不列 `Symbol` 键。若用对象当字典，而处理结果又依赖插入顺序，就要先确认用的是哪个枚举 API、键是什么形式。
 
 ~~~javascript
 const orderedObject = {};
@@ -181,14 +181,15 @@ Object.keys(orderedObject); // ["2", "10", "z"]
 
 ## 成本和生命周期也属于选择条件
 
-规范要求 `Map`、`Set` 和弱集合的平均访问时间相对集合大小为次线性，但不规定具体哈希表或常数时间实现。总体成本还取决于外围算法：如果过滤 n 个数组项时每次都新建同一张查找表，建表成本会被重复支付。需要比较数组去重、批量移除和排序的结果时，见[数组操作怎样处理空位与复制？](./arrays.md)。
+规范要求 `Map`、`Set` 和弱集合的平均访问时间相对集合大小是次线性的，但不规定必须用哈希表或做到常数时间。总成本还取决于外围算法：如果过滤 n 个数组项时每一项都重新建一张同样的查找表，建表成本就被重复支付了 n 次。需要比较数组去重、批量移除和排序的结果时，见[数组操作怎样处理空位与复制？](./arrays.md)。
 
-普通 `Map` 强持有当前条目中的键和值，`Set` 强持有当前成员。用 `Map.set` 替换已有键对应的值后，`Map` 不再因此持有被替换的旧值；删除条目也会解除该条目的持有。集合自身不再可达时，也不会仅靠内部引用让整个集合永久存活。对象实例的元数据若不应延长键对象寿命，可考虑 `WeakMap`（弱映射）；它不提供遍历、`size` 或确定的清理时间，详见[弱集合与弱引用能保证什么？](./javascript-memory-weakmap-and-weakset.md)。
+生命周期也影响选择。`Map` 强引用当前条目的键和值，`Set` 强引用当前成员：只要集合还可达，这些对象就不会被垃圾回收。用 `Map.set` 替换某个键的值后，旧值不再被集合引用；删除条目也会解除对它的引用；集合本身不可达后，它和其中的条目可以一起被回收。如果为对象实例保存的元数据不应延长该对象的寿命，可考虑 `WeakMap`（弱映射）；它不提供遍历、`size` 或确定的清理时间，详见[弱集合与弱引用能保证什么？](./javascript-memory-weakmap-and-weakset.md)。
 
 > [!info]- 来源
 > - Map / Set 可接受的键、成员比较、遍历与平均次线性访问要求：[ECMAScript 2026 §§24.1–24.2](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)。
 > - `SameValueZero` 的定义：[ECMAScript 2026 §7.2.10](https://tc39.es/ecma262/2026/multipage/abstract-operations.html#sec-samevaluezero)。
 > - Set 运算和 Set-like 参数契约：[ECMAScript 2025 §§24.2.1.2、24.2.4.5–24.2.4.16](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-getsetrecord)；`intersection` 按较小一侧遍历：[§24.2.4.9](https://tc39.es/ecma262/2025/multipage/keyed-collections.html#sec-set.prototype.intersection)。
+> - Set 运算方法在主流浏览器的支持（Chrome 122、Firefox 127、Safari 17，2024 年 6 月起成为 Baseline Newly available）：[MDN `Set.prototype.intersection`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set/intersection)，核对于 2026-11-17。
 > - 普通对象自有键顺序与 `Object.keys` 的筛选范围：[ECMAScript 2026 §10.1.11.1](https://tc39.es/ecma262/2026/multipage/ordinary-and-exotic-objects-behaviours.html#sec-ordinaryownpropertykeys) 与 [§20.1.2.19](https://tc39.es/ecma262/2026/multipage/fundamental-objects.html#sec-object.keys)。
 > - 普通对象属性键转换为字符串或 `Symbol`：[ECMAScript 2026 §7.1.19 `ToPropertyKey`](https://tc39.es/ecma262/2026/multipage/abstract-operations.html#sec-topropertykey)；强集合与弱集合的键值及可观察边界：[§§24.1–24.4](https://tc39.es/ecma262/2026/multipage/keyed-collections.html)。
 > - 本章代码核对：Node.js v26.13.0 / V8 14.6.202.34-node.40，2026-11-12。
