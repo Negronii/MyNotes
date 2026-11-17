@@ -1,31 +1,31 @@
 # 脚本如何影响 HTML 解析与文档就绪？
 
-案例背景：报表服务器已返回标题、排序按钮和初始行，浏览器还在解析 HTML，并同时获取 `/reports.css` 与 `/reports.js`。用户想先看到正文；排序按钮应在处理器安装后才可用。下面按脚本获取、执行和文档就绪的先后关系判断哪些工作会挡住哪一步。
+案例背景：一个报表页的服务器已经返回了标题、两个排序按钮和初始的报表行。浏览器一边解析这段 HTML，一边下载样式表 `/reports.css` 和脚本 `/reports.js`。用户希望尽快看到正文；排序按钮则应等脚本装好点击处理器后才可用。下面按脚本的下载、执行和文档就绪三个环节，逐一判断哪项工作会挡住哪一步。
 
 ## 不同脚本属性怎样改变解析顺序？
 
-表格说的是 HTML parser（HTML 解析器）插入的脚本；动态插入的脚本有不同默认调度，不能把它们混为一谈。
+下表只讨论 HTML parser（HTML 解析器）在解析过程中遇到的脚本。用 JavaScript 动态插入的脚本有另一套默认调度规则，不能混为一谈。
 
 | 脚本形式 | 下载与解析的关系 | 运行时机与顺序 |
 |---|---|---|
-| 外部经典脚本，不带 `async` / `defer` | 主 parser 处理到脚本时可开始请求；浏览器也可能由推测解析更早请求资源。主 parser 到达该元素后转而处理脚本；资源或阻塞样式表尚未就绪时先等待 | 脚本同步执行完后 parser 才继续解析，保持文档顺序 |
+| 外部经典脚本，不带 `async` / `defer` | parser 遇到该元素时开始请求（浏览器也可能通过推测解析提前请求）；随后 parser 停下，等脚本资源和阻塞脚本的样式表就绪 | 脚本同步执行完，parser 才继续解析；多个脚本按文档顺序执行 |
 | 外部经典脚本 `defer` | 与解析并行获取 | 解析完成后、`DOMContentLoaded` 前执行；多个 defer 脚本按文档顺序 |
 | 外部经典脚本 `async` | 与解析并行获取 | 下载就绪后尽快执行；若解析还在进行，会暂时打断解析；不保证多个 async 脚本的顺序 |
 | 普通模块脚本 | 模块文件及其 `import` 依赖与解析并行获取 | 默认在解析完成后按文档顺序开始求值；各模块依赖按依赖关系处理 |
 | `async` 模块脚本 | 模块文件及其 `import` 依赖与解析并行获取 | 模块及其依赖就绪后尽快执行，不保证相对其他异步脚本的顺序 |
 | 内联经典脚本，有无 `defer` | 没有外部文件要获取 | parser 到达该元素且没有待等的阻塞样式表时执行；没有 `src` 时 `defer` 不起延后作用 |
 
-`defer` 适合依赖已解析文档、且需要保持外部经典脚本文档顺序的代码。`async` 适合执行不依赖解析结果或其他脚本的独立工作。模块脚本默认延后执行，给模块加 `async` 会改变这个选择。
+`defer` 适合需要完整 DOM、且多个外部经典脚本之间要保持文档顺序的代码。`async` 适合不依赖解析结果、也不依赖其他脚本的独立工作，例如统计脚本。模块脚本默认就像 `defer` 一样延后执行；给它加 `async` 则改为就绪即执行。
 
 ## 为什么解析器有时必须停下来？
 
-解析 HTML 就像按顺序读取标记并逐个建立节点。经典脚本能在节点还没建完时查询、修改文档，甚至用 `document.write()` 改变后续解析结果；浏览器不能一概把这种脚本当作与文档无关的文件而继续前进。因此，脚本获取可以和其他资源获取重叠，但脚本执行本身可能成为解析的依赖点。
+上表中，只有不带 `async` / `defer` 的经典脚本会让 parser 停下等待，原因在于解析的工作方式。parser 按顺序读取标记、逐个建立节点；经典脚本却能在文档还没解析完时查询和修改它，甚至用 `document.write()` 改变后面的解析结果。浏览器无法事先断定某个脚本不会这样做，只好先执行它再继续解析。所以，脚本的下载可以和其他资源的下载并行，但脚本的执行可能成为解析必须等待的点。
 
-样式表对脚本的影响不是浏览器先分析某段 JavaScript 是否调用了 `getComputedStyle()`。HTML 定义了脚本阻塞样式表集合：由 parser 创建、作为启用样式表处理、media 条件匹配且仍在等待中的 `style` / stylesheet `link`，可以进入该集合。后续要执行的同步 parser 脚本或延后脚本，会按这个集合判断是否等待；即便 `/reports.js` 只给按钮注册事件，也可能先等 `/reports.css`。
+样式表也会挡住脚本，因为脚本可能读取样式（例如调用 `getComputedStyle()`）。但浏览器并不会先分析脚本里是否真的读了样式，而是按规则统一处理：HTML 规范定义了一个“阻塞脚本的样式表”集合，由 parser 创建、处于启用状态、`media` 条件匹配且仍在加载中的 `<style>` 或 stylesheet `<link>` 都会进入该集合。之后要执行的同步脚本或延后脚本，只要这个集合非空就要等待。因此，即便 `/reports.js` 只是给按钮注册事件，也可能要先等 `/reports.css` 加载完。
 
-本例中由 parser 在 `<head>` 创建、已启用且 `media` 匹配的 stylesheet link 可能阻塞渲染，因此资源尚未就绪时首帧可能推迟。不是“所有 CSS 必须全部下载后才能开始任何绘制”，而是具体资源是否阻塞由渲染与脚本各自的条件决定。
+样式表还会阻塞渲染。本例的 stylesheet `<link>` 由 parser 在 `<head>` 中创建、处于启用状态且 `media` 匹配，所以它加载完之前，首帧可能推迟。这并不等于“所有 CSS 都下载完才能开始绘制”：某个资源是否阻塞渲染、是否阻塞脚本，各有各的判定条件。
 
-以下 HTML 是报表页的初始结构。本节只跟踪 head 中的 CSS 与模块，以及正文排序控件和图片；标题片段锚点与图标形状不改变这段加载时序。
+以下是报表页的初始 HTML。后文只跟踪 `<head>` 中的样式表和模块脚本，以及正文里的排序按钮和图片；标题的 `id` 和按钮中的 SVG 图标与加载顺序无关。
 
 ~~~html
 <head>
@@ -64,9 +64,9 @@
 </main>
 ~~~
 
-服务器已经输出 May → April 的初始顺序；外部模块 `/reports.js` 在 parser 完成后运行。两个按钮先以原生 `disabled` 状态输出，避免模块尚未安装处理器时把用户的点击静默丢掉。本例模块默认延后到解析结束才执行，因此 guard 走 `interactive` 分支，直接安装处理器；`loading` 分支适用于其他入口在文档仍解析时运行的脚本。
+服务器输出的初始顺序是 May → April。两个按钮先带着原生 `disabled` 属性输出：模块还没装好处理器时，用户点了也没有反应，与其让点击被静默丢掉，不如明确显示为不可用。
 
-以下是外部 `/reports.js` 的最小实现。本例只展示处理器何时安装、如何同步列表和按钮状态，不在这里重放 URL 与浏览器历史逻辑。
+以下是 `/reports.js` 的最小实现，只展示处理器何时安装，以及如何同步列表和按钮状态，不涉及 URL 与浏览器历史。末尾的 `if` 是一段就绪检查（guard）：文档仍在解析（`readyState` 为 `loading`）时等 `DOMContentLoaded` 再初始化，否则立即初始化。本例的模块默认延后到解析结束才执行，此时 `readyState` 已是 `interactive`，所以总是走立即初始化的分支；`loading` 分支是为在解析期间就运行的其他入口准备的。
 
 ~~~javascript
 const records = [
@@ -116,7 +116,7 @@ if (document.readyState === "loading") {
 }
 ~~~
 
-下面前两行对照两种资源返回顺序：CSS 先完成、模块后到；或模块先到、CSS 仍在等待。两者都汇合到 parser 已结束、脚本可运行的阶段。
+下表沿时间顺序列出页面状态。前两行对照两种资源返回顺序：CSS 先到、模块后到；或模块先到、CSS 还在加载。两种情况都会进入第三行：parser 已结束，模块可以运行。
 
 | 此刻的资源状态 | parser、DOM 与首帧 | 排序处理器与就绪事件 |
 |---|---|---|
@@ -125,13 +125,17 @@ if (document.readyState === "loading") {
 | parser 已结束（`readyState=interactive`），模块及其依赖已可执行，CSS 已解除阻塞 | 模块同步调用初始化函数，保留 May → April 初始顺序，随后启用两个按钮 | 排序监听器和初始 `aria-pressed=true/false` 已就绪；普通同步模块执行结束后才派发 `DOMContentLoaded` |
 | 用户点已启用的 **Oldest first** | 不再解析 HTML；处理器按日期重建列表行 | `aria-pressed` 变为 `false/true`，顺序变为 April → May |
 
-这条链把“有 DOM”“可绘制”和“处理器已绑定”分开：模块未运行时按钮仍不可用；同步绑定和初始渲染完成后才启用。若图片较晚到，预留的宽高减少它到达后挤动文字的机会。
+这张表把“DOM 已建好”“可以绘制”和“处理器已绑定”三件事分开：模块没运行时按钮一直不可用，同步绑定和初始渲染完成后才启用。图片若到得较晚，HTML 中预先写好的宽高可以避免它加载后把文字挤开。
 
 ## `DOMContentLoaded` 和 `load` 分别说明什么？
 
-`DOMContentLoaded` 在 HTML parser 完成解析并处理延后脚本后派发到 `Document`。`document.readyState` 在 parser 停止时先变为 `interactive`，此时延后脚本仍可能等待模块脚本、其依赖或阻塞脚本的样式表。普通 `defer` 脚本在该流程同步执行；默认模块也在解析后开始求值。模块及其依赖均同步求值时，模块代码会在事件前执行完；模块遇到顶层 `await` 时，后续代码可在事件后继续，依赖含顶层 `await` 的模块也可能推迟导入方的代码。若初始化把后续工作放进 Promise 回调或异步请求，也可能晚于该事件。因此它不表示所有应用初始化已完成，也不等图片或 `async` 脚本完成。延后脚本可能等待脚本阻塞样式表，所以样式表也能间接推迟 `DOMContentLoaded`。
+上面的表格已经用到这两个事件，这里把它们各自保证什么说清楚。
 
-`load` 事件由 `Window` 的监听器接收；HTML 使用历史兼容的 target override，因此回调中 `event.currentTarget` 是 `window`，而 `event.target` 是 `document`。触发前，文档转入 `complete`，所有仍会延迟 `load` 的资源都已完成；普通图片、样式表、脚本和子框架可能在其中，懒加载资源通常不必挡住它。精确范围由 HTML 的加载算法决定。
+`DOMContentLoaded` 在 HTML parser 完成解析、并执行完延后脚本后派发到 `Document`。顺序是：parser 停止时，`document.readyState` 先变为 `interactive`；这时延后脚本可能还在等模块文件、模块依赖或阻塞脚本的样式表；等它们依次执行完，才派发 `DOMContentLoaded`。由于延后脚本要等阻塞脚本的样式表，样式表也能间接推迟这个事件。
+
+“执行完”只指脚本的同步部分。模块及其依赖都同步求值时，模块代码会在事件前全部跑完；模块里有顶层 `await` 时，`await` 之后的代码可能在事件之后才继续，依赖了含顶层 `await` 模块的代码也可能被推迟。初始化如果把后续工作放进 Promise 回调或网络请求，同样可能晚于该事件。所以 `DOMContentLoaded` 不代表应用初始化全部完成，它也不等待图片或 `async` 脚本。
+
+`load` 事件在 `Window` 上监听。出于历史兼容，HTML 让这个事件的 target 指向文档，所以回调里 `event.currentTarget` 是 `window`，`event.target` 却是 `document`。触发前，`readyState` 已变为 `complete`，所有会延迟 `load` 的资源都已加载完成，通常包括普通图片、样式表、脚本和 iframe；懒加载的资源一般不会挡住它。确切范围由 HTML 规范的加载算法决定。
 
 | 检查点与 `readyState` | 事件与监听位置 | 此时可依赖的条件 |
 |---|---|---|
@@ -143,11 +147,11 @@ if (document.readyState === "loading") {
 
 ## 脚本晚到时，怎样避免错过 `DOMContentLoaded`？
 
-`DOMContentLoaded` 是一次事件，不是以后可订阅的完成状态。若代码通过动态导入或延迟执行，在事件之后才注册监听器，处理器不会补发。前面 `/reports.js` 末尾的 guard 读取 `document.readyState`：仍是 `loading` 时订阅事件并一次性调用已完整定义的 `initializeReportControls()`；否则文档解析已结束，就立即初始化。同步执行的 JavaScript 不会被浏览器事件打断，因此状态检查和注册之间不会插入一次 `DOMContentLoaded` 派发。
+`DOMContentLoaded` 只派发一次，不是一个之后还能订阅的状态。代码若通过动态导入或延迟执行，在事件之后才注册监听器，处理器永远不会被调用。前面 `/reports.js` 末尾的就绪检查正是为此而写：读到 `document.readyState` 仍是 `loading` 时，注册一次性监听器，在事件触发时调用 `initializeReportControls()`；否则说明解析已结束，直接初始化。同步执行的 JavaScript 不会被浏览器事件打断，所以检查状态和注册监听器之间不会恰好插进一次 `DOMContentLoaded`。
 
-`readyState` 的 `loading` 表示 HTML parser 仍在解析；`interactive` 表示解析已结束但延后脚本与子资源流程可能尚未完成；`complete` 表示文档已进入加载完成阶段。这个 guard 只保证 DOM 已可查询：若初始化依赖尚未执行的 defer/module 脚本副作用，应等待该脚本自己的就绪信号。文档状态也不代表报表 API 请求、React hydration 或其他应用异步初始化已经完成；若初始化包含这类异步工作，仍需单独表示并等待。
+回顾 `readyState` 的三个值：`loading` 表示 HTML parser 仍在解析；`interactive` 表示解析已结束，但延后脚本和子资源可能尚未完成；`complete` 表示文档已加载完成。这个就绪检查只保证 DOM 已可查询：若初始化依赖尚未执行的 defer/module 脚本副作用，应等待该脚本自己的就绪信号。文档状态也不代表报表 API 请求、React hydration 或其他应用异步初始化已经完成；若初始化包含这类异步工作，仍需单独表示并等待。
 
-判断主要内容何时出现，要观察绘制；判断排序按钮是否可用，要看其初始化状态。首帧可以早于 `load`，而报表内容也可能已显示、模块脚本还没注册排序处理器。反过来，`DOMContentLoaded` 触发后，一次长脚本任务仍会让点击处理器排队等待。可见时点和就绪事件的区别见[浏览器如何把 URL 变成第一帧？](../browser/browser-basics.md)；用户侧的加载与交互数据见[如何测量并诊断网页性能问题？](../performance/performance-metrics-and-analysis.md)。
+所以，判断主要内容何时出现要看绘制，判断排序按钮能否使用要看它的初始化状态，两者不能用同一个事件代替。首帧可以早于 `load`；报表内容已经显示时，模块也可能还没注册排序处理器。反过来，`DOMContentLoaded` 触发后，主线程上的一个长任务仍会让点击处理排队等待。可见时点和就绪事件的区别见[浏览器如何把 URL 变成第一帧？](../browser/browser-basics.md)；用户侧的加载与交互数据见[如何测量并诊断网页性能问题？](../performance/performance-metrics-and-analysis.md)。
 
 > [!info]- 来源
 > - 解析器插入的经典脚本、`async`、`defer` 与模块调度：[WHATWG HTML：script processing model](https://html.spec.whatwg.org/multipage/scripting.html#script-processing-model)，Living Standard（2026-11-11 更新），外部/内联脚本、defer 模块列表与 async 集合。核对日期：2026-11-12。
