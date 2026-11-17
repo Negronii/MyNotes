@@ -1,10 +1,10 @@
 # 修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？
 
-案例背景：报表列表准备显示新结果，先要清空现有行。Document Object Model（文档对象模型，DOM）查询能返回 `HTMLCollection`（元素集合）或 `NodeList`（节点列表）；成员是否随树变化，由具体 API 决定。若代码遍历实时集合时同时删除成员，后续索引会移动，递增索引可能跳过一行，旧行便会留在下一份结果中。
+案例背景：报表列表要显示一批新结果，代码得先清空现有行。Document Object Model（文档对象模型，DOM）的查询会返回 `HTMLCollection`（元素集合）或 `NodeList`（节点列表）；树变化后集合成员会不会跟着变，取决于具体是哪个 API 返回的。如果一边按递增索引遍历实时集合、一边删除其中的成员，剩余成员的索引会前移，循环就可能跳过一行，旧行于是和新结果一起显示。本文先说明怎样查询到这些行，再逐步追踪跳行是怎样发生的。
 
 ## 先查询到要操作的节点
 
-`document.documentElement` 是 `<html>` 根元素，`document.body` 指向 `<body>`；如果脚本在 HTML parser（HTML 解析器）处理到相应标签前运行，`body` 可能还是 `null`。`getElementById()` 与 `querySelector()` 都返回一个元素或 `null`；后者的参数是 CSS 选择器。拿到容器后，在容器内查询可以避免把页面上另一个同类控件误当成报表控件：
+`document.documentElement` 是 `<html>` 根元素，`document.body` 指向 `<body>`；如果脚本在 HTML parser（HTML 解析器）读到 `<body>` 标签之前就运行，`body` 可能还是 `null`。`getElementById()` 与 `querySelector()` 都返回一个元素或 `null`，后者接收 CSS 选择器。先拿到报表容器，再在容器内部查询，就不会把页面上另一个同类控件误当成报表控件：
 
 ~~~javascript
 const reports = document.querySelector("#reports");
@@ -13,9 +13,11 @@ const oldestButton = controls?.querySelector('button[data-sort="oldest"]') ?? nu
 const directRows = reports?.querySelectorAll(":scope > li.report") ?? [];
 ~~~
 
-`querySelectorAll()` 在没有匹配项时仍返回长度为 `0` 的 `NodeList`；`querySelector()` 则返回 `null`。选择器字符串若不是有效 CSS 语法，查询会抛出 `SyntaxError`，不会返回空结果。完整页面中 `body`、根元素和控件的关系见[浏览器如何把 URL 变成第一帧？](../browser/browser-basics.md)。
+`querySelectorAll()` 在没有匹配项时仍返回长度为 `0` 的 `NodeList`；`querySelector()` 则返回 `null`。选择器字符串若不是有效 CSS 语法，查询会抛出 `SyntaxError`，不会返回空结果。完整页面中根元素、`body` 和这些控件的位置见[浏览器如何把 URL 变成第一帧？](../browser/browser-basics.md)。
 
-这里的可选链还处理了容器不存在的情况：找不到 `#reports` 时，`directRows` 是普通空数组；容器存在但没有匹配行时，它是空 `NodeList`。`:scope >` 把查询范围限定为容器本身的直接子元素。下面的教学列表只有报表行，因此 `children` 与 `.report` 查询开头都得到 `[r1, r2, r3]`；若以后加入状态提示行，`children` 也会包含它，而 `.report` 查询不会。
+代码中的可选链 `?.` 处理了容器不存在的情况：找不到 `#reports` 时，`directRows` 是普通空数组；容器存在但没有匹配行时，它是空 `NodeList`。`:scope >` 把范围限定为容器自身的直接子元素。下一节的教学列表里只有报表行，所以 `children` 和 `.report` 查询一开始都得到 `[r1, r2, r3]`；如果以后列表里加入一行状态提示，`children` 会包含它，`.report` 查询则不会。
+
+能返回多个节点的 API 不止 `querySelectorAll()`，它们在两点上不同：包含哪些节点，以及查询之后 DOM 改变时成员是否跟着变：
 
 | 来源 | 返回类型 | 包含什么 | 查询后 DOM 改变时，集合成员怎样变化 |
 |---|---|---|---|
@@ -24,12 +26,12 @@ const directRows = reports?.querySelectorAll(":scope > li.report") ?? [];
 | `element.querySelectorAll()` | `NodeList` | 匹配元素 | 保持查询时的成员列表 |
 | `element.childNodes` | `NodeList` | 元素、文本、注释等直接子节点 | 实时反映当前树 |
 
-因此，不能只看 `NodeList` 这个类型来判断它是否实时：`childNodes` 是实时集合，而 `querySelectorAll()` 返回静态列表。`childNodes` 中的缩进空白也会成为文本节点；通用节点应使用 `nodeName`，因为 `tagName` 只属于元素。两种集合都不是普通数组，不能直接调用 `map()`；`Array.from()` 可把当前成员引用复制进数组。
+可见，只看类型是 `NodeList` 还判断不了它是否实时：`childNodes` 是实时集合，`querySelectorAll()` 却返回静态列表。`childNodes` 还会把 HTML 中的缩进空白当作文本节点收进来；遍历这类混合节点时读 `nodeName`，因为 `tagName` 只有元素才有。两种集合都不是普通数组，不能直接调用 `map()`；`Array.from()` 会把当前成员的引用复制到一个新数组里。
 
 ## 删除实时集合时，索引为什么会跳过一行？
 
 > [!example] 正向删除实时集合会留下 r2
-> 报表行的教学 ID 是 `r1`、`r2`、`r3`，它们只是合成标识，与真实报表 ID、业务版本或事件游标无关。开始时，循环变量 `i = 0`，实时集合和 `querySelectorAll(":scope > .report")` 的静态结果都按树顺序包含 `[r1, r2, r3]`。这份列表的直接子元素全是报表行，所以 `children` 与按 `.report` 选择的范围相同。
+> 三行报表的 ID `r1`、`r2`、`r3` 是教学用的合成标识。开始时，实时集合 `list.children` 和静态结果 `querySelectorAll(":scope > .report")` 都按树顺序包含 `[r1, r2, r3]`；这份列表的直接子元素全是报表行，所以两者范围相同。
 >
 > ~~~html
 > <ul id="reports">
@@ -51,13 +53,13 @@ const directRows = reports?.querySelectorAll(":scope > li.report") ?? [];
 > // queriedRows 仍有 3 个成员；queriedRows[0].isConnected 为 false。
 > ~~~
 >
-> 第一次执行 `i = 0` 时，循环移除 `liveRows[0]`，也就是 `r1`。实时集合立即变成 `[r2, r3]`，`r2` 从索引 `1` 移到索引 `0`。循环递增 `i` 到 `1` 后，`liveRows[1]` 现在是 `r3`，于是第二次移除 `r3`。集合此时只剩 `[r2]`。第二轮循环体结束后，`for` 语句先把 `i` 再递增到 `2`，然后才检查条件；此时 `2 < liveRows.length`（即 `2 < 1`）为假，循环结束。
+> 第一轮 `i = 0`，循环移除 `liveRows[0]`，也就是 `r1`。实时集合立即变成 `[r2, r3]`，`r2` 从索引 `1` 前移到索引 `0`。第二轮 `i = 1`，此时 `liveRows[1]` 是 `r3`，于是移除的是 `r3`，集合只剩 `[r2]`。随后 `i` 递增到 `2`，条件 `2 < liveRows.length`（即 `2 < 1`）为假，循环结束。
 >
 > 清理步骤结束后 `r2` 还在列表里；如果接下来把新结果插入这份列表，旧行就会和新结果同时显示。
 >
 > ![正向删除实时集合的三步索引变化，以及静态查询仍保留三个节点引用](resources/dom-collections-live-static.svg)
 >
-> 静态结果 `queriedRows` 仍含三个节点引用，但已移除的 `r1`、`r3` 的 `isConnected` 会变成 `false`。静态只固定成员列表，不冻结节点对象。可以在改树之前先复制实时成员，或从末尾向前删除：
+> 静态结果 `queriedRows` 仍含三个节点引用，但已移除的 `r1`、`r3` 的 `isConnected` 变成了 `false`：“静态”只固定成员名单，不会冻结节点本身。修正方法是在改树之前先把实时成员复制出来，或者从末尾向前删除：
 >
 > ~~~javascript
 > // 与上面的错误循环二选一，并从同一份初始列表开始。
@@ -68,9 +70,9 @@ const directRows = reports?.querySelectorAll(":scope > li.report") ?? [];
 > }
 > ~~~
 
-实时集合适合读取 DOM 当前有哪些成员；若遍历期间修改它，递增索引就可能不再指向预期节点。静态查询结果适合按查询时确定的成员执行任务。查询列表是否变化、列表里的节点是否仍连接到文档，是两个不同问题。这里的“实时”描述读取时可见的成员结果，不规定浏览器内部怎样或多久计算一次。
+总结起来，实时集合适合回答“DOM 现在有哪些成员”；遍历期间若修改它，递增索引就可能不再指向预期节点。静态查询结果适合对查询那一刻确定的成员逐个执行操作。名单会不会变、名单里的节点是否仍连接在文档上，是两个独立的问题。“实时”只描述每次读取时看到的成员，不规定浏览器内部怎样、多久重新计算一次。
 
-**延伸阅读：** [JavaScript 事件总线在监听器中重入时怎样保持顺序？](./event-bus-and-observer-patterns.md) 说明状态更新如何触发本地模块；[用户离开报表页时，分析事件怎样尽力发送？](../performance/analytics-event-delivery-on-navigation.md) 说明导航期间的遥测边界；[浏览器如何从输入到绘制界面？](../browser/browser-basics.md) 讨论 DOM 与后续渲染。
+**延伸阅读：** [JavaScript 事件总线在监听器中重入时怎样保持顺序？](./event-bus-and-observer-patterns.md) 说明状态更新如何触发本地模块；[用户离开报表页时，分析事件怎样尽力发送？](../performance/analytics-event-delivery-on-navigation.md) 说明导航期间的遥测边界；[浏览器如何把 URL 变成第一帧？](../browser/browser-basics.md) 讨论 DOM 与后续渲染。
 
 > [!info]- 来源
 > - `Document.body` 可能为空；HTML Standard 将它定义为可返回 `null` 的元素属性：[WHATWG HTML §3.1.1、§3.1.7，Document tree accessors](https://html.spec.whatwg.org/multipage/dom.html#dom-document-body)，Living Standard，核对于 2026-11-12。

@@ -1,24 +1,26 @@
 # 浏览器怎样查询、更新 DOM 并响应用户输入？
 
-案例背景：报表页从 `https://example.test/reports?sort=recent#summary` 打开，列表先显示 May、April 两行。用户点“最早优先”按钮里的文字或图标后，原生示例要找到所属按钮，从 `data-sort` 读出 `oldest`，再把现有行节点排成 April、May，并更新按钮状态。这里把 History API 处理 URL、React 管理状态作为相邻交接；本页先走通普通文档树中的查询、内容更新和事件处理。Document Object Model (文档对象模型，DOM) 把 HTML 文档表示为节点树，JavaScript 可以查询这些节点、改写其状态，并响应输入事件。
+案例背景：报表页从 `https://example.test/reports?sort=recent#summary` 打开，列表先显示 May、April 两行。用户点击“最早优先”按钮里的文字或图标后，原生 JavaScript 要找到被点的按钮，从它的 `data-sort` 读出 `oldest`，把现有的两行重排成 April、May，并更新按钮状态。Document Object Model（文档对象模型，DOM）把 HTML 文档表示为一棵节点树，JavaScript 通过它查询节点、修改节点状态并响应输入事件。本页只走通普通文档树中的查询、修改和事件处理；用 History API 同步 URL、改由 React 管理状态，分别在相邻章节继续。
 
-本章各示例在独立页面或作用域中运行，避免把不同示例的顶层代码拼成同一脚本（重复声明 `const controls` 会报错）。同一示例中的 HTML、交互和清理代码要一起使用。建表和拖动示例使用各自的 HTML；查询、事件、克隆、排序与尺寸观察示例使用后文委托节提供的 `#sort-controls` / `#reports` 初始 HTML。
+本章每个示例都应放在独立页面或独立作用域中运行；把不同示例的顶层代码拼进同一脚本会出错，例如重复声明 `const controls`。同一示例中的 HTML、交互代码和清理代码要一起使用。建表和拖动示例自带 HTML；查询、事件、克隆、排序和尺寸观察示例共用“什么时候用父级监听器处理子控件？”一节给出的 `#sort-controls` / `#reports` 初始 HTML。
 
 ## DOM 树里有哪些节点？
 
-文档节点包含元素节点、文本节点和注释等；元素的 attribute（属性）描述元素状态，但 attribute 不是元素的子节点。常用的 `nodeType` 值如下：
+DOM 树中的节点有元素节点、文本节点、注释节点等；元素的 attribute（属性）描述元素状态，但 attribute 不是元素的子节点。常用的 `nodeType` 值如下：
 
 | `nodeType` | 节点 | 报表页中的例子 |
 |---:|---|---|
 | 1 | Element（元素） | `<ol>`、`<li>`、`<button>` |
 | 2 | Attr（属性） | `id="reports"`（有 `Attr` 对象，但不是树的子节点） |
 | 3 | Text（文本） | `May report` |
+| 8 | Comment（注释） | `<!-- 排序控件 -->` |
+| 9 | Document（文档） | `document` 本身 |
 
-向上找父级时，`parentNode` 可返回任意节点父级：`<html>` 的 `parentNode` 是 Document，而 `parentElement` 只返回元素父级，所以 `<html>.parentElement` 为 `null`。`nodeName` 命名任意节点，`tagName` 只属于元素；`nodeValue` 读取单个 Text 节点的值，在 Element 上则为 `null`，读取元素后代文字应使用 `textContent`。若要查某行的下一个元素，使用 `nextElementSibling`；`nextSibling` 可能先遇到 HTML 换行空白对应的文本节点。同理，`firstChild` 与 `firstElementChild` 可能不是同一项。`childNodes` 包含文本、注释等节点，`children` 只包含元素；它们的集合更新规则见[修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](./dom-collections.md)。
+向上找父级时，`parentNode` 可以返回任何类型的父节点：`<html>` 的 `parentNode` 是 Document，而 `parentElement` 只返回元素父级，所以 `<html>.parentElement` 为 `null`。`nodeName` 命名任意节点，`tagName` 只属于元素；`nodeValue` 读取单个 Text 节点的值，在 Element 上则为 `null`，读取元素后代文字应使用 `textContent`。若要查某行的下一个元素，使用 `nextElementSibling`；`nextSibling` 可能先遇到 HTML 换行空白对应的文本节点。同理，`firstChild` 与 `firstElementChild` 可能不是同一项。`childNodes` 包含文本、注释等节点，`children` 只包含元素；它们的集合更新规则见[修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](./dom-collections.md)。
 
-查询 DOM 使用 CSS 选择器。`querySelector()` 返回第一个匹配元素；没有匹配项时返回 `null`，所以后续读取前要先处理找不到的情况。`querySelectorAll()` 返回匹配项组成的静态 `NodeList`，创建后不会因之后插入的新按钮而自动增加成员。
+要找到节点，最常用的是 CSS 选择器查询。`querySelector()` 返回第一个匹配元素，没有匹配项时返回 `null`，所以读取结果前要先处理找不到的情况。`querySelectorAll()` 返回由匹配项组成的静态 `NodeList`，之后再插入新按钮，它也不会自动多出成员。
 
-下面的查询、事件日志和委托代码使用后面“什么时候用父级监听器处理子控件？”一节中的报表初始 HTML；先载入该 HTML，再在独立运行上下文中执行所需的代码块。
+下面的代码使用本章共用的报表初始 HTML（在后文委托一节给出，需先载入）：
 
 ~~~javascript
 const controls = document.querySelector("#sort-controls");
@@ -29,11 +31,11 @@ if (controls) {
 }
 ~~~
 
-`#sort-controls` 按 ID 找工具栏；`button[data-sort="oldest"]` 同时匹配元素名和 attribute 值。选到控件后，再决定修改文字、HTML 内容属性、DOM 对象属性还是节点顺序。
+`#sort-controls` 按 ID 找到工具栏；`button[data-sort="oldest"]` 同时要求元素名是 `button`、`data-sort` 的值是 `oldest`。选到控件之后，下一步是修改它：可以改文字、改 HTML 属性、改 DOM 对象属性，或调整节点顺序，下一节先区分前三者。
 
 ## 修改内容、HTML 属性和 DOM 对象属性有何区别？
 
-文本和标记要用不同接口。`textContent` 读取后代文本，赋值会用一个文本内容替换子树；`innerText` 读写渲染文本：读取时元素若未渲染，会退回到后代文本；若已渲染，结果会受显示状态影响；赋值中的换行会成为可见换行。`innerHTML` 读取或解析 HTML 字符串。把纯文字放入 DOM 时使用 `textContent`；只有受信任或已净化的标记才作为 HTML 解析。
+写纯文字和写 HTML 标记要用不同接口。`textContent` 读取所有后代文本，赋值时用一个文本节点替换整个子树。`innerText` 读写的是渲染后的文本：元素未渲染时，读取结果退回为后代文本；已渲染时，结果受 CSS 显示状态影响（例如隐藏内容不计入）；赋值时字符串里的换行会变成可见换行。`innerHTML` 读取子树的 HTML 字符串，赋值时把字符串当作 HTML 解析。放入纯文字时用 `textContent`；只有可信或已净化的标记才交给 HTML 解析。
 
 | 写法 | 控制什么 | 报表页上的用途 |
 |---|---|---|
@@ -43,7 +45,7 @@ if (controls) {
 | `element.setAttribute(name, value)` | HTML content attribute（HTML 内容属性） | 设置 `data-id`、`alt`、`title` 等声明 |
 | `element.classList`、`element.style` | class 集合与内联样式 | 切换状态 class，或写入必要的单次样式 |
 
-HTML 内容属性是元素当前的标记属性；许多 DOM property（DOM 对象属性）会反射对应 attribute。文本输入框的 `value` 属性提供了一个重要区别：`value` 内容属性给出默认值，`input.value` 则表示当前值。当前值一旦变成 dirty（已修改），再改 attribute 只更新默认值，直到表单重置。
+HTML 内容属性就是写在标记上的属性；许多 DOM property（DOM 对象属性）会反射（reflect）对应的 attribute，即读写其中一个会同步另一个。但两者不总是等价，文本输入框的 `value` 就是典型例子：`value` 内容属性给出默认值，`input.value` 表示当前值。当前值一旦被修改（变成 dirty），再改 attribute 只会更新默认值，当前值保持不变，直到表单重置。
 
 ~~~html
 <form id="sort-form">
@@ -64,7 +66,7 @@ const afterReset = [query.value, query.defaultValue];
 console.log(JSON.stringify({ beforeEdit, afterEdit, afterReset }));
 ~~~
 
-HTML 的 dirty value flag（值已修改标记）区分当前输入值和可变默认值；`reset()` 会恢复默认值。对 boolean attribute（布尔属性），例如 `disabled`，只看元素自己的 attribute 是否存在：`setAttribute("disabled", "false")` 仍会设置它。`button.disabled = false` 会移除按钮自己的禁用属性，但不一定让它脱离 HTML 禁用状态：若它位于禁用的 `fieldset` 中，仍会匹配 `:disabled`；该 fieldset 的第一个 `legend` 元素子节点内的后代控件有例外。
+上面靠的是 HTML 的 dirty value flag（值已修改标记），它区分当前输入值和默认值；`reset()` 把当前值恢复为默认值并清除标记。另一类容易出错的是 boolean attribute（布尔属性），例如 `disabled`：它只看属性是否存在，不看值，所以 `setAttribute("disabled", "false")` 照样会禁用元素。`button.disabled = false` 只移除按钮自己的禁用属性，不一定让它变为可用：如果按钮位于禁用的 `fieldset` 中，它仍然匹配 `:disabled`。例外是该 fieldset 的第一个 `legend` 子元素内的控件，它们不受 fieldset 禁用影响。
 
 ~~~html
 <fieldset disabled>
@@ -108,7 +110,7 @@ console.log(JSON.stringify(states));
 
 若要检查 HTML 表单禁用状态（包含 `fieldset` 继承），用 `button.matches(":disabled")`；若只想读写元素自己的禁用属性，用 `button.disabled`。
 
-要更新筛选行的外观，`className = "selected"` 会整体替换 class 字符串；`classList.add()`、`remove()` 和 `toggle()` 改单个类。`element.style.backgroundColor` 只读写行内的声明；样式表计算出的生效值要用 `getComputedStyle(element)` 读取。CSS property 在 JavaScript 里通常使用 camelCase（小驼峰）。`data-id="may"` 可通过 `row.dataset.id` 读取与设置，`dataset` 中已存在的值是字符串，缺少的 data 属性读到 `undefined`。多段名称会转为小驼峰，例如 `data-report-id` 对应 `dataset.reportId`。图片的 `src` 选择资源，`alt` 提供替代文本（装饰图可用空值），`title` 是补充信息，不能替代 `alt`。
+改元素外观时，`className = "selected"` 会整体替换 class 字符串；`classList.add()`、`remove()` 和 `toggle()` 改单个类。`element.style.backgroundColor` 只读写行内的声明；样式表计算出的生效值要用 `getComputedStyle(element)` 读取。CSS property 在 JavaScript 里通常使用 camelCase（小驼峰）。`data-id="may"` 可通过 `row.dataset.id` 读取与设置，`dataset` 中已存在的值是字符串，缺少的 data 属性读到 `undefined`。多段名称会转为小驼峰，例如 `data-report-id` 对应 `dataset.reportId`。图片的 `src` 选择资源，`alt` 提供替代文本（装饰图可用空值），`title` 是补充信息，不能替代 `alt`。
 
 ~~~javascript
 const textDemo = document.createElement("div");
@@ -124,7 +126,7 @@ console.log(JSON.stringify({ literal, visibleLines }));
 
 ## 怎样生成、移动或克隆一组节点？
 
-为单独演示如何从结构化数据建表，设一张学校成绩表固定按 Name、Subject、Grade 排列。对象字段顺序不是表格的列定义；三条记录应分别显示 Ron—Math—100、Jack—Calculus—70、Mar—Business—90：
+前面修改的都是已有节点；页面还常常需要从数据生成新节点。这里暂时离开报表，用一张独立的学校成绩表演示：表格固定按 Name、Subject、Grade 三列排列，三条记录应分别显示 Ron—Math—100、Jack—Calculus—70、Mar—Business—90。列顺序由代码中的 `columns` 数组定义，而不是依赖对象字段的书写顺序：
 
 ~~~html
 <table>
@@ -153,11 +155,11 @@ for (const student of students) {
 }
 ~~~
 
-每个记录依照同一份 `columns` 产生三格，输入值只进入文本节点。`append()` 会把新节点追加到末尾；若传入已经在文档中的节点，它会将该节点移动到新位置。`insertBefore(node, reference)` 把节点放到参考节点前，`remove()` 将节点从树上移除。
+每条记录都按同一份 `columns` 生成三格，数据值只写入文本节点，不会被当作 HTML 解析。`append()` 会把新节点追加到末尾；若传入已经在文档中的节点，它会将该节点移动到新位置。`insertBefore(node, reference)` 把节点放到参考节点前，`remove()` 将节点从树上移除。
 
-`cloneNode(true)` 会复制节点、后代结构和 HTML attribute。写在 `onclick="..."` 中的内容属性会随节点复制；通过 `element.onclick = handler` 设置的 DOM 对象属性和 `addEventListener()` 注册的监听器不会复制。若副本及其后代有 `id`，插入同一文档前应改成不冲突的 ID，并同步更新指向它们的引用。需要复制行为时，在新节点上重新注册监听器：
+`cloneNode(true)` 会复制节点、全部后代和 HTML attribute。写在标记里的 `onclick="..."` 是内容属性，会随节点复制；通过 `element.onclick = handler` 赋值的处理函数和 `addEventListener()` 注册的监听器都不会复制。如果副本或其后代带有 `id`，插入同一文档前要改成不冲突的 ID，并同步更新指向它们的引用。需要副本也有行为时，在新节点上重新注册监听器。
 
-本例从后文委托节的两行初始列表单独运行：May 源行带 `data-id="may"` 和 `data-date="2026-05-01"`，自身没有 DOM `id` attribute，后代也没有带 ID 的节点。深克隆会保留这两个 data 属性；代码给副本新增一个文档内唯一的 DOM `id`。运行后列表会多一行 May 副本，因此不要把它与后面的两行排序表串成同一轮状态。
+下面的例子回到报表列表，单独从委托一节的两行初始 HTML 运行：May 行带 `data-id="may"` 和 `data-date="2026-05-01"`，自身和后代都没有 `id`。深克隆会保留这两个 data 属性，代码再给副本加一个文档内唯一的 `id`。运行后列表会多出一行 May 副本，所以它与后面两行排序的例子不是同一轮状态。
 
 ~~~javascript
 function handleReportClick(event) {
@@ -171,11 +173,11 @@ copy.addEventListener("click", handleReportClick);
 document.querySelector("#reports").append(copy);
 ~~~
 
-对同一元素给 `onclick` 属性赋新函数会替换先前的函数；多处代码都需监听时，用 `addEventListener()` 可以各自注册和移除 listener（监听器）。只需响应一次时可设 `{ once: true }`；若要提前移除，保留原函数引用，并使用相同 capture（捕获阶段）选项调用 `removeEventListener()`。也可把同一 `AbortSignal`（中止信号）交给多个监听器，结束该页面区域时调用 `abort()` 一并清理。
+上例用 `addEventListener()` 而不是 `onclick` 属性，是因为给同一元素的 `onclick` 赋新函数会替换掉先前的函数；多处代码都要监听时，`addEventListener()` 让每段代码各自注册和移除 listener（监听器）。只需响应一次时可传 `{ once: true }`。要提前移除，需保留原函数引用，并用相同的 `capture` 选项（是否在下一节所说的捕获阶段监听）调用 `removeEventListener()`。也可以把同一个 `AbortSignal`（中止信号）传给多个监听器，页面区域销毁时调用 `abort()` 一并清理。
 
 ## 一次点击沿哪些节点传播？
 
-浏览器为事件确定传播路径（event path）后，监听器可在 capture phase（捕获阶段）、target phase（目标阶段）和 bubble phase（冒泡阶段）运行。下面限定在普通 DOM 树中的 click：点标签文字时 `target` 是 `span`；点 SVG 箭头的可见描边时 `target` 是 `<path>`，点图标留白时则可能是 `svg`。这段代码只记录事件顺序；图展示标签文字分支经过的节点，并在工具栏层带出下一节的委托处理器。
+监听器注册好后，一次点击会触发哪些监听器、按什么顺序？浏览器先为事件确定 event path（传播路径），即从 `Window` 到被点节点的祖先链；监听器随后可在三个阶段运行：capture phase（捕获阶段，从外向内）、target phase（目标阶段）和 bubble phase（冒泡阶段，从内向外）。下面只讨论普通 DOM 树中的 click：点按钮上的标签文字时 `target` 是 `span`；点 SVG 箭头的可见描边时 `target` 是 `<path>`；点图标的留白处则可能是 `svg`。这段代码只打印事件顺序：
 
 ~~~javascript
 const controls = document.querySelector("#sort-controls");
@@ -195,13 +197,13 @@ document.body.addEventListener("click", () => console.log("body bubble"));
 
 ![普通 DOM 树中 click 的监听器顺序，以及 target 与 currentTarget 的变化](resources/dom-manipulation-and-events-event-path.svg)
 
-图对应上面的点文字日志；工具栏框展示同一传播路径到达 `#sort-controls` 后，由下一节注册的委托监听器继续处理，这不是上面只打印日志的 `controls bubble` 回调。点箭头描边时，路径为 `path → svg → button → #sort-controls → body`；点图标留白时从 `svg` 开始，随后经过同样的祖先。委托器从实际命中的 `event.target` 向上找到按钮，两条路径都不经过 `.sort-label` span。
+图对应点击文字时的日志。图中工具栏一层还画出了下一节注册的委托监听器，表示事件冒泡到 `#sort-controls` 后由它接手；它不是上面只打印日志的 `controls bubble` 回调。点箭头描边时，路径为 `path → svg → button → #sort-controls → body`；点图标留白时从 `svg` 开始，随后经过同样的祖先。委托器从实际命中的 `event.target` 向上找到按钮，两条路径都不经过 `.sort-label` span。
 
-`event.target` 在一次普通 DOM 派发中保持为最初命中的节点；`event.currentTarget` 则是当前监听器绑定的节点。图中的文字分支依次以 `body`、`span`、按钮、工具栏和 `body` 为 `currentTarget`；点箭头描边或图标留白时，target 分别为 `path` 或 `svg`，两条路径都不含 span。普通函数监听器中的 `this` 也指向 `currentTarget`，箭头函数的 `this` 则保留词法绑定。图不覆盖 Shadow DOM（影子 DOM）：跨影子边界时 `target` 可能被重定向；`bubbles` 决定是否向普通祖先冒泡，`composed` 决定能否穿过影子边界，二者不是同一开关。输入框获得和失去焦点时分别派发 `focus` 与 `blur`，这两个原生事件不冒泡；父级要委托焦点变化时可监听会冒泡的 `focusin` 与 `focusout`。
+在一次普通 DOM 派发中，`event.target` 始终是最初命中的节点；`event.currentTarget` 则是当前正在运行的监听器所绑定的节点。点文字时，`currentTarget` 依次是 `body`、`span`、按钮、工具栏和 `body`。用普通函数注册的监听器中，`this` 也指向 `currentTarget`；箭头函数的 `this` 则沿用定义处的词法绑定。图不覆盖 Shadow DOM（影子 DOM）：跨影子边界时 `target` 可能被重定向；`bubbles` 决定是否向普通祖先冒泡，`composed` 决定能否穿过影子边界，二者不是同一开关。输入框获得和失去焦点时分别派发 `focus` 与 `blur`，这两个原生事件不冒泡；父级要委托焦点变化时可监听会冒泡的 `focusin` 与 `focusout`。
 
 ## 什么时候用父级监听器处理子控件？
 
-event delegation（事件委托）让一个父级监听器处理多个后代控件，包括稍后插入的控件，因此不用逐一注册监听器。它适合事件会冒泡、父级确实拥有这些控件、目标匹配规则清楚的场景；它不会消除每次事件分发或处理器本身的计算。
+冒泡意味着祖先节点能收到后代上发生的事件，event delegation（事件委托）正是利用这一点：在父级注册一个监听器，处理多个后代控件，包括之后才插入的控件，不必逐个注册。它适用于事件会冒泡、父级确实拥有这些控件、并且能清楚判断目标属于哪个控件的场景；它减少的是注册次数，每次事件分发和处理器本身的计算并不会少。下面是本章共用的报表初始 HTML：
 
 ~~~html
 <h1 id="summary">Recent reports</h1>
@@ -264,24 +266,30 @@ controls.addEventListener("click", (event) => {
 });
 ~~~
 
-点击标签文字或图标时，`closest()` 从命中的后代向上找到带 `data-sort` 的按钮；`controls.contains(button)` 确认它属于这个工具栏。处理器读到 `oldest` 后，`applySort()` 先拒绝未知意图，再用固定的 ISO 日期值比较两行。`querySelectorAll()` 给出当前行的静态集合，`Array.from()` 把它变为可排序数组；对现有行调用 `append()` 会移动节点，而不是重新创建行。事件处理器同步完成后，本例得到：
+点击标签文字或图标时，`closest()` 从命中的后代向上找到带 `data-sort` 的按钮；`controls.contains(button)` 确认该按钮属于这个工具栏，而不是工具栏外层恰好也匹配的元素。处理器读到 `oldest` 后，`applySort()` 先拒绝未知的排序值，再比较两行 `data-date` 中的 ISO 日期字符串（`YYYY-MM-DD` 格式按字典序比较即按时间先后）。`querySelectorAll()` 给出当前行的静态集合，`Array.from()` 把它变为可排序数组；对现有行调用 `append()` 会移动节点，而不是重新创建行。事件处理器同步完成后，本例得到：
 
 | 时点 / 意图 | 行顺序（`data-id`） | `recent` | `oldest` |
 | --- | --- | --- | --- |
 | 初始 HTML / `recent` | `may` → `april` | `aria-pressed="true"` | `aria-pressed="false"` |
 | 点击处理完成 / `oldest` | `april` → `may` | `aria-pressed="false"` | `aria-pressed="true"` |
 
-本节的 `applySort()` 只负责把同一排序意图写成 DOM 顺序和按钮状态；完整页面还要让 URL、前进后退与这份状态同步，见[每次 URL 变化都会加载新文档吗？](../browser/browser-navigation-and-history.md)。若操作会删除匹配节点并继续遍历，应先取静态快照，避免移除节点改变实时集合；集合差异见[修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](./dom-collections.md)。
+本节的 `applySort()` 只负责把排序意图落实为 DOM 顺序和按钮状态；完整页面还要让 URL 和前进/后退与这份状态同步，见[每次 URL 变化都会加载新文档吗？](../browser/browser-navigation-and-history.md)。若操作会删除匹配节点并继续遍历，应先取静态快照，避免移除节点改变实时集合；集合差异见[修改 DOM 时，HTMLCollection 和 NodeList 会怎样变化？](./dom-collections.md)。
 
 ## 默认动作与传播控制是两回事
 
-按钮若位于表单中，点击可能触发表单提交；这是与事件传播分开的默认动作。`preventDefault()` 只在事件可取消且监听器不是 passive listener（被动监听器）时取消默认动作，它不会停止冒泡。`stopPropagation()` 不取消正在运行的回调，也不会跳过当前 `EventTarget` 本次捕获或非捕获调用中剩余的匹配监听器；它会阻止随后沿路径进行的监听器调用。目标上的捕获调用结束后，若它设置了停止传播标志，目标上的非捕获调用会被跳过（两次调用中的 `eventPhase` 都是 `AT_TARGET`）。`stopImmediatePropagation()` 还会停止当前 `EventTarget` 本次调用中的后续监听器。
+委托示例中的按钮写了 `type="button"`，原因在于：位于表单中的按钮默认是提交按钮，点击会触发表单提交。这种浏览器自带的 default action（默认动作）与事件传播是两回事，控制它们的方法也不同：
 
-如果滚动或触控监听器不需要取消浏览器默认滚动，设置 `{ passive: true }` 能表明这一点；被动监听器调用 `preventDefault()` 无法取消默认动作。DOM 标准规定，未显式设置 `passive` 的 `touchstart`、`touchmove`、`wheel` 和 `mousewheel` 监听器，在 `Window`、`Document`、`documentElement` 或 `body` 上默认 passive 为 true；确实需要拦截时，应先按事件的 `cancelable` 状态判断，再显式设置 `{ passive: false }`。
+- `preventDefault()` 取消默认动作，但前提是事件可取消（`cancelable` 为 true）且监听器不是 passive listener（被动监听器）；它不会停止冒泡。
+- `stopPropagation()` 阻止事件继续传到路径上的下一个节点，但当前节点上同一轮（同为捕获或同为非捕获）剩余的监听器仍会执行。目标节点是个特例：浏览器先调用目标上的捕获监听器、再调用非捕获监听器（两轮中 `eventPhase` 都是 `AT_TARGET`），若捕获监听器调用了 `stopPropagation()`，目标上的非捕获监听器也会被跳过。
+- `stopImmediatePropagation()` 在 `stopPropagation()` 的基础上，还会跳过当前节点本轮剩余的监听器。
+
+两者都不会取消默认动作。
+
+滚轮或触摸监听器如果不需要阻止浏览器默认滚动，可以设置 `{ passive: true }` 声明这一点，浏览器就不必等监听器执行完再滚动；被动监听器里调用 `preventDefault()` 不起作用。DOM 标准还规定，注册在 `Window`、`Document`、`documentElement` 或 `body` 上的 `touchstart`、`touchmove`、`wheel` 和 `mousewheel` 监听器，若未显式设置 `passive`，默认就是 passive。确实需要拦截滚动时，要显式设置 `{ passive: false }`，并在调用 `preventDefault()` 前检查事件的 `cancelable`。
 
 ## 移动端点击与手势策略
 
-历史上的移动端 click 延迟有特定条件：部分浏览器曾等待判断一次触摸是否还会成为双击缩放手势。它不是今天所有浏览器、所有 viewport（视口）或所有输入模式下的固定延迟。先设置符合设备宽度的 viewport；不要为了绕开历史延迟而禁止用户缩放。
+默认动作不只来自表单，触摸手势也是。移动端曾有 click 延迟：部分浏览器在一次轻触后要等一会儿，判断它是否会成为双击缩放。这只在特定条件下发生，不是今天所有浏览器、所有 viewport（视口）或所有输入方式下都有的固定延迟。Chrome 的 viewport 诊断说明，初始视口未针对移动设备优化时，点击可能延后最多 300 毫秒；其他浏览器和设置会有不同。首先应设置与设备宽度一致的 viewport，不要为了绕开这种延迟而禁止用户缩放：
 
 ~~~html
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -295,11 +303,11 @@ controls.addEventListener("click", (event) => {
 }
 ~~~
 
-它让浏览器保留平移和连续缩放，同时不把双击缩放作为该元素上的手势。把规则限制在确实需要的控件，不要用 `touch-action: none` 全局封锁操作。原生 `<button>` 自带键盘激活；自制的 `role="button"` 还必须补足键盘行为。Chrome 的 viewport 诊断指出一个特定条件：初始视口未针对移动设备优化时，点击可能延后至多 300 毫秒；其他浏览器和输入设置会不同，不能把这个值当成所有移动端点击的固定时延。除非目标设备实测仍有兼容问题，不要同时在 `touchend` 和 `click` 上触发同一动作，以免合成 click 与原生 click 重复执行。
+它让浏览器在该元素上保留平移和双指缩放，但不再把双击识别为缩放手势。只对确实需要的控件使用这条规则，不要用 `touch-action: none` 全局禁止触摸操作。除非在目标设备上实测仍有问题，不要同时在 `touchend` 和 `click` 上触发同一动作，否则触摸后浏览器派发的 click 会让动作执行两次。另外，原生 `<button>` 自带键盘激活（Enter、空格）；用 `role="button"` 自制的按钮必须自己补上键盘行为，这正是下一节的主题。
 
 ## 键盘事件怎样区分按键含义、位置与重复？
 
-`keydown` 表示按下，`keyup` 表示释放；开启按键自动重复时，持续按住通常还会产生后续 `keydown`。`key` 表示当前布局和修饰键下的按键含义，`code` 则识别物理按键位置。下表是美式键盘上三个独立情形，不是一段连续输入记录：
+`keydown` 表示按下，`keyup` 表示释放；系统开启按键自动重复时，按住不放通常还会持续产生 `keydown`。`key` 表示当前布局和修饰键下的按键含义，`code` 则识别物理按键位置。下表是美式键盘上三个独立情形，不是一段连续输入记录：
 
 | 收到的 `keydown` | `key` | `code` | `repeat` |
 | --- | --- | --- | --- |
@@ -307,13 +315,13 @@ controls.addEventListener("click", (event) => {
 | 按住 Shift 后初次按下同一键 | `"@"` | `"Digit2"` | `false` |
 | 不按 Shift，长按 2 产生后续自动重复 | `"2"` | `"Digit2"` | `true` |
 
-判断“向左移动”这类按键语义时，读 `key === "ArrowLeft"`；确实要固定物理位置的游戏控制等场景，才考虑 `code`，同时处理不同键盘和输入设备的差异。下一节的卡片移动使用 `key`，每次方向键 `keydown` 都移动一步，因此自动重复会连续移动。若某个动作要求每次按下只执行一次，可忽略 `event.repeat` 为 `true` 的重复事件；这不等于限流或服务端去重。
+判断“向左移动”这类按键语义时，读 `key === "ArrowLeft"`；确实要固定物理位置的游戏控制等场景，才考虑 `code`，同时处理不同键盘和输入设备的差异。下一节的卡片移动使用 `key`，每个方向键 `keydown` 移动一步，所以按住方向键会连续移动。如果某个动作要求每次按下只执行一次，可以忽略 `event.repeat` 为 `true` 的事件；但这不能代替限流或服务端去重。
 
 旧 `keypress` 以及数字式 `keyCode` / `which` 属于兼容接口，新代码不应据此判断字符。键盘事件也不等于文本变化：粘贴、语音输入和 Input Method Editor（输入法编辑器，IME）都可能改变文本。观察编辑结果用 `input`；确需处理编辑意图时再结合 `beforeinput` 与 composition（组合输入）过程，不要假定每次 `keydown` 都输入一个字符。`addEventListener` 接受 `"keydown"` 这样的事件名，不加 DOM 属性 `onkeydown` 中的 `on` 前缀。
 
 ## 拖动时怎样跟踪坐标并处理取消？
 
-Pointer Events（指针事件）把鼠标、触摸和笔输入统一到 pointer 事件，但一次拖动不是只有 `pointermove`：它从 `pointerdown` 开始，可通过 `setPointerCapture(pointerId)` 把后续该 pointer 的事件留给手柄；正常释放由 `pointerup` 结束，系统接管手势时可能收到 `pointercancel`，捕获释放后会有 `lostpointercapture`。清理时按 `pointerId` 匹配当前拖动，避免另一根手指或旧事件结束错误手势。
+Pointer Events（指针事件）把鼠标、触摸和笔的输入统一成 pointer 事件。一次拖动不只有 `pointermove`：它从 `pointerdown` 开始，可以调用 `setPointerCapture(pointerId)` 让这个指针的后续事件都发给被拖动的元素；正常松开时收到 `pointerup`，系统接管手势（例如转为页面滚动）时收到 `pointercancel`；指针捕获被释放时（包括 `pointerup` 或 `pointercancel` 之后的自动释放）还会收到 `lostpointercapture`。处理结束事件时要按 `pointerId` 匹配当前拖动，避免另一根手指或过期事件错误地结束这次拖动。
 
 坐标属性对应不同参照系：
 
@@ -323,7 +331,7 @@ Pointer Events（指针事件）把鼠标、触摸和笔输入统一到 pointer 
 | `pageX / pageY` | 文档 | 指针在页面内容坐标中在哪里 |
 | `screenX / screenY` | 屏幕 | 指针相对设备显示区域的位置 |
 
-下面把一个报表卡片放进定位容器。移动用 client 坐标的差值；初始卡片位置来自同一个定位容器的 `offsetLeft` / `offsetTop`。本例假设容器没有 CSS 缩放或旋转，拖动时页面与容器也不滚动；在此条件下，视口坐标的位移对应卡片的 CSS 像素位移。若变换或滚动改变坐标参照系，就需先转换到同一坐标空间。
+下面把一张报表卡片放进定位容器。卡片的位移等于指针 client 坐标的变化量，起点是卡片相对该容器的 `offsetLeft` / `offsetTop`。本例假设容器没有 CSS 缩放或旋转，拖动期间页面和容器也不滚动；在此条件下，指针在视口中移动多少 CSS 像素，卡片就移动多少。如果有变换或滚动，需要先把坐标换算到同一个参照系。
 
 ~~~html
 <div id="report-canvas">
@@ -414,7 +422,9 @@ card.addEventListener("keydown", (event) => {
 });
 ~~~
 
-卡片仍连接文档时，捕获让它在指针移出按钮后仍收到同一指针的移动与结束事件；正常抬起保留新位置，取消或捕获丢失则回到拖动起点。捕获目标脱离文档后，规范建议（SHOULD）把捕获目标改为 `document`，因此卸载时不能依赖卡片监听器收到 `lostpointercapture`。卸载区域时，应先清空拖动状态、释放捕获，再移除节点；下面的清理函数与前面的拖动代码共用同一作用域中的 `card` 和 `drag`：
+卡片仍在文档中时，指针捕获让它在指针移出卡片后仍能收到同一指针的移动和结束事件。正常松开时，`pointerup` 先到达并把 `drag` 清空，保留新位置；随后自动释放捕获产生的 `lostpointercapture` 因 `drag` 已为空而被忽略。只有 `pointercancel` 或意外丢失捕获时，卡片才回到拖动起点。
+
+如果捕获中的卡片被移出文档，规范建议（SHOULD）把 `lostpointercapture` 改发给 `document`，因此卸载时不能指望卡片自己的监听器收到它。卸载这块区域时，应先清空拖动状态、释放捕获，再移除节点；下面的清理函数与前面的拖动代码共用同一作用域中的 `card` 和 `drag`：
 
 ~~~javascript
 function disposeCard() {
@@ -427,13 +437,13 @@ function disposeCard() {
 }
 ~~~
 
-`touch-action: none` 会禁止从卡片上开始的视口平移与缩放，所以只应放在确实需要拖动的小控件上；页面其余区域仍可正常滚动。另有 `contextmenu` 和 `selectstart` 的默认动作可在特定自定义交互上取消，但全页禁用菜单或选中文字会移除浏览器本身提供的操作，也不是安全机制。
+CSS 中的 `touch-action: none` 禁止从卡片上开始的视口平移和缩放，否则触摸拖动会被浏览器当作滚动并触发 `pointercancel`；它只应放在确实需要拖动的小控件上，页面其余区域仍可正常滚动。类似地，`contextmenu` 和 `selectstart` 的默认动作可以在特定的自定义交互上取消，但在全页禁用右键菜单或文字选择会拿走浏览器本身提供的操作，而且起不到任何安全作用。
 
 ## 窗口 resize、元素尺寸与 scroll 应监听在哪里？
 
-`resize` 事件用于窗口/视口尺寸变化；若要响应某个报表容器自身的尺寸变化，使用 `ResizeObserver`（尺寸变化观察器）。`scroll` 应监听页面或实际发生滚动的容器；元素滚动时，把 listener 绑在该元素上，而不是假设它会冒泡到任意父级。两种事件都可能频繁触发，应让处理器只做该界面所需的更新。
+拖动跟踪的是指针位置；页面布局本身也会变化，需要另外的事件。`resize` 事件只反映窗口（视口）尺寸变化；要响应某个报表容器自身的尺寸变化，使用 `ResizeObserver`（尺寸变化观察器）。`scroll` 事件要监听在页面或实际发生滚动的那个容器上：元素滚动时派发的 `scroll` 不冒泡，不能指望在任意父级收到。这两种事件都可能高频触发，处理器只应做界面确实需要的更新。
 
-Navigator 对象（浏览器环境信息接口）提供环境线索：`navigator.language` 是浏览器报告的首选语言，`navigator.platform` 是平台字符串，`navigator.userAgent` 是 user-agent 字符串（用户代理字符串）。语言不是国籍，平台或 user-agent 字符串也不能证明某个 API 可用；相关识别信息还会增加隐私暴露。页面需要容器尺寸能力时，直接检测 `ResizeObserver`，不按浏览器品牌猜测。
+有人会按浏览器类型决定用哪种方式，这并不可靠。Navigator 对象提供一些环境线索：`navigator.language` 是浏览器报告的首选语言，`navigator.platform` 是平台字符串，`navigator.userAgent` 是 user-agent 字符串（用户代理字符串）。语言不是国籍，平台或 user-agent 字符串也不能证明某个 API 可用；相关识别信息还会增加隐私暴露。页面需要容器尺寸能力时，直接检测 `ResizeObserver`，不按浏览器品牌猜测。
 
 ~~~javascript
 const reportList = document.querySelector("#reports");
@@ -467,15 +477,13 @@ function stopObservingReport() {
 }
 ~~~
 
-检测到 `ResizeObserver` 时，更新来自实际报表容器；退回 `window.resize` 时只知道视口变化，父容器单独改变大小不会触发该回退。示例中的 `stopObservingReport()` 应由移除该页面区域的一方调用。
-
-页面区域被移除时，用 `AbortController`（中止控制器）的 `signal` 一次清除绑定到该 signal 的事件监听器；`ResizeObserver` 则调用 `disconnect()` 停止观察。文档就绪和页面加载完成时，`DOMContentLoaded` / `load` 的触发条件见[脚本如何影响 HTML 解析与文档就绪？](../html-css/browser-html-and-css.md)。
+支持 `ResizeObserver` 时，记录的是报表容器的实际宽度；退回 `window` 的 `resize` 时只能知道视口变化，父容器单独改变大小不会触发它。移除这块页面区域的代码负责调用 `stopObservingReport()`：`AbortController`（中止控制器）的 `abort()` 一次移除所有用它的 `signal` 注册的监听器，`ResizeObserver` 则调用 `disconnect()` 停止观察。文档就绪和页面加载完成时，`DOMContentLoaded` / `load` 的触发条件见[脚本如何影响 HTML 解析与文档就绪？](../html-css/browser-html-and-css.md)。
 
 ## 把浏览器事件交给 React 时，交接什么？
 
-若同一报表页由 React 管理，浏览器仍然派发 click；React 的 `onClick` 处理函数收到筛选意图 `oldest` 后，把它交给 state（状态）更新。浏览器这一侧的输入仍是点击事件和当前 DOM；交给应用的意图是“筛选变为 `oldest`”。React 章节从这个输入继续，讲状态快照、组件重算和 commit（提交）后需要的 DOM 变化。见[React 如何把用户操作变成更新后的界面？](../frameworks/react-basics.md)。React 管理的节点应由 React 状态描述；若另用 DOM API 直接改它们，下一次 React 提交可能覆盖这些修改。
+如果同一报表页改由 React 管理，浏览器仍然照常派发 click；React 的 `onClick` 处理函数读出排序意图 `oldest`，把它交给 state（状态）更新，而不是像前面那样直接移动 DOM 节点。浏览器这一侧交出的是点击事件和当前 DOM，应用拿到的是“排序变为 `oldest`”这个意图。React 章节从这里继续，讲状态快照、组件重新计算和 commit（提交）阶段需要的 DOM 变化。见[React 如何把一次用户操作变成界面更新？](../frameworks/react-basics.md)。React 管理的节点应由 React 状态描述；若另用 DOM API 直接改它们，下一次 React 提交可能覆盖这些修改。
 
-React 的 JSX 事件使用 SyntheticEvent（合成事件），保留常用的 DOM 事件概念；`onClick` 默认冒泡，`onClickCapture` 对应捕获。`currentTarget` 在当前处理函数执行时指向该 JSX 监听器所在元素。React DOM 17 起不再池化事件；当前监听函数返回后，React 仍会把 `event.currentTarget` 清为 `null`。因此跨越 `await` 或延后回调前，先把 `event.currentTarget.dataset.sort` 读成普通字符串。这里的 `handleSort` 直接绑定到带筛选意图的按钮，例如 `<button data-sort="oldest" onClick={handleSort}>Oldest first</button>`；若把处理器绑定到工具栏，`currentTarget` 就是工具栏，而不是带 `data-sort` 的按钮：
+React 的 JSX 事件处理函数收到的是 SyntheticEvent（合成事件），它保留了常用的 DOM 事件概念：`onClick` 在冒泡阶段运行，`onClickCapture` 对应捕获阶段。处理函数执行期间，`currentTarget` 指向写了该 JSX 事件属性的元素。React 17 起不再复用（池化）事件对象，但每个处理函数返回后，React 仍会把 `event.currentTarget` 重置为 `null`。所以在 `await` 或延迟回调之前，要先把 `event.currentTarget.dataset.sort` 读成普通字符串。这里的 `handleSort` 直接绑定到带筛选意图的按钮，例如 `<button data-sort="oldest" onClick={handleSort}>Oldest first</button>`；若把处理器绑定到工具栏，`currentTarget` 就是工具栏，而不是带 `data-sort` 的按钮：
 
 ~~~jsx
 async function handleSort(event) {
@@ -485,9 +493,9 @@ async function handleSort(event) {
 }
 ~~~
 
-React DOM 的 `persist()` 不用于延长 `currentTarget` 的有效期；这里要保存的是 `intent`。React 17 也把委托根从 `document` 移到 React root container，但 React 事件对象中的 `currentTarget` 仍表示 JSX 监听元素。与原生 `focus`、`blur` 不冒泡不同，React 的 `onFocus`、`onBlur` 会沿 React 树传播。React Native 的事件行为有自己的边界。
+`persist()` 在 React DOM 中已无作用，不能用它延长 `currentTarget` 的有效期；这里应保存的是 `intent` 字符串。React 17 还把内部委托监听器从 `document` 移到了 React 根容器（root container），但这不改变 React 事件对象中 `currentTarget` 的含义。另一个差异是：原生 `focus`、`blur` 不冒泡，React 的 `onFocus`、`onBlur` 却会沿 React 树冒泡。React Native 的事件系统另有规则，不适用本节结论。
 
-**延伸：**[浏览器如何把 URL 变成第一帧？](../browser/browser-basics.md)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](../browser/browser-navigation-and-history.md)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](../runtime/event-loop.md)说明 click 处理器如何等待主线程并交接到渲染机会；[跨浏览上下文如何通信？](./browser-context-communication.md)讲跨文档消息；[JavaScript 事件总线怎样处理重入？](./event-bus-and-observer-patterns.md)讨论应用层发布/订阅。
+**延伸：**[浏览器如何把 URL 变成第一帧？](../browser/browser-basics.md)交代该页面的首帧和筛选入口；[每次 URL 变化都会加载新文档吗？](../browser/browser-navigation-and-history.md)展示同一点击如何更新历史地址和列表；[浏览器 JavaScript 何时运行，画面何时更新？](../runtime/event-loop.md)说明 click 处理器如何等待主线程并交接到渲染机会；[同一报表在多个标签页中怎样交换变化？](./browser-context-communication.md)讲跨文档消息；[JavaScript 事件总线在监听器中重入时怎样保持顺序？](./event-bus-and-observer-patterns.md)讨论应用层发布/订阅。
 
 > [!info]- 来源
 > - 查询、树节点与事件机制：[WHATWG DOM，Living Standard（2026-11-11 更新）](https://dom.spec.whatwg.org/) 的 [`querySelector()`](https://dom.spec.whatwg.org/#dom-parentnode-queryselector)、[`querySelectorAll()`](https://dom.spec.whatwg.org/#dom-parentnode-queryselectorall)、[节点复制算法](https://dom.spec.whatwg.org/#concept-node-clone)、[事件分发、invoke 与 inner invoke](https://dom.spec.whatwg.org/#concept-event-dispatch)。涵盖首个匹配、静态结果、cloneNode 复制范围、事件阶段、`target` / `currentTarget`、传播和取消。核对日期：2026-11-12。
