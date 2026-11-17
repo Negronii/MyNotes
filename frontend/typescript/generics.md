@@ -1,10 +1,10 @@
 # 泛型怎样保留输入与输出之间的类型关系？
 
-报表页会处理很多种行数据和分页结果。若每个函数都复制一份实现，维护成本很高；若一律把参数和返回值写成 `any`（任意类型），调用处又会丢掉具体字段信息。generic（泛型）让同一段逻辑保留调用时的具体类型。
+报表页要处理多种行数据和分页结果。如果为每种数据各复制一份函数，维护成本很高；如果一律把参数和返回值写成 `any`（任意类型），调用处又会丢掉具体的字段信息。generic（泛型）让同一段逻辑在每次调用时保留具体的类型。
 
 ## 怎样把所选字段的类型一并保留下来？
 
-type parameter（类型参数）像是类型层面的变量。编译器可以从调用参数推断它，也可以由调用者显式指定。下面的 `T` 代表整行类型，`K` 受 `keyof T`（类型键集合）约束，只能取该类型已有的键；indexed access type（索引访问类型）`T[K]` 则返回所选键对应的值类型。
+type parameter（类型参数）相当于类型层面的变量：编译器可以从调用参数推断它，调用者也可以显式指定。下面的 `getProperty` 用 `T` 代表整行的类型；`keyof T` 得到 `T` 所有键名组成的联合类型，`K` 被约束在其中，只能取该行已有的键；indexed access type（索引访问类型）`T[K]` 再取出所选键对应的值类型。
 
 ~~~typescript
 type ReportRow = {
@@ -40,9 +40,9 @@ const statusOrTotal = getProperty(row, statusOrTotalKey);
 // getProperty(row, "owner");                  // 编译错误：不是 ReportRow 的键
 ~~~
 
-`T` 与 `K` 是两个分别推断的类型参数：`T` 保留行形状，`K extends keyof T` 中的 `extends` 是 constraint（约束），要求本次传入的键属于该行已有的键。返回类型 `T[K]` 再按 `K` 取属性值类型，因此单键 `"id"` 得到 `string`，单键 `"total"` 得到 `number`。
+`T` 和 `K` 是分别推断的两个类型参数：`T` 记住行的形状；`K extends keyof T` 里的 `extends` 表示 constraint（约束），要求本次传入的键属于这一行已有的键。返回类型 `T[K]` 按 `K` 取出对应字段的类型。
 
-把一次调用拆开看，编译器先从 `row` 得到 `T`，再把键限制在 `keyof T` 内，并由传入的字面量键推断 `K`，最后计算 `T[K]`：
+把一次调用拆开看：编译器先从 `row` 推断出 `T`，再由传入的字面量键推断出 `K` 并检查它是否在 `keyof T` 内，最后计算 `T[K]`：
 
 | 调用与推导 | 返回类型 |
 |---|---|
@@ -50,11 +50,11 @@ const statusOrTotal = getProperty(row, statusOrTotalKey);
 | `getProperty(row, "total")`：`T = ReportRow`，`K = "total"`，满足 `K extends keyof T` | `T[K]`，即 `ReportRow["total"]`，为 `number` |
 | `getProperty(row, statusOrTotalKey)`：`T = ReportRow`，`K` 是 `"status"` 和 `"total"` 组成的联合 | `T[K]` 是 `ReportRow["status"]` 与 `number` 的联合 |
 
-单独保留 `K` 很重要：若签名只把参数写成 `keyof T`、返回值写成 `T[keyof T]`，即使传入字面量 `"id"`，返回类型也会包含字段值类型的联合。若调用者只掌握部分键组成的联合，`T[K]` 只合并这些键对应的字段类型；例如 `"status" | "total"` 得到 `ReportRow["status"] | number`。只有 `K = keyof ReportRow` 时才覆盖全部字段，本例的结果为 `string | number`。泛型约束保证编译器看到的键有效，不在运行时校验键或行数据。
+为键单独设一个类型参数 `K` 很重要。如果签名把参数直接写成 `keyof T`、返回值写成 `T[keyof T]`，那么即使传入字面量 `"id"`，返回类型也是所有字段值类型的联合。保留 `K` 后，传入的键是几个键的联合时，`T[K]` 也只合并这几个键对应的字段类型：例如 `"status" | "total"` 得到 `ReportRow["status"] | number`。只有 `K` 是完整的 `keyof ReportRow` 时，结果才覆盖全部字段，本例为 `string | number`。泛型约束只保证编译器看到的键有效，运行时并不会校验键或行数据。
 
 ## 怎样让分页与仓储接口为不同数据复用？
 
-泛型也可把类型关系保留在对象结构和一组操作中。报表页面拿到 `ReportPage<ReportRow>`，下游仍知道 `rows` 里的每一项是报表行；同一容器也能装其他数据，而不必退化成 `unknown[]` 或 `any[]`。
+泛型不只用于单个函数，也可以把类型关系保留在数据结构和一组操作中。报表页面拿到 `ReportPage<ReportRow>`，下游仍知道 `rows` 里的每一项是报表行；同一容器也能装其他数据，而不必退化成 `unknown[]` 或 `any[]`。
 
 ~~~typescript
 type ReportPage<T> = {

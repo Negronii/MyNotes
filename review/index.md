@@ -1,6 +1,6 @@
 # 知识导航
 
-先从一个完整问题进入，读完主线再展开感兴趣的机制。下方路线连接同一过程中的不同章节；领域地图提供完整阅读顺序，连续阅读稿适合一口气读下去。
+建议先选一个完整的问题进入，读完主线后再展开感兴趣的机制。下面每条路线把同一个过程涉及的不同章节串起来；各领域地图给出完整的阅读顺序，连续阅读稿则把整个领域合成一篇，适合一口气读下去。
 
 ## 从领域开始
 
@@ -12,18 +12,18 @@
 
 ## 一次操作怎样变成界面更新？
 
-[报表页首次出现](../frontend/browser/browser-basics.md)之后，用户点击筛选条件。先跟着原生 JavaScript 实现理解事件与调度，再把相同的筛选意图放进 React 实现，看两种方式的 DOM 改动怎样得到下一帧。
+这条路线从[报表页首次显示](../frontend/browser/browser-basics.md)之后开始：用户点击“最早优先”排序按钮（按钮上的取值为 `oldest`）。先跟着原生 JavaScript 实现理解事件与调度，再用 React 实现同一个筛选，比较两种方式产生的 DOM 改动怎样变成下一帧画面。
 
 1. [点击先交给谁，事件怎样传播？](../frontend/browser-apis/dom-manipulation-and-events.md)点击进入事件分发路径，轮到该任务执行时才调用处理器。
 2. [JavaScript 什么时候处理事件？](../frontend/runtime/event-loop.md)回调、microtask 和浏览器渲染机会相互交错。
-3. [React 怎样把状态变成界面更新？](../frontend/frameworks/react-basics.md)这里切换到 React 实现：处理器将相同的 `oldest` 筛选意图交给 state，React 计算视图并提交必要的 DOM 改动。原生实现与 React 实现是两条替代路径。计算结果很贵时，再看[怎样让输入保持响应](../frontend/frameworks/advanced-react.md)。
+3. [React 怎样把状态变成界面更新？](../frontend/frameworks/react-basics.md)这里切换到 React 实现：事件处理器把同一个 `oldest` 筛选写入 state，React 据此计算新视图，只提交必要的 DOM 改动。原生实现与 React 实现是二选一的两条路径，不是先后两步。计算结果很贵时，再看[怎样让输入保持响应](../frontend/frameworks/advanced-react.md)。
 4. [DOM 改动怎样变成像素？](../frontend/html-css/rendering-pipeline-and-forced-layout.md)浏览器按改动的依赖关系完成样式、布局、绘制和合成。
 5. [如果这一帧迟到了，怎样定位原因？](../frontend/performance/performance-metrics-and-analysis.md)用同一次交互的时间线区分输入等待、执行和呈现成本。
 
 ## 怎样确认一次跨系统操作的结果？
 
 1. [请求超时后，怎样确认结果并重试？](../engineering-foundations/reliability/api-reliability-and-async-delivery.md)先明确调用者看到了什么，以及服务端可能已经完成了什么。
-2. [账户报表怎样成为可恢复的任务？](../engineering-foundations/architecture/system-design-fundamentals.md)沿受理、持久化和 worker 的最终结果建立查询依据，再看[队列确认到底证明了什么](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
+2. [账户报表怎样成为可恢复的任务？](../engineering-foundations/architecture/system-design-fundamentals.md)沿着“受理请求、持久化任务、worker 写出最终结果”的过程，确定调用方事后凭什么查询结果，再看[队列确认到底证明了什么](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
 3. [AI 运行怎样在断线后继续或恢复？](../ai-engineering/systems/ai-application-architecture.md)将模型调用、工具动作连接到服务保存的运行状态。
 4. [流式界面怎样准确展示任务状态？](../frontend/browser-apis/streaming-ux.md)界面收到部分内容或本地取消后，仍需区分连接状态与服务端任务终态。
 
@@ -42,7 +42,7 @@
 
 ## AI 应用怎样凭证据回答？
 
-从[一条消息到完整回答](../ai-engineering/systems/from-message-to-answer.md)开始，沿构建 42 的失败问题，走完输入组装、模型推理、授权查询日志和解释结果。
+从[一条消息到完整回答](../ai-engineering/systems/from-message-to-answer.md)开始。该章以用户提问“构建 42 为什么失败”为例，依次走完输入组装、模型推理、在授权范围内查询日志，以及解释结果。
 
 - 想知道模型内部发生了什么，继续看[提示词怎样变成文本](../ai-engineering/foundations/how-llms-work.md)，再把中间状态连接到[KV cache 与服务容量](../ai-engineering/systems/llm-serving-and-kv-cache.md)。
 - 问题需要先找到某份资料时，进入[文档更新、检索与证据核对](../ai-engineering/rag/rag-architecture-and-implementation.md)。[上下文组织](../ai-engineering/context/context-engineering-principles.md)解释每次推理该看到什么。

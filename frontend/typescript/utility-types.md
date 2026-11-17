@@ -1,10 +1,12 @@
 # 怎样从报表类型派生数据形状并约束方法中的 `this`？
 
-列表预览和局部更新可以从 `ReportRow` 派生；状态标签使用与 `ReportRow.status` 共用的 `ReportStatus`，避免两处状态定义漂移。对象字面量中的方法也需要知道调用接收者有哪些字段：`ThisType<T>` 或显式的 `this` 参数能提供编译期上下文。工具类型只影响静态检查，不会投影或验证运行时数据，也不会替方法绑定接收者；不可信的外部输入应在数据边界执行运行时检查。
+本文继续使用报表页的行类型 `ReportRow`（下方代码会重新声明）。列表预览、局部更新这些数据形状，可以用 utility type（工具类型）从 `ReportRow` 派生，而不必再手写一遍；状态标签和 `ReportRow.status` 共用同一个 `ReportStatus` 联合，以免两处状态定义各改各的。本文后半部分处理另一个问题：对象字面量里的方法要知道 `this` 上有哪些字段，`ThisType<T>` 或显式的 `this` 参数可以在编译期提供这个信息。
+
+这些手段都只作用于静态检查：它们不会在运行时筛选或验证数据，也不会替方法绑定 `this`。不可信的外部输入仍要在数据边界做运行时检查。
 
 ## 哪些工具类型适合哪些数据形状？
 
-下面用 `Pick` 从 `ReportRow` 选出列表预览字段，用 `Partial` 把允许编辑的字段变为可选项；`Record` 则为共享的 `ReportStatus` 联合要求每个状态都有标签。
+下面用 `Pick` 从 `ReportRow` 选出列表预览需要的字段，用 `Partial` 把允许编辑的字段变成可选；`Record` 则要求共享的 `ReportStatus` 中每个状态都有一个标签。
 
 ~~~typescript
 type ReportStatus = "open" | "published" | "archived";
@@ -34,13 +36,15 @@ const patch: ReportPatch = input;
 console.log(Object.keys(patch)); // ["region", "ownerEmail"]：仍是同一个运行时对象
 ~~~
 
-`Partial<Pick<ReportRow, "title" | "region">>` 从内向外展开为 `{ title?: string; region?: string }`。示例变量 `input` 含有共同键 `region`，所以它可赋给这个部分类型；多出的 `ownerEmail` 仍留在同一个运行时对象中。若变量只有 `ownerEmail`，则与目标类型没有共同属性而不能赋值；直接把含 `ownerEmail` 的新对象字面量赋给 `ReportPatch` 也会触发多余属性检查。`Pick` 只筛选静态声明的字段，列表展示若需要实际投影，仍须在运行时构造新对象。
+`Partial<Pick<ReportRow, "title" | "region">>` 由内向外展开为 `{ title?: string; region?: string }`。变量 `input` 与它有共同的键 `region`，所以可以赋值；多出的 `ownerEmail` 并不会被删掉，仍留在同一个运行时对象里，`Object.keys` 的输出证明了这一点。如果变量只有 `ownerEmail`，它与目标类型没有任何共同属性（目标类型的属性全部可选，TypeScript 称为 weak type），赋值会报错；直接把含 `ownerEmail` 的新对象字面量赋给 `ReportPatch`，也会被多余属性检查拦下。可见 `Pick` 只筛选类型上声明的字段；列表展示如果真的只想带这几个字段，仍要在运行时构造新对象。
 
-`ReportStatus` 增加 `"scheduled"` 后，`labels` 会因缺少该键而报错，提醒界面补上新状态。当前 `ReportPatch` 的字段是可选 `string`；在示例所用的 `strictNullChecks` 下，显式写入 `null` 不通过检查。只有当接口把 `null` 定义为清空字段等业务操作时，才应在对应属性类型中加入 `| null`，并让运行时边界按该语义解析。启用 `exactOptionalPropertyTypes`（要求 `strictNullChecks`）时，可选字段可以省略，但不能显式写 `undefined`，除非其类型包含 `undefined`；未启用时，编译器允许把 `undefined` 赋给可选字段。无论开关如何，读取 `patch.title` 都可能得到 `undefined`，因为属性可以缺席。
+`ReportStatus` 增加 `"scheduled"` 后，`labels` 会因缺少这个键而报错，提醒界面补上新状态的标签。
+
+更新数据还要分清“省略”“`null`”和“`undefined`”。当前 `ReportPatch` 的字段是可选的 `string`；示例开启了 `strictNullChecks`，所以显式写入 `null` 无法通过检查。只有当接口约定 `null` 表示“清空该字段”之类的业务操作时，才应在对应属性类型里加上 `| null`，并让运行时边界按这层含义解析。至于 `undefined`：启用 `exactOptionalPropertyTypes`（它要求同时开启 `strictNullChecks`）后，可选字段可以省略，但除非类型里写了 `undefined`，否则不能显式赋值为 `undefined`；不启用时，编译器允许这样赋值。无论这个开关如何设置，读取 `patch.title` 都可能得到 `undefined`，因为属性本身可以不存在。
 
 接收网络或存储中的更新数据时，运行时仍要按接口白名单检查字段，并区分省略、`null` 和具体值。这个检查针对不可信输入；本地按 `ReportPatch` 构造的对象仍由编译器检查。
 
-常用变换可按目的理解：
+其他常用工具类型可以按用途对照：
 
 | 需要 | 工具类型 | 结果与边界 |
 |---|---|---|
@@ -54,11 +58,11 @@ console.log(Object.keys(patch)); // ["region", "ownerEmail"]：仍是同一个�
 | 读取构造签名 | `ConstructorParameters<C>` / `InstanceType<C>` | 得到构造参数元组或实例类型 |
 | 解开 Promise 返回类型 | `Awaited<T>` | 递归解包 Promise 及兼容其 `then` 约定的类型；不会等待运行时值 |
 
-这些工具大多通过 mapped type（映射类型）、conditional type（条件类型）或索引访问组合实现。阅读 `Partial<Pick<ReportRow, "title" | "region">>` 时，先用 `Pick` 取两个允许编辑的字段，再用 `Partial` 将它们变为可选；前文已展开其具体对象形状。
+这些工具大多由 mapped type（映射类型）、conditional type（条件类型）和索引访问类型组合而成。嵌套使用时由内向外阅读，例如前面的 `Partial<Pick<...>>`：先由 `Pick` 取出两个可编辑字段，再由 `Partial` 把它们变为可选。表中 `Exclude`、`Extract` 这类筛选联合成员的工具，依赖条件类型的一条特殊规则，下一节单独说明。
 
 ## 条件类型遇到联合类型时，为什么会逐项筛选？
 
-条件类型（conditional type）若在被检查的位置直接写类型参数，例如 `T extends X`，传入联合类型时会把联合成员逐个代入条件。`Exclude` 就利用这个规则：成员可赋给排除类型时变成 `never`，剩余成员再组成联合。
+条件类型写作 `T extends X ? A : B`。如果 `extends` 左边直接是一个“裸”类型参数（没有包在数组、元组等结构里），那么传入联合类型时，编译器会把联合成员逐个代入条件，再把各自的结果合成联合。这叫 distributive conditional type（分配式条件类型）。`Exclude` 就利用了这条规则：可以赋给排除类型的成员变成 `never`，其余成员保留下来重新组成联合。
 
 ~~~typescript
 type WithoutArchived<T> = T extends "archived" ? never : T;
@@ -81,11 +85,11 @@ const wholeStatusCheck: WholeStatusCheck = false;
 const wholeStatusTrue: WholeStatusCheck = true;
 ~~~
 
-`WithoutArchived<ReportStatus>` 会得到 `"open" | "published" | never`，而 `never` 没有可取值，所以结果只剩前两种状态。两个布尔条件使用相同的分支：裸 `T` 分配后得到 `true | false`（也就是 `boolean`）；把 `T` 包在元组中则比较整个联合，结果为 `false`。同样，`Exclude<ReportStatus, "archived">` 与 `VisibleStatus` 一样得到剩余状态。
+`WithoutArchived<ReportStatus>` 先得到 `"open" | "published" | never`；`never` 没有任何可取的值，在联合中会被吸收，所以结果只剩前两种状态。内置的 `Exclude<ReportStatus, "archived">` 得到同样的结果。后两个条件类型的分支完全相同，区别只在 `T` 是否“裸”：裸 `T` 会分配，三个成员分别得到 `false`、`false`、`true`，合起来是 `true | false`，即 `boolean`；把 `T` 包进元组 `[T]` 后不再分配，比较的是整个联合，结果为 `false`。
 
 ## 对象字面量方法里的 `this` 怎样获得上下文类型？
 
-`ThisType<T>` 是一个 contextual typing marker（上下文类型标记），可让对象字面量中的方法把 `this` 看作 `T`。它不会添加属性、绑定运行时接收者或改变对象；检查依赖 `noImplicitThis`。
+前面的工具类型都在派生数据形状。另一类问题出在方法上：对象字面量中的方法默认不知道 `this` 指向什么对象。`ThisType<T>` 是一个标记接口，作为对象字面量的上下文类型时，会让其中的方法把 `this` 当作 `T`。它不会添加属性、不会在运行时绑定 `this`，也不会改变对象本身；只有开启 `noImplicitThis`（`strict` 已包含）时它才生效。
 
 ~~~typescript
 type ObjectDescriptor<Data, Methods> = {
@@ -130,7 +134,9 @@ const viewer: ReportViewer = {
 console.log(viewer.describe()); // 报表查看者：Ada
 ~~~
 
-`this: ReportViewer` 只是编译期接收者注解；调用 `viewer.describe()` 时仍由普通 JavaScript 成员调用提供 `this`。`ThisType<T>` 也只影响方法体中的静态检查，不会替你调用 `bind`。单独取出 `viewer.describe` 后直接调用，会因缺少显式接收者而报类型错误；单独取出 `rowCounter.addLoadedRow` 后直接调用可能通过静态检查，但运行时仍需要正确的接收者。如果 `ReportPatch` 来自网络或存储，需在该输入边界挑选并验证字段；类型工具不会过滤其运行时键。解析入口见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](./advanced-typescript.md)。
+`this: ReportViewer` 只是编译期对调用方式的要求；运行时调用 `viewer.describe()`，`this` 仍由普通的 JavaScript 方法调用提供。`ThisType<T>` 同样只影响方法体内的静态检查，不会替你调用 `bind`。两者的差别在方法被单独取出时显现：把 `viewer.describe` 赋给变量后直接调用，编译器会因为缺少所需的 `this` 而报错；把 `rowCounter.addLoadedRow` 取出后直接调用，却可能通过静态检查，而运行时 `this` 已经不对。
+
+`ReportPatch` 这类更新数据若来自网络或存储，前面的工具类型都不会过滤它的运行时键，要在输入边界挑选并验证字段，做法见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](./advanced-typescript.md)。
 
 > [!info]- 来源
 > - [TypeScript Utility Types 参考](https://www.typescriptlang.org/docs/handbook/utility-types.html)

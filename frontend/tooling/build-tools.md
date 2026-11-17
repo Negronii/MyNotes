@@ -1,32 +1,30 @@
 # 构建工具怎样把源码变成可发布产物？
 
-用一张合成的月度报表页跟踪源码如何变成浏览器请求的 URL。最后再看 v42 发布后，仍打开的 v41 页面为什么可能要取回旧的编辑器分块，以及发布时要保留什么。这个例子采用 Node.js 26.13.0、Vite 8.3.5 和 Webpack 5.109.0；文件名来自固定版本和配置的独立小项目，不代表产品默认值。
+本文用一张合成的月度报表页，跟踪源码怎样变成浏览器实际请求的 URL；最后再看发布 v42 之后，仍开着的 v41 页面为什么还可能去取旧的编辑器代码分块，以及发布时必须保留哪些文件。例子使用 Node.js 26.13.0、Vite 8.3.5 和 Webpack 5.109.0。文中的文件名来自固定版本和配置的独立小项目，不是这些工具的默认输出。
 
-入口 `index.html` 引用 `src/main.ts`。主文件从 `rows.ts` 导入 `formatRow`，并静态导入 `report.css`；CSS 的 `url()` 引用图标；用户点击“打开编辑器”时，事件处理器才调用 `import("./editor.ts")`。`import()` 语法形成异步依赖边，点击处理器决定何时调用它。构建时会先找到并转换 `editor.ts`，但没有预加载时，浏览器等到这次调用才请求其生成文件。
-
-`package.json` 中的脚本启动构建命令；它不是浏览器模块图的入口。Vite 默认以项目根目录的 `index.html` 开始。本例给 Webpack 显式设置 `entry: "./index.html"`，并配置生成页面的位置。
+项目结构如下：入口 `index.html` 引用 `src/main.ts`；`main.ts` 从 `rows.ts` 导入 `formatRow`，并静态导入 `report.css`；CSS 用 `url()` 引用一个 SVG 图标；用户点击“打开编辑器”后，事件处理器才调用 `import("./editor.ts")`。`import()` 语法在构建时就形成一条异步依赖边，点击处理器只决定运行时何时调用它。因此构建器会提前找到并转换 `editor.ts`；但如果没有预加载，浏览器要等这次调用发生才请求它的生成文件。
 
 ![合成报表项目的模块依赖关系](resources/build-tools-module-dependencies.svg)
 
-图只画本例源码的模块关系。`main.ts` 保留对 `rows.ts` 中 `formatRow` 的值导入；`rows.ts` 的 `Column` 只作类型标注，TypeScript 擦除后不进入 JavaScript。处理 `report.css` 时，CSS 解析器才发现 `url('./report.svg')` 并排入该资源请求；本例关闭小资源内联，所以图标输出为单独文件。编辑器的异步边由 `import()` 语法建立，点击处理器只决定调用时机。
+图中只画本例源码的模块关系。`main.ts` 对 `rows.ts` 中 `formatRow` 的导入是值导入，会保留到输出中；`rows.ts` 里的 `Column` 只用于类型标注，类型擦除后不会进入 JavaScript。`report.svg` 要等到处理 `report.css` 时，才由 CSS 解析器从 `url('./report.svg')` 中发现并加入待处理请求；本例关闭了小资源内联，所以图标会输出为单独的文件。
 
-构建器按请求逐步扩展这张图，再把图中的关系变成浏览器可访问的产物：
+构建器从入口出发逐步扩展这张图，再把图中的关系变成浏览器能访问的产物：
 
-1. **选入口。** `package.json` 的脚本启动构建器，但不是模块图入口。Vite 默认从项目根目录的 `index.html` 开始；本例为 Webpack 显式设置 `entry: "./index.html"`。
-2. **递归发现依赖。** 对每个待处理请求，模块解析器（resolver）从导入方定位资源，再由匹配的加载器（loader）或内置处理器读取并转换。解析器检查转换后的内容，记录发现的静态、动态和资源依赖边，再把尚未处理的目标请求入队；继续处理，直到待处理请求队列为空。比如相对请求 `./rows.ts` 从导入方目录定位，包名则按安装位置和包元数据解析；本例只使用相对请求。
-3. **优化并分块。** 队列清空时，本例的模块图才完整。摇树优化（tree shaking）删除可证明未使用的导出；代码分割（code splitting）决定模块怎样组成初始或异步的代码分块（chunk）。因此 Webpack 的 `optimization.splitChunks` 等规则会影响文件分组，不能只看源码写了几个入口。本例实际输出中没有 `unusedChart` 的哨兵字符串。
-4. **生成并改写引用。** 构建器写出 HTML、JavaScript、CSS 和资源文件，把源请求改为生成文件间的引用；可选 manifest 记录入口到输出文件的映射。v41/v42 表格展示同一配置的实际文件名。哈希还会受图中引用和其他构建输入影响，不能只用某个源文件或最终 JS 字节独立推算。
-5. **部署并运行。** 将整套产物部署在与公开路径相配的位置。浏览器沿 HTML 请求初始 JS 和 CSS，CSS 再引用图标；运行到生成代码里的动态导入时，Vite 请求改写后的 ESM URL，Webpack 则用 chunk ID、运行时文件名映射和 `output.publicPath` 组装 URL。此例只有在首次调用且没有预加载或可复用缓存时才会产生编辑器网络请求；HTML 相对 URL 的具体结果见下文实测。
+1. **确定入口。** `package.json` 里的脚本只负责启动构建命令，它不是模块图的入口。Vite 默认从项目根目录的 `index.html` 开始；本例给 Webpack 显式设置 `entry: "./index.html"`，并配置生成页面的输出位置。
+2. **递归发现依赖。** 每处理一个请求，模块解析器（resolver）先从导入方出发定位到实际资源，再由匹配的加载器（loader）或内置处理器读取并转换它。随后，构建器在转换后的内容里找出静态导入、动态导入和资源引用这几类依赖边，把还没处理过的目标加入待处理队列，直到队列清空。例如相对请求 `./rows.ts` 从导入方所在目录查找，包名则按安装位置和包元数据解析；本例只用到相对请求。
+3. **优化并分块。** 队列清空后，模块图才算完整。tree shaking（摇树优化）删除能证明没有被使用的导出；code splitting（代码分割）决定哪些模块组成初始加载的代码分块（chunk），哪些组成异步加载的 chunk。所以最终有几个文件，不只取决于源码写了几个入口，还取决于 Webpack 的 `optimization.splitChunks` 等分组规则。本例在 `rows.ts` 中另放了一个从未被导入的导出 `unusedChart`，其中带有一段可搜索的哨兵字符串；实际输出中找不到这段字符串，说明它已被删除。
+4. **生成文件并改写引用。** 构建器写出 HTML、JavaScript、CSS 和资源文件，把源码中的请求改写为生成文件之间的引用；还可以按配置输出 manifest，记录源入口到输出文件的映射。文件名里的哈希还受图中引用关系和其他构建输入影响，不能只凭某个源文件或最终 JS 的字节单独推算；后文的 v41/v42 表格列出了同一配置下的实际文件名。
+5. **部署并运行。** 整套产物要部署到与公开路径（public path）相符的位置。浏览器先按 HTML 请求初始 JS 和 CSS，CSS 再引用图标；执行到生成代码中的动态导入时，Vite 产物直接请求改写后的 ESM URL，Webpack 产物则由运行时用 chunk ID、文件名映射和 `output.publicPath` 拼出 URL。在本例中，只有首次点击、且没有预加载或可复用的缓存时，才会产生编辑器的网络请求。HTML 中相对 URL 的实际解析结果见下文实测。
 
 ## 为什么要固定 Node.js 与包管理器版本？
 
 要复现一份构建，至少需要知道 Node.js、包管理器、锁文件和构建器的版本。`package.json` 的 `packageManager` 字段可记录项目采用的管理器及版本，但不会安装 Node.js；Node 版本仍应由版本文件、CI 镜像或运行环境固定。锁文件复用依赖解析结果，却不能固定操作系统、环境变量、系统工具或构建脚本读取的任意外部输入。
 
-Node.js 25 起不再随发行包提供 Corepack。若项目依赖 Corepack 提供的命令代理，应按当前 Corepack 文档单独安装；也可按所选包管理器的官方流程固定版本。比如 `package.json` 把 `build` 脚本映射到 `vite build`，再由 `pnpm build` 运行。CI 与本地使用相同工具和锁文件能减少解析差异，仍需检查实际生成路径和部署结果。
+Node.js 25 起，发行包不再附带 Corepack。如果项目靠 Corepack 按 `packageManager` 字段代理 `pnpm`、`yarn` 等命令，需要按当前 Corepack 文档单独安装它；也可以按所选包管理器的官方方式固定版本。例如 `package.json` 的 `build` 脚本写成 `vite build`，本地和 CI 都用同一版本的 pnpm 执行 `pnpm build`。两边使用相同的工具和锁文件可以减少依赖解析差异，但仍要检查实际生成的路径和部署结果。
 
 ## Webpack 的模块加载器与插件分别处理什么？
 
-先把合成页面的请求关系和浏览器看到的产物分开：
+讨论 loader 和插件之前，先把两件事分开：构建时发现了哪些依赖关系，和浏览器运行时实际请求哪些生成文件。下表按本例逐项对照：
 
 | 源码或入口 | 构建时发现的关系 | 本例浏览器何时请求生成文件 |
 |---|---|---|
@@ -36,11 +34,11 @@ Node.js 25 起不再随发行包提供 Corepack。若项目依赖 Corepack 提�
 | `src/report.svg` | CSS 解析发现的 `url()` 请求 | 浏览器取 CSS 后请求，或由构建配置内联 |
 | `src/editor.ts` | 点击处理器里的动态 `import()` | 本例第一次点击时请求生成的编辑器分块 |
 
-在 Webpack 5.109.0 的实测配置中，HTML 输出名放在 `assets/` 目录，页面实际 URL 为 `/reports/assets/index-5248e5cf.html`。HTML 中的脚本 `../assets/__html_68cecd12_0-7cc84df8.js` 和样式 `../assets/__html_68cecd12_0-efdbfebc.css`，都要相对于这个 HTML URL 解析，因此请求落在 `/reports/assets/`。CSS 再引用 `/reports/assets/report-b1d5801f.svg`。如果把相同 HTML 原样放到 `/reports/index.html`，这两个 `../assets/…` 会解析到 `/assets/…`；本例的请求因此得到 404。HTML 的部署 URL 必须和它内部的相对引用及服务器挂载位置一致。
+在 Webpack 5.109.0 的实测配置中，生成的 HTML 也输出到 `assets/` 目录，页面实际 URL 是 `/reports/assets/index-5248e5cf.html`。HTML 里的脚本 `../assets/__html_68cecd12_0-7cc84df8.js` 和样式 `../assets/__html_68cecd12_0-efdbfebc.css` 都相对这个 HTML URL 解析，所以请求落在 `/reports/assets/` 下；CSS 再引用 `/reports/assets/report-b1d5801f.svg`。如果把同一份 HTML 原样放到 `/reports/index.html`，这两个 `../assets/…` 会解析成 `/assets/…`，本例中的请求因此返回 404。也就是说，HTML 的部署 URL 必须与它内部的相对引用以及服务器的挂载位置相互吻合。
 
-Webpack 输出的初始脚本把动态导入变为 chunk ID 与运行时映射；本例的运行时使用 `output.publicPath: "/reports/"`，点击后才请求 `/reports/assets/354-b92eb80e.js`。另有一个 stats 列出的 `assets/main-fa829d06.js` 没有被生成 HTML 引用，也没有浏览器请求。检查页面加载应沿 HTML、CSS 和脚本中的实际引用走，不能把每个 emitted asset 都当成必请求文件。
+Webpack 输出的初始脚本把动态导入改成了 chunk ID 加运行时映射。本例的运行时使用 `output.publicPath: "/reports/"`，点击后才请求 `/reports/assets/354-b92eb80e.js`。构建统计（stats）还列出了一个 `assets/main-fa829d06.js`，但生成的 HTML 没有引用它，浏览器也没有请求它。检查页面加载时，应沿着 HTML、CSS 和脚本中的实际引用追踪，不能把构建输出的每个文件都当成一定会被请求的文件。
 
-Webpack 由入口和导入边建立模块图。每个请求先解析到实际资源，再由匹配的加载器或内置处理器读取并转换；解析器根据转换后的文本发现后续边。加载器的常规阶段（normal）按 `use` 数组从右向左执行；若定义前置钩子（pitch），Webpack 会先从左向右调用它。某个 pitch 返回结果时，会跳过该加载器及它右侧尚未执行的常规函数，并把返回值交给左侧加载器，按 normal 顺序反向继续。下面的 Sass 配置先编译 Sass，再将结果交给 PostCSS：
+回到 loader 本身。前面第 2 步说过，每个模块请求解析到实际资源后，由匹配的 loader 或内置处理器转换，Webpack 再从转换结果中发现后续依赖。同一条规则可以串联多个 loader：它们的常规函数（normal 阶段）按 `use` 数组从右向左执行；如果 loader 定义了前置函数（pitch），Webpack 会先从左向右调用各个 pitch。某个 pitch 一旦返回结果，就跳过该 loader 自身及其右侧尚未执行的常规函数，把返回值交给左侧的 loader，再按 normal 顺序继续向左。下面的 Sass 配置因此先运行 `sass-loader` 编译 Sass，再把结果交给 `postcss-loader`：
 
 ~~~javascript
 module: {
@@ -54,13 +52,13 @@ module: {
 }
 ~~~
 
-这里 `type: "css/auto"` 明确让 Sass 转出的 CSS 交给 CSS 模块解析。若两步确实各有职责，才保留两个转换器；普通 CSS 已有原生处理时，不要仅为旧配置习惯重复加 loader。Sass、Less、Stylus 或 PostCSS 仍需各自的预处理器。
+这里的 `type: "css/auto"` 明确把 Sass 转出的 CSS 交给 Webpack 原生的 CSS 模块处理。只有两步确实各有职责时，才串联两个 loader；普通 CSS 已经有原生处理，不要只因为沿用旧配置就再加一个 loader。Sass、Less、Stylus 或 PostCSS 仍需要各自的 loader。
 
-Webpack 5.109.0 中原生 CSS 和 HTML 的默认值是 `auto`。它不是按文件任意混用两套解析器：旧规则可能使原生处理在整个编译中关闭，所以要同时构建一个应走原生能力的文件和一个应走旧规则的文件。没有冲突配置时，原生 CSS 能处理常见 CSS、`@import`、`url()` 与 CSS Modules；原生 HTML 能据入口和模块图生成页面引用。模板型旧页面要按实际行为逐项迁移。
+Webpack 5.109.0 中，原生 CSS 和原生 HTML 的开关默认都是 `auto`。`auto` 并不是逐个文件在原生处理和旧 loader 规则之间自由切换：配置里存在接管这类文件的旧规则时，原生处理可能在整个编译中关闭（判定细节见下方折叠框）。所以迁移时，要同时构建一个应由原生能力处理的文件和一个应走旧规则的文件，确认两者的实际行为。没有冲突配置时，原生 CSS 能处理常见 CSS、`@import`、`url()` 和 CSS Modules；原生 HTML 能根据入口和模块图生成页面中的引用。依赖模板功能的旧页面要按实际行为逐项迁移。
 
-Webpack 5.107.0 加入原生 TypeScript 擦除，5.109.0 默认启用 `experiments.typescript: "auto"`。它只擦除类型，不做类型检查，也不处理 TSX、enum 等需要额外转换的语法。`module.stripTypeScriptTypes` 这个 Node API 在 Node 22 系列从 22.13.0 提供、在 23 系列从 23.2.0 提供；Node 22.6.0 提供的是命令行类型擦除选项，并没有这个 API。Webpack 5.109 的 `auto` 会检测 API 和相关 loader 规则。`ts-loader@9.6.2` 默认会检查类型；使用 `transpileOnly: true`、Webpack 原生擦除或 Vite 转译时，应另有 `tsc --noEmit` 等类型检查步骤。
+TypeScript 也有类似的原生路径。Webpack 5.107.0 加入原生 TypeScript 类型擦除，5.109.0 默认启用 `experiments.typescript: "auto"`。它只删除类型标注，不做类型检查，也不处理 TSX、enum 这类需要额外代码转换的语法。它依赖 Node 的 `module.stripTypeScriptTypes` API：Node 22 系列从 22.13.0 起提供，23 系列从 23.2.0 起提供；Node 22.6.0 加入的只是命令行类型擦除选项，没有这个 API。Webpack 5.109 的 `auto` 会检测这个 API 是否存在，以及配置中是否已有处理 TypeScript 的 loader 规则。`ts-loader@9.6.2` 默认会检查类型；使用 `transpileOnly: true`、Webpack 原生擦除或 Vite 转译时，应另有 `tsc --noEmit` 等类型检查步骤。
 
-以下 loader 仅做字符串替换，不理解 JavaScript 结构；要按语法节点改写代码，应使用抽象语法树（AST）转换器：
+一个 loader 本质上是接收源码文本、返回转换结果的函数。下面这个 loader 只做字符串替换，并不理解 JavaScript 结构；需要按语法节点改写代码时，应改用 abstract syntax tree（AST，抽象语法树）转换器：
 
 ~~~javascript
 export default function replaceReportTitle(source) {
@@ -68,9 +66,9 @@ export default function replaceReportTitle(source) {
 }
 ~~~
 
-Webpack Asset Modules（资源模块）可处理图片、字体、媒体与文本资源，在许多项目里可替代旧的 `file-loader`、`url-loader` 或 `raw-loader` 配置。图标最终是独立文件还是 CSS 中的 data URL，取决于工具版本、资源大小和内联配置。本例为观察浏览器 URL 明确将 Vite `assetsInlineLimit` 设为 `0`。
+Webpack Asset Modules（资源模块）可处理图片、字体、媒体与文本资源，在许多项目里可替代旧的 `file-loader`、`url-loader` 或 `raw-loader` 配置。图标最终是独立文件还是 CSS 中的 data URL，取决于工具版本、资源大小和内联配置。为了观察浏览器请求的 URL，本例的 Vite 配置把 `assetsInlineLimit` 设为 `0`（见下一节）。
 
-插件（plugin）处理一次构建中的共享状态或资源；新增产物应在 `compilation.hooks.processAssets` 选择合适阶段。下面的统计插件在 `done` 时把 JSON 写到运行命令时的当前目录；它不会自动写入 `dist/`，也不是 Webpack asset：
+loader 一次只转换一个模块。plugin（插件）则挂在编译器和编译过程的钩子上，处理整次构建共享的状态或产物；如果要新增产物，应在 `compilation.hooks.processAssets` 中选择合适的阶段。下面的统计插件在 `done` 钩子里把 JSON 写到执行命令时的当前目录；它不会自动写进 `dist/`，也不属于 Webpack 管理的产物（asset）：
 
 ~~~javascript
 import { writeFileSync } from "node:fs";
@@ -85,7 +83,7 @@ class BuildStatsPlugin {
 }
 ~~~
 
-`DefinePlugin` 在构建时替换代码表达式；写入客户端 bundle 的值会交给浏览器用户，不能放入密钥。
+`DefinePlugin` 在构建时把代码中的表达式替换为常量。写进客户端 bundle 的值，任何能打开页面的用户都能看到，所以不能放入密钥。
 
 > [!info]- Webpack 5.109 自动探测、emit 阶段与旧插件迁移细节
 > CSS 和 HTML 的 `auto` 在构建配置层先用 `/file.css`、`/file.module.css`、`/file.html` 等合成路径探测。`test`、`resource` 或 `include` 任一条件可能计入；规则中的 `exclude` 不参与这项宽松探测。探测还会把正则中明确引用扩展名的模式计入：例如 `/source\.css$/` 即使不匹配 `/file.css`，仍可关闭这一编译的原生 CSS。只有显式 `type` 或未设 `enforce` 的普通 `loader/use` 才算接管；`pre`、`post` loader 不触发关闭。若 `auto` 保持启用，真实模块只有在默认原生类型仍被选中、已应用 loader 且没有 `matchResource` 显式重定类型时，才沿旧解析路径退让给 loader 产物。
@@ -93,11 +91,11 @@ class BuildStatsPlugin {
 >
 > `processAssets` 的 stage 决定生成或读取资源的时点。`ADDITIONAL` 位于代码压缩、source map 和传输压缩之前，适合新增自有文件；若到 `SUMMARIZE` 才新增文件，`OPTIMIZE_SIZE` 已经过，Webpack 不会重跑整个阶段；若某个处理器订阅了 `additionalAssets`，仍可单独处理后续新增资源。Webpack 5.109 的默认 JavaScript minimizer 就使用这种订阅，因此不能仅凭新增阶段断言文件不会被压缩；还要看该处理器的匹配与处理条件。全部 `processAssets` 阶段完成并封存资源后，Webpack 才调用 `emit`，随后写入配置的 output filesystem；后注册的 emit tap 仍能看到较早 tap 的改动，但它新增的文件已错过先前 stage。`afterEmit` 已在输出后，修改不会回写刚才的文件。Webpack 5.109 默认 `backCompat: true`，此时写封存的 `Compilation.assets` 会警告；关闭兼容模式后该对象被冻结。需要新增或变换产物时使用正确 stage 的 `processAssets`，统计信息则可在 `done` 写到独立文件。
 >
-> `HtmlWebpackPlugin` 当前 README 标记为弃用；Webpack 5.109 原生 HTML 可覆盖常见页面产物，但模板插件的定制行为仍须逐项核对。CSS/HTML 内置压缩从 5.110.0 才开始。当前 `CompressionWebpackPlugin` 已弃用，压缩 generator 迁入 `minimizer-webpack-plugin`，迁移选项从 `minimizer-webpack-plugin@5.11.0` 起提供；生成 `.gz`/`.br` 文件不代表服务器已按内容协商返回相应 `Content-Encoding`。Webpack 5.109 默认 JavaScript 压缩仍使用 Terser；`terser-webpack-plugin` 于自身 5.6.0 更名。覆盖 `optimization.minimizer` 时，保留默认项需包含 `"..."`。更多历史选项见[归档的 Webpack 插件对照表](../../archive/front-end/Deprecated_Interview_Notes/webpack-plugin-history.md)。
+> `HtmlWebpackPlugin` 当前 README 标记为弃用；Webpack 5.109 原生 HTML 可覆盖常见页面产物，但模板插件的定制行为仍须逐项核对。CSS/HTML 内置压缩从 5.110.0 才开始。当前 `CompressionWebpackPlugin` 已弃用，压缩 generator 迁入 `minimizer-webpack-plugin`，迁移选项从 `minimizer-webpack-plugin@5.11.0` 起提供；生成 `.gz`/`.br` 文件不代表服务器已按内容协商返回相应 `Content-Encoding`。Webpack 5.109 默认 JavaScript 压缩仍使用 Terser；`terser-webpack-plugin` 从自身 5.6.0 版起更名为 `minimizer-webpack-plugin`。覆盖 `optimization.minimizer` 时，保留默认项需包含 `"..."`。更多历史选项见[归档的 Webpack 插件对照表](../../archive/front-end/Deprecated_Interview_Notes/webpack-plugin-history.md)。
 
 ## Vite 开发服务器为什么不能代替生产构建检查？
 
-按 Vite 8.3.5 说明，开发服务器按请求提供转换后的原生 ESM，也用 Rolldown 预打包依赖；生产 `vite build` 由 Rolldown 生成静态 HTML、JavaScript、CSS 和资源。两条路径在分块、目标浏览器、公开路径和服务器行为上可能不同。HMR（热模块替换）是开发期机制：服务器通知变化并提供更新模块，浏览器运行时取得更新并调用模块的接受回调；当前模块边界无法处理时才会整页刷新。它不是生产文件发布。
+Vite 的开发和生产走两条不同路径。按 Vite 8.3.5 文档，开发服务器按浏览器请求逐个提供转换后的原生 ESM，并用 Rolldown 预打包第三方依赖；生产构建 `vite build` 则由 Rolldown 一次性生成静态的 HTML、JavaScript、CSS 和资源文件。两条路径在分块、目标浏览器、公开路径和服务器行为上都可能不同，所以开发环境能跑通，不代表生产产物没有问题。HMR（Hot Module Replacement，热模块替换）也只属于开发期：服务器通知文件变化并提供更新后的模块，浏览器端运行时取回更新、调用模块注册的接受回调；只有当前模块边界处理不了更新时才整页刷新。它与生产文件的发布无关。
 
 Vite 默认以项目根目录 `index.html` 为生产入口。本例把生成的页面挂在 `/reports/`，并显式生成 manifest、关闭小 SVG 内联：
 
@@ -121,7 +119,7 @@ export default defineConfig({
 background: url(/reports/assets/report-D2wE4vR2.svg);
 ~~~
 
-v41 的入口脚本保留 `import('./editor-x2UHusWa.js')` 这个改写后的目标（实际输出由预加载辅助函数包装）：
+本例把这次构建记为 v41。它的入口脚本中，动态导入的目标已改写为生成文件名（实际输出外面还包了一层预加载辅助函数）：
 
 ~~~javascript
 await import("./editor-x2UHusWa.js");
@@ -129,13 +127,15 @@ await import("./editor-x2UHusWa.js");
 
 脚本从 `/reports/assets/` 加载，浏览器因此请求 `/reports/assets/editor-x2UHusWa.js`，而不是请求源码 `editor.ts`。本例用无界面 Chromium 首次打开页面时未请求编辑器；点击后该 URL 返回 200。
 
-Vite 的 manifest 默认不生成。本例打开它是为核对源入口到输出文件的映射，例如 `"index.html"` 记录 `dynamicImports: ["src/editor.ts"]`，而 `"src/editor.ts"` 的 `file` 是 `"assets/editor-x2UHusWa.js"`。这些 `file` 值是相对输出目录的路径，不含 `/reports/` URL 前缀；浏览器按 HTML、CSS 和生成 JavaScript 中的引用请求文件，不请求 manifest。服务端或集成工具若需要这份映射，可打开 `build.manifest`。
+Vite 默认不生成 manifest。本例打开它，是为了核对源入口到输出文件的映射：例如 `"index.html"` 一项记录了 `dynamicImports: ["src/editor.ts"]`，而 `"src/editor.ts"` 一项的 `file` 是 `"assets/editor-x2UHusWa.js"`。这些 `file` 值是相对输出目录的路径，不带 `/reports/` 前缀。浏览器只按 HTML、CSS 和生成的 JavaScript 中的引用请求文件，不会读取 manifest；需要这份映射的是服务端渲染或后端集成工具。
 
-若恢复默认内联阈值，本例的小 SVG 会变成 CSS 的 data URL，不再单独发 SVG 请求。部署到子路径时，`base` 要与静态站点挂载路径一致。`vite preview` 可预览生产构建，不是生产服务器；还要在实际部署 URL 检查 HTML、初始脚本/样式、异步分块、图像、缓存头、压缩和路由回退。Vite/Oxc 转译 TypeScript 不等于类型检查。Vite 8.3.5 的 `build.target` 默认面向 2026-01-01 的 Baseline Widely Available 浏览器范围；它决定语法转换范围，不补齐运行时 API，也不由 `tsconfig.json` 的 `target` 代替。若要支持更早浏览器，还要单独安排 API polyfill（应用程序接口兼容补丁）并在目标环境验证。参见[怎样判断目标浏览器或 Node.js 是否支持一项 JavaScript 特性？](../javascript/modern-javascript-features.md)。
+如果恢复默认的内联阈值，本例的小 SVG 会变成 CSS 中的 data URL，不再单独发请求。部署到子路径时，`base` 必须与静态站点的挂载路径一致。`vite preview` 只用来本地预览生产构建，不是生产服务器；上线前仍要在实际部署 URL 下检查 HTML、初始脚本和样式、异步分块、图像、缓存头、压缩和路由回退。
+
+另外两点也不能靠构建成功来证明。第一，Vite 用 Oxc 转译 TypeScript，只删除类型，不做类型检查。第二，Vite 8.3.5 的 `build.target` 默认面向 2026-01-01 时 Baseline Widely Available 的浏览器范围（即 Chrome/Edge 111、Firefox 114、Safari 16.4）；它只决定语法转换到什么程度，不会补齐运行时 API，`tsconfig.json` 的 `target` 也不能代替它。要支持更早的浏览器，还需单独引入 API polyfill（兼容补丁）并在目标环境中验证。参见[怎样判断目标浏览器或 Node.js 是否支持一项 JavaScript 特性？](../javascript/modern-javascript-features.md)。
 
 ## 新入口与带哈希代码分块怎样作为同一版本发布？
 
-独立构建的 v41 与 v42 只改变编辑器文字。构建器改写入口中的编辑器目标，所以即使 `main.ts` 源码不变，生成的入口 JavaScript 内容也变了，入口和编辑器文件名都随之变化。下面是这个合成 fixture 的实际输出；未变的 CSS 与 SVG 文件保持原名：
+v41 和 v42 是两次独立构建，源码中唯一的差别是编辑器里的文字。编辑器内容变了，它的文件名哈希随之改变；而入口脚本里写着编辑器的生成文件名，所以即使 `main.ts` 源码没动，生成的入口 JavaScript 内容也变了，入口文件名同样改变。下面是这个合成测试项目（fixture）的实际输出，没有变化的 CSS 和 SVG 保持原文件名：
 
 | 浏览器请求（`base` 为 `/reports/`） | v41 | v42 |
 |---|---|---|
@@ -148,11 +148,11 @@ Vite 的 manifest 默认不生成。本例打开它是为核对源入口到输�
 
 ![v41 旧标签与 v42 新标签分别请求对应编辑器分块](resources/build-tools-release-v41-v42.svg)
 
-发布前把一整套 v42 入口、样式、图像和异步分块写到目标存储，再核对它们能从对应 URL 读取，最后切换源站的 HTML 或 release 指针。这个切换只能保证指针更新本身的原子性；CDN 边缘可能短时仍返回旧 HTML。因此不要覆写同一个哈希 URL 的内容，也不要在仍有旧 HTML、旧标签或旧 Service Worker 时删除其引用的文件。
+发布 v42 时，先把整套入口、样式、图像和异步分块写入目标存储，确认它们都能从对应 URL 读取，最后才切换源站上的 HTML 或 release 指针。这次切换只保证指针本身是原子更新的；CDN 边缘节点可能在短时间内仍返回旧 HTML，已打开的旧页面也还在运行。因此，不要改写同一个哈希 URL 下的内容；只要还可能有旧 HTML、旧标签页或旧 Service Worker 引用某个文件，就不要删除它。
 
-上面的 200/404 来自实际浏览器测试。v41 标签已加载入口但尚未点编辑器；保留旧 chunk 后首次点击请求旧 URL 并返回 200，提前删除后该首次请求返回 404，导入失败。若编辑器已由该页面加载，之后重复调用通常复用已加载模块，不会再发同一请求；若浏览器/Service Worker 有可用副本，也可能不请求网络。若服务器把缺失 chunk 回退到 HTML，网络状态可以是 200，但动态导入仍会因响应不是 JavaScript 而失败。
+图中的 200 和 404 来自实际浏览器测试。测试时，v41 标签页已经加载入口，但还没点开编辑器：保留旧 chunk 时，首次点击请求旧 URL，返回 200；提前删除旧 chunk 时，这次请求返回 404，动态导入失败。如果该页面已经加载过编辑器，之后再调用通常直接复用已加载的模块，不会重复请求；如果浏览器缓存或 Service Worker 中有可用副本，也可能不走网络。还有一种容易误判的情况：服务器把缺失的 chunk 回退成 HTML 页面时，网络状态是 200，但动态导入仍会因为响应不是 JavaScript 而失败。
 
-回滚静态发布时，把入口 HTML 与其清单（若有服务端消费者）配对指回 v41；已打开的 v42 页面仍可能需要 v42 文件。旧版保留窗口要覆盖仍服务的 HTML、打开的页面和可能继续接管旧页面的 Service Worker。后端 API 是否兼容新旧页面是另一条发布边界。HTTP 缓存和 Service Worker Cache Storage 也需分开看：
+回滚同样要成套进行：把入口 HTML 和对应的 manifest（如果服务端会读取）一起指回 v41；已经打开的 v42 页面仍可能需要 v42 的文件，所以也不能立即删除。旧版本文件的保留时长，要覆盖仍在提供的 HTML、用户仍开着的页面，以及可能继续控制旧页面的 Service Worker。后端 API 能否同时兼容新旧页面，是另一项需要单独检查的发布条件。缓存方面，HTTP 缓存和 Service Worker 的 Cache Storage 是两套机制，要分开设置：
 
 | 资源 | 缓存边界 |
 |---|---|
@@ -161,11 +161,11 @@ Vite 的 manifest 默认不生成。本例打开它是为核对源入口到输�
 | manifest | 浏览器通常不请求；服务端读取时按版本保存，或与入口一同重新验证 |
 | Service Worker Cache Storage | 独立于 HTTP 缓存；按版本保留旧页仍需的文件 |
 
-`no-cache` 允许存储响应，但再次使用前要求验证；它不是 `no-store`。`immutable` 表示新鲜期内内容不变。遇到动态 chunk 加载失败时，应识别可恢复的发布错配，保留用户未保存的草稿，并让用户保存或选择刷新；不要把所有导入错误都判成发布错配，也不要无限重载。本页止于静态资源部署；构建一次、逐环境验证、渐进放量和服务端回滚见[如何晋级并回滚已验证的报表服务产物](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)。
+`no-cache` 允许缓存保存响应，只是每次复用前都要先向服务器验证；它不等于禁止存储的 `no-store`。`immutable` 表示响应在新鲜期内不会变化，浏览器无需重新验证。动态 chunk 加载失败时，应先判断是不是可恢复的新旧版本错配；如果是，保留用户未保存的草稿，让用户保存后自行选择刷新。不要把所有导入错误都当成版本错配，也不要自动无限重载。本页止于静态资源部署；构建一次、逐环境验证、渐进放量和服务端回滚见[如何晋级并回滚已验证的报表服务产物](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)。
 
 ## Source map 怎样用于调试，又会暴露什么？
 
-Source map（源映射）记录生成代码位置与原始源码位置的对应关系。调试器或错误收集工具可用它把生成代码中的行列位置映回源码；映射本身不重建原始文件。映射粒度、loader 是否提供映射、文件内嵌或外置、是否含源码文本，会影响定位、构建成本和公开信息。
+生产代码经过转换和压缩，报错时的行列号对应的是生成文件，很难直接读懂。source map（源映射）记录生成代码位置与原始源码位置的对应关系，调试器或错误收集工具可以据此把生成代码中的行列位置映射回源码；映射本身并不能还原出原始文件。映射精确到行还是列、是否使用 loader 提供的映射、映射内嵌在文件中还是单独存放、是否附带源码文本，这些选择分别影响定位精度、构建成本和对外暴露的信息。
 
 | Webpack `devtool` 例子 | 主要含义 | 适用边界 |
 |---|---|---|
