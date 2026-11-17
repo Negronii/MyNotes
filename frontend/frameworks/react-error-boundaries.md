@@ -1,10 +1,10 @@
 # React错误边界能恢复哪些失败？
 
-**案例背景。** 延续报表页：服务端给出 May、April，用户选 **Oldest first** 后，路由状态变为 `sort=oldest`，父组件把排好序的 April、May 传给列表；排序状态随浏览器前进/后退恢复，见[浏览器导航路径](../browser/browser-navigation-and-history.md#让排序状态跟随地址栏与前进后退)。若列表组件在 `render`（渲染）时抛错，错误边界可以把这块列表换成备用界面，让边界外的排序区域继续留在页面。它能捕获 React 渲染路径中的子树错误、React 提交阶段同步执行时的异常，以及 React 明确追踪的部分异步失败。普通点击、定时器和 Effect 启动后自行运行的 Promise 拒绝，仍须各自处理。
+**案例背景。** 延续报表页：服务端给出 May、April，用户选 **Oldest first** 后，路由状态变为 `sort=oldest`，父组件把排好序的 April、May 传给列表；排序状态怎样随浏览器前进/后退恢复，见[浏览器导航路径](../browser/browser-navigation-and-history.md#让排序状态跟随地址栏与前进后退)。若列表组件在 `render`（渲染）时抛错，错误边界可以把这块列表换成备用界面，让边界外的排序区域继续留在页面。错误边界能接住的失败有三类：React 渲染子树时抛出的错误、React 调用组件代码时同步抛出的异常（如提交阶段和 Effect 中），以及 React 明确追踪的少数异步失败。普通点击处理器、定时器，以及 Effect 启动后自行运行的 Promise 拒绝，仍须在各自的位置处理。
 
 ## 先按失败发生的位置选择处理方式
 
-Error Boundary（错误边界）是包住子树、在子树出错时改显示 fallback（备用界面）的组件。React 内置的边界由类组件实现：`static getDerivedStateFromError`（从错误派生状态）让下一次 render 进入 fallback，`componentDidCatch`（捕获错误）在提交阶段记录错误与组件栈。React 19.3 的捕获边界如下：
+Error Boundary（错误边界）是包住子树、在子树出错时改显示 fallback（备用界面）的组件。React 内置的边界由类组件实现：`static getDerivedStateFromError` 根据错误返回新状态，让下一次 render 显示 fallback；`componentDidCatch` 在提交阶段记录错误与组件栈。在 React 19.3 中，各类失败是否由错误边界接住如下：
 
 | 失败发生的位置 | 最近错误边界会怎样处理 |
 | --- | --- |
@@ -17,7 +17,7 @@ Error Boundary（错误边界）是包住子树、在子树出错时改显示 fa
 | `useEffect` 启动的普通请求失败 | 把失败和重试放在请求状态中；它不会自动变成 render 错误或 Suspense 挂起。 |
 | 服务端渲染期间抛错 | 类错误边界不捕获服务端错误，由服务端渲染管线处理。流式 SSR 可用 `Suspense` 输出 fallback；若客户端随后重试渲染仍报错，才可能由客户端错误边界处理。 |
 
-React 19 文档把 Error Boundary 的内置用途描述为捕获子树 rendering errors，并明确排除普通事件、一般异步任务、服务端渲染和边界自身错误。React 调用 Effect setup/cleanup 时，可捕获其中的同步抛错；普通 `useEffect` 也可能在浏览器绘制后运行，这不要求它与 DOM 提交同步。本章实测了 19.3.0 中仍挂载边界的捕获范围。由 Effect 启动、之后才拒绝的 Promise 已离开 React 当次调用，必须自行处理。Hook 返回的 `startTransition` 是文档列出的例外；独立导入的同名 API 不提供这条错误边界路径。
+React 19 文档把 Error Boundary 的用途描述为捕获子树的渲染错误，并明确排除事件处理器、一般异步代码、服务端渲染和边界自身抛出的错误。Effect 是个需要单独说明的情况：普通 `useEffect` 通常在浏览器绘制后才运行，不与 DOM 提交同步，但 setup/cleanup 仍由 React 调用，其中同步抛出的错误会被捕获；本章在 19.3.0 中实测了仍挂载边界的捕获范围。由 Effect 启动、之后才拒绝的 Promise 已离开 React 的那次调用，必须自行处理。Hook 返回的 `startTransition` 是文档列出的异步例外；独立导入的同名 API 没有这条错误边界路径。
 
 ## 边界放在用户能理解的恢复位置
 
@@ -25,7 +25,9 @@ React 19 文档把 Error Boundary 的内置用途描述为捕获子树 rendering
 
 ![报表列表位于错误边界内，排序区在边界外](./resources/react-error-boundaries-scope.svg)
 
-下面给出边界、报表区域和一个最小调用。工具栏固定显示 `Oldest first`，只代表边界外仍在页面的区域；此例省略 URL 和实际排序逻辑，由父组件传入已按 April、May 排序的数据。`key={accountId}` 让切换账户时重新建立边界和列表树，边界本地的失败状态不会带到新账户；它只重置 React 子树身份，不负责隔离查询缓存或验证报表数据，共享查询缓存且账户会改变结果时，查询身份也必须区分账户。查询键如何区分结果集，见[报表查询章节](./react-server-state-and-optimistic-updates.md)。目前 React 内置边界仍由类组件实现；即使用函数组件组装页面，也能在子树周围嵌入类边界或使用现有边界库。
+下面给出边界、报表区域和一个最小调用。工具栏固定显示 `Oldest first`，只用来代表边界外仍留在页面上的区域；此例省略 URL 和实际排序逻辑，由父组件传入已按 April、May 排好的数据。目前 React 内置边界仍只能写成类组件；页面其余部分用函数组件组装时，也可以在子树外包一个类边界，或使用现有的边界库。
+
+`key={accountId}` 让切换账户时重新创建边界和列表子树，因此边界里的失败状态不会带到新账户。它只重置 React 子树的身份，不负责隔离查询缓存，也不验证报表数据；若多个账户共用查询缓存，查询身份同样必须区分账户，见[报表查询章节](./react-server-state-and-optimistic-updates.md#排序值构成查询身份)。
 
 > [!example]- 完整的类边界与报表区域
 >
@@ -101,17 +103,17 @@ React 19 文档把 Error Boundary 的内置用途描述为捕获子树 rendering
 > }
 > ~~~
 
-起始调用用账户 `a` 和已排序的 `initialReports` 显示 April、May。若父组件为同一账户传入 `reports = [null]`，列表在渲染这条空记录并读取其属性时会触发 `TypeError`，fallback 替代列表而工具栏继续留在页面。坏输入不变时点击“重新渲染列表”会再失败；先传回有效行，边界仍会保留 fallback，直到再次点击重试才恢复。若换成新的账户 ID 且传入有效行，`key` 会重建边界。真实 API JSON 应先做运行时校验；这里注入的 render TypeError 只验证错误边界，不能替代请求或数据校验失败的处理。
+起始调用用账户 `a` 和已排序的 `initialReports` 显示 April、May。若父组件为同一账户传入 `reports = [null]`，列表在渲染这条空记录并读取其属性时会触发 `TypeError`，fallback 替代列表而工具栏继续留在页面。坏输入不变时，点击“重新渲染列表”会再次失败；父组件改传有效行后，边界仍保持 fallback，直到用户再点一次重试才恢复。若同时换成新的账户 ID 并传入有效行，`key` 会直接重建边界。真实的 API JSON 应先做运行时校验；这里人为注入的 render TypeError 只用来演示错误边界，不能代替对请求失败或数据校验失败的处理。
 
-“重新渲染列表”按钮只把边界状态重置为可尝试渲染；它不会修复错误数据，也不会重新发送查询。若 `reports` 仍含 `null`，子树一重试就再次报错。真正的恢复动作应先由数据所有者修复输入、重新读取或离开故障路由，然后再重置/重新挂载边界。查询状态、重试和缓存由[报表服务端状态章节](./react-server-state-and-optimistic-updates.md)负责。
+“重新渲染列表”按钮只是把边界状态重置为“可以再试一次渲染”；它不会修复错误数据，也不会重新发送查询。若 `reports` 仍含 `null`，子树一重试就会再次报错。真正的恢复应先由持有数据的一方修复输入、重新读取或离开出错的路由，然后再重置或重新挂载边界。查询状态、重试和缓存由[报表服务端状态章节](./react-server-state-and-optimistic-updates.md)负责。
 
-边界粒度按用户能理解和恢复的区域决定：把整页包起来会连工具栏一起隐藏；每一行都放边界则可能留下许多局部错误框，读者也难以知道列表是否完整。JSX 中写 `try { return <ReportsList /> } catch { ... }` 捕获不到之后的子组件 render，因为那一行只创建元素描述，React 会在后续工作中调用子组件。
+边界粒度按用户能理解、也能恢复的区域来定：把整页包起来，会连工具栏一起隐藏；给每一行都放边界，则可能留下许多零散的错误框，用户也难以判断列表是否完整。另外，在父组件里写 `try { return <ReportsList /> } catch { ... }` 无法代替边界：这一行只创建元素描述，子组件要等 React 之后渲染时才被调用，那时的错误已不在这个 `try` 里。
 
 ## 错误边界与其他失败处理方式
 
-普通 TanStack Query v5 `useQuery` 默认把请求失败作为结果状态交给组件；组件读取 `isError`、`error`、`data` 决定报错和重试。配置 `throwOnError` 或改用 `useSuspenseQuery` 时，查询 Hook 会按当前规则把错误抛入边界；应用也可以在 render 中自行抛出查询错误。`useSuspenseQuery` 的默认规则不是“所有失败都丢弃数据”：无缓存数据时错误交给边界；已有缓存但后台刷新失败时，默认继续显示缓存数据。若用边界承接查询错误并在 fallback 提供重试，需要用 TanStack 的 Query Error Reset Boundary 协调查询错误重置和边界重置；只清空 React 边界的 `hasError` 不会重置查询状态。
+报表数据常由 TanStack Query（服务端数据查询与缓存库）读取，它的失败默认不走错误边界。v5 的普通 `useQuery` 把请求失败作为结果状态交给组件，组件读取 `isError`、`error`、`data` 决定如何报错和重试。配置 `throwOnError` 或改用 `useSuspenseQuery` 后，查询 Hook 才会按相应规则把错误抛给边界；应用也可以在 render 中自行抛出查询错误。`useSuspenseQuery` 并不是“任何失败都丢弃数据”：没有缓存数据时，错误交给边界；已有缓存而后台刷新失败时，默认继续显示缓存数据。若用边界承接查询错误并在 fallback 提供重试，需要用 TanStack 的 Query Error Reset Boundary 协调查询错误重置和边界重置；只清空 React 边界的 `hasError` 不会重置查询状态。
 
-客户端资源暂未就绪时，`Suspense` 可用 fallback 显示等待界面；首次挂载或不保留旧内容的更新通常会切到它。若已显示的内容在 Transition 等更新中再次挂起，React 也可能保留旧界面。错误边界的 fallback 则表示子树已经失败。`use(promise)` 只在 render 中读取并跨重渲染复用的 Promise：pending 属于挂起，拒绝属于错误。普通 `fetch` 写在 `useEffect` 或点击处理器中不会自动进入 Suspense；常规查询若选择 `isError` 状态路径，也无须额外套一层错误边界。
+`Suspense` 的 fallback 和错误边界的 fallback 含义不同：前者表示资源尚未就绪、仍在等待，首次挂载或不保留旧内容的更新通常会切到它；后者表示子树已经失败。`use(promise)` 在 render 中读取一个跨重渲染复用的 Promise：pending 时挂起，拒绝时按错误处理。写在 `useEffect` 或点击处理器里的普通 `fetch` 不会自动触发 Suspense；常规查询若采用 `isError` 状态路径，也不必再额外套一层错误边界。
 
 状态更新包在 Transition（过渡）中时，如果新内容暂时挂起，React 可以继续显示已经提交的旧内容，而不马上换成 Suspense fallback。是否保留旧界面由更新方式与边界位置决定；Transition 不会把已提交的旧数据变成新请求结果。
 
