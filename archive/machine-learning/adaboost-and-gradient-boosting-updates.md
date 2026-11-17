@@ -7,11 +7,11 @@
 | AdaBoost（Adaptive Boosting，自适应提升） | 依当前分类结果更新的样本权重 | 按分类器权重加总投票分数 |
 | Gradient boosting（梯度提升） | 依当前预测和损失计算的负梯度（伪残差） | 把树的叶节点数值增量加到当前预测 |
 
-因此，“提升”都意味着按顺序修正已有集成；AdaBoost 让错分样本在下一轮训练中占更大影响，梯度提升让新树近似当前预测应下降损失的方向。下面分别沿一轮完整重放，再说明多轮时哪些量会更新。
+两者的共同点是按顺序修正已有集成：AdaBoost 让错分样本在下一轮训练中影响更大，梯度提升让新树近似“当前预测往哪个方向调整，损失下降最快”。下面先各自完整走一轮，再说明多轮训练时哪些量会更新。
 
 ## AdaBoost：错分样本如何变重？
 
-AdaBoost（Adaptive Boosting，自适应提升）把多个 weak learner（弱学习器）按轮次训练。分类时，每轮学习器的加权错误率决定它在最终分类投票中的分量；更新样本权重后，下一轮会更关注本轮错分的记录。决策树桩常作弱分类器，但权重机制也可交给其它支持样本权重的分类算法。每一轮都依赖上一轮结果，不同于随机森林中独立训练后再汇总的树。
+AdaBoost（Adaptive Boosting，自适应提升）把多个 weak learner（弱学习器）按轮次训练。分类时，每轮学习器的加权错误率决定它在最终分类投票中的分量；更新样本权重后，下一轮会更关注本轮错分的记录。弱分类器常用 decision stump（决策树桩，只做一次切分的树），但任何支持样本权重的分类算法都可以接入这套权重机制。每一轮都依赖上一轮结果，不同于随机森林中独立训练后再汇总的树。
 
 这里先推导经典二分类 AdaBoost。训练集有 $n$ 条记录，$i=1,\ldots,n$ 标记一条记录，$x_i$ 是它的特征；第 $t$ 轮把标签和分类器输出编码为 $y_i,h_t(x_i)\in\{-1,+1\}$。令前 $t-1$ 轮的加权分数为 $S_{t-1}$，训练集的指数损失为 $L$：
 
@@ -53,7 +53,7 @@ Z_t(\alpha)=(1-\epsilon_t)e^{-\alpha}+\epsilon_t e^{\alpha},
 \frac{dZ_t}{d\alpha}=-(1-\epsilon_t)e^{-\alpha}+\epsilon_t e^{\alpha}=0
 $$
 
-令导数为 0，得 $e^{2\alpha}=(1-\epsilon_t)/\epsilon_t$，于是得到上式的 $\alpha_t$。二阶导数 $Z_t''(\alpha)=(1-\epsilon_t)e^{-\alpha}+\epsilon_t e^{\alpha}>0$，所以该驻点是唯一最小值。固定前轮分数及当前分类器后，按此公式计算的加权错误率 $\epsilon_t$ 越小，这轮的指数损失最优投票系数越大；再按同一分数更新权重，后续弱学习器就会把更多训练注意力放在指数损失较大的记录上。
+令导数为 0，得 $e^{2\alpha}=(1-\epsilon_t)/\epsilon_t$，于是得到上式的 $\alpha_t$。二阶导数 $Z_t''(\alpha)=(1-\epsilon_t)e^{-\alpha}+\epsilon_t e^{\alpha}>0$，所以该驻点是唯一最小值。也就是说，在前几轮分数和本轮分类器都固定时，本轮加权错误率 $\epsilon_t$ 越小，使指数损失最小的投票系数就越大。接着按更新后的分数重算权重，后续弱学习器就会更关注指数损失较大的记录。
 
 > [!example] 四个等权样本中错分一个
 > 假设本轮有四个等权样本，每个初始权重为 $1/4$；三条分对、一条分错，所以 $\epsilon=1/4$。这轮分类器的投票权为 $\alpha=\frac12\ln 3\approx0.5493$，正确样本的更新乘数为 $e^{-\alpha}=1/\sqrt3\approx0.5774$，错分样本为 $e^\alpha=\sqrt3\approx1.7321$。
@@ -193,7 +193,7 @@ $\eta$ 无量纲，且乘积 $\rho_m h_m(x)$ 必须与 $F$ 同尺度；因此一
 
 二分类梯度提升的树同样输出连续增量：叶值加到 logit 分数 $F_m(x)$，再经 sigmoid 转成概率 $p_m(x)$；它不是把各轮树的类别标签作多数投票。
 
-树深度会改变梯度提升基学习器的表达能力；树数 `n_estimators` 与学习率 `learning_rate` 相互作用。若设置 `subsample < 1`，每轮树只使用一部分训练记录，这通常降低方差但会增加偏差，实际收益要在验证数据上检查。AdaBoost 1.9.1 提供学习率缩放与轮数上限，并在完美拟合时提前停止；`GradientBoostingClassifier` 与 `GradientBoostingRegressor` 还可用 `n_iter_no_change`、`validation_fraction` 配置验证早停。最终应使用符合数据生成过程的验证划分选模型复杂度和轮数，再以独立数据检查泛化误差，训练误差本身不能证明模型对新样本有效。
+树深度会改变梯度提升基学习器的表达能力；树数 `n_estimators` 与学习率 `learning_rate` 相互作用。若设置 `subsample < 1`，每轮树只使用一部分训练记录，这通常降低方差但会增加偏差，实际收益要在验证数据上检查。scikit-learn 1.9.1 的 AdaBoost 提供学习率缩放与轮数上限，并在完美拟合时提前停止；`GradientBoostingClassifier` 与 `GradientBoostingRegressor` 还可用 `n_iter_no_change`、`validation_fraction` 配置验证早停。最终应使用符合数据生成过程的验证划分选模型复杂度和轮数，再以独立数据检查泛化误差，训练误差本身不能证明模型对新样本有效。
 
 > [!info]- 来源
 > - **经典二分类 AdaBoost 推导与加权投票。** Freund 与 Schapire，*A Decision-Theoretic Generalization of On-Line Learning and an Application to Boosting*（1997），[原论文 DOI](https://doi.org/10.1006/jcss.1997.1504)，§4.1 的 AdaBoost 算法及 §4.2 的分析。原文使用 0/1 标签与 beta 更新；本节以 $y,h\in\{-1,+1\}$ 对称编码重写，得到 $\alpha=\frac12\ln((1-\epsilon)/\epsilon)$ 和指数权重更新。

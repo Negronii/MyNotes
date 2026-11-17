@@ -1,6 +1,6 @@
 # 常见 Webpack 插件分别改变哪一步构建行为？
 
-Webpack plugin（插件）通过 compiler（编译器）或 compilation（单次编译）的生命周期钩子扩展构建。下表按构建阶段或运行边界速查旧配置；实际判断要核对项目锁定的 Webpack 完整版本（例如 5.109.0）和对应插件版本，主版本号不足以区分这里的原生能力。
+Webpack plugin（插件）通过 compiler（编译器）或 compilation（单次编译）的生命周期钩子扩展构建。下表按构建阶段或运行边界速查旧配置；实际判断要核对项目锁定的 Webpack 完整版本（例如 5.109.0）和对应插件版本：同属 Webpack 5，不同小版本的原生能力差别很大。
 
 | 插件 | 构建阶段或系统边界 | 常见作用 | 配置前要确认 |
 |---|---|---|---|
@@ -13,11 +13,11 @@ Webpack plugin（插件）通过 compiler（编译器）或 compilation（单次
 | ProvidePlugin | 模块解析时形成依赖 | 源码遇到配置指定的自由标识符（没有局部绑定）时，自动引入其对应模块或导出 | 可能隐藏文件的实际依赖，降低可读性和依赖追踪清晰度 |
 | DllPlugin / Dll<wbr>Reference<wbr>Plugin | 两次分开的 Webpack compilation | `DllPlugin` 在单独配置中生成 DLL bundle 与 manifest；应用编译中的 `DllReferencePlugin` 再读取 manifest 并复用其中依赖 | 较早的跨编译共享 bundle 工作流；官方称文件系统缓存已大体替代其缩短应用编译时间的用途。保留前先测量项目收益 |
 
-Webpack 5.109 的 `auto` 先用 `/file.html`、`/file.css` 或 `/file.module.css` 等合成路径做宽松的构建级探测：`test`、`resource`、`include` 任一条件可命中便计入（忽略 `exclude`），显式 `type` 或未设 `enforce` 的普通 `loader/use` 才会关闭该构建对应的原生处理。探测不等于真实资源的完整规则匹配；若 `auto` 保持开启，它还会逐模块让已应用 loader、且未显式改用其他类型的请求沿原有解析路径，因此不能据此认定所有未命中实际规则的 HTML 都由原生接管，`HtmlWebpackPlugin` 注入的请求也须按具体配置判断。
+表中提到的原生 HTML/CSS 处理，在 Webpack 5.109 中默认取值 `auto`：项目没有为这类文件自行配置处理方式时，才由 Webpack 原生处理。“是否自行配置过”分两层判断。第一层是构建级探测：用 `/file.html`、`/file.css` 或 `/file.module.css` 等合成路径宽松地试探模块规则，`test`、`resource`、`include` 任一条件命中就计入（忽略 `exclude`）；命中的规则显式设置了 `type`，或带有未设 `enforce` 的普通 `loader`/`use`，才会关闭该构建对应的原生处理。第二层是逐模块回退：`auto` 保持开启时，已经应用了 loader、且没有显式改用其他类型的请求，仍沿原有解析路径处理。合成路径探测不等于对真实资源做完整的规则匹配，所以不能据此认定所有没命中实际规则的 HTML 都由原生接管；`HtmlWebpackPlugin` 注入的请求也要按具体配置判断。
 
 自定义插件要增加或修改 compilation 资源时，使用 `compilation.hooks.processAssets` 并按工作选择 stage。新增文件通常放 `ADDITIONAL`，可让后续已注册且匹配该资源的 stage 有机会处理；它不会自动获得压缩、source map 或内容哈希。是否处理仍取决于后续插件的配置、资源类型和元数据。`REPORT` 晚于体积优化、source map、内容哈希与传输优化。
 
-在 Webpack 5.109.0 中，`compiler.hooks.emit` 在 compilation 封存、所有 `processAssets` stage 结束后、资源交给配置的输出系统前运行。默认 `experiments.futureDefaults: false`（因而 `experiments.backCompat: true`）时，此后写入 `Compilation.assets` 会触发弃用警告；关闭 backCompat 后，封存的资源对象会被冻结，写入会被拒绝。无论哪种模式，修改都会错过已经结束的资源处理阶段；较晚运行的 `emit` tap 仍可看到较早 tap 的修改。输出完成后 `afterEmit` 仍会收到 compilation，但那不意味着钩子里的修改会回写已输出资源。`emit` 生命周期钩子本身没有整体弃用：读取已有资源仍可用；需要写入或变换的资源应提前放进 `processAssets`。
+旧插件常在 `emit` 钩子里改资源，这在当前版本已不合适。Webpack 5.109.0 中，`compiler.hooks.emit` 的运行时机是：compilation 已封存、所有 `processAssets` stage 已结束、资源还没交给配置的输出系统。默认 `experiments.futureDefaults: false`（因而 `experiments.backCompat: true`）时，此时写入 `Compilation.assets` 会触发弃用警告；关闭 backCompat 后，封存的资源对象会被冻结，写入直接被拒绝。无论哪种模式，这时的修改都赶不上已经结束的资源处理阶段，只有较晚运行的 `emit` tap 能看到较早 tap 的修改。输出完成后 `afterEmit` 仍会收到 compilation，但在这个钩子里修改不会回写已输出的资源。`emit` 钩子本身并没有整体弃用，用它读取已有资源仍然可以；需要写入或变换的资源应提前放进 `processAssets`。
 
 Webpack 的 loader、plugin 与资源处理边界见[构建工具中的 loader 与 plugin 分别处理什么](../../../frontend/tooling/build-tools.md#Webpack%20%E7%9A%84%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD%E5%99%A8%E4%B8%8E%E6%8F%92%E4%BB%B6%E5%88%86%E5%88%AB%E5%A4%84%E7%90%86%E4%BB%80%E4%B9%88%EF%BC%9F)。source map 的完整选项差异保留在[Webpack source map 预设对照](./webpack-source-map-presets.md)。
 

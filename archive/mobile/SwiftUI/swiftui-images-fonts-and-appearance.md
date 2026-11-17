@@ -30,7 +30,7 @@ let image: UIImage = #imageLiteral(resourceName: "your_image_name")
 > [!example] 头像框比原图更接近正方形时会发生什么？
 > 假设原图宽高比为 2:1，目标框为 1:1。以 150 × 150 pt 方框为例，`.fit` 显示为 150 × 75 pt，方框上下各留 37.5 pt；`.fill` 显示为 300 × 150 pt，左右各有 75 pt 超出方框。方框裁切时，左右各裁掉缩放后图宽的四分之一，框内可见面积是整幅图的一半。`Circle` 裁剪则沿圆形轮廓截取可见内容，并可继续叠加圆形描边。
 
-下面图只展示保持 2:1 比例的图像进入方形矩形框；圆形头像是后续再加的遮罩步骤。
+下图只展示保持 2:1 比例的图像放进方框的结果；圆形头像是在此之后再加的遮罩步骤。
 
 ![把 2:1 图像放入 1:1 方框：fit 显示整幅图并在上下留白；fill 放大后超出方框的左右部分被裁掉。](resources/swiftui-image-fit-fill-2-to-1.svg)
 
@@ -74,7 +74,9 @@ ZStack {
 
 ## 自定义字体如何注册并支持动态字体大小？
 
-Dynamic Type（动态字体）允许用户调整文字大小。在支持用户调整 Dynamic Type 的平台上，SwiftUI 可随设置缩放自定义字体；macOS 上用户不能更改 `dynamicTypeSize`，它也不影响文本尺寸。先将有分发授权的字体文件加入目标并确认 target membership（目标成员资格）；然后按平台注册资源。iOS、iPadOS、watchOS、tvOS、visionOS 与 Mac Catalyst 使用 `UIAppFonts` 数组，其元素是包内相对文件路径并包含扩展名，例如 `Fonts/Brand.ttf`；macOS 使用 `ATSApplicationFontsPath`，值相对于 app bundle 的 `Resources` 目录，例如 `Fonts/`。这两个键不能混用。
+Dynamic Type（动态字体）允许用户调整文字大小。在支持用户调整 Dynamic Type 的平台上，SwiftUI 可随设置缩放自定义字体；macOS 上用户不能更改 `dynamicTypeSize`，它也不影响文本尺寸。
+
+使用自定义字体分两步。先把有分发授权的字体文件加入 app target，并确认 target membership（目标成员资格）勾选正确；再按平台在应用信息属性列表中注册字体。iOS、iPadOS、watchOS、tvOS、visionOS 与 Mac Catalyst 使用 `UIAppFonts` 数组，其元素是包内相对文件路径并包含扩展名，例如 `Fonts/Brand.ttf`；macOS 使用 `ATSApplicationFontsPath`，值相对于 app bundle 的 `Resources` 目录，例如 `Fonts/`。这两个键不能混用。
 
 Xcode 常由 target build settings（目标构建设置）生成最终的应用信息属性列表；项目里没有单独可见的 `Info.plist` 文件并不代表没有应用信息列表。编辑应用信息时，先选中项目和 app target，再查看 Info 页支持的键；若项目手动维护 plist，就在 Build Settings 检查生成开关与实际来源，避免只改了不会进入 app bundle 的文件。
 
