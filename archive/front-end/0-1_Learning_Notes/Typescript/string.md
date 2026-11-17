@@ -1,6 +1,6 @@
 # 字符串处理怎样从位置索引走到用户看见的文字？
 
-**案例背景：** 报表标题是 `"  Hello World! 😀  "`，要去掉边缘空白、找到关键词、替换标签，并正确计算展示长度。字符串值不可变；变换方法返回新字符串，查找方法则返回位置或匹配信息，原字符串不会被原地修改；但“一个位置”究竟是什么单位，决定了截断是否安全。Unicode 分段的深入机制见[文本算法为什么必须先选择字符单位？](../../../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
+**案例背景：** 报表标题是 `"  Hello World! 😀  "`，要去掉边缘空白、找到关键词、替换标签，并正确计算展示长度。字符串值不可变：变换方法返回新字符串，查找方法返回位置或匹配信息，原字符串都不会被修改。真正容易出错的是“一个位置”以什么为单位，它决定了截断是否安全。Unicode 分段的深入机制见[文本算法为什么必须先选择字符单位？](../../../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
 
 ## 先处理什么，再按什么单位找位置？
 
@@ -18,7 +18,7 @@ const renamed = trimmed.replace(keyword, "Everyone");
 
 ## 为什么 length、索引与可见字符数量不一致？
 
-JavaScript 字符串由 UTF-16 code unit（代码单元）组成。`"Hello".length` 为 5；`"😀".length` 为 2，因为它用 surrogate pair（代理对）表示。`charAt(i)` 返回一个代码单元的字符串，越界为 `""`；`charCodeAt(i)` 返回代码单元数值，越界为 NaN。方括号越界则是 `undefined`。
+JavaScript 字符串由 UTF-16 code unit（编码单元）组成。`"Hello".length` 为 5；`"😀".length` 为 2，因为它用 surrogate pair（代理对）表示。`charAt(i)` 返回由一个编码单元组成的字符串，越界为 `""`；`charCodeAt(i)` 返回编码单元的数值，越界为 NaN。方括号越界则是 `undefined`。
 
 ```javascript
 console.log("Hello".charAt(1), "Hello".charCodeAt(1)); // "e", 101
@@ -53,7 +53,7 @@ for (const sample of ["😀", "e\u0301", "👨‍👩‍👧‍👦"]) {
 
 `codePointAt(i)` 在有效代理对的高位读取完整码点，但 `i` 仍按 UTF-16 编码单元计；指向代理对低位时只返回低代理项数值。`for...of` 或字符串展开按 code point（码点）推进，不会把有效代理对拆开；但组合重音或家庭 emoji 仍可能包含多个码点。需要按用户感知的字符边界截断时，可用 grapheme cluster（字素簇）分段作为近似；它不等同于字体最终绘制的 glyph（字形），不能直接把 `split('')`、`slice` 或码点遍历当成它。
 
-长度对比和截断都使用同一份去空白后的 `displayText = trimmed`：它有 15 个 UTF-16 编码单元、14 个码点和 14 个字素簇。替换后的 `renamed = "Hello Everyone! 😀"` 则分别有 18、17、17 个。`displayText.slice(0, 14)` 的结束位置按代码单元计且不包含索引 14，因此留下 emoji 的高代理项 `\ud83d`，没有完整字符；代码用 `JSON.stringify` 把这个未配对代理项显示出来。按字素簇取前 14 项则保留完整的 😀；因为这个例子正好有 14 个字素簇，该结果仍是整份去空白标题。
+长度对比和截断都使用同一份去空白后的 `displayText = trimmed`：它有 15 个 UTF-16 编码单元、14 个码点和 14 个字素簇。替换后的 `renamed = "Hello Everyone! 😀"` 则分别有 18、17、17 个。`displayText.slice(0, 14)` 的结束位置按编码单元计且不包含索引 14，因此留下 emoji 的高代理项 `\ud83d`，没有完整字符；代码用 `JSON.stringify` 把这个未配对代理项显示出来。按字素簇取前 14 项则保留完整的 😀；因为这个例子正好有 14 个字素簇，该结果仍是整份去空白标题。
 
 | 输入 | length：UTF-16 编码单元 | 字符串展开：码点 | Intl.Segmenter：字素簇 |
 |---|---:|---:|---:|
@@ -71,7 +71,7 @@ for (const sample of ["😀", "e\u0301", "👨‍👩‍👧‍👦"]) {
 | `substring(start,end)` | 不包含的结束位置 | 负数按 0；开始大于结束时交换两者 |
 | 旧 `substr(start,length)` | 长度 | 负起点从末尾换算；负长度按 0 处理并返回空串。Annex B 兼容方法，维护旧代码时识别 |
 
-`"Hello".slice(1,4)` 是 `"ell"`；`substring(4,1)` 也是 `"ell"`，但 `slice(4,1)` 是空串。旧例 `"Hello World!".substr(1,4)` 为 `"ello"`，等价的本例 `slice(1,5)` 也为 `"ello"`。`"Hello World!".substr(-5,2)` 为 `"or"`：负起点从末尾换算；`"Hello World!".substr(7,-2)` 为 `""`：负长度按 0 处理。三者的位置和长度参数都以代码单元计，不会自动保护 emoji 或字素簇边界。
+`"Hello".slice(1,4)` 是 `"ell"`；`substring(4,1)` 也是 `"ell"`，但 `slice(4,1)` 是空串。旧例 `"Hello World!".substr(1,4)` 为 `"ello"`，等价的本例 `slice(1,5)` 也为 `"ello"`。`"Hello World!".substr(-5,2)` 为 `"or"`：负起点从末尾换算；`"Hello World!".substr(7,-2)` 为 `""`：负长度按 0 处理。三者的位置和长度参数都以编码单元计，不会自动保护 emoji 或字素簇边界。
 
 ## 文本匹配、替换和排序分别要什么契约？
 

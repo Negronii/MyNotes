@@ -2,11 +2,11 @@
 
 **案例背景。** 报表列表当前按 `recent` 排序。用户改选 `oldest` 后，组件需要读取相应数据；如果用户很快又改回 `recent`，两个请求可能乱序返回。此页用手写 Effect（副作用同步）演示如何清理旧请求、忽略过期结果，并保留一个浏览器事件订阅例子。Effect 的完整提交时序见[React 如何把一次用户操作变成界面更新？](../../../../frontend/frameworks/react-basics.md#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)；要缓存、去重和协调服务端数据时，应接着看[React 如何维护服务端数据与乐观更新？](../../../../frontend/frameworks/react-server-state-and-optimistic-updates.md)。
 
-Effect 用于让已提交的界面与 React 外部系统同步。由用户动作直接触发的工作通常放在事件处理器里；能由当前 props（属性）和 state（状态）算出的值则在 render（渲染）中计算。这里的 `sort` 是 prop，也可能因地址栏后退而改变，所以组件需要在它变化后读取对应报表。
+Effect 用于让已提交的界面与 React 外部系统同步。由用户动作直接触发的工作通常放在事件处理器里；能由当前 props（属性）和 state（状态）算出的值则在 render（渲染）中计算。这里的 `sort` 是 prop，可能由用户选择改变，也可能因浏览器后退而改变；无论哪种来源，组件都要在它变化后读取对应的报表，所以这项工作适合放在 Effect 中。
 
 ## 请求变化后，旧响应不能覆盖新结果
 
-以下代码假定 `fetchReports` 把收到的 `AbortSignal` 传给 `fetch` 或其他可中止操作。每轮 Effect 都有自己的 `active` 标记和 `AbortController`：cleanup（清理函数）先禁止这轮闭包再写入 state（状态），再向底层读取发出中止信号。若底层函数不理会 signal，`active` 仍会挡住旧响应；中止浏览器端读取也不保证服务端已经停止处理请求。
+以下代码假定 `fetchReports` 把收到的 `AbortSignal` 传给 `fetch` 或其他可中止操作。每轮 Effect 都有自己的 `active` 标记和 `AbortController`。cleanup（清理函数）先把 `active` 设为 `false`，使这一轮的回调不能再写入 state，然后向底层读取发出中止信号。若底层函数不理会 signal，`active` 仍会挡住旧响应；中止浏览器端读取也不保证服务端已经停止处理请求。
 
 ~~~tsx
 import { useEffect, useState } from "react";
@@ -82,11 +82,11 @@ function ReportRows({ sort }: { sort: SortOrder }) {
 }
 ~~~
 
-假定首次 `recent` 读取已经成功，之后用户每次改选都分别提交一次。选择 `oldest` 后，React 先清理 `recent` 那轮 Effect，再发出 `oldest` 请求；界面报告它正在读取，同时保留最近一次成功的 `recent` 列表。若 `oldest` 还没返回，用户又切回 `recent`，React 先清理 `oldest` 那轮，再发出第二次 `recent` 请求；界面仍保留第一次成功的 `recent` 结果，并报告当前读取进度。第二次 `recent` 成功后，才以它替换列表。随后迟到的 `oldest` 成功或失败都不能改写组件状态。
+假定首次 `recent` 读取已经成功，之后用户每次改选都分别提交一次。选择 `oldest` 后，React 先清理 `recent` 那轮 Effect，再发出 `oldest` 请求；界面提示正在读取 `oldest`，同时保留最近一次成功的 `recent` 列表。若 `oldest` 还没返回，用户又切回 `recent`，React 先清理 `oldest` 那轮，再发出第二次 `recent` 请求；界面仍保留第一次成功的 `recent` 结果，并报告当前读取进度。第二次 `recent` 成功后，才以它替换列表。随后迟到的 `oldest` 成功或失败都不能改写组件状态。
 
-每当新的 `sort` 已提交并触发 Effect 重跑，React 先执行旧清理，再用新值建立请求；组件卸载时也会执行当前轮清理。cleanup（清理函数）先把本轮 `active` 设为 `false`，再中止本轮 signal。旧请求在清理后才成功或失败，都不能再写回；若当前请求失败，上方错误提示独立说明失败；若已有列表，下方仍标为最近一次成功读取的排序。`fetchReports` 必须把 signal 传到底层读取，中止才有机会停止浏览器侧工作；对不支持中止的异步来源，`active` 检查仍能挡住过期结果。
+规则可以概括为：每当新的 `sort` 提交并触发 Effect 重跑，React 先执行上一轮的清理，再用新值发起请求；组件卸载时也会执行当前这一轮的清理。旧请求在清理之后才成功或失败，都不能再写回 state。若当前请求失败，上方的错误提示单独说明；若已有列表，下方仍标明它是哪个排序最近一次成功读取的结果。`fetchReports` 必须把 signal 传到底层读取，中止才有机会停止浏览器侧工作；对不支持中止的异步来源，`active` 检查仍能挡住过期结果。
 
-根部启用 StrictMode（严格模式）时，React 在开发环境会先额外执行一次建立和清理，再正式建立 Effect。两个例子都应能经受重复建立和清理。
+根部启用 StrictMode（严格模式）时，React 在开发环境会先额外执行一次建立和清理，再正式建立 Effect。本页的请求例子和下面的订阅例子都应能经受这种重复建立和清理。
 
 新项目若已有路由或框架数据读取机制，应优先使用它；直接在 Effect 里读取数据通常还需要自行补缓存、去重、预取和水合处理。这个手写模式适合维护已有客户端组件或解释请求清理，不是每个数据加载场景的默认方案。
 

@@ -1,6 +1,6 @@
 # React 受控表单怎样把输入写回组件状态？
 
-**案例背景。** 用户填写姓名和备注，选择是否允许联系、工作状态与颜色，然后提交这份本地表单。这里的受控输入由 React state（状态）提供当前显示值：文本框、文本区域和选择框使用 `value`，复选框用布尔值 `checked`；单选项的 `value` 表示选项值，`checked` 表示该项当前是否选中。每次 `onChange`（变化处理器）都在处理器内调用 setter（状态设置函数）安排更新，但不会原地改写本次 render（渲染）的 `values` 快照。此练习只演示界面状态与提交快照，不实现服务端保存或字段校验。React 的状态快照与父组件状态归属见[更新轮次](../../../../frontend/frameworks/react-basics.md#处理器读到的是本次界面的状态快照)和[组件状态归属](../../../../frontend/frameworks/react-component-composition.md#把状态放在共同使用者之上的最近一层)。
+**案例背景。** 用户填写姓名和备注，选择是否允许联系、工作状态与颜色，然后提交这份本地表单。表单里的控件都是受控输入：它们显示的值由 React state（状态）提供。文本框、文本区域和选择框用 `value`，复选框用布尔值 `checked`；单选项的 `value` 是选项值，`checked` 表示该项当前是否选中。每次 `onChange`（变化处理器）触发时，处理器调用 setter（状态设置函数）安排更新，但不会原地改写本次 render（渲染）中的 `values` 快照。此练习只演示界面状态和提交时的快照，不实现服务端保存或字段校验。React 的状态快照与父组件状态归属见[更新轮次](../../../../frontend/frameworks/react-basics.md#处理器读到的是本次界面的状态快照)和[组件状态归属](../../../../frontend/frameworks/react-component-composition.md#把状态放在共同使用者之上的最近一层)。
 
 ~~~tsx
 import { useState, type ChangeEvent, type FormEvent } from "react";
@@ -118,7 +118,7 @@ export function ExampleForm() {
 
 具体看一次更新：初始 `employment` 是空字符串，两项单选都未选。假定用户先输入姓名“林”，那次事件安排更新后，下一次 render 会读到 `firstName: "林"`。随后用户点击“兼职”，`updateValue` 收到 `name: "employment"`、`value: "part-time"`；updater（更新函数）用前一份对象复制字段，只覆盖 `employment`，因此姓名仍为“林”。处理器内的 `values` 变量仍是本次 render 的快照；React 随后用新 state 再渲染，得到全职 `checked={false}`、兼职 `checked={true}`。复选框则由独立处理器读取 `checked` 布尔值并更新 `friendly`。
 
-受控输入的 `onChange` 要在事件处理器中立即安排 state 更新；处理器当前拿到的 state 仍是本轮快照，setter 不会在原地改变它。若处理器没有安排更新，React 会继续按受控属性显示本轮快照中的旧值。输入应在生命周期内保持受控或非受控模式；从 `undefined`/`null` 切换到字符串等受控值会在开发环境触发警告；本例的文本框、文本区域和选择框始终传字符串，复选框始终传布尔值。复选框的业务状态是是否选中，因此读 `checked`，不把选项提交值混作这个布尔状态。
+受控输入的 `onChange` 必须在处理器中同步安排 state 更新；若没有安排，React 会按受控属性继续显示快照里的旧值，用户的输入看起来就被吞掉了。一个输入在整个生命周期内应保持受控或非受控其中一种模式；从 `undefined`/`null` 切换到字符串等受控值，会在开发环境触发警告。本例的文本框、文本区域和选择框始终传字符串，复选框始终传布尔值。复选框的业务状态是是否选中，因此读 `checked`，不把选项提交值混作这个布尔状态。
 
 若用户输入“林”、备注“周五下午联系”、勾选“允许联系”、选“兼职”和“绿色”，提交处理器记录的对象是：
 

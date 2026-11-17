@@ -1,8 +1,8 @@
 # 现有 Create React App 项目怎样挂载 React 根节点？
 
-**案例背景。** 维护一个现有 Create React App（CRA，React 应用脚手架）项目：HTML 页面提供 `#root` 容器，入口模块在其中挂载 `<App />`。先核对 `package.json` 中的 `react` 和 `react-dom` 依赖；下方的 `createRoot` 示例要求两者兼容且版本为 React 18 或更高，因为既有 CRA 仓库也可能仍使用 React 17。CRA 默认提供空的 `#root` 容器时，用 `createRoot` 挂载。若项目另行准备了 React 服务端或预渲染 HTML，客户端可用 `hydrateRoot` 接管，但服务器标记必须与客户端首次渲染的结果匹配。
+**案例背景。** 维护一个现有 Create React App（CRA，React 应用脚手架）项目：HTML 页面提供 `#root` 容器，入口模块在其中挂载 `<App />`。动手前先核对 `package.json` 里的 `react` 和 `react-dom`：下方的 `createRoot` 示例要求两者版本一致且不低于 18，而既有 CRA 仓库可能还停留在 React 17。CRA 默认提供空的 `#root` 容器，用 `createRoot` 挂载即可。若项目另外由 React 在服务端或构建时生成了 HTML，客户端改用 `hydrateRoot` 接管，前提是这份 HTML 与客户端首次渲染的结果一致。
 
-CRA 已不再推荐用于创建新应用，但仍以维护模式运行，已有项目可以继续维护。继续维护 CRA 时，按仓库的 `package.json` 脚本启动，常见为 `npm start`；无需把旧教程中的创建命令照搬到新项目。
+React 团队已不再推荐用 CRA 创建新应用，CRA 本身进入维护模式，已有项目仍可继续使用。维护时按仓库 `package.json` 里的脚本启动，常见为 `npm start`；不要把旧教程里的建项目命令照搬到新项目。
 
 ## 入口容器与当前挂载方式
 
@@ -45,7 +45,7 @@ if (!container) throw new Error("缺少 #root 容器");
 hydrateRoot(container, <App />);
 ~~~
 
-`createRoot(...).render(...)` 首次运行会清掉容器内原有内容；有服务端 HTML 时这样做会丢弃它并重新创建节点。若水合时两边首屏不匹配，React 会报告 hydration mismatch（水合不匹配），并可能改为客户端重建不匹配区域；一次实际重放中，按钮文本不一致导致原按钮节点被替换。默认 CRA 空挂载点走上面的客户端根示例；水合分支只适用于项目另行准备了 React 生成的 HTML，并确保首屏输出匹配的情况。
+`createRoot(...).render(...)` 首次运行会清掉容器内原有内容；有服务端 HTML 时这样做会丢弃它并重新创建节点。若水合时两边首屏不匹配，React 会报告 hydration mismatch（水合不匹配），并可能改为客户端重建不匹配区域；例如按钮文本两边不一致时，原按钮节点会被替换。默认 CRA 空挂载点走上面的客户端根示例；水合分支只适用于项目另行准备了 React 生成的 HTML，并确保首屏输出匹配的情况。
 
 ## 旧项目中的 `ReactDOM.render`
 

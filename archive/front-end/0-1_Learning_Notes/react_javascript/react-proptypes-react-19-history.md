@@ -1,6 +1,6 @@
 # React 19 移除 PropTypes 后，旧组件怎样维护？
 
-**案例背景。** 一个旧 React 项目从 18 升级到 19 后，组件仍附有 propTypes（属性类型声明），但无效属性不再出现原来的警告。React 19 移除的是 React 对组件 propTypes 属性的自动检查；独立 prop-types 包仍可被代码引用，但单独安装或保留声明不会让 React 19 自动校验。组件 API（应用程序编程接口）可用 TypeScript 在编译期检查，来自 API、存储或用户输入的数据则仍需在边界做运行时解析，见[TypeScript 如何处理不可信 JSON？](../../../../frontend/typescript/advanced-typescript.md)。
+**案例背景。** 一个旧 React 项目从 18 升级到 19 后，组件上仍挂着 `propTypes`（属性类型声明），但传入错误类型的属性时，原来的警告不再出现。原因是 React 19 移除了 React 对组件 `propTypes` 的自动检查。独立的 prop-types 包仍可以安装和引用，但无论安装它还是保留声明，都不会让 React 19 重新自动校验。如今组件的调用约定可以用 TypeScript 在编译期检查；来自接口、存储或用户输入的数据，则仍需在边界做运行时解析，见[TypeScript 如何处理不可信 JSON？](../../../../frontend/typescript/advanced-typescript.md)。
 
 ## 旧组件里还会遇到的写法
 
@@ -18,7 +18,7 @@ Greeting.propTypes = {
 };
 ~~~
 
-例如在 React 18 开发构建中，调用 `<Greeting message={42} />` 会产生“应为字符串、实际为数字”的 PropTypes 警告，但 React 仍把 `42` 渲染在标题中；同一调用在 React 18 生产构建不会做 PropTypes 检查。升级到 React 19 后，React 不再自动读取这份声明，同样不会产生这条警告，组件仍会收到并渲染 `42`。这里指组件的 `propTypes` 属性，不是 JavaScript class 里的 `static` 关键字；React 19 的变化是移除了 React 的自动检查。
+例如在 React 18 开发构建中，调用 `<Greeting message={42} />` 会产生“应为字符串、实际为数字”的 PropTypes 警告，但 React 仍把 `42` 渲染在标题中；同一调用在 React 18 生产构建不会做 PropTypes 检查。升级到 React 19 后，React 不再自动读取这份声明，同样不会产生这条警告，组件仍会收到并渲染 `42`。类组件常写成 `static propTypes = {...}`，这只是把同一个属性挂到类上的语法；React 19 不再读取的是这个属性，与 `static` 关键字本身无关。
 
 ## 当前组件 API 的类型与默认值
 
@@ -32,7 +32,7 @@ function Greeting({ message }: GreetingProps) {
 }
 ~~~
 
-上面的必填 `message` 保留旧 API（应用程序编程接口）的调用约定：TypeScript 可以在项目编译时检查是否传入字符串；React 的旧 PropTypes 警告则只在开发环境检查运行时值，而且不会阻止渲染。TypeScript 类型会在编译时擦除，并不会在浏览器里验证 API 响应或本地存储。例如接口返回 `{"message":42}` 时，运行时解析应报告字段形状错误，由调用方显示错误，或将明确的字符串回退值传给 `Greeting`；解析成功时则传入解析得到的字符串，具体解析边界见上面的 TypeScript 笔记。
+上面的必填 `message` 沿用了旧组件的调用约定：TypeScript 在项目编译时检查调用方是否传入字符串；而旧的 PropTypes 警告只在开发环境检查运行时值，且不会阻止渲染。TypeScript 类型会在编译时擦除，并不会在浏览器里验证 API 响应或本地存储。例如接口返回 `{"message":42}` 时，运行时解析应报告字段形状错误，由调用方显示错误，或将明确的字符串回退值传给 `Greeting`；解析成功时则传入解析得到的字符串，具体解析边界见上面的 TypeScript 笔记。
 
 若产品约定允许省略 `message`，这是有意放宽调用契约的另一种 API，可以写成：
 

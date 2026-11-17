@@ -1,6 +1,6 @@
 # 目录聚合导出怎样改变组件的导入路径？
 
-这页保留旧课程的组件目录示例；聚合导出本质上是普通 ECMAScript 模块的重新导出，不是 React 特有功能。当前模块语法、循环依赖和 tree shaking 的边界见[ECMAScript 模块与 CommonJS 有何不同？](../../../../frontend/javascript/modules-and-host-boundaries.md)。
+这页保留旧课程的组件目录示例。barrel export（聚合导出）是指用目录下的 `index.ts` 把多个模块的导出集中重新导出，让调用方只从目录入口导入；它就是普通的 ECMAScript 模块 re-export，不是 React 的特有功能。当前模块语法、循环依赖和 tree shaking 的边界见[ECMAScript 模块与 CommonJS 有何不同？](../../../../frontend/javascript/modules-and-host-boundaries.md)。
 
 ~~~text
 src/
@@ -44,7 +44,7 @@ export function App() {
 }
 ~~~
 
-本例的无扩展名导入和目录入口由项目的 TypeScript／bundler 模块解析配置处理。浏览器原生 ESM 按 URL 加载模块：只要服务器返回正确的 JavaScript 内容和 MIME type，无扩展名的 URL 也可以使用。Node.js 原生 ESM 的相对文件导入则需要写明文件名及扩展名，例如 `./components/index.js`。两者都不会像本例的打包器一样自动探测目录里的 `index` 文件。
+本例的无扩展名导入和“导入目录即导入其 `index`”，都依赖项目的 TypeScript／打包器模块解析配置。浏览器原生 ESM 按 URL 加载模块：只要服务器返回正确的 JavaScript 内容和 MIME 类型，无扩展名的 URL 也能用。Node.js 原生 ESM 的相对文件导入则需要写明文件名及扩展名，例如 `./components/index.js`。浏览器和 Node.js 原生 ESM 都不会像打包器那样自动查找目录里的 `index` 文件。
 
 集中入口可以让调用方不依赖更深的文件路径，但也会扩大该入口的公开面。目录内部实现通常直接导入具体模块，以免互相经由 index.ts 形成循环；包体能否裁掉未使用导出，取决于 ESM 依赖图与构建工具配置，不是“用了 index.ts”就能保证。
 
