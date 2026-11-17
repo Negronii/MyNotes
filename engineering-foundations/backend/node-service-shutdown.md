@@ -1,16 +1,16 @@
 # Node.js 服务如何排空并关闭？
 
-**案例接续 acct-17：** 报表服务收到 `SIGTERM` 时，可能正把账户活动报表行流给一个 HTTP 响应，也可能有已经持久接受、由队列拥有的报表作业。两者的所有者不同：请求流可以在请求取消后结束；持久作业不能只因客户端断开而被撤销。本页的小型回放只模拟三条教学报表行直接流向 HTTP 响应，聚焦服务关停；它不冒充真实数据库、worker 或作业队列。持久作业的停止与发布边界会单独对照前两章。
+**案例接续 acct-17：** 报表服务收到 `SIGTERM`（部署系统要求进程终止时常发的信号）时，手上可能有两类工作：一类是正把账户 acct-17 的活动报表逐行流式写给某个 HTTP 响应；另一类是已经持久受理、归队列所有的报表作业。两者的所有者不同：请求内的流可以随请求取消而结束；持久作业却不能只因客户端断开就被撤销。本页的小型回放只模拟三条教学报表行直接流向 HTTP 响应，聚焦服务如何关停，不冒充真实的数据库、worker 或作业队列。持久作业的停止与发布边界，放在后文对照[运行时章](node-js-fundamentals.md)和[流背压章](node-stream-backpressure-and-cleanup.md)单独讨论。
 
 ![SIGTERM 后同步关闸并停止接收；并行等待 HTTP 关闭与请求工作结算，内部 deadline 通知取消后仍须等待清理；supervisor 自己的硬截止覆盖整个关停过程，届时进程仍未退出才会被强停](resources/node-service-shutdown-lifecycle.svg)
 
 ## 为什么要先拒绝工作再关闭连接？
 
-关停信号到达后，先在本进程内同步设 `draining = true`，再把 readiness（就绪状态）标为 false。负载均衡器或编排器收到不就绪状态需要时间；因此 handler 仍要在开始新报表或副作用之前检查 draining。尚在 keep-alive 连接上的新请求也可能到达，直接拒绝并回 `503`、`Connection: close`。之后调用 `server.close()` 停止接新连接；Node.js v19 起它也会关闭调用时的空闲连接。已有活动响应可以继续写完。本页回放还在应用 handler 结束后调用 `server.closeIdleConnections()`，主动收掉刚变空闲的 keep-alive 连接，以满足本例的关停时间预算；这不是说每个 Node.js v19+ 服务都必须额外调用它。
+关停信号到达后，先在本进程内同步设置 `draining = true`，再把 readiness（就绪状态）标为 false。负载均衡器或编排器发现实例不就绪需要一段时间，这期间仍可能有新请求进来，所以 handler 在开始新报表或产生副作用之前，还要自己检查 `draining`。已建立的 keep-alive 连接上也可能来新请求，对它们直接回 `503` 并带上 `Connection: close`。然后调用 `server.close()` 停止接受新连接；从 Node.js v19 起，它还会顺带关闭调用时处于空闲状态的连接，而正在进行的响应可以继续写完。本页回放还在应用 handler 全部结束后调用 `server.closeIdleConnections()`，主动关掉那些刚刚变空闲的 keep-alive 连接，以满足本例的关停时间预算；这并不是说每个 Node.js v19+ 服务都必须这样补调。
 
-HTTP Server 的关闭回调只说明它拥有的普通 HTTP 连接已经收尾，不证明已启动的 handler、数据库游标、worker、文件写入或后台任务都停下。相反，deadline 时 `server.closeAllConnections()` 可以强制关闭 HTTP(S) 连接，却不会自动取消 handler 正在等的查询或 CPU 工作。服务要分别等待 HTTP 关闭与应用任务集合归零；若服务还提供 WebSocket 或 HTTP/2，应由对应协议的 server / session owner 停止接收、关闭会话并确认结束；不能只看普通 HTTP Server 回调。
+HTTP Server 的关闭回调只说明它管理的普通 HTTP 连接都已收尾，不能证明已经启动的 handler、数据库游标、worker、文件写入或后台任务都已停下。反过来，到 deadline 时调用 `server.closeAllConnections()` 可以强行关闭 HTTP(S) 连接，却不会自动取消 handler 正在等待的查询或 CPU 工作。所以服务要分别等两件事：HTTP 关闭完成，以及在途应用任务全部结束。若服务还提供 WebSocket 或 HTTP/2，要由对应协议的 server 或 session 的管理方负责停止接收、关闭会话并确认结束，不能只看普通 HTTP Server 的回调。
 
-下面的精简脚本把教学用 `acct-17` 三行 CSV 直接流给当前客户端。生成器、流管线和请求响应的完成/取消关系沿用 [Node.js 流如何传播背压？](node-stream-backpressure-and-cleanup.md) 的说明。脚本默认每行延迟 100 ms；本地 deadline 回放用 --slow 改为 600 ms。两者都用可取消 timer 代替数据库查询，不代表真实查询耗时；真实驱动若不支持取消，pending 查询完成前仍不能关闭它的连接池。
+下面的精简脚本把教学用的 acct-17 三行 CSV 直接流给当前客户端。生成器、流管线，以及请求与响应之间的完成和取消关系，沿用 [Node.js 流如何传播背压？](node-stream-backpressure-and-cleanup.md) 的说明。脚本默认每行延迟 100 ms；加 `--slow` 参数则改为 600 ms，用来回放 deadline 分支。两种延迟都用可取消的 timer 代替数据库查询，不代表真实查询耗时；真实驱动若不支持取消，在途查询完成之前仍不能关闭它所用的连接池。
 
 > [!example]- 可运行的关停重放
 >
@@ -207,14 +207,17 @@ HTTP Server 的关闭回调只说明它拥有的普通 HTTP 连接已经收尾�
 > process.on('SIGINT', onShutdown);
 > ~~~
 
-**本机回放（Node.js v26.13.0）：** 默认每行 100 ms 时，在首个响应块到达后发送 SIGTERM；客户端仍收到完整三行 CSV，生成器清理、HTTP 关闭和资源清理都在 1 秒 deadline 前完成，进程 exit code 为 0。使用 `--slow`（每行 600 ms）时，客户端只收到表头与 event-1；deadline 回调发出取消并强关 HTTP 连接，连接关闭后生成器执行 `finally`，管线以 `ERR_STREAM_PREMATURE_CLOSE` 结算，`inFlight` 中的 handler 随后全部结算并继续资源清理，进程仍以 0 退出。正常排空时，handler 集合归零后补调 `server.closeIdleConnections()`，HTTP close 回调随之完成；本机移除这次补调的对照中，正文虽已完整，HTTP 收尾仍等到了 1 秒 deadline。另对慢模式在首块后间隔 150 ms 发两次 SIGTERM：两次信号共用同一个 `shutdownPromise`，没有触发默认信号退出；deadline 后生成器与资源清理均有日志，最终 exit 0。
+**本机回放（Node.js v26.13.0）：**
 
+- 默认模式（每行 100 ms）：在首个响应块到达后发送 `SIGTERM`。客户端仍收到完整的三行 CSV；生成器清理、HTTP 关闭和资源清理都在 1 秒 deadline 之前完成，进程退出码为 0。handler 全部结束后补调的 `server.closeIdleConnections()` 让 HTTP close 回调随即完成；去掉这次补调做对照时，正文虽然完整送达，HTTP 收尾却一直拖到了 1 秒 deadline。
+- `--slow` 模式（每行 600 ms）：客户端只收到表头和 event-1。deadline 回调发出取消并强行关闭 HTTP 连接；连接关闭后生成器执行 `finally`，管线以 `ERR_STREAM_PREMATURE_CLOSE` 结束；`inFlight` 中的 handler 随后全部结算，脚本继续资源清理，进程仍以 0 退出。
+- 重复信号：在慢模式下首块到达后，间隔 150 ms 连发两次 `SIGTERM`。两次信号拿到的是同一个 `shutdownPromise`，没有触发 Node 默认的信号退出；deadline 之后生成器和资源清理都留下了日志，最终退出码为 0。
 
-脚本将 HTTP handler 的**完整 Promise**登记到 `inFlight`，包含流结束和 `finally` 中移除请求控制器的步骤。正常写完时，响应结束后 handler Promise 才完成；随后补关刚转为空闲的 keep-alive 连接，并等待 HTTP close 回调。客户端提前断开时，响应 `close` 会触发该请求取消。两项生命周期都已结算后才清理依赖。deadline 到达时，脚本先对请求流发协作取消，再关闭 HTTP(S) 连接；取消可以令本例中的 timer 与生成器停止；deadline 回放里，先通知取消并强关 HTTP 连接，随后生成器运行 `finally`；管线以 `ERR_STREAM_PREMATURE_CLOSE` 结算，`inFlight` 集合归零后才清理依赖。代码仅在本请求 signal 已触发时把它当作预期停止。它不能保证真实数据库、文件系统或第三方 API 已撤销在途操作。`server.closeAllConnections()` 放在 `server.close()` 之后调用，以免在关停期间另有连接进入。
+这些结果依赖脚本的几处设计。第一，`inFlight` 登记的是 HTTP handler 的**完整 Promise**，其中包括流结束和 `finally` 里移除请求控制器的步骤；因此正常写完时，要等响应结束 handler Promise 才完成，之后再补关刚变空闲的 keep-alive 连接，并等待 HTTP close 回调。第二，客户端提前断开时，响应的 `close` 事件会触发该请求的取消。第三，到 deadline 时脚本先向请求流发出协作取消，再关闭 HTTP(S) 连接；本例中的 timer 和生成器会响应这个取消。第四，只有 HTTP 关闭和在途 handler 两项等待都结算后，脚本才清理依赖。代码只在本请求的 signal 已经触发时，才把 `AbortError` 或 `ERR_STREAM_PREMATURE_CLOSE` 当作预期的停止；这不能保证真实数据库、文件系统或第三方 API 已经撤销在途操作。另外，`server.closeAllConnections()` 放在 `server.close()` 之后调用，以免关停期间又有新连接进来。
 
 ## 哪些完成状态允许关闭资源？
 
-“收到信号”“连接断了”和“任务结束”是不同事实。示例里的 `lifecycleWaitSucceeded` 表示 `server.close()` 回调与 `waitForInFlight()` 两项等待都成功返回。`waitForInFlight()` 等到完整 handler Promise 结算，但不要求业务 handler 本身成功；`task.catch` 会记失败与退出码。本例没有真实数据库池或 worker，所以这个等待结果不能当作生产资源已释放的证据。生产还要等每个资源 owner 确认成功释放；清理失败或状态未知时，不关闭仍可能被使用的那项依赖。
+“收到信号”“连接断了”和“任务结束”是三件不同的事。示例里的 `lifecycleWaitSucceeded` 表示 `server.close()` 回调和 `waitForInFlight()` 两项等待都成功返回。`waitForInFlight()` 只等完整的 handler Promise 结算，不要求业务 handler 本身成功；handler 的失败和退出码由 `task.catch` 记录。本例没有真实的数据库池或 worker，所以这个等待结果不能当作生产资源已释放的证据。生产环境还要等每项资源的所有者确认释放成功；若清理失败或状态未知，就不要关闭仍可能在用的那项依赖。下表列出各类资源要等到什么状态：
 
 | 资源或副作用 | 等待到什么状态 | 不能据此推出什么 |
 | --- | --- | --- |
@@ -225,17 +228,17 @@ HTTP Server 的关闭回调只说明它拥有的普通 HTTP 连接已经收尾�
 | 临时文件与发布 | 文件流结束并关闭；若进入发布，则以 `rename` 等提交操作的真实成功/失败结果为准 | 写入 Promise 被本地取消不能证明文件或远端服务没有副作用 |
 | 已持久受理的 acct-17 job | 队列授予本次执行的 lease（租约）；job owner 停止接新 job，并让当前 attempt 达到完成状态，或清理后安全归还租约 / 让队列重试 | API 客户端断开不撤销已持久接受的 job |
 
-前两章中的 worker 导出把一个作业固定到 worker，逐批读、压缩和写出；EOF 后还要等压缩器发送全部尾块、写入方关闭临时文件。服务收到关停时，先停止队列继续领取新作业。当前 attempt 可在预算内完成；若策略要求在 deadline 取消，则由同一 job 协调者停止拉取、取消查询并等待查询结束、worker 的停止/收尾确认与已提交写入，再关闭并清理本 attempt 的临时文件，最后安全归还本次执行的租约。它不能把请求连接关闭误记成 job 已取消。
+再看持久作业。在[运行时章](node-js-fundamentals.md)的导出流程中，一个作业固定在一个 worker 上，逐批读取、压缩、写出；读到 EOF 后，还要等压缩器发完全部尾块、写入方关闭临时文件。服务收到关停信号时，先让队列消费者停止领取新作业。当前这次执行（attempt）如果能在时间预算内完成，就让它完成；如果策略要求到 deadline 就取消，则由同一个 job 协调者依次：停止拉取数据，取消查询并等它结束，等待 worker 的停止或收尾确认以及已提交的写入完成，然后关闭并清理本次 attempt 的临时文件，最后安全归还本次执行的租约。协调者不能把请求连接关闭误记为 job 已取消。
 
-取消与发布正在同一个 job 协调者里竞争时，仍按既定顺序裁决：若 job 还在 `running` 且取消先被接受，不提交文件发布；若先进入 `publishing` 并提交 rename，就等待真实成功或失败，不能让晚到的本地取消覆盖结果。若进程在提交后被硬杀，结果可能未知；重启后按 job ID、专属目标路径和持久化状态核对或幂等重试，不要凭 handler 退出推断“肯定没发布”。客户端已收到部分流响应也不能回滚先前已提交的数据库或对象存储副作用。
+取消与发布在同一个 job 协调者里竞争时，仍按[线程与进程章（何时选线程、进程或异步 I/O？）](../operating-systems/processes-threads-and-concurrency.md)规定的顺序裁决：若 job 还在 `running` 且取消先被接受，不提交文件发布；若先进入 `publishing` 并提交 rename，就等待真实成功或失败，不能让晚到的本地取消覆盖结果。若进程在提交后被硬杀，结果可能未知；重启后按 job ID、专属目标路径和持久化状态核对或幂等重试，不要凭 handler 退出推断“肯定没发布”。客户端已收到部分流响应也不能回滚先前已提交的数据库或对象存储副作用。
 
 ## deadline 与 supervisor 如何配合？
 
-示例的 1 秒 deadline 与 timer 延迟只为回放不同分支：默认每行 100 ms 让在途响应有机会正常排空，`--slow` 的每行 600 ms 会进入 deadline 取消分支。它们不是生产 SLA，也不保证真实操作在这一秒内终止。真实服务要为停止接单、协作取消、查询/worker 清理、文件关闭和资源池关闭保留时间。内部 deadline 应早于部署管理器的硬终止时间，并留出根据实际清理时长确定的余量。内部 timer 依赖事件循环运行；若 JavaScript 同步代码长时间阻塞，回调也不能准时执行。最外层 supervisor 自己的硬截止才会强停仍未退出的进程，图中的 SIGKILL 指这个外部动作。
+前面的代码已经用到内部 deadline，这里说明它和外部 supervisor（部署管理器、编排器等负责强停进程的一方）的分工。示例的 1 秒 deadline 和 timer 延迟只是为了回放不同分支：默认每行 100 ms 让在途响应有机会正常排空，`--slow` 的每行 600 ms 会进入 deadline 取消分支。它们不是生产 SLA，也不保证真实操作在这一秒内终止。真实服务要为停止接单、协作取消、查询/worker 清理、文件关闭和资源池关闭保留时间。内部 deadline 应早于部署管理器的硬终止时间，并留出根据实际清理时长确定的余量。内部 timer 依赖事件循环运行；若 JavaScript 同步代码长时间阻塞，回调也不能准时执行。最外层 supervisor 自己的硬截止才会强停仍未退出的进程，图中的 SIGKILL 指这个外部动作。
 
 在支持这些信号的 POSIX 部署上，注册 `SIGTERM` 或 `SIGINT` listener 会移除相应默认退出行为；应用要自己走完关停路径，不要在 cleanup 前直接调用 `process.exit()`。脚本用 `process.exitCode` 记录失败，并让已关闭的 handle 自然结束进程。deadline timer 保持引用，避免事件循环空闲时在它执行前退出。若不响应取消的请求仍持有数据库连接，等待会继续；不能为了让进程按时退出而提前关闭正在使用的依赖。最外层 supervisor 到硬截止后可以强制杀进程，但强杀不能替代持久任务恢复与未知副作用的对账。
 
-PM2 对 stop、restart 和 reload 默认先发 `SIGINT`；可改 `PM2_KILL_SIGNAL`。`kill_timeout` 默认 1600 ms，届满后发 `SIGKILL`；生产配置要把应用自己的 drain deadline 和清理余量放在这个截止之前，或同步调整 PM2 配置。若服务还提供 WebSocket 或 HTTP/2，另由对应 server / session owner 停止接收、关闭并确认会话结束；HTTP server 的 `closeAllConnections()` 不会替这些协议连接完成应用清理。
+以 PM2 为例：它在 stop、restart 和 reload 时默认先发 `SIGINT`，可用 `PM2_KILL_SIGNAL` 改成别的信号；`kill_timeout` 默认 1600 ms，到期后发 `SIGKILL`。生产配置要让应用自己的排空 deadline 加上清理余量落在这个截止时间之前，或者相应调大 PM2 的配置。
 
 **接下来：** HTTP server 的 connection 生命周期与请求/任务所有权在此收束；账户报表何时算持久完成，以及重试如何查询未知结果，见[请求超时后如何确认结果并安全重试？](../reliability/api-reliability-and-async-delivery.md)。
 

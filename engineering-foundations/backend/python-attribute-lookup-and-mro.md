@@ -1,22 +1,22 @@
 # Python 实例属性何时来自对象字典，何时变成描述符或绑定方法？
 
-**承接前篇：** [前篇](python-fundamentals.md)的 CSV worker 接受了 `evt-1` 与 `evt-3`，并沿共享标签列表把第一条记录改为 `['new', 'priority', 'reviewed', 'shared']`。本篇在独立代码中重建这两条记录；现在标题输入改成 `"  November  "`，要求读取得到规范化后的 `November`，空白标题则拒绝。我们还要解释普通类属性、描述符和实例字典同名时由谁响应，以及同一验证方法如何沿多继承顺序协作。
+**承接前篇：** 在[前篇](python-fundamentals.md)中，报表 worker 从 CSV 中接受了 `evt-1` 和 `evt-3` 两条事件，存进 `Report("November", ...)` 的 `rows`；随后通过别名和浅拷贝修改共享的标签列表，第一条事件的 `tags` 最终变成 `['new', 'priority', 'reviewed', 'shared']`。本篇的代码可独立运行，会直接重建这两条记录。新的要求是：标题输入改为带空格的 `"  November  "`，读取 `report.title` 时应得到规范化后的 `November`，全是空白的标题则要拒绝。围绕这个要求，本篇解释两件事：普通类属性、描述符和实例字典里出现同名属性时由谁响应；同一个验证方法如何按多继承的顺序在几个类之间协作完成。
 
 本篇只讨论普通类实例的显式读写，例如 `report.title`、`report.title = value` 和 `getattr(report, name)`。类对象本身的元类查找、特殊语法触发的隐式特殊方法查找，以及代理类的额外规则不属于这条路径。
 
-方法解析顺序（method resolution order，MRO）是从当前类沿基类继续查找属性时使用的顺序。
+下文常用的 method resolution order（方法解析顺序，MRO），是 Python 从对象的类出发、沿各基类查找属性时依次检查的类列表，可通过 `类名.__mro__` 查看。
 
 ![读取普通实例属性时从类 MRO、描述符和实例字典得到结果的分支](resources/python-attribute-lookup.svg)
 
-图的前半展示默认 `__getattribute__` 的查找链；当它以 `AttributeError` 结束，普通点号访问和两参数 `getattr()` 才进入末端的 `__getattr__` 回退。描述符 getter 自己抛出 `AttributeError` 也会进入该回退；若重写的 `__getattribute__` 抛出同一错误，也会走这条外层回退，详见下文。
+图的前半部分是默认 `__getattribute__` 的查找链。只有这条链以 `AttributeError` 结束时，普通点号访问和两参数的 `getattr()` 才会进入末端的 `__getattr__` 回退。描述符的 getter 自己抛出 `AttributeError`，或者重写后的 `__getattribute__` 抛出这个错误，也都会走到这条回退路径，详见下文。
 
 ## 为什么同名实例键不会取代标题验证器？
 
 descriptor（描述符）是其类型定义了 `__get__`、`__set__` 或 `__delete__` 的对象。要让点号访问自动调用它，描述符对象必须作为属性放在类字典中，或被实例类型的某个基类继承；把描述符对象放进实例字典只会得到那个普通对象。
 
-下面的 `NonEmptyText` 将公开的 `title` 管理在实例字典的 `_title` 键里。`__set_name__` 在类创建时收到它所属的类和属性名；`__get__` 在类访问时返回描述符本身，在实例访问时读存储键；`__set__` 把校验交给实例的 `validate_title` 协议，成功后才写入规范化值。
+下面的 `NonEmptyText` 对外提供 `title` 属性，实际值存在实例字典的 `_title` 键里。三个方法各有分工：`__set_name__` 在类创建时得知自己所属的类和属性名；`__get__` 在通过类访问时返回描述符本身，在通过实例访问时读取存储键；`__set__` 把校验交给实例的 `validate_title` 方法，校验通过后才写入规范化后的值。
 
-这个实现要求宿主实例有 `__dict__`，并提供 `validate_title`；后面的 `Report` 同时满足这两个前提。
+这个实现要求使用它的实例有 `__dict__`，并提供 `validate_title` 方法；后面的 `Report` 满足这两个前提。
 
 ~~~python
 class NonEmptyText:
@@ -39,9 +39,9 @@ class NonEmptyText:
         instance.__dict__[self.storage_name] = normalized
 ~~~
 
-这个描述符定义了 `__get__` 和 `__set__`，所以它是 data descriptor（数据描述符）。读取时，若类 MRO 找到这样的候选，描述符 getter 会先于 `report.__dict__` 执行；赋值时，默认属性设置会先调用它的 `__set__`。因此，即使实例字典里也出现 `title` 键，普通的 `report.title` 仍由描述符决定。
+这个描述符同时定义了 `__get__` 和 `__set__`，所以是 data descriptor（数据描述符）。读取时，如果沿类的 MRO 找到这样的属性，描述符的 getter 会先于 `report.__dict__` 生效；赋值时，默认的属性设置流程也会先调用它的 `__set__`。因此，即使实例字典里也有 `title` 键，普通的 `report.title` 仍由描述符决定结果。
 
-以下类和对象继续使用前篇的 `Report` 与事件数据。`NonEmptyText.__set__` 调用 `report.validate_title`；该函数由类中的普通函数描述符绑定到当前实例，再通过 `super()` 进入审计、去空格和非空检查步骤。
+下面重新定义 `Report`，并重建前篇的事件数据。`NonEmptyText.__set__` 调用的 `instance.validate_title` 是一个普通方法：类里的函数在经实例读取时会绑定到该实例（机制见后文“绑定方法”）。`Report.validate_title` 再通过 `super()` 依次进入审计、去空格和非空检查三个步骤。
 
 ~~~python
 events = []
@@ -112,9 +112,9 @@ print([row["id"] for row in report.rows])
 print(events)
 ~~~
 
-输出为 `True`、`_title`、`November November`、`['evt-1', 'evt-3']`，校验轨迹为 `Report.validate_title → AuditMixin.before → NormalizeMixin.before → FieldBase → NormalizeMixin.after → AuditMixin.after`。赋值 `self.title = title` 不是直接把标题字符串放进 `report.__dict__`：它触发类上的数据描述符，空格先被去掉，随后 `FieldBase` 检查结果非空，最后才写入 `_title`。直接查看 `vars(Report)["title"]` 会取得描述符对象；`Report.title` 则通过类属性访问调用 `__get__(None, Report)`，本例同样返回它自身。
+输出为 `True`、`_title`、`November November`、`['evt-1', 'evt-3']`，校验轨迹为 `Report.validate_title → AuditMixin.before → NormalizeMixin.before → FieldBase → NormalizeMixin.after → AuditMixin.after`。`__init__` 里的赋值 `self.title = title` 并没有把标题字符串直接放进 `report.__dict__`：它触发类上的数据描述符，先去掉空格，再由 `FieldBase` 检查结果非空，最后才写入 `_title`。`vars(Report)["title"]` 直接从类字典取出描述符对象；`Report.title` 则经过类属性访问，调用 `__get__(None, Report)`，本例中返回的也是描述符本身，所以第一行输出 `True`。
 
-正常点号访问和直接改字典不是同一操作。下面先把一个同名键直接塞进实例字典，再通过语法赋值空白标题：
+通过点号访问属性和直接修改字典，是两种不同的操作。下面先绕过描述符，直接往实例字典里写一个同名的 `title` 键，再用正常的赋值语法写入一个空白标题：
 
 ~~~python
 report.__dict__["title"] = "forged instance value"
@@ -127,11 +127,11 @@ except ValueError as error:
 print(report.title)
 ~~~
 
-结果是 `November forged instance value November`，接着抛出 `ValueError title must contain non-whitespace text`，最后 `report.title` 仍为 `November`。直接写 `__dict__` 绕开了 `__set__`，但正常读取仍先调用数据描述符；描述符约束的是普通属性访问协议，不是防止任意代码篡改内部状态的安全边界。
+结果是 `November forged instance value November`，接着抛出 `ValueError title must contain non-whitespace text`，最后 `report.title` 仍为 `November`。直接写 `__dict__` 绕开了 `__set__`，但正常读取时仍先调用数据描述符，所以伪造的值不会被读出。不过，描述符只约束普通的属性访问流程，并不是防止任意代码篡改内部状态的安全机制。
 
 ## 实例字典、类属性和两种描述符怎样排优先级？
 
-对默认实例读取，Python 先沿 `type(obj).__mro__` 找到第一个定义该名称的类属性候选，再按候选的 descriptor 能力和实例字典决定返回值。关键条件是“数据描述符并且有 `__get__`”：只有这种可读取的数据描述符会在读取时压过同名实例值。
+上一节的现象可以归纳成一般规则。默认读取实例属性时，Python 先沿 `type(obj).__mro__` 找到第一个定义了该名称的类属性（下表称“类候选”），再根据这个候选具备哪些描述符方法、以及实例字典里有没有同名键，决定返回什么。关键条件是“数据描述符，并且有 `__get__`”：只有这种能读取的数据描述符，才会在读取时压过实例字典里的同名值。
 
 | 类 MRO 找到的候选 | 实例字典有同名键 | `obj.x` 的结果 |
 | --- | --- | --- |
@@ -143,9 +143,9 @@ print(report.title)
 | 没有类候选 | 有 | 返回实例字典值 |
 | 没有类候选 | 没有 | 默认查找抛 `AttributeError`，之后才尝试 `__getattr__` |
 
-这张读取表假定普通实例有 `__dict__`；若实例没有字典，查找会略过这一步。有 `__set__` 或 `__delete__` 就属于数据描述符，即使没有 `__get__`；不过，没有 getter 的对象不能在读取时计算属性值，所以它不会压过实例字典，实例字典缺少该键时则直接读到类上的描述符对象。
+这张读取表假定实例有 `__dict__`；若实例没有字典（例如使用了 `__slots__`），查找会跳过实例字典这一步。只要定义了 `__set__` 或 `__delete__` 就算数据描述符，即使没有 `__get__`；但没有 getter 的对象无法在读取时计算属性值，所以它压不过实例字典；实例字典里没有该键时，读到的就是类上的描述符对象本身。
 
-赋值有自己的分派规则。类候选定义了 `__set__` 时，`obj.x = value` 会调用它；只定义 `__delete__` 的数据描述符也会拦截默认赋值，但由于没有 `__set__`，赋值会抛出 `AttributeError`，已有的同名实例键不会被替换。setter 自己拒绝值时，异常同样向外传播。只有类上没有拦截这次赋值的描述符且实例有 `__dict__` 时，默认赋值才会写入实例字典；没有实例字典也可能无法新增属性。读取优先级表不能代替设置规则。
+赋值另有一套分派规则，不能套用上面的读取表。类候选定义了 `__set__` 时，`obj.x = value` 会调用它；setter 拒绝这个值时，异常向外传播。只定义了 `__delete__` 的数据描述符同样会拦截默认赋值，但因为没有 `__set__`，赋值会抛出 `AttributeError`，实例字典里已有的同名键也不会被替换。只有类上没有拦截这次赋值的数据描述符、并且实例有 `__dict__` 时，默认赋值才会写入实例字典；实例没有字典时，可能根本无法新增属性。
 
 下面的 `DeleteOnly` 只实现删除协议。即使实例字典已有 `value`，点号赋值也会由类候选拦截并报错，旧值保持不变：
 
@@ -167,7 +167,7 @@ except AttributeError as error:
 
 CPython 3.11.13 输出 `AttributeError __set__ kept`。
 
-`@property` 是数据描述符。普通类函数是非数据描述符：`report.publish` 会调用函数的 `__get__`，得到一个绑定方法（bound method），其中 `__self__` 是 `report`、`__func__` 是类字典里的函数。函数只有放在类上、经实例读取时才按这条路径绑定；将普通函数直接存进实例字典，读取会得到原函数，不会自动补上 `self`。因为函数是非数据描述符，实例字典可以遮住它；这也解释了为什么对单个实例做 monkey patch（运行时替换）只影响那个实例。
+常见的内置描述符也可以放进这张表。`@property` 是数据描述符。类里定义的普通函数是非数据描述符：读取 `report.publish` 时会调用函数的 `__get__`，得到一个 bound method（绑定方法），它的 `__self__` 是 `report`，`__func__` 是类字典里的那个函数。只有放在类上、经实例读取的函数才会这样绑定；把普通函数直接存进实例字典，读出来的仍是原函数，不会自动补上 `self`。正因为函数是非数据描述符，实例字典里的同名键可以遮住它；这也是为什么对单个实例做 monkey patch（运行时替换）只影响那一个实例。
 
 ~~~python
 print(report.category)
@@ -183,9 +183,9 @@ del report.__dict__["publish"]
 print(report.publish())
 ~~~
 
-输出先是 `monthly`，之后是 `draft monthly`：普通类值在实例没有同名键时提供默认值，赋值创建实例自己的遮蔽值。方法部分依次输出 `True True`、`Published November (2 events)`、`temporary label` 和恢复后的 `Published November (2 events)`。
+输出先是 `monthly`，之后是 `draft monthly`：普通类属性 `category` 在实例没有同名键时充当默认值；赋值则在实例字典里创建一个遮住它的同名值，类上的值不变。方法部分依次输出 `True True`、`Published November (2 events)`、`temporary label` 和恢复后的 `Published November (2 events)`。
 
-普通点号访问和两参数 `getattr(obj, "x")` 的外层分派，会在 `__getattribute__(self, name)` 抛出 `AttributeError` 时调用类上定义的 `__getattr__(self, name)`；这个错误可以来自默认读取，也可以来自重写后的 `__getattribute__`。若没有 `__getattr__`，或回退方法再次抛出 `AttributeError`，错误传给调用方。描述符 `__get__` 抛出 `AttributeError` 也会触发同一回退。`__getattribute__` 为每次显式属性读取提供入口，默认实现是 `object.__getattribute__`，其中包含上述描述符和实例字典顺序。重写它会接管默认路径；若要保留该路径，应在实现里委托给 `object.__getattribute__(self, name)`，并避免用 `self.other` 读取内部状态而递归。
+最后看查找失败时的回退。每次显式读取属性，入口都是 `__getattribute__`，默认实现 `object.__getattribute__` 就包含上面那套描述符与实例字典的优先顺序。普通点号访问和两参数 `getattr(obj, "x")` 在外层还有一步：如果 `__getattribute__(self, name)` 抛出 `AttributeError`，就调用类上定义的 `__getattr__(self, name)`。这个错误可以来自默认查找，也可以来自重写后的 `__getattribute__`，或来自描述符的 `__get__`。如果类没有定义 `__getattr__`，或者回退方法也抛出 `AttributeError`，错误就传给调用方。重写 `__getattribute__` 会接管整条默认路径；若还想保留默认行为，应在实现里委托给 `object.__getattribute__(self, name)`，并避免在里面用 `self.other` 读取内部状态，否则会无限递归。
 
 可以从 `row_count` 看出默认回退和直接调用的区别。`report.row_count` 与 `getattr(report, "row_count")` 都在默认查找失败后调用 `Report.__getattr__`；直接调用 `object.__getattribute__` 只做默认查找本身，不会自行调用回退。
 
@@ -199,7 +199,7 @@ except AttributeError:
 print(events)
 ~~~
 
-前两次访问都得到 `2`，事件列表只记录两次 `__getattr__(row_count)`；直接调用 `object.__getattribute__` 抛出 `AttributeError`，没有额外调用 `__getattr__`。在属性找到了数据描述符、但 getter 因内部值缺失而抛出 `AttributeError` 时，默认查找也以这个错误结束，外层属性语法再尝试 `__getattr__`，而不是回头读取同名实例字典值。
+前两次访问都得到 `2`，事件列表只记录两次 `__getattr__(row_count)`；直接调用 `object.__getattribute__` 抛出 `AttributeError`，没有额外调用 `__getattr__`。还有一种情形：查找找到了数据描述符，但 getter 因内部值缺失而抛出 `AttributeError`。这时默认查找同样以这个错误结束，外层的属性访问语法接着尝试 `__getattr__`，而不会回头去读实例字典里的同名值。
 
 下面故意只调用 `Report.__new__` 而不运行 `__init__`，让 `_title` 缺失；同时在实例字典放入伪造的同名 `title` 键。描述符 getter 抛出 `AttributeError` 后，点号访问调用 `__getattr__("title")`；回退也抛错，所以最终仍是 `AttributeError`，字典里的伪造值没有被读出。这只用于显露查找分支，正常业务对象仍通过 `Report(...)` 初始化。
 
@@ -214,17 +214,17 @@ except AttributeError as error:
 print(events)
 ~~~
 
-本机输出是 `AttributeError` 和 `['__getattr__(title)']`。本例在 getter 错误发生前确实已经有 `incomplete.__dict__["title"]`；这一步表明该错误会直接转入 `__getattr__`，查找不会返回去读取同名实例字典键。
+本机输出是 `AttributeError` 和 `['__getattr__(title)']`。尽管 getter 出错之前 `incomplete.__dict__["title"]` 已经存在，错误仍直接转入 `__getattr__`，查找没有退回去读取实例字典里的同名键。
 
 ## 菱形继承中，`super()` 为什么会到达另一个 mixin？
 
-标题描述符调用的是绑定到当前 `Report` 实例的 `validate_title` 方法。零参数 `super()` 会从“当前方法定义的类”在“该实例真实类型的 MRO”中的位置之后继续查找；它不是按当前类定义里的直接父类名称固定跳转。MRO 因此决定这条校验链的下一站。
+回到第一节的校验轨迹：标题描述符调用的是绑定到当前 `Report` 实例的 `validate_title`，之后每一层都用 `super()` 交给下一层。不带参数的 `super()` 的查找起点是：在“实例实际类型的 MRO”中，找到“当前方法所在的类”，从它后面一个类开始继续查找；它不会固定跳到当前类定义里写的直接父类。所以，校验链的下一站由 MRO 决定。
 
 ![Report 的菱形继承结构、C3 线性化结果和 super 调用顺序](resources/python-super-mro.svg)
 
-`Report(AuditMixin, NormalizeMixin)` 声明审计 mixin 在前，规范化 mixin 在后；两者共同继承 `FieldBase`。C3 线性化保留每个基类已有的顺序，也保留子类声明的直接基类顺序，并让共同的 `FieldBase` 只进入最终 MRO 一次。
+`Report(AuditMixin, NormalizeMixin)` 声明审计 mixin 在前、规范化 mixin 在后，两者都继承 `FieldBase`，构成菱形继承。Python 用 C3 线性化算法计算 MRO：它保留每个基类自身 MRO 中的顺序，也保留子类声明直接基类时的顺序，并让共同基类 `FieldBase` 在最终 MRO 中只出现一次。
 
-可按 C3 规则推导：
+记 `L(C)` 为类 `C` 的 MRO 列表，`merge(...)` 为下文描述的合并步骤，推导如下：
 
 ~~~text
 L(AuditMixin) = [AuditMixin, FieldBase, object]
@@ -236,9 +236,9 @@ L(Report) = [Report] + merge(
 )
 ~~~
 
-每轮从各列表当前首项中，选第一个不出现在任何其他列表剩余尾部的类，将它追加到结果，并从所有以它开头的剩余列表移除首项。先选 `AuditMixin`；从第一张线性化列表和直接基类列表同时移除它后，剩余序列为 `[FieldBase, object]`、`[NormalizeMixin, FieldBase, object]`、`[NormalizeMixin]`。此时 `FieldBase` 虽是第一张表的首项，却出现在第二张表的尾部，暂时不能选。选择 `NormalizeMixin` 后，也从以它开头的两张表同时移除，剩余为 `[FieldBase, object]`、`[FieldBase, object]` 和空表；于是依次选出 `FieldBase` 与 `object`。所以 `Report.__mro__` 是 `[Report, AuditMixin, NormalizeMixin, FieldBase, object]`。若某轮仍有剩余项却选不出合法候选，继承约束相互冲突，类定义会失败并抛出 `TypeError`。
+merge 每一轮依次查看各列表的首项，选出第一个“不出现在任何列表尾部（即首项之后的部分）”的类，把它追加到结果中，并从所有以它开头的列表中移除它。先选 `AuditMixin`；从第一张线性化列表和直接基类列表同时移除它后，剩余序列为 `[FieldBase, object]`、`[NormalizeMixin, FieldBase, object]`、`[NormalizeMixin]`。此时 `FieldBase` 虽是第一张表的首项，却出现在第二张表的尾部，暂时不能选。选择 `NormalizeMixin` 后，也从以它开头的两张表同时移除，剩余为 `[FieldBase, object]`、`[FieldBase, object]` 和空表；于是依次选出 `FieldBase` 与 `object`。所以 `Report.__mro__` 是 `[Report, AuditMixin, NormalizeMixin, FieldBase, object]`。若某轮仍有剩余项却选不出合法候选，继承约束相互冲突，类定义会失败并抛出 `TypeError`。
 
-本例的轨迹是 `Report.validate_title → AuditMixin.validate_title → NormalizeMixin.validate_title → FieldBase.validate_title`。`FieldBase` 是校验链终点，没有下一层 `validate_title` 要委托。`AuditMixin` 中的 `super()` 从 `AuditMixin` 在 `Report` 实例 MRO 的位置继续，因此抵达 `NormalizeMixin`，不是其定义时写的 `FieldBase`。每层 mixin 都要遵守共同约定：参数形状兼容，并在需要链条继续时调用 `super()`；省掉一次调用会截断后续步骤。
+所以本例的轨迹是 `Report.validate_title → AuditMixin.validate_title → NormalizeMixin.validate_title → FieldBase.validate_title`，`FieldBase` 是终点，不再向下委托。`AuditMixin` 里的 `super()` 从 `AuditMixin` 在 `Report` 实例 MRO 中的位置之后继续查找，所以到达的是 `NormalizeMixin`，而不是 `AuditMixin` 定义时写的父类 `FieldBase`。这要求每层 mixin 遵守共同约定：参数形式相互兼容，并在需要链条继续时调用 `super()`；任何一层漏掉这次调用，后面的步骤都会被跳过。
 
 改变直接基类顺序会改变 MRO，也会改变同一套 `super()` 的执行顺序：
 
@@ -254,7 +254,7 @@ print(NormalizeFirst().validate_title("  November  "))
 print(events)
 ~~~
 
-`NormalizeFirst` 的 MRO 是 `[NormalizeFirst, NormalizeMixin, AuditMixin, FieldBase, object]`，同一输入仍规范化为 `November`，轨迹则变为 `NormalizeMixin.before → AuditMixin.before → FieldBase → AuditMixin.after → NormalizeMixin.after`。这段代码直接调用只含两个 mixin 的 `NormalizeFirst`，所以轨迹没有 `Report.validate_title`；它比较的是两个 mixin 的相对顺序。这个相对顺序随直接基类声明变化，而 `super()` 的语义不变。对一个方法是否值得组合多个 mixin，应看这些步骤是否真有可组合的共同契约；若调用顺序难以说明，显式组合对象或直接调用命名步骤更容易阅读。
+`NormalizeFirst` 的 MRO 是 `[NormalizeFirst, NormalizeMixin, AuditMixin, FieldBase, object]`，同一输入仍规范化为 `November`，轨迹则变为 `NormalizeMixin.before → AuditMixin.before → FieldBase → AuditMixin.after → NormalizeMixin.after`。`NormalizeFirst` 只继承两个 mixin，没有 `Report.validate_title` 这一层，所以轨迹里也没有它；这段代码比较的是两个 mixin 的相对顺序。相对顺序随直接基类的声明顺序改变，而 `super()` 的规则本身不变。一个方法是否值得拆成多个 mixin 组合，要看这些步骤是否真的有可组合的共同约定；如果调用顺序很难讲清楚，改用显式组合对象，或直接按名字调用各个步骤，代码会更易读。
 
 > [!info]- 来源
 > - 描述符的定义、必须作为类属性才自动触发、`__set_name__`、实例读取优先级、函数绑定和 `super` 触发 descriptor binding：[Python 3.15.2 Descriptor Guide](https://docs.python.org/3.15/howto/descriptor.html)，Descriptor Protocol、Invocation from an Instance、Invocation from Super、Automatic Name Notification、Functions and Methods，核对于 2026-11-12。
