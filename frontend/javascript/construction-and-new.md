@@ -45,13 +45,9 @@ flowchart TD
   R --> I
 ~~~
 
-本例的 `newTarget` 是 `ReportService`，它的 `.prototype` 是对象，因此走左支。构造函数还没运行，接收者已经连接到共享的原型对象；随后 `this.prefix` 和 `this.onReport` 写到这个接收者。这里的原型回退按 `newTarget` 所属 Realm（执行域）选择，该环境有自己的一套内建对象；不要默认总是当前代码所在环境的 `Object.prototype`。
+本例的 `newTarget` 是 `ReportService`，它的 `.prototype` 是对象，因此走左支：构造函数体还没运行，接收者就已经连上共享的原型对象；随后 `this.prefix` 和 `this.onReport` 写在这个接收者上。右支的回退值取自 `newTarget` 所属的 Realm（执行域）。每个 Realm（例如一个 iframe）都有自己的一套内建对象，所以回退得到的不一定是当前代码所在 Realm 的 `Object.prototype`。
 
-构造器没有返回替换对象，所以 `service` 就是新接收者。接着 `service.onReport(...)` 使 `service` 成为处理器的 `this`；处理器沿实例原型找到 `format`，再从接收者读取 `prefix`。调用形式如何提供这个接收者，见[JavaScript 函数的 `this` 值由什么决定？](./this-and-function-binding.md)；共享方法如何被找到，见[JavaScript 对象如何查找属性并组织成员？](./objects-functions-and-prototypes.md)。
-
-读取原型、初始化实例字段或执行构造器时若抛错，本次构造就中断，不会继续到正常返回。派生 `class` 的接收者初始化另有规则，下面接着说明。
-
-只要 `newTarget.prototype` 的值是对象，它就可以作为新接收者的原型，函数本身也可以。普通 `new C()` 中 `newTarget` 就是 `C`；若普通函数构造器的 `prototype` 为 `null` 或其他原始值，构造过程会回退到 `newTarget` 所属 Realm 的 `Object.prototype`：
+两条分支可以直接验证：`newTarget.prototype` 只要是对象就能作为原型，函数也可以；若普通函数构造器的 `prototype` 被改成 `null` 或其他原始值，构造会回退到 `newTarget` 所属 Realm 的 `Object.prototype`。
 
 ~~~javascript
 function Parent() {}
@@ -65,9 +61,13 @@ FallbackDemo.prototype = null;
 Object.getPrototypeOf(new FallbackDemo()) === Object.prototype; // true
 ~~~
 
+回到报表案例。`ReportService` 没有返回替换对象，所以 `service` 就是新接收者。之后调用 `service.onReport(...)` 使 `service` 成为处理器的 `this`；处理器沿实例原型找到 `format`，再从接收者读取 `prefix`。调用形式如何提供这个接收者，见[JavaScript 函数的 `this` 值由什么决定？](./this-and-function-binding.md)；共享方法如何被找到，见[JavaScript 对象如何查找属性并组织成员？](./objects-functions-and-prototypes.md)。
+
+读取原型、初始化实例字段或执行构造器时若抛错，本次构造就中断，不会正常返回。派生 `class` 的接收者由 `super()` 初始化，规则不同，下一节末尾再说明。
+
 ## 构造器返回值可能替换接收者
 
-**再运行函数体并选择最终结果。** 沿用上一图已建立的接收者，普通基类构造器会把实参交给函数体。函数体对 `this` 的修改留在接收者上，但最终是否返回它，要看构造器的返回值：
+**再运行函数体并选择最终结果。** 接收者建立后，普通基类构造器带着实参运行函数体。函数体对 `this` 的修改都留在接收者上，但 `new` 表达式最终是否得到这个接收者，要看构造器的返回值：
 
 ~~~mermaid
 %%{init: {"flowchart": {"wrappingWidth": 280}}}%%
@@ -77,7 +77,7 @@ flowchart TD
   T -->|否，包括 null 和 undefined| N["返回新建的接收者"]
 ~~~
 
-数字、字符串、布尔值、Symbol、BigInt、`null` 和 `undefined` 都是 primitive value（原始值），不用于替换接收者。没有显式 `return` 时相当于返回 `undefined`，所以报表案例走右支。以下四个例子分别改变返回值，其他构造规则不变：
+数字、字符串、布尔值、Symbol、BigInt、`null` 和 `undefined` 都是 primitive value（原始值），不用于替换接收者。没有显式 `return` 时相当于返回 `undefined`，所以报表案例走右支。下面四个例子只改变返回值，其他构造规则不变：
 
 ~~~javascript
 function ReturnsPrimitive() {
@@ -145,12 +145,12 @@ try {
 
 ## `new.target` 标识本次构造目标
 
-`new.target` 读取这次构造传入的 `newTarget`。普通 `new C()` 中它是 `C`；`Reflect.construct(C, args, D)` 运行的仍是 `C`，但让 `D` 成为 `newTarget`，于是普通基类创建接收者时改从 `D.prototype` 选原型。省略第三参数时 `newTarget` 仍为 `C`。相反，把不可构造的箭头函数传作第三参数，如 `Reflect.construct(function C() {}, [], () => {})`，会抛出 `TypeError`，不会进入目标构造器函数体。
+`new.target` 读取这次构造传入的 `newTarget`。普通 `new C()` 中它是 `C`；`Reflect.construct(C, args, D)` 运行的仍是 `C`，但让 `D` 成为 `newTarget`，于是普通基类创建接收者时改从 `D.prototype` 选原型。省略第三参数时 `newTarget` 仍为 `C`。但如果把不可构造的箭头函数传作第三参数，如 `Reflect.construct(function C() {}, [], () => {})`，会抛出 `TypeError`，不会进入目标构造器函数体。
 
 > [!info] Reflect 的检查顺序
 > `Reflect.construct` 是函数调用，先求值 `C`、`args` 和 `D` 的实参表达式。进入它后先检查 `C`、显式提供时再检查 `D`，两者都必须可构造；随后要求 `args` 是对象，从它读取数组状的实参列表，最后启动构造。任一步抛错就不再继续。这个顺序不同于“先读取参数列表，再判断能不能构造”。
 
-派生 class 每次调用 `super()` 都把同一个 `newTarget` 传给基类，因此多层继承中每一层构造器都看到同一次构造传入的目标。`super()` 把基类的构造结果（包括基类显式返回的对象）绑定为派生构造器的 `this`，再初始化派生类自己的实例字段。
+派生 class 每次调用 `super()` 都把同一个 `newTarget` 传给基类，因此多层继承中每一层构造器看到的都是最初那次 `new` 的目标。`super()` 绑定好 `this` 后，还会初始化派生类自己的实例字段。
 
 下面的派生类代码沿用前面报表案例中已经定义的 `makeReportHandler` 和 `ReportService`；请按本文顺序执行。
 
@@ -230,13 +230,13 @@ const leafResults = [
 leafResults; // [true, true, true, true]
 ~~~
 
-`new.target` 不是等价于构造器函数体的局部名称：它是沿这次构造传递的目标。箭头函数自身不建立这个绑定。在本例的函数内嵌套中，它沿词法环境读取 `TargetReader` 那次调用收到的 `newTarget`。`TargetReader()` 直接调用时该值是 `undefined`，`new TargetReader()` 时是 `TargetReader`；通过 `new LeafLayer()` 逐层执行 `super()` 进入基类时，基类中的 `new.target` 仍是 `LeafLayer`，不是当前执行的基类构造器名称。
+可见 `new.target` 并不表示“当前正在执行的构造器”，而是沿这次构造一路传递的目标。箭头函数自己不建立这个绑定，所以 `TargetReader` 例子中的箭头函数沿词法环境读取外层那次调用收到的 `newTarget`。`TargetReader()` 直接调用时该值是 `undefined`，`new TargetReader()` 时是 `TargetReader`；通过 `new LeafLayer()` 逐层执行 `super()` 进入基类时，基类中的 `new.target` 仍是 `LeafLayer`，不是当前执行的基类构造器名称。
 
 ## 可调用的函数未必可以用 `new`
 
-构造器表达式与实参求值完毕后，`new` 按 `IsConstructor`（构造能力检查）判断目标是否具有构造能力；仅能被普通调用不够。普通函数声明通常可构造。class 构造器也有构造能力，可以作为 `Reflect.construct` 的目标或通过派生类的 `super()` 调用；直接写 `C()` 则会抛出 `TypeError`。箭头函数、普通非生成器简洁方法、生成器函数、async function（异步函数）和 async generator（异步生成器）都不可构造；生成器与异步生成器简洁方法也不可构造。函数上是否有名为 `prototype` 的属性不能单独证明它可构造，例如生成器函数及生成器简洁方法可以有这个属性但仍不支持 `new`。
+前面的例子都假定目标可以构造。实际上，构造器表达式与实参求值完毕后，`new` 先用 `IsConstructor`（构造能力检查）判断目标能否构造；能被普通调用并不够。普通函数声明通常可构造。class 构造器也有构造能力，可以作为 `Reflect.construct` 的目标或通过派生类的 `super()` 调用；直接写 `C()` 则会抛出 `TypeError`。箭头函数、普通非生成器简洁方法、生成器函数、async function（异步函数）和 async generator（异步生成器）都不可构造；生成器与异步生成器简洁方法也不可构造。函数上是否有名为 `prototype` 的属性不能单独证明它可构造，例如生成器函数及生成器简洁方法可以有这个属性但仍不支持 `new`。
 
-这两项能力可以直接并排看。下表检查语法刚创建的函数，尚未手动添加、删除或替换其属性：
+下表把“有没有 `prototype` 属性”和“能否构造”并排列出，检查对象是语法刚创建、尚未手动增删或替换属性的函数：
 
 | 函数形式 | 自有 `prototype` | 能否作为构造目标 |
 |---|---|---|
@@ -248,7 +248,7 @@ leafResults; // [true, true, true, true]
 | 异步函数或普通异步简洁方法 | 无 | 不能 |
 | 异步生成器函数或方法 | 有 | 不能 |
 
-能力检查不阻止更早的实参求值。下面目标不可构造，但计数已经增加；因此不能把 `new` 的错误理解成“什么都没发生”：
+构造能力检查发生在实参求值之后。下面的目标不可构造，但计数已经增加，所以 `new` 抛出 `TypeError` 并不意味着“什么都没发生”：
 
 ~~~javascript
 const notAConstructor = () => {};
@@ -262,7 +262,7 @@ try {
 [constructionError, argumentCount]; // ["TypeError", 1]
 ~~~
 
-绑定函数（bound function）是否能构造取决于目标函数：目标可构造时，`bind` 返回的绑定函数也可构造。使用 `new` 调用它时，已经绑定的 `this` 会被忽略，但绑定的前置参数仍会加入实参列表；当 `newTarget` 正是这个绑定函数时，构造会改用原目标函数作为 `newTarget`。
+绑定函数（bound function）是否能构造取决于目标函数：目标可构造时，`bind` 返回的绑定函数也可构造。使用 `new` 调用它时，已经绑定的 `this` 会被忽略，但绑定的前置参数仍会加入实参列表；当 `newTarget` 就是这个绑定函数本身（例如直接 `new boundFn()`）时，构造会改用原目标函数作为 `newTarget`，因此新对象的原型取自原函数的 `prototype`。
 
 ~~~javascript
 function BuildReport(prefix, title) {
@@ -284,7 +284,7 @@ const builtReport = new boundBuildReport("Q4");
 
 ## 简化的 `new` 模型有有限输入范围
 
-下面的教学模型只模拟当前 Realm 中直接使用的普通基类函数构造器：目标须已知可构造，函数体不依赖 `new.target`，而 `fn.prototype` 的值和构造器的直接返回值均不能是浏览器历史特殊对象 `document.all`。该对象虽然 `typeof` 返回 `"undefined"`，语言仍将它视为对象；模型用 `typeof` 判断这两个直接值时无法识别它。模型展示原型选择、接收者绑定和显式返回对象替换规则；不实现 class、派生构造器、绑定函数、内置构造器、Proxy 的 `construct` trap 或跨 Realm 回退。应用代码应直接使用 `new`、class 语法或 `Reflect.construct`。
+把前面几节的步骤串起来，可以写一个教学用的简化模型。它只模拟当前 Realm 中直接使用的普通基类函数构造器，并要求：目标已知可构造；函数体不依赖 `new.target`；`fn.prototype` 和构造器的返回值都不是浏览器的历史遗留对象 `document.all`。`document.all` 的 `typeof` 返回 `"undefined"`，但语言仍把它当作对象，模型用 `typeof` 判断时会认错。模型展示原型选择、接收者绑定和显式返回对象替换规则；不实现 class、派生构造器、绑定函数、内置构造器、Proxy 的 `construct` trap 或跨 Realm 回退。应用代码应直接使用 `new`、class 语法或 `Reflect.construct`。
 
 ~~~javascript
 function emulateNew(fn, ...args) {
@@ -315,7 +315,7 @@ const simple = emulateNew(SimpleReport, "West");
 // [true, "West"]
 ~~~
 
-改用 `Reflect.apply` 可避免函数自有的 `apply` 属性遮住内建调用方法，但这个模型依旧不能替代 `[[Construct]]`：它没有 `newTarget`，会把箭头函数当作普通函数调用，也不能调用 class 构造器。不能仅凭 `typeof fn === "function"` 就判断它可构造，class 也不能被这个模型当作普通函数执行。
+模型用 `Reflect.apply` 而不是 `fn.apply(...)`，是为了避免函数自己的 `apply` 属性遮住内建方法。即便如此，它仍不能替代 `[[Construct]]`：它没有 `newTarget`；会把不可构造的箭头函数当作普通函数调用；遇到 class 构造器则会因不能普通调用而抛错。`typeof fn === "function"` 也不足以判断一个函数能否构造。
 
 **相关机制：** [Proxy 如何拦截构造操作？](./proxy.md)说明可构造代理和 `construct` trap 必须返回对象的条件；[JavaScript 对象如何查找属性并组织成员？](./objects-functions-and-prototypes.md)解释新实例连接原型后怎样找到共享成员。
 

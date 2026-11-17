@@ -2,13 +2,15 @@
 
 ## 案例背景
 
-报表 42 的[基础资料、摘要和权限已校验](./asynchronous-javascript.md#报表请求何时并发、何时顺序等待？)；用户有权读取明细。页面要用同一个报表 ID、当前排序和页面的 `AbortSignal`（中止信号）读取行。接口每页返回若干行和下一个 `cursor`（游标），而下一页的地址要等当前响应给出游标后才知道。页面希望逐行追加；找到目标行或用户取消时停止。本章所说的“清理”是关闭迭代器并处理它持有的资源，不是删除报表行。
+报表页面已经取得并[校验了报表 42 的基础资料、摘要和权限](./asynchronous-javascript.md#报表请求何时并发、何时顺序等待？)，确认用户有权读取明细。接下来要用同一个报表 ID、当前排序方式和页面的 `AbortSignal`（中止信号，用于取消请求）读取表格行。行接口是分页的：每页返回若干行和下一页的 cursor（游标），下一页的地址要等当前响应给出游标后才知道。页面希望逐行追加到表格中，找到目标行或用户取消时就停止。本章所说的“清理”指关闭迭代器并释放它持有的资源，不是删除报表行。
 
-这一条链路包含两个不同的按需边界：浏览器 Fetch API（网络请求接口）的 `fetch` 和 `response.json()` 先取得并解析**一整页**，异步生成器再把该页的行逐项交给消费者。本例循环等待 `await appendRow(row)` 完成当前行后，才请求下一项；当前页的行交付完毕后，生成器才请求下一页。它不是逐字节读取响应体。由于本接口下一页 URL 必须依赖上一页返回的游标，页与页之间必须顺序请求；若接口一开始就提供了独立页码或分片，可再按顺序需求、失败策略和资源限制选择串行或[有界并发池](./bounded-async-concurrency.md)。
+这条链路有两层“按需”：浏览器 Fetch API 的 `fetch` 和 `response.json()` 先取得并解析**一整页**，异步生成器再把这一页的行逐个交给消费者。消费循环 `await appendRow(row)` 完成当前行后才要下一项；当前页的行交付完毕，生成器才请求下一页。所以它是按行、按页按需，而不是逐字节读取响应体。由于下一页 URL 依赖上一页返回的游标，页与页只能顺序请求；如果接口一开始就提供独立的页码或分片，才可以按顺序要求、失败策略和资源限制，在串行和[有界并发池](./bounded-async-concurrency.md)之间选择。
+
+要实现这种逐项交付，先要了解 JavaScript 的迭代协议。
 
 ## 可迭代对象怎样交给消费者逐项读取？
 
-iterable（可迭代对象）告诉消费者如何取得 iterator（迭代器）。普通可迭代对象通过 `Symbol.iterator` 提供同步迭代器；异步可迭代对象通过 `Symbol.asyncIterator` 提供异步迭代器。同步迭代器的 `next()` 当场返回 `{ value, done }` 结果对象；异步迭代器的 `next()` 返回 Promise，兑现值才是这种结构。消费者读取结果对象后，把 `done` 转成布尔值：真表示结束，假表示消费 `value` 后继续。缺少 `done` 等同于假；结束结果的 `value` 可以省略。
+iterable（可迭代对象）负责告诉消费者如何取得 iterator（迭代器），迭代器再一项一项地交出值。普通可迭代对象通过 `Symbol.iterator` 提供同步迭代器；异步可迭代对象通过 `Symbol.asyncIterator` 提供异步迭代器。同步迭代器的 `next()` 当场返回 `{ value, done }` 结果对象；异步迭代器的 `next()` 返回 Promise，兑现值才是这种结构。消费者拿到结果对象后，把 `done` 当作布尔值判断：为真表示结束，为假则消费 `value` 后继续要下一项。缺少 `done` 等同于假；表示结束的结果可以省略 `value`。
 
 ~~~javascript
 const values = [10, 20];
@@ -30,7 +32,7 @@ flowchart TD
   C -- "true" --> E["结束"]
 ~~~
 
-`iterable` 每次可以给出一个新迭代器，也可以返回同一个自身；协议并不保证可重用。数组每次通常提供新迭代器，而生成器实例是一次性状态机：
+可迭代对象每次可以给出一个新迭代器，也可以总是返回自身，协议并不保证能重复遍历。下面的 `range` 和数组一样，每次都提供新迭代器；而生成器对象（下一节介绍）的迭代器就是它自己，只能遍历一次：
 
 ~~~javascript
 const range = {
@@ -57,11 +59,13 @@ oneShot[Symbol.iterator]() === oneShot; // true
 [...oneShot]; // []
 ~~~
 
-展开语法、`for...of`、数组解构等消费者会按各自的规则使用这个协议。迭代器描述的是“怎样取得下一项”，不保证生产者内部没有预取、缓存或副作用。
+展开语法、`for...of`、数组解构等消费者各自按规则使用这个协议。迭代器只规定“怎样取得下一项”，并不保证生产者内部没有预取、缓存或副作用。
+
+像 `range` 这样手写迭代器需要自己保存进度。生成器把进度保存在暂停的函数体里，写起来更直接。
 
 ## 生成器怎样暂停、接收值并委托工作？
 
-`function*` 声明 generator function（生成器函数）。调用它会创建一个生成器对象，参数绑定和默认参数表达式在调用时处理，但函数体要到第一次 `next()` 才开始执行。每次 `yield` 暂停函数体并产出值；后续的 `next(value)` 恢复它，暂停处 `yield` 表达式的值就是传入的 `value`。第一次 `next(value)` 没有已暂停的 `yield` 可接收，所以参数被忽略。
+`function*` 声明 generator function（生成器函数）。调用它会创建一个生成器对象：参数绑定和默认参数表达式在调用时就处理，但函数体要到第一次 `next()` 才开始执行。每次 `yield` 暂停函数体并产出一个值；之后调用 `next(value)` 恢复执行，暂停处的 `yield` 表达式求值为传入的 `value`。第一次 `next(value)` 时还没有暂停的 `yield` 来接收，所以参数被忽略。
 
 ~~~javascript
 function* conversation() {
@@ -76,7 +80,7 @@ chat.next("Ada");              // { value: "你好，Ada！你喜欢做什么？
 chat.next("编程");             // { value: "Ada喜欢编程", done: true }
 ~~~
 
-最后一个 `return` 值放在 `value` 中，但 `done: true` 表示序列已经结束；它不是又一项普通产出。调用生成器时参数默认值可以运行，函数体内的 `try`、日志或副作用则还没有运行：
+`return` 的值放在最后结果的 `value` 中，但 `done: true` 表示序列已经结束，它不算一项普通产出（`for...of` 和展开语法都会忽略它）。下面验证调用时机：调用生成器时默认参数已经求值，函数体内的 `try`、日志等副作用还没有运行。对尚未启动的生成器调用 `return()`，它直接结束：
 
 ~~~javascript
 const events = [];
@@ -95,7 +99,7 @@ rows.return("未启动"); // { value: "未启动", done: true }
 events; // ["参数初始化"]；未开始的函数体没有进入 try/finally
 ~~~
 
-当生成器已经开始并暂停在 `yield` 时，调用 `return(value)` 会把一次 return 控制流送回暂停点。若暂停点位于 `try` 中，`finally` 会运行；但 `finally` 自己也可以暂停：
+生成器已经启动并暂停在 `yield` 时，调用 `return(value)` 相当于在暂停点执行一次 `return`。若暂停点位于 `try` 中，`finally` 会运行；但 `finally` 里也可以再 `yield` 暂停：
 
 ~~~javascript
 function* withCleanupYield() {
@@ -106,13 +110,13 @@ function* withCleanupYield() {
   }
 }
 
-const rows = withCleanupYield();
-rows.next();             // { value: "row", done: false }
-rows.return("finished"); // { value: "cleanup step", done: false }
-rows.next();             // { value: "finished", done: true }
+const cleanupRows = withCleanupYield();
+cleanupRows.next();             // { value: "row", done: false }
+cleanupRows.return("finished"); // { value: "cleanup step", done: false }
+cleanupRows.next();             // { value: "finished", done: true }
 ~~~
 
-`rows.return()` 收到 `{ done: false }` 后不会继续替调用者拉取；生成器还暂停在 `finally` 里的第二个 `yield`。同样，`for...of` 的 `break` 只调用一次 `return()`，检查返回值是对象后便退出，不会因 `done: false` 再请求 `next()`。异步循环会等待这一次异步 `return()` 完成，但也不会重复关闭；所以清理代码若在 `yield` 后还要释放资源，`break` 后那部分仍可能悬停：
+`cleanupRows.return()` 得到 `{ done: false }` 后，并不会自动继续推进；生成器停在 `finally` 里的 `yield` 处。`for...of` 的 `break` 也一样：它只调用一次 `return()`，确认返回值是对象后就退出，不会因为 `done: false` 再调用 `next()`。`for await...of` 会等待这一次异步 `return()` 完成，同样不会重复关闭。所以，如果清理代码在 `yield` 之后还要释放资源，`break` 后那部分会一直挂着不执行：
 
 ~~~javascript
 const cleanup = [];
@@ -133,11 +137,11 @@ rowsToStop.next();
 cleanup; // ["开始清理", "完成清理"]；必须显式再恢复才完成
 ~~~
 
-因此资源清理若要求一次关闭就完成，不要在清理路径中再次 `yield`。`return()` 是迭代器协议提供的通知，不是对任意工作或宿主资源的强制中断。
+因此，若希望一次关闭就完成资源清理，就不要在清理路径中再 `yield`。`return()` 只是迭代器协议提供的关闭通知，不能强制中断任意工作或宿主资源。
 
-生成器还能通过 `yield*` 把一段迭代委托给另一个可迭代对象。后续 `next` 请求交给子迭代器必需的 `next()`；`throw` 和 `return` 的转发则取决于子迭代器是否实现对应方法。自然耗尽时，子迭代器的结束结果 `{ done: true, value }` 中的 `value` 成为 `yield*` 表达式的值，外层从该表达式之后继续；这能组合惰性序列并保留子生成器的最终结果。
+生成器还能用 `yield*` 把一段迭代委托给另一个可迭代对象。委托期间，外部的 `next()` 请求转交给子迭代器的 `next()`（这是迭代器必须实现的方法）；`throw()` 和 `return()` 能否转交，取决于子迭代器有没有实现对应的可选方法。子迭代器自然耗尽时，它结束结果 `{ done: true, value }` 中的 `value` 成为 `yield*` 表达式的值，外层生成器从这里继续执行。借助它可以组合惰性序列，同时拿到子生成器的最终返回值。
 
-强制关闭时，外部对外层调用 `return(v)`：若子迭代器没有 `return`，外层继续处理这次返回；若子 `return()` 给出 `done: false`，外层还可继续暂停，若给出 `done: true`，外层以这个子结果的 `value` 继续返回，但自己的 `finally` 仍可能改写结果。外部调用 `throw(e)` 而子迭代器没有 `throw` 时，委托会先尝试调用它可选的 `return` 来关闭。无论有没有 `return`，之后都会抛出 `TypeError`；若关闭本身先抛错，则传播关闭错误。直接对暂停中的生成器调用 `throw(e)`，则会在暂停处表现为抛错，可被生成器的 `catch` 捕获或沿 `finally` 展开：
+委托期间若外部提前关闭，规则如下。对外层调用 `return(v)` 时：子迭代器没有 `return` 方法，外层直接在 `yield*` 处执行这次返回；子 `return()` 给出 `done: false`，外层原样交出这个结果并继续暂停；给出 `done: true`，外层以该结果的 `value` 执行返回，但外层自己的 `finally` 仍可能改写结果。对外层调用 `throw(e)` 而子迭代器没有 `throw` 方法时，委托先尝试调用子迭代器的 `return` 关闭它，然后抛出 `TypeError`（表示协议不匹配）；若关闭过程本身抛错，则传播关闭错误。不涉及委托时，直接对暂停的生成器调用 `throw(e)`，会在暂停处抛出 `e`，可被生成器的 `catch` 捕获，或在经过 `finally` 后向外传播：
 
 ~~~javascript
 function* flatten(items) {
@@ -161,7 +165,7 @@ delegated.next(); // { value: "item", done: false }
 delegated.next(); // { value: 42, done: true }
 ~~~
 
-同一状态方式可以按需生成无限序列。停止读取的一方必须明确结束遍历，否则无限生成器不会自然结束：
+同样的暂停与恢复机制可以按需生成无限序列。无限生成器不会自己结束，消费者必须在拿够数据后主动停止：
 
 ~~~javascript
 function* fibonacci() {
@@ -179,7 +183,7 @@ fib.next().value; // 1
 fib.next().value; // 2
 ~~~
 
-序号也能按需生成，不必预分配一个大数组。下面只在同一个生成器实例内、计数没有超过 JavaScript 安全整数范围时保持唯一；不同实例使用同一前缀仍可能产生相同 ID：
+序号也可以按需生成，不必预先分配一个大数组。下面的 ID 只在同一个生成器实例内、计数不超过 JavaScript 安全整数范围时保证唯一；不同实例使用同一前缀会产生重复 ID：
 
 ~~~javascript
 function* ids(prefix = "id") {
@@ -194,7 +198,7 @@ userIds.next().value; // "user_1"
 
 ## 提前退出如何通知迭代器清理？
 
-`for...of` 在循环体执行 `break`、`return` 或抛错等突然控制流离开时，会尝试调用迭代器可选的 `return()`。生成器把这次关闭请求变成暂停点处的 return 控制流，因此已进入 `try` 的生成器会运行 `finally`；需要清理生成器持有的资源时，应把清理放在该 `finally` 中：
+前面已经看到 `break` 会调用 `return()`。更一般地说，循环体通过 `break`、`return` 或抛错提前离开时，`for...of` 会尝试调用迭代器的可选方法 `return()`。生成器把这次关闭请求变成暂停点处的 `return`，因此已进入 `try` 的生成器会运行 `finally`；生成器持有的资源应在这个 `finally` 中清理。下面的手写迭代器直接实现了 `return()`：
 
 ~~~javascript
 const source = {
@@ -217,18 +221,18 @@ for (const value of source) {
 }
 ~~~
 
-“关闭”表示消费者不再要下一项；它不表示迭代器一定释放了所有外部资源。同步 `for...of` 的 `next()` 自身抛错、或原生异步迭代器的 `next()` Promise 拒绝时，循环直接传播该错误，不能假定它还会调用 `return()`。循环体抛错则会请求关闭；若关闭钩子也抛错，原循环体错误仍优先传播，正常 `break` 时关闭钩子抛错则会传播。对需要可靠清理的资源，应把它放在生成器自己的 `try/finally` 中，并确认关闭路径没有挂起的 `yield`。
+“关闭”只表示消费者不再要下一项，并不表示迭代器一定释放了所有外部资源。还要注意错误来自哪里：若同步迭代器的 `next()` 自己抛错，或原生异步迭代器的 `next()` 返回的 Promise 拒绝，循环直接传播该错误，不会调用 `return()`。若是循环体抛错，循环会请求关闭；关闭方法若也抛错，优先传播的仍是循环体的原错误。正常 `break` 时关闭方法抛错，则会传播关闭方法的错误。对需要可靠清理的资源，应把它放在生成器自己的 `try/finally` 中，并确认关闭路径没有挂起的 `yield`。
 
-有一个不同的异步适配分支：`for await...of` 没有原生异步迭代器、改用同步迭代器时，适配器会等待每个 `{ done: false, value }` 的 `value`。若这个 Promise/thenable 拒绝，ECMAScript 2026 的同步转异步适配器会先关闭底层同步迭代器，再传播拒绝；本机 Node.js v26.13.0 对同步生成器实跑时确实进入其 `finally`。这与 `next()` 自身抛错或原生异步迭代器的 `next()` 拒绝不同。
+有一种异步情况例外。`for await...of` 遍历的对象没有异步迭代器时，会把同步迭代器包装成异步迭代器，包装器会等待每个 `{ done: false, value }` 中的 `value`。若这个 Promise 或 thenable 拒绝，按 ECMAScript 2026，包装器会先关闭底层的同步迭代器，再传播拒绝；在 Node.js v26.13.0 中用同步生成器实测，确实会进入它的 `finally`。这与 `next()` 自身抛错、或原生异步迭代器的 `next()` 拒绝时不调用 `return()` 不同。
 
 > [!warning] 关闭请求不等于强制取消
-> 调用 `return()` 只执行迭代器定义的关闭步骤。若 `next()` 正在等待网络、文件或流，普通同步迭代器协议不能抢占宿主 API；即使异步迭代器的关闭请求排队了，也要等正在运行的步骤让出控制权。应同时使用宿主资源提供的取消接口，例如把 `AbortSignal` 传给 Fetch。
+> 调用 `return()` 只会执行迭代器自己定义的关闭步骤。若 `next()` 正在等待网络、文件或流，迭代器协议无法打断宿主 API；异步迭代器的关闭请求即使已经排队，也要等正在运行的步骤让出控制权。所以还要同时使用宿主资源自己的取消接口，例如把 `AbortSignal` 传给 Fetch。
 
-异步生成器中的 `next()`、`return()` 和 `throw()` 都返回 Promise，恢复请求按顺序排队。若一个 `next()` 正等待 `await`，随后调用的 `return()` 不会跳到它前面；它要等当前请求推进后才执行关闭路径。这个次序保证生成器代码不被并发重入，却不取消它等待的 Fetch。
+异步生成器的 `next()`、`return()` 和 `throw()` 都返回 Promise，这些请求按调用顺序排队。若一个 `next()` 还停在函数体内的 `await` 上，随后调用的 `return()` 不会插队，要等前一个请求完成后才执行关闭路径。这个顺序保证生成器代码不会被并发重入，但不会取消它正在等待的 Fetch。
 
 ## 报表行怎样按页异步读取？
 
-`for await...of` 优先使用 `Symbol.asyncIterator`：它等待异步迭代器 `next()` 返回的 Promise，但把兑现结果里的 `value` 原样交给循环体。若对象没有异步迭代方法，语法会把同步迭代器适配为异步迭代器；这个适配器还会等待每项的 Promise 或 thenable（带 `then` 方法、可被 Promise 接纳的对象）。异步生成器本身也会等待它的 `yield` 值，所以这三种入口在 `value` 本身是 Promise 时表现不同。`for await...of` 不只接受异步生成器：
+回到报表分页。消费分页生成器要用 `for await...of`，先看它怎样取值。它优先使用 `Symbol.asyncIterator`：等待异步迭代器 `next()` 返回的 Promise，然后把结果里的 `value` 原样交给循环体。若对象没有异步迭代方法，它把同步迭代器包装成异步迭代器，包装器还会等待每项的 Promise 或 thenable（带 `then` 方法、能被 Promise 采纳的对象）。异步生成器在 `yield` 时也会先等待被产出的值。因此，当 `value` 本身是 Promise 时，原生异步迭代器、同步包装器和异步生成器这三种来源的表现不同：
 
 ~~~javascript
 async function compareForAwaitValues() {
@@ -255,9 +259,9 @@ async function compareForAwaitValues() {
 compareForAwaitValues().then(console.log); // [true, "x", "x"]
 ~~~
 
-报表接口返回一页 `items` 和 `nextCursor`。页面先等响应、检查 HTTP（超文本传输协议）状态、读取 JSON（JavaScript 对象表示法）并校验整页结构，再逐行 `yield`。只有当前页的行全部消费完毕，生成器才把游标放进下一次请求。下面沿用报表 42、当前排序和页面中止信号；每个响应可能包含任意数量的行，下一页只有非空游标可用时才存在。
+报表行接口每次返回一页 `items`（行数组）和 `nextCursor`（下一页游标，没有下一页时为 `null`）。分页生成器先等响应、检查 HTTP 状态、读取 JSON 并校验整页结构，再逐行 `yield`；当前页的行全部被消费后，才用游标发起下一次请求。下面沿用报表 42、当前排序和页面的中止信号；每页可以有任意多行。
 
-把合成输入逐步展开：页 1 返回 `items: [r-101, r-102]` 和 `nextCursor: "c2"`；页 2 返回 `items: [r-201]` 和 `nextCursor: null`。第一次 `next()` 会取得并验证整页 1，然后停在 `yield r-101`，等待页面追加；下一次拉取才交付 `r-102`。若 `r-102` 是目标行，循环体 `break` 调用一次异步迭代器关闭，等待生成器 `finally`，不继续拉取到游标更新步骤，因此不会请求 `c2`。若继续消费，之后的那次 `next()` 才会读到 `c2` 并请求页 2；页 2 的行交付后，再次拉取遇到 `nextCursor: null` 才自然结束。坏结构在 `validateReportPage` 阶段、首次 `yield` 之前拒绝；重复游标则在当前页的行已经交付后检查。
+用一组合成数据逐步展开：页 1 返回 `items: [r-101, r-102]` 和 `nextCursor: "c2"`；页 2 返回 `items: [r-201]` 和 `nextCursor: null`。第一次 `next()` 会取得并验证整页 1，然后停在 `yield r-101`，等待页面追加；下一次拉取才交付 `r-102`。若 `r-102` 是目标行，循环体 `break` 会调用一次异步迭代器的 `return()` 并等待生成器的 `finally` 完成；生成器不会走到更新游标那一步，因此不会请求 `c2`。若继续消费，之后的那次 `next()` 才会读到 `c2` 并请求页 2；页 2 的行交付后，再次拉取遇到 `nextCursor: null` 才自然结束。结构错误的页面在 `validateReportPage` 中、该页第一次 `yield` 之前就会拒绝；重复游标则要等当前页的行都交付后才检查。
 
 | 消费者做什么 | 生成器推进到哪里 | 本次结果 / 是否请求下一页 |
 |---|---|---|
@@ -268,7 +272,7 @@ compareForAwaitValues().then(console.log); // [true, "x", "x"]
 | 追加完 `r-201` 后再 `next()` | 发现页 2 的 `nextCursor: null`，结束并清理 | `done: true`；没有下一页 |
 
 > [!example]- 分页生成器与逐行消费者的完整实现
-> `appendRow` 返回当前行追加完成的 Promise，并绑定本次筛选自己的输出容器；`currentSort`、`selectedRowId`、取消按钮和错误展示函数由页面提供。两个信号检查分别守住“开始追加”和“再次拉取”的边界。
+> `appendRow` 返回当前行追加完成的 Promise，并写入本次筛选自己的输出容器；`currentSort`、`selectedRowId`、取消按钮和错误展示函数由页面提供。`appendReportRows` 中的两次信号检查分别守住“开始追加”和“再次拉取”两个边界。
 >
 > ~~~javascript
 > function validateReportRow(value) {
@@ -342,15 +346,15 @@ compareForAwaitValues().then(console.log); // [true, "x", "x"]
 >   .catch(showReportError);
 > ~~~
 
-每页的 JSON 已解析，验证后的 `page.items` 数组在内存中；生成器逐项交付这些已解析的行，不会把整份报表合成一个数组，也不保证宿主继续保留原始响应字节。消费者每处理完一行才继续拉取，但这种 backpressure（背压）只约束当前拉取、且生产者没有自行后台预取的部分。`seenCursors` 检查重复游标，防止错误响应令后续分页无休止；它占用与已读页数成正比的游标集合。
+内存方面：任一时刻内存里是当前页解析并校验后的 `page.items` 数组，生成器逐项交付这些行，不会把整份报表合并成一个大数组。消费者处理完一行才继续拉取，这形成了一种 backpressure（背压），但它只约束经由拉取产生的工作，生产者若自己在后台预取则不受约束。`seenCursors` 记录见过的游标，防止接口重复返回游标导致无限分页；它占用的空间与已读页数成正比。
 
-本例的 `finally` 只记录迭代已经关闭；网络和响应体读取的实际中止由传给 Fetch 的 signal 完成。用户取消时，信号传给 Fetch，可中止尚未收到响应的请求；若响应头已到达而 `response.json()` 仍在读响应体，中止仍可令这次读取拒绝。取消发生在 `appendRow` 等待中时，已开始的追加不能回滚，也仍可能写入当前筛选所显示的 tbody。这个 helper 在追加前检查一次 signal，防止启动新的追加；追加完成后再检查一次，避免向迭代器要下一项或尝试下一页；只有与当前 `signal.reason` 完全相同的取消拒绝会被吞掉，独立追加错误仍会向上传播。取消让分页 helper 正常返回，因此当前刷新处理器不会进入 `catch`，而会在分页返回后由 `finally` 关闭 loading。切换筛选则先递增代号、再中止旧信号、替换旧 tbody；旧追加即使完成，也只会写入已经移除的旧容器。详情见[报表请求的错误由谁接手？](./error-handling.md#报表请求的错误由谁接手？)。
+取消方面：本例的 `finally` 只记录迭代已关闭，真正中止网络请求和响应体读取的是传给 Fetch 的信号。用户取消时，尚未收到响应的请求会被中止；若响应头已到达而 `response.json()` 还在读响应体，这次读取也会拒绝。若取消发生在 `appendRow` 等待期间，已开始的追加无法回滚，这一行仍可能写入当前筛选的 `tbody`。`appendReportRows` 在追加前检查一次信号，防止启动新的追加；追加完成后再检查一次，避免向迭代器要下一项或请求下一页。它只吞掉与当前 `signal.reason` 完全相同的取消原因，其他追加错误仍向上传播。由于取消时 `appendReportRows` 正常返回，页面的刷新处理器不会进入 `catch`，而是由 `finally` 关闭 loading。切换筛选时，页面先递增请求序号，再中止旧信号、替换旧 `tbody`；旧的追加即使完成，也只会写进已移除的旧容器。详情见[报表请求的错误由谁接手？](./error-handling.md#报表请求的错误由谁接手？)。
 
-页码预先已知时，页与页可以串行，也可按顺序要求和失败策略用有界并发；当前接口的 `c2` 只能由页 1 给出，因此不能提前请求。`appendRow` 每次须完成后才会拉取下一行；若需并发处理行，也要另行规定顺序、背压和失败策略。
+若需要并发处理行，也要另行规定顺序、背压和失败策略；本例的 `appendRow` 必须完成后才会拉取下一行。
 
 ## 同步 Promise 数组何时不等于并发收集？
 
-`for await...of` 也可消费包含 Promise 的同步可迭代对象；同步适配器按输入顺序等待值。Promise 可以在迭代前就启动，实际结局先后与循环交付顺序并不相同。
+前面提到，`for await...of` 也能消费包含 Promise 的同步可迭代对象，比如 Promise 数组。这时同步包装器按数组顺序逐个等待。这些 Promise 可能在循环开始前就已启动，它们实际完成的先后顺序与循环交付的顺序不一定相同：
 
 ~~~javascript
 let resolveFirst;
@@ -371,9 +375,9 @@ collected.then(values => console.log(JSON.stringify(values)));
 // ["first","second"]：交付仍按数组输入顺序
 ~~~
 
-`Promise.all` 和 `Promise.allSettled` 履行时的结果数组也按输入顺序排列；区别是它们遍历普通数组时就给每个成员安装处理器。若较后的 Promise 在前项仍待定时拒绝，`for await...of` 还没请求到它，宿主之后可能报告这项拒绝暂时未处理；若前项先拒绝或一直未完成，循环可能永远不会走到后项。轮到后项时才观察拒绝，不是稳妥的并发收集方式。未处理拒绝的报告时机因宿主而异。
+`Promise.all` 和 `Promise.allSettled` 的结果数组同样按输入顺序排列；区别在于，它们一开始就给每个成员注册处理器。而 `for await...of` 只有轮到某一项时才开始监听它：若后面的 Promise 在前一项还未完成时就拒绝，这个拒绝暂时无人处理，宿主可能报告它为未处理拒绝；若前一项拒绝或一直不完成，循环可能永远走不到后面的项。所以用 `for await...of` 遍历已启动的 Promise 数组不是稳妥的并发收集方式。未处理拒绝的报告时机因宿主而异。
 
-在 async/await 标准化以前，`co` 等库常用生成器作为控制流接口：runner 读到 `yield promise` 后等待它，成功时把值交给 `next(value)`，失败时用 `throw(error)` 恢复。理解这个模式能帮助维护旧代码；现代 `async function` 有自己的 Promise 语义，并非用户可见的生成器实例。
+最后补充一段历史：在 async/await 标准化之前，`co` 等库用生成器表达异步流程。执行器（runner）读到 `yield promise` 后等待它，成功时用 `next(value)` 把结果送回生成器，失败时用 `throw(error)` 在暂停处抛出。了解这个模式有助于维护旧代码；现代的 `async function` 有自己的 Promise 语义，不会暴露生成器对象。
 
 > [!info]- 来源
 > - **迭代协议、关闭、生成器委托和异步适配：**[ECMAScript 2026](https://tc39.es/ecma262/2026/)，2026 年正式版。§7.4.11、§7.4.14 定义同步/异步 IteratorClose；§14.7.5.7 定义 `for...of` / `for await...of` 的遍历与关闭；§15.5.5 定义生成器函数和委托；§27.1.5.4 定义同步迭代器 Promise 值的异步适配与拒绝关闭；§27.5、§27.6 定义生成器状态和异步生成器请求排队。

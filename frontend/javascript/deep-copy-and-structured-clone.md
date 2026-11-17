@@ -1,14 +1,14 @@
 # 如何安全地深拷贝 JavaScript 值？
 
-假设报表编辑器要保存一份快照，让用户修改快照时不影响当前界面。shallow copy（浅复制）只新建外层数组或对象；嵌套的 `owner` 仍指向原对象。deep copy（深拷贝）要回答的不只是“嵌套对象是否复制”，还包括 object graph（对象图）中的 cyclic reference（循环引用）、多个字段是否继续共享同一个子对象（shared reference，共享引用），以及哪些 property descriptor（属性描述符）和 prototype（原型）行为要保留；底层资源还要决定是复制、共享还是转移。
+假设报表编辑器要保存一份快照，让用户修改快照时不影响当前界面。报表记录里嵌套着负责人对象 `owner`。shallow copy（浅复制）只新建最外层的数组或对象，复制出的记录仍指向原来的 `owner`。deep copy（深拷贝）要回答的不只是“嵌套对象有没有复制”，还包括：object graph（对象图）中的 cyclic reference（循环引用）怎么处理；多个字段原本共享同一个子对象（shared reference，共享引用）时，副本里是否仍然共享；哪些 property descriptor（属性描述符）和 prototype（原型）行为需要保留；以及底层资源（如二进制缓冲区）应当复制、共享还是转移。
 
-没有脱离数据契约的通用深拷贝。若输入本来就是 JSON 形状，JSON 往返可能够用；若要保留受支持对象图中的循环和共享关系，可用宿主提供的 `structuredClone`（结构化克隆）；只有当输入范围与属性规则都受控时，才值得维护手写复制器。
+因此不存在脱离数据契约的通用深拷贝。输入本来就是 JSON 形状时，JSON 往返可能就够了；需要保留对象图中的循环和共享关系时，可用宿主提供的 `structuredClone`（结构化克隆）；只有输入范围和属性规则都可控时，才值得维护手写复制器。下面三节依次说明这三种做法的适用边界。
 
-复制对象与比较两个值是否结构相等是不同操作。若只需在受限纯数据范围内比较，见[JavaScript 如何按约定比较对象与数组？](./javascript-types.md#结构比较要把输入范围写成契约)。
+复制对象和判断两个值结构是否相等是两种操作。若只需在受限的纯数据范围内比较，见[JavaScript 如何按约定比较对象与数组？](./javascript-types.md#结构比较要把输入范围写成契约)。
 
 ## JSON 往返只适合 JSON 形状的数据
 
-`JSON.parse(JSON.stringify(value))` 先把值序列化为 JSON 文本，再从文本创建新值。这个过程不保存对象身份和引用边：两个属性指向同一个对象时，文本里会有两份相同内容，解析后成为两个不同对象；循环结构则无法表示。
+`JSON.parse(JSON.stringify(value))` 先把值序列化为 JSON 文本，再从文本解析出新值。文本不记录对象身份和引用关系：两个属性指向同一个对象时，文本里会写出两份相同内容，解析后变成两个不同对象；循环结构则根本无法表示。下面的代码还演示了数组空位和特殊数值的转换：
 
 ~~~javascript
 const jsonShared = { ownerId: "u-17", name: "Ada" };
@@ -27,7 +27,7 @@ inheritedHole.length = 1;
 JSON.stringify(inheritedHole); // '["inherited"]'：原型链提供了索引 0 的值
 ~~~
 
-在未覆写 `toJSON`、未提供 `replacer` 时，`Date` 会通过 `Date.prototype.toJSON()` 转换；有效 `Date` 变为 ISO 时间字符串。普通 `Map`、`Set` 的条目存放在内部槽中，不是 JSON 遍历的自有可枚举属性，因此没有额外自有可枚举属性时会变成 `{}`。对象中值为 `undefined`、函数或 `Symbol` 的字符串键属性会被省略，`Symbol` 键属性也不参与默认序列化。数组按 `length` 逐项读取：值为 `undefined`、函数、`Symbol`，以及原型链也没有该索引值的空位会变成 `null`；若原型链提供了值，该值会被序列化。对象属性和数组元素里的 `NaN`、`Infinity`、`-Infinity` 都会变成 `null`。
+在未覆写 `toJSON`、未提供 `replacer` 时，`Date` 会通过 `Date.prototype.toJSON()` 转换；有效 `Date` 变为 ISO 时间字符串。`Map`、`Set` 的条目存放在内部槽中，不是 JSON 会遍历的自有可枚举属性，因此（在没有额外自有可枚举属性时）它们会变成 `{}`。对象中值为 `undefined`、函数或 `Symbol` 的字符串键属性会被省略，`Symbol` 键属性也不参与默认序列化。数组则按 `length` 逐个索引读取：值为 `undefined`、函数或 `Symbol` 的元素，以及原型链上也找不到值的空位，都会变成 `null`；若原型链为空位提供了值（如上面的 `inheritedHole`），序列化的就是这个值。对象属性和数组元素里的 `NaN`、`Infinity`、`-Infinity` 都会变成 `null`。
 
 默认序列化遇到 BigInt 会抛 `TypeError`，遇到循环引用也会抛 `TypeError`。自定义 `toJSON` 或 `replacer` 可以改变部分结果，但那是在按 JSON 契约转换数据，不再是通用对象图复制。
 
@@ -47,13 +47,13 @@ cyclicValue.self = cyclicValue;
 stringifyErrorName(cyclicValue); // "TypeError"
 ~~~
 
-若数据契约本来就只包含 JSON 值，且共享引用、原型、属性描述符和特殊数值的变化都可以接受，JSON 往返才是合适的简化方案。
+只有当数据契约本来就只包含 JSON 值，而且共享引用、原型、属性描述符和特殊数值的上述变化都可以接受时，JSON 往返才是合适的简化方案。
 
 ## structuredClone 复制对象图并保留图内关系
 
-`structuredClone(value)` 是宿主 API；WHATWG HTML 标准规定它怎样执行结构化克隆，ECMAScript 本身不提供这个全局函数。算法把输入序列化成与 realm（执行环境）无关的记录，再在调用目标 realm 中反序列化；普通全局调用时，目标 realm 就是当前环境。过程中有一张记忆表：对象第一次遇到时登记其序列化结果，后面再次遇到同一对象就复用登记项。因此循环能回指克隆对象，多处原本指向同一子对象的引用仍指向同一个克隆对象。
+`structuredClone(value)` 是宿主 API：WHATWG HTML 标准规定它怎样执行结构化克隆，ECMAScript 本身并不提供这个全局函数（Node.js 等运行时也实现了它）。算法先把输入序列化成与 realm（执行环境，每个 realm 有自己的一套全局对象和内建对象）无关的记录，再在调用方所在的 realm 中反序列化；直接调用全局 `structuredClone` 时，结果就落在当前环境中。序列化过程维护一张记忆表：第一次遇到某个对象时登记它的序列化结果，再次遇到同一对象时直接复用登记项。所以循环引用会回指克隆出的对象，原本指向同一子对象的多处引用也仍指向同一个克隆对象。
 
-这里沿用[数组篇的报表案例](./arrays.md#复制数组只复制一层)，但故意让两条记录共用同一个 `owner`，以便观察共享关系；数组篇的 `first` / `retry` 各有一个内容相同但身份不同的 `owner`；本节改成共享同一个 `owner`，其他记录字段仍可不同。图中实线箭头表示属性引用，数组框包含两个记录对象；相同编号表示输入与克隆中的对应位置，撇号表示新对象身份。
+下面沿用[数组篇的报表案例](./arrays.md#复制数组只复制一层)，但做了一处改动：数组篇的 `first` / `retry` 各有一个内容相同、身份不同的 `owner`，本节让两条记录共用同一个 `owner` 对象，以便观察共享关系是否保留；另外让根对象的 `self` 指回自己，构成循环。图中实线箭头表示属性引用，数组框包含两个记录对象；相同编号表示输入与克隆中的对应位置，带撇号的编号表示新的对象身份。
 
 ![输入报表对象图与 structuredClone 输出对象图：self 回到副本根，三条 owner 引用仍指向共享的 owner 副本](resources/deep-copy-and-structured-clone-object-graph.svg)
 
@@ -77,7 +77,7 @@ snapshot.focusedOwner === snapshot.rows[0].owner; // true
 snapshot.rows[0].owner !== sharedOwner; // true：克隆节点与原节点分离
 ~~~
 
-结构化克隆会读取普通对象和数组的自有、可枚举字符串键。属性值若由 getter（读取器）提供，getter 会执行，得到的值会成为克隆中的普通数据属性；Symbol 键和非枚举属性不参与这一步。由此可见，克隆不是绕过代码去复制“隐藏状态”：被读取的 getter 可能有副作用，而被过滤的属性不会进入结果。
+对普通对象和数组，结构化克隆只读取自有、可枚举的字符串键。若属性值由 getter（读取器）提供，getter 会被执行，读到的值在克隆中成为普通数据属性；Symbol 键和不可枚举属性被跳过。可见克隆并不是绕过代码直接复制对象内部状态：读取 getter 可能产生副作用，被跳过的属性也不会出现在结果里。
 
 ~~~javascript
 const metadataKey = Symbol("metadata");
@@ -104,7 +104,7 @@ Object.getOwnPropertyDescriptor(propertyCopy, "label");
 propertyCopy[metadataKey]; // undefined
 ~~~
 
-`Date`、`RegExp`、`Map`、`Set`、`ArrayBuffer` 和 typed array（类型化数组）等标准对象有各自的序列化步骤：internal slot（内部槽）中的数据会按类型复制，但对象上临时挂的扩展属性不一定参与。例如 `Map` 的条目会复制，自加的 `note` 属性不会。其他平台对象能否克隆，也要看该接口是否定义了序列化步骤。可克隆不等于所有对象行为都保留。普通用户类实例的自有可枚举数据会按普通对象属性处理，但类原型、原型方法和访问器描述符不会随对象图复制。函数、`WeakMap`（弱映射）、`Symbol` 值、`Proxy`（代理）和普通 DOM `Node` 不能序列化；若不可克隆值出现在对象图任一待复制位置，调用会抛 `DataCloneError`。
+`Date`、`RegExp`、`Map`、`Set`、`ArrayBuffer` 和 typed array（类型化数组）等标准对象各有自己的序列化步骤：internal slot（内部槽）中的数据按类型复制，但额外挂在对象上的属性不一定参与。例如 `Map` 的条目会复制，自己加上的 `note` 属性不会。其他平台对象能否克隆，取决于该接口是否定义了序列化步骤。而且“可克隆”不等于所有行为都保留：用户自定义类的实例会被当作普通对象，自有可枚举数据会复制，但类原型、原型方法和访问器描述符都不会随之复制。函数、`WeakMap`（弱映射）、`Symbol` 值、`Proxy`（代理）和普通 DOM `Node` 不能序列化；只要对象图中任何待复制的位置出现这类值，调用就会抛出 `DataCloneError`。另一方面，与 JSON 默认序列化不同，BigInt 可以被结构化克隆。下面几段代码分别验证这些规则：
 
 ~~~javascript
 structuredClone(9007199254740993n); // 9007199254740993n：结构化克隆支持 BigInt
@@ -148,7 +148,7 @@ cloneErrorName(Symbol("value")); // "DataCloneError"
 cloneErrorName({ format: () => "r-104" }); // "DataCloneError"：嵌套函数也会失败
 ~~~
 
-`structuredClone` 的 `transfer`（转移）选项把可转移资源的所有权交给结果，而不是另外复制一份。对 `ArrayBuffer` 来说，结果接管原缓冲区的字节，原 `ArrayBuffer` 被分离；它仍是原对象，但不能再读写缓冲区内容。只有确实要交出所有权时才转移；普通快照应使用不带 `transfer` 的克隆。
+前面讨论的都是复制。`structuredClone` 的 `transfer`（转移）选项则把可转移资源的所有权交给结果，而不是再复制一份。对 `ArrayBuffer` 来说，结果接管原缓冲区的字节，原 `ArrayBuffer` 变为 detached（已分离）状态：对象本身还在，但长度变为 0，不能再读写内容。只有确实要交出所有权时才转移；普通快照应使用不带 `transfer` 的克隆。
 
 ~~~javascript
 const buffer = new ArrayBuffer(8);
@@ -158,7 +158,7 @@ transferred.buffer.byteLength; // 8
 buffer.byteLength; // 0：原 buffer 已分离
 ~~~
 
-新建包装对象也不一定代表底层数据独立。在允许使用 `SharedArrayBuffer`（共享数组缓冲区）的环境中，结构化克隆会新建包装对象，但两者继续共享字节；浏览器环境还要求满足 cross-origin isolated（跨源隔离）条件。下面的例子在支持 `SharedArrayBuffer` 的运行时观察共享效果。复制到普通 `ArrayBuffer` 后，结果不会随源的后续写入改变；若还要求复制期间读到同一时刻的一致内容，读写双方需另行协调。本例两端都是 `Uint8Array`，`TypedArray.prototype.set()` 按字节复制，但不保证跨字节的原子快照；若两端都存 Number 或都存 BigInt，但元素类型不同，复制时会逐元素读取并转换，同样不保证多个元素来自同一时刻。Number 与 BigInt 混拷会抛 `TypeError`。
+反过来，克隆出新的包装对象也不代表底层数据已经独立。`SharedArrayBuffer`（共享数组缓冲区）被结构化克隆时，会得到一个新的包装对象，但两者仍共享同一块字节；在浏览器中，克隆它还要求页面处于 cross-origin isolated（跨源隔离）状态。下面的例子需要在支持 `SharedArrayBuffer` 的运行时执行。若要得到独立快照，可以把内容复制到普通 `ArrayBuffer`，之后源的写入就不会影响它。但如果其他线程在复制期间仍在写入，复制结果不保证对应同一时刻，读写双方需要另行协调：本例两端都是 `Uint8Array`，`TypedArray.prototype.set()` 按字节复制，不提供跨字节的原子快照；两端元素类型不同（但同为 Number 类或同为 BigInt 类）时会逐元素读取并转换，同样不保证一致；Number 类与 BigInt 类数组互相复制则会抛 `TypeError`。
 
 ~~~javascript
 const sharedBuffer = new SharedArrayBuffer(1);
@@ -180,9 +180,9 @@ independentByte[0]; // 42：复制出的快照不随之变化
 
 ## 何时 JSON 与 structuredClone 都不符合契约
 
-若应用只处理一组很小且稳定的类型，并且确实需要自定义属性复制规则，可以写范围受限的复制器。下面实现支持同一 realm（执行环境）的基础 `Date`、`RegExp`、`Map`、`Set`、数组，以及原型为当前 realm `Object.prototype` 或 `null` 的普通对象。在普通对象分支，原型不符合这一范围时，代码会显式抛 `TypeError`。这不是拒绝所有范围外输入的校验器；被调用的 getter、迭代器或递归子项也可能抛错，并向外传播。
+JSON 会丢掉共享关系和多种类型，`structuredClone` 则会丢掉原型并拒绝函数。若应用只处理一小组稳定的类型，又确实需要自定义复制规则，可以写一个范围受限的复制器。下面的实现支持同一 realm 中的基础 `Date`、`RegExp`、`Map`、`Set`、数组，以及原型为当前 realm 的 `Object.prototype` 或 `null` 的普通对象。普通对象分支遇到其他原型时会显式抛出 `TypeError`。但它并不是能拒绝所有范围外输入的校验器；执行过程中调用的 getter、迭代器或递归处理的子项也可能抛错，并向外传播。
 
-`seen` 是本次递归使用的 `WeakMap`（弱映射）。每个对象在递归子项前就登记“输入对象 → 副本”：再次遇到同一对象时直接返回登记的副本，所以不会因循环而无限递归，也能保留图内共享关系。原始值直接返回；函数和 `Symbol` 值也原样返回，因此它们若出现在结果中仍与输入共享同一身份或值，并没有被隔离。
+`seen` 是这次复制共用的 `WeakMap`，作用与结构化克隆的记忆表相同。每个对象在递归处理子项之前，先登记“输入对象 → 副本”；再次遇到同一对象时直接返回登记的副本，所以循环不会导致无限递归，图内的共享关系也得以保留。原始值直接返回；函数和 `Symbol` 值同样原样返回，因此结果中的函数与输入共享同一身份，并没有被隔离。
 
 > [!example]- 一个有限范围的递归复制器实现
 >
@@ -279,7 +279,7 @@ console.log(copiedArraySubclass instanceof CustomArray,
 // false true：数组子类降为普通 Array
 ~~~
 
-这段实现的边界属于调用者必须满足的输入契约，不是统一的拒绝行为：不要传入 `Proxy`、跨 realm 对象、未知宿主对象，或覆写这段代码会读取的内建方法、属性和迭代器的实例。分支顺序会让 `Date`、`RegExp`、`Map`、`Set` 子类降为对应基础类型；数组子类和跨 realm 数组也会进入数组分支，成为当前 realm 的普通数组。调用者仍须排除不支持的输入。`Date`、`RegExp`、`Map`、`Set` 上的自有扩展属性会被忽略；数组的可枚举字符串扩展属性则会复制。`RegExp.lastIndex` 按原值赋给副本，故这里要求它是普通数字位置。递归实现也要求对象图深度受控。若输入不能可靠地满足这些条件，应缩窄数据契约或使用明确支持目标类型的机制，而不是把得到的结果称作完整副本。
+以下边界是调用者必须满足的输入契约，代码不会统一检查并拒绝：不要传入 `Proxy`、跨 realm 对象、未知宿主对象，或覆写这段代码会读取的内建方法、属性和迭代器的实例。分支顺序会让 `Date`、`RegExp`、`Map`、`Set` 子类降为对应基础类型；数组子类和跨 realm 数组也会进入数组分支，成为当前 realm 的普通数组。`Date`、`RegExp`、`Map`、`Set` 上的自有扩展属性会被忽略；数组的可枚举字符串扩展属性则会复制。`RegExp` 的 `lastIndex` 按原值赋给副本，因此要求它是普通的数字位置。递归实现也要求对象图深度受控。若输入不能可靠地满足这些条件，应缩窄数据契约或使用明确支持目标类型的机制，而不是把得到的结果称作完整副本。
 
 > [!info]- 来源
 > - JSON 序列化属性选择、对象中的未表示值、数组中的 `null` 替代、BigInt 默认错误及循环结构错误：[ECMAScript 2026 §25.5.4 JSON.stringify](https://tc39.es/ecma262/2026/multipage/structured-data.html#sec-json.stringify)，尤其是 §25.5.4.2 `SerializeJSONProperty`、§25.5.4.5–.6 对象和数组序列化；日期默认 JSON 表示：[ECMAScript 2026 §21.4.4.37 `Date.prototype.toJSON`](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-date.prototype.tojson)。
