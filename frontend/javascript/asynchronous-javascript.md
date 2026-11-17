@@ -2,19 +2,19 @@
 
 ## 案例背景
 
-用户打开 `reportId="42"` 的报表，再把排序切到 `recent`。页面通过 Fetch API 经 HTTP（超文本传输协议）分别请求报表、摘要和访问权限；三项彼此独立，可以同时发出。本例接口以 JSON 返回数据；Fetch 先给出 `Response` 响应对象，正文还需另行读取。三份响应都成功、正文都能解析，并通过各自的运行时校验后，界面才收到一组可信数据。只有权限允许查看明细时，页面才继续读取行。用户离开页面时，页面持有的 `AbortController`（中止控制器）可以通过 `AbortSignal`（中止信号）通知支持取消的工作停止。
+用户打开 `reportId="42"` 的报表，并把排序切到 `recent`。页面要用 Fetch API 通过 HTTP（超文本传输协议）分别请求报表、摘要和访问权限，三项彼此独立，可以同时发出。接口以 JSON 返回数据，但 Fetch 先交回的是 `Response` 响应对象，正文还要另外读取。只有三份响应的状态都成功、正文都能解析、内容都通过运行时校验，界面才算拿到一组可信数据。之后，只有权限允许查看明细，页面才继续读取报表行。用户离开页面时，页面通过自己持有的 `AbortController`（中止控制器）发出 `AbortSignal`（中止信号），通知支持取消的工作停止。
 
-这条过程有几个不同边界：callback（回调）描述“之后要调用的函数”；Promise 表示将来成功值或失败原因；异步函数与等待运算符（`async`/`await`）写出等待与错误传播；宿主决定异步回调何时有机会运行；取消则由具体 API 的中止信号等机制处理。把 Promise 放进组合器不会自动启动限额调度或停止其他工作。
+这个过程涉及几种不同的机制，本章依次讲解：callback（回调）是“稍后被调用的函数”；Promise 表示将来的成功值或失败原因；`async`/`await`（异步函数与等待运算符）让等待和错误传播写起来像同步代码；宿主环境（浏览器或 Node.js）决定异步回调何时运行；取消则依靠中止信号这类由具体 API 支持的机制。注意，`Promise.all` 这类组合器只负责等待结果，既不会限制同时运行的数量，也不会停止其他工作。
 
-三次 `fetch()` 调用先启动三项请求。`Promise.all` 等待三份 `Response`，代码随后才检查 HTTP 状态；某项较早返回 404，也要等另外两份响应到达，才会在这份实现中被检查出来。
+下面两张图先给出整体流程。三次 `fetch()` 调用立即启动三项请求，`Promise.all` 等到三份 `Response` 都到达后，代码才检查 HTTP 状态；所以即使某项很早就返回 404，在这份实现中也要等另外两份响应到达后才会被发现。
 
 ![同一组报表参数与 signal 启动三个 Fetch；等待三份 Response，再检查 HTTP 状态](resources/report-promise-pipeline.svg)
 
-上图的成功出口只是三份 HTTP 状态可接受的响应，正文还没有被代码读完。接下来同时读取三份 JSON，再等待它们全部解析完成，最后运行同步校验器。只有这两道等待及校验都通过，`loadReport` 才交付数据；任一阶段失败都会拒绝它返回的 Promise。组合器本身不会取消其他已启动的工作。
+上图走到成功出口时，只得到三份状态可接受的响应，正文还没有读取。接下来同时读取三份 JSON，等它们全部解析完成，再运行同步校验器。两轮等待和校验都通过后，`loadReport` 才交付数据；任一阶段失败，它返回的 Promise 都会被拒绝，但已启动的其他工作不会因此被取消。
 
 ![三份响应分别读取 JSON，全部解析完成后逐项校验，交付报表摘要和权限，权限决定是否续读行](resources/report-promise-results.svg)
 
-第二张图沿用同一 `reportId`、`sort` 和页面 signal。若权限允许且行页码已知，下一步可交给[并发池按上限启动任务](./bounded-async-concurrency.md)；如果下一页要等前页给出 cursor（游标），就按页顺序推进，见[报表行怎样按页异步读取？](./iterators-and-generators.md#报表行怎样按页异步读取？)。Promise 只传递结果和失败，不会替页面完成结构校验、权限判断、限流或取消。
+第二张图沿用同一 `reportId`、`sort` 和页面的 signal。读取报表行不在本章范围内：若权限允许且所有页码已知，可以交给[并发池按上限启动任务](./bounded-async-concurrency.md)；如果每一页都要等前一页给出 cursor（游标），就只能按页顺序读取，见[报表行怎样按页异步读取？](./iterators-and-generators.md#报表行怎样按页异步读取？)。贯穿全章的一点是：Promise 只传递结果和失败，结构校验、权限判断、限流和取消都要由页面代码另外完成。
 
 ## 回调如何表示延后的工作？
 
@@ -30,9 +30,9 @@ readUser(userId, (error, user) => {
 });
 ~~~
 
-Promise 把“未来的一个值或失败原因”作为可传递的对象。它从待定（`pending`）转为履行（`fulfilled`）或拒绝（`rejected`）之一；状态只改变一次。Promise 不持有一条通用的取消命令，也不意味着底层工作在另一个线程运行。
+Promise 把“将来才有的值或失败原因”变成一个可以传递的对象，后续步骤挂在它上面，而不是层层嵌套。它从待定（`pending`）转为履行（`fulfilled`）或拒绝（`rejected`）之一；状态只改变一次。Promise 不持有一条通用的取消命令，也不意味着底层工作在另一个线程运行。
 
-`new Promise(executor)` 会在构造时同步调用执行器；执行器若同步抛错，构造所得 Promise 会以该异常拒绝。`resolve` 与 `reject` 用来报告结果，但后续 `.then()` 注册的处理器不会在注册它的那段同步代码中内联运行。下面先输出“执行器”、再输出“构造完成”；计时器调用 `resolve` 后，Promise 处理器才有机会输出结果：
+`new Promise(executor)` 在构造时同步调用执行器函数；执行器同步抛错时，得到的 Promise 以该异常拒绝。执行器用 `resolve` 和 `reject` 报告结果，而通过 `.then()` 注册的处理器总是稍后才运行，不会在注册它的那段同步代码里立即执行。下面的代码先输出“执行器”，再输出“构造完成”；计时器调用 `resolve` 之后，处理器才有机会输出结果：
 
 ~~~javascript
 const response = new Promise(resolve => {
@@ -44,11 +44,18 @@ console.log("构造完成");
 response.then(value => console.log(value));
 ~~~
 
-这段程序先输出 `执行器`、`构造完成`。计时器的 20 毫秒是最早等待时间，不保证回调恰在该时刻运行；计时器属于宿主 API。在浏览器中，Promise 处理器（reaction）和 `await` 的续段会作为microtask（微任务）排队；当前 JavaScript 调用栈清空后，浏览器执行微任务检查点，把队列中的微任务逐个跑完，再继续事件循环的后续步骤。于是 `await` 先让出当前同步片段，而续段会在后续微任务中继续。绘制机会与其他任务（task）的交错由宿主决定，见[浏览器 JavaScript 何时运行，画面何时更新？](../runtime/event-loop.md)和 [Node.js 事件循环阶段与微任务队列如何交互？](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
+这段程序先输出 `执行器`、`构造完成`。20 毫秒只是最短等待时间，不保证回调恰好在那一刻运行；计时器由宿主提供，不属于 JavaScript 语言本身。在浏览器中，Promise 处理器（reaction）和 `await` 之后的代码会作为 microtask（微任务）排队；当前 JavaScript 调用栈清空后，浏览器执行微任务检查点，把队列中的微任务逐个跑完，再进入事件循环的后续步骤。因此 `await` 会先交出控制权，它后面的代码在之后的某个微任务中继续。绘制机会与其他 task（任务）怎样交错由宿主决定，见[浏览器 JavaScript 何时运行，画面何时更新？](../runtime/event-loop.md)和 [Node.js 事件循环阶段与微任务队列如何交互？](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
 
 ## Promise 链怎样传递值和失败？
 
-每次调用 `.then()` 都返回一个新 Promise。成功处理器返回普通值时，新 Promise 以该值履行；它抛出异常时，新 Promise 以该异常拒绝；若它返回 Promise，新 Promise 会采用该 Promise；若返回普通对象且它的 `then` 属性是函数（thenable），新 Promise 会调用这个 `then`，根据它调用的解析或拒绝回调决定结果。内建 Promise 同样有 `then` 方法，但 `Promise.resolve(p)` 遇到确为 Promise 且读到 `p.constructor === Promise` 的 `p` 时会直接返回它；普通 thenable 的getter（取值器）和采用作业不应套用到这条捷径上。`.catch(handler)` 等价于只提供拒绝处理器的 `.then(undefined, handler)`：处理器返回普通值或最终履行的 Promise/thenable，后续链才恢复成功。
+每次调用 `.then()` 都返回一个新 Promise，它的结果由处理器决定：
+
+- 处理器返回普通值，新 Promise 以该值履行；
+- 处理器抛出异常，新 Promise 以该异常拒绝；
+- 处理器返回 Promise，新 Promise 跟随它的最终结果（称为“采用”）；
+- 处理器返回 thenable（带有 `then` 方法的普通对象），新 Promise 会调用这个 `then`，按它回调的是解析函数还是拒绝函数决定结果。
+
+内建 Promise 本身也有 `then` 方法，但有一条捷径：`Promise.resolve(p)` 遇到真正的 Promise、且 `p.constructor === Promise` 时直接返回 `p`，不经过采用。普通 thenable 没有这条捷径，后文“组合器如何保留输入顺序”一节会看到它的处理步骤。`.catch(handler)` 等价于 `.then(undefined, handler)`：只有处理器返回普通值，或返回最终履行的 Promise / thenable，后续链才恢复为成功。
 
 ~~~javascript
 function parseReport(response) {
@@ -63,11 +70,11 @@ fetch("/api/reports/42?sort=recent")
   .catch(showRequestFailure);
 ~~~
 
-若 `parseReport`、`validateReport` 或 `renderReport` 同步抛错，或 `response.json()` 返回的 Promise 拒绝，拒绝会沿后续链传播，直到某一层接手。处理器返回错误提示文案会把链恢复为成功；若界面层需要保留“请求失败”状态，就应返回或抛出符合该状态契约的结果。哪个层拥有足够上下文来恢复或上报，见[JavaScript 错误应在哪一层恢复、传播或上报？](./error-handling.md)。
+若 `parseReport`、`validateReport` 或 `renderReport` 抛错，或 `response.json()` 返回的 Promise 拒绝，拒绝会沿后续链一路传播，直到遇到拒绝处理器。注意，`showRequestFailure` 如果返回一段错误提示文字，整条链就恢复为成功；若后续代码需要知道“请求失败”，处理器应重新抛错，或返回调用方约定的失败状态。哪个层拥有足够上下文来恢复或上报，见[JavaScript 错误应在哪一层恢复、传播或上报？](./error-handling.md)。
 
-`.finally(cleanup)` 在履行或拒绝时都会运行，不接收原来的值或原因。回调返回的普通成功值会被忽略；清理成功则原值或原拒绝继续传递。若清理抛错或返回最终拒绝的 Promise / thenable，清理失败取代原结果。可让 `finally` 等待异步清理，但不要用其返回值改写业务结果。
+`.finally(cleanup)` 无论履行还是拒绝都会运行，回调不接收原来的值或原因。回调返回的普通值会被忽略，清理成功后原值或原拒绝原样继续传递；只有清理抛错，或返回最终拒绝的 Promise / thenable 时，清理失败才会取代原结果。`finally` 可以返回 Promise 来等待异步清理，但不能用返回值改写业务结果。
 
-异步函数（`async function`）调用时立即执行函数体，直到遇到第一个等待运算符（`await`）或结束；即使被等待的值已经可用，续行也不会在当前语句段内同步接着执行。调用总会返回 Promise。`await` 会让当前异步函数暂停并把控制权还给调用者，等被等待的值履行后再继续；若它拒绝，拒绝会像该处抛错一样进入 `try/catch` 或向外传播。`try` 的 `finally` 会在正常返回或抛错时运行；其中新的 `return` 或 `throw` 可以替换原先的完成结果。
+`.then()` 链可以用 `async` 函数改写成顺序代码。调用 `async function` 时，函数体立即同步执行，直到遇到第一个 `await` 或函数结束；调用总是返回 Promise。`await` 让当前函数暂停并把控制权还给调用者，等被等待的值履行后再继续；即使这个值已经可用，后续代码也要等下一个微任务才继续。被等待的值拒绝时，效果相当于在该处抛错，可以被 `try/catch` 捕获，否则向外传播。`try` 语句的 `finally` 块在正常返回或抛错时都会运行，其中新的 `return` 或 `throw` 会替换原来的结果。
 
 ~~~javascript
 async function loadUserAndOrders(userId) {
@@ -85,7 +92,7 @@ loadUserAndOrders("u-42")
 
 ## TypeScript 的 Promise 类型能保证什么？
 
-`Promise<T>` 只能在编译期约束 TypeScript 代码中的类型，注解编译后不会检查服务端 JSON。把外部值先当作未知类型（`unknown`），读取正文后执行真正的运行时校验：
+案例要求正文通过运行时校验，而 TypeScript 类型不能代替这一步。`Promise<T>` 只在编译期约束 TypeScript 代码，类型注解编译后被擦除，不会检查服务端返回的 JSON。应把外部数据先声明为 `unknown`（未知类型），读取正文后再做真正的运行时校验：
 
 ~~~typescript
 async function parseReport(response: Response): Promise<Report> {
@@ -102,7 +109,7 @@ async function parseReport(response: Response): Promise<Report> {
 
 ## 报表请求何时并发、何时顺序等待？
 
-Fetch API（Fetch 应用程序接口）的调用会启动请求，然后返回一个 Promise。把已经启动的 Promise 交给 `Promise.all` 是等待它们的结果，不是把它们排进一个稍后启动的队列。独立请求可以先同时发出：
+现在回到案例的完整实现。调用 `fetch()` 会立即启动请求，然后返回一个 Promise。把这些已经启动的 Promise 交给 `Promise.all`，只是等待它们的结果，而不是把请求排进一个稍后才启动的队列。三项独立请求因此可以同时发出：
 
 ~~~javascript
 async function loadReport(reportId, sort, signal) {
@@ -137,7 +144,7 @@ async function loadReport(reportId, sort, signal) {
 
 第一轮 `Promise.all` 等三项 Fetch Promise 全部履行才继续检查状态；任一 Fetch Promise 拒绝时，它会尽早以该原因拒绝，但不会取消其他已启动请求。三项 Response 都到达后，代码按输入顺序检查 HTTP 状态；有一项不是成功状态时立即抛错，因此不会开始读取任何正文。三项状态都成功后，第二轮才同时调用三个 `json()`，并等待三个解析 Promise 全部履行；其中一项解析拒绝时，后续同步校验都不会运行。最后三个校验器依次同步返回已校验值，或同步抛错。若把校验器改成 `async` 函数，返回对象里的字段会是 Promise；外层 `async` 函数不会递归等待普通对象的属性。
 
-主例使用教学权限值 `{ canReadRows: true }`；校验器返回这个布尔字段后，页面在 `await loadReport` 的下一行分支。页面持有控制器，离开时发出中止信号：
+本例假设权限接口返回 `{ canReadRows: true }`（教学用的合成字段），校验器把这个布尔字段交给页面，页面在 `await loadReport(...)` 的下一行据此分支。控制器由页面持有，页面离开时发出中止信号：
 
 ~~~javascript
 const controller = new AbortController();
@@ -151,11 +158,11 @@ if (data.permissions.canReadRows) {
 }
 ~~~
 
-这里的 `canReadRows` 是合成教学字段；真实接口应按其实际权限契约定义和校验该值。前端分支只决定是否继续请求，明细 API 仍须独立验证调用者的读取权限。若它为 `true`，行读取会从这个分支开始；若为 `false`，主例停在报表与摘要。行页码已知时可把每页请求交给[并发池按上限启动任务](./bounded-async-concurrency.md)；下一页必须等前页给出游标（cursor）时按页顺序推进，见[报表行怎样按页异步读取？](./iterators-and-generators.md#报表行怎样按页异步读取？)。页面离开时的 `abort()` 会通知 Fetch 及其他主动监听同一中止信号的 API；它不会强行终止任意 Promise，也不能撤销服务器已执行的副作用。
+真实接口应按自己的权限契约定义和校验这个值。前端分支只决定要不要继续请求，明细 API 仍须在服务端独立验证调用者的读取权限。值为 `true` 时，读取报表行从这个分支开始（按页读取的两种方式见本章开头）；为 `false` 时，页面只显示报表与摘要。
 
-页面可把同一个 `AbortSignal` 传给三项 Fetch；控制器发出 abort 后，Fetch 按自己的中止协议响应。Promise 组合器不会代替页面调用 `abort()`，也不会撤回服务器已经执行的副作用。若 Promise 被超时竞速淘汰，工作也不会因此自动停止，后文会区分“停止等待”和“取消操作”。
+同一个 `AbortSignal` 传给了三项 Fetch。页面离开时调用 `abort()`，Fetch 以及其他监听该信号的 API 按各自的中止规则停止；它不会强行终止任意 Promise，也不能撤销服务器已经执行的副作用。Promise 组合器也不会替页面调用 `abort()`。同理，Promise 在超时竞速中落败，底层工作也不会自动停止，后文“定时器和超时究竟能取消什么”一节会区分“停止等待”和“取消操作”。
 
-多项异步工作的组合条件可按结果需求选择：
+`Promise.all` 适合“全部必需”的情况。其他需求可以选用其他组合器：
 
 | 方法 | 组合 Promise 何时结束 | 报表场景中的含义 |
 | --- | --- | --- |
@@ -164,7 +171,7 @@ if (data.permissions.canReadRows) {
 | `Promise.any` | 首个履行就履行；全部拒绝才以聚合错误（`AggregateError`）拒绝 | 多个镜像或备选端点中任一成功即可 |
 | `Promise.race` | 首个履行或拒绝决定结果 | 观察任务与计时器谁先结束；组合结果不会取消没赢的工作 |
 
-这些方法都消费同步 iterable（可迭代对象）。对空可迭代对象，`all([])` 与 `allSettled([])` 履行 `[]`；`any([])` 以空 `errors` 的聚合错误（`AggregateError`）拒绝；`race([])` 永远待定（pending）。若调用时输入是已启动的请求，任何组合器都不能限流。若需要在有槽位时才调用请求，必须把任务工厂交给[异步并发池](./bounded-async-concurrency.md)。
+这些方法都接收同步 iterable（可迭代对象）。输入为空时，`all([])` 与 `allSettled([])` 履行为 `[]`，`any([])` 以 `errors` 为空的 `AggregateError` 拒绝，`race([])` 永远处于 pending（待定）。如果传入的是已经启动的请求，任何组合器都无法限流；要做到“有空闲名额时才发起请求”，必须把创建任务的函数（任务工厂）交给[异步并发池](./bounded-async-concurrency.md)。
 
 ### 两个 Promise 结果怎样相加？
 
@@ -175,7 +182,7 @@ if (data.permissions.canReadRows) {
 
 ### 组合器如何保留输入顺序？
 
-先看 `Promise.resolve` 怎样采用普通 thenable。读取 `then` getter 是同步步骤；调用取得的 `then` 函数则安排为后续 Promise 作业，因此这两个动作不在同一时刻发生：
+上例中的 `[2, 5]` 按输入位置排列，而不是按完成先后。要理解组合器怎样做到这一点，先看它们对每个输入调用的 `Promise.resolve` 怎样采用普通 thenable：读取 `then` getter（取值器）是同步发生的，调用取到的 `then` 函数则被安排成后续的 Promise 作业，两个动作不在同一时刻发生：
 
 ~~~javascript
 const events = [];
@@ -195,7 +202,7 @@ events.push("当前同步代码结束");
 // 随后：再依次追加 "调用 then"、"摘要已到"
 ~~~
 
-原生组合方法接收可迭代值，并对每项执行 Promise 解析与结果登记。即使第二项先结束，它的处理器也写入第二个位置；所以数组顺序取决于输入，不取决于完成先后。下面的折叠实现用于观察这套最小机制，不是可替代原生 Promise 的兼容性填充（polyfill）：它假设普通内建 `Promise`，不模拟子类构造器、`Symbol.species` 或所有恶意 thenable 的防护。
+原生组合器遍历输入，对每一项调用 `Promise.resolve`，再注册一个记得自己位置的处理器。即使第二项先结束，它的处理器也只写入第二个位置，所以结果数组的顺序取决于输入顺序，与完成先后无关。下面折叠的代码用于观察这套最小机制，不能当作原生 Promise 的 polyfill（兼容性填充）使用：它假设普通内建 `Promise`，不模拟子类构造器、`Symbol.species` 或所有恶意 thenable 的防护。
 
 > [!example]- 完整教学实现：四个 Promise 组合器
 >
@@ -286,7 +293,7 @@ events.push("当前同步代码结束");
 
 ## 定时器和超时究竟能取消什么？
 
-Promise 没有通用取消操作。`Promise.race` 只决定调用方先观察到哪个结果：超时先拒绝时，底层工作仍可能继续。定时器延迟到期只是回调获得运行机会的门槛；当前 JavaScript 不会被它打断，回调也可能更晚运行。
+前面多次提到，组合器不会取消工作。给请求加超时是常见需求，本节说明超时能做到什么、做不到什么。Promise 没有通用的取消操作。`Promise.race` 只决定调用方先看到哪个结果：超时先拒绝时，底层工作仍可能继续。定时器的延迟到期，只表示回调从此可以被调度；它不会打断正在运行的 JavaScript，回调也可能更晚才运行。
 
 ### 怎样把定时器延迟包装成 Promise？
 
@@ -328,7 +335,7 @@ function timeLimit(fn, millis) {
 }
 ~~~
 
-包装器用普通函数保留调用时的 `this`，并把 `fn` 同步抛出的异常转成拒绝。工作先结束时，`finally` 清除仍待运行的计时器。只有超时回调实际得到调度时，竞速才会以超时拒绝包装 Promise；`fn` 仍可能完成。计时器到期不能抢占当前 JavaScript，包装器也不会停止工作。
+包装器返回普通函数（而非箭头函数）以保留调用时的 `this`，并把 `fn` 同步抛出的异常转成拒绝。工作先结束时，`finally` 清除还没触发的计时器。只有超时回调真正运行了，竞速结果才是超时拒绝；即便如此，`fn` 的工作仍可能继续直到完成。计时器到期不能抢占正在运行的 JavaScript，包装器也不会停止工作。
 
 > [!info] TypeScript 的 this 参数不改变运行时调用
 > 可以用显式 this 参数保留包装函数的调用类型；它会在编译时擦除，不是实际传入的第一个参数。运行时仍要用普通 function 接住调用上下文，并像本例一样以 fn.apply(this, args) 调用原函数；箭头函数捕获外层 this，不适合此处。
@@ -348,7 +355,7 @@ function timeLimit(fn, millis) {
 
 ### 取消一次或重复定时器时，哪些调用还会发生？
 
-一次性计时器可把它的 ID 暴露给取消函数：
+下面两个例子来自常见的计时器练习：给定函数 `fn`、参数 `args` 和延迟 `t`（毫秒），在 `cancelT` 毫秒时调用返回的取消函数。一次性计时器可以把计时器 ID 封装进取消函数：
 
 ~~~javascript
 function cancellable(fn, args, millis) {
@@ -365,7 +372,7 @@ function cancellable(fn, args, millis) {
 
 这些毫秒是题目输入，不是精确计时保证。取消只能清掉仍待执行的回调；它不打断已开始运行的函数，也不把函数结果交给 `cancellable` 的调用者。若 `fn` 依赖 `this`，需显式传接收者（receiver）或先绑定。
 
-原练习要求重复计时器立即调用一次，再按给定间隔安排后续调用：
+重复计时器的版本来自同一组练习，要求先立即调用一次，再按给定间隔安排后续调用：
 
 ~~~javascript
 function cancellableInterval(fn, args, millis) {
@@ -385,7 +392,9 @@ function cancellableInterval(fn, args, millis) {
 
 ## Promise 处理器为什么会交错？
 
-要推导顺序，先区分“注册处理器”与“把处理器作业入队”。同步代码给已履行 Promise 调用 `.then` 时，规范会立即为处理器入队；给待定 Promise 调用 `.then` 时，先保存 reaction（反应记录），等 Promise 状态改变才入队。作业运行后若履行下游 Promise，也会把已保存的下游 reaction 排入队列尾部。浏览器将 Promise 处理器作业（Promise reaction job）放入微任务队列，在微任务检查点按入队顺序逐个处理；Node.js 另有宿主调度边界。以下第一组的两个源 Promise 已履行，所以同步代码先排好 `0` 和 `2`；执行 `0` 才使下游处理器 `1` 入队，队列中已有 `2`，因此输出为 `0, 2, 1, 3`。
+最后回到微任务：多条 Promise 链同时运行时，处理器的执行顺序常令人意外。推导顺序时，要区分“注册处理器”和“把处理器作业放进队列”。对已履行的 Promise 调用 `.then` 时，处理器作业立即入队；对待定的 Promise 调用 `.then` 时，只保存一条 reaction（反应记录），等 Promise 状态改变才入队。一个作业运行后如果履行了下游 Promise，又会把下游已保存的 reaction 排到队尾。浏览器把这些 Promise reaction job（处理器作业）放进微任务队列，在检查点按入队顺序逐个运行；Node.js 有自己的宿主调度边界。
+
+在下面第一组代码中，两个源 Promise 都已履行，所以同步代码先把处理器 `0` 和 `2` 排进队列；`0` 运行后，它的下游处理器 `1` 才入队，排在 `2` 后面，因此输出为 `0, 2, 1, 3`。
 
 ~~~javascript
 Promise.resolve().then(() => console.log(0)).then(() => console.log(1));
@@ -393,7 +402,7 @@ Promise.resolve().then(() => console.log(2)).then(() => console.log(3));
 // Node.js v26.13.0 的 CommonJS 模块格式：0, 2, 1, 3
 ~~~
 
-原归档练习还保留了三条链的交错以及处理器返回已履行 Promise 时的附加采用作业。先追踪第一段的关键作业，队列左侧是下一项：
+处理器返回 Promise 时情况更复杂，因为“采用”这个 Promise 需要额外的作业。下面三段代码来自原归档练习；先追踪第一段中的关键作业，表中队列最左侧是下一个要运行的作业：
 
 | 步骤 | 动作 | 队列 |
 | --- | --- | --- |
@@ -404,7 +413,7 @@ Promise.resolve().then(() => console.log(2)).then(() => console.log(3));
 | 4 | 输出 2 的处理器运行，并把输出 3 排到队尾 | `[转发 4, 输出 3]` |
 | 5 | 转发作业履行第一条链的下游 Promise，输出 4 才入队 | `[输出 3, 输出 4]` |
 
-这说明处理器运行会触发新的 Promise 状态转换和后续入队；不能只按 `.then` 的源代码注册位置排序。下列输出在 Node.js `v26.13.0` CommonJS 中逐段重放；它们展示当前例子的入队关系，不是跨宿主固定的“第几个 tick”公式。
+可见，处理器运行会引发新的状态变化和入队，不能只看 `.then` 在源码中的位置来排序。返回 `Promise.resolve(4)` 多出了“采用”和“转发”两个作业，所以 `4` 排在 `3` 之后。下列输出在 Node.js `v26.13.0`（CommonJS）中逐段运行得到；它们展示的是这些例子中的入队关系，不是跨宿主通用的“第几个 tick”公式。
 
 ~~~javascript
 Promise.resolve().then(() => {
