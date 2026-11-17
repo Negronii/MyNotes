@@ -1,18 +1,20 @@
 # 每次 URL 变化都会加载新文档吗？
 
-案例背景：用户先打开 `https://example.test/reports?sort=recent#summary`，随后点“最早优先”并可能按浏览器后退。要让这三个时点显示正确的报表，先判断浏览器是在换文档、跳转片段，还是只更新当前文档的历史地址。
+**案例：** 沿用[上一章](browser-basics.md)的报表页面。用户先打开 `https://example.test/reports?sort=recent#summary`，随后点“最早优先”，之后可能按浏览器的后退键。要让这三个时刻都显示正确的报表顺序，先要分清每次 URL 变化时，浏览器是在加载新文档、跳到片段位置，还是只改写当前文档的历史地址。
 
 ## URL 分量怎样对应到浏览器导航？
 
-以本例地址为例，`https:` 是 scheme (方案)，`example.test` 是 host (主机)，`/reports` 是 path (路径)，`?sort=recent` 是 query (查询)，`#summary` 是 fragment (片段)。本例 HTTPS 地址的 origin (源) 由 scheme、host 和 port 标识。不是所有 URL 都有 `//authority`：`mailto:reports@example.test` 就没有 HTTP(S) 式主机与路径结构。
+以本例地址为例，`https:` 是 scheme（方案），`example.test` 是 host（主机），`/reports` 是 path（路径），`?sort=recent` 是 query（查询），`#summary` 是 fragment（片段）。这个 HTTPS 地址的 origin（源）由 scheme、host 和 port 三者确定，省略的 port 取默认值 443。不是所有 URL 都有 `//authority`：`mailto:reports@example.test` 就没有 HTTP(S) 式主机与路径结构。
 
-`location.href` 读取完整 URL，赋值会导航；`protocol` 带结尾冒号，`host` 包含非默认端口，`hostname` 不含端口，`port` 是非默认端口或空字符串，`pathname` 是路径，`search` 保留开头的 `?`，`hash` 保留开头的 `#`。用 `URL` 和 `URLSearchParams` 解析，不要手动切分字符串；查询参数缺失时 `get()` 返回 `null`，已存在的值是字符串，例如 `"2026"` 不是数字。`getAll()` 可读同名多值，`set()` 替换同名值，`append()` 则追加一项；序列化时按 URL 查询参数规则编码。
+在脚本中，`location` 对象按这些分量暴露当前地址：`location.href` 读取完整 URL，给它赋值会触发导航；`protocol` 带结尾冒号，`host` 包含非默认端口，`hostname` 不含端口，`port` 是非默认端口或空字符串，`pathname` 是路径，`search` 保留开头的 `?`，`hash` 保留开头的 `#`。解析 URL 时用 `URL` 和 `URLSearchParams`，不要手动切分字符串。查询参数缺失时 `get()` 返回 `null`；存在时返回的总是字符串，例如 `"2026"` 不是数字。`getAll()` 可读同名多值，`set()` 替换同名值，`append()` 则追加一项；序列化时按 URL 查询参数规则编码。
 
-浏览器历史栈可以包含不同 origin（源）的文档，因此 `history.back()`、`forward()` 和 `go()` 可能遍历到跨源页面。`history.go(n)` 按偏移量移动历史项：正数向前、负数向后、零会重新载入当前页；超出范围则不动作。History API 对 `pushState()` / `replaceState()` 新 URL 的同源要求，不等于浏览器只能在同源历史项之间后退。
+同一标签页的会话历史可以包含不同 origin 的文档，因此 `history.back()`、`forward()` 和 `go()` 可能移到跨源页面。`history.go(n)` 按偏移量移动：正数向前、负数向后、`0` 重新加载当前页；超出范围则什么也不做。下文会讲到 `pushState()` / `replaceState()` 只能写入同源 URL，但这条限制只针对改写地址，并不意味着后退只能在同源历史项之间进行。
 
 ## 用 URL 参数表达排序状态
 
-本例只接受 `sort=recent` 和 `sort=oldest`；`sortFromUrl()` 将缺失或未知值按 `recent` 渲染，直到用户选择另一种排序才写入 URL。写回时从 `location.href` 解析现有地址，再更新 `sort`，所以路径、其他查询参数的值和 `#summary` 片段仍在；`URLSearchParams` 会重新序列化查询，空格可能从 `%20` 写成 `+`。查询参数来自地址栏或外部链接，必须按业务允许值校验，也不要把口令或访问令牌放进 URL。
+把排序写进 query，地址就能被复制、分享和后退恢复。本例只接受 `sort=recent` 和 `sort=oldest`；后面代码里的 `sortFromUrl()` 把缺失或未知的值都当作 `recent` 显示，直到用户选择另一种排序才写回 URL。写回时先从 `location.href` 解析现有地址，再只改 `sort`，所以路径、其他查询参数和 `#summary` 片段都保留；不过 `URLSearchParams` 会重新序列化整个查询，空格可能从 `%20` 变成 `+`。查询参数来自地址栏或外部链接，必须按业务允许的值校验；口令和访问令牌也不要放进 URL。
+
+写回 URL 有多种方式，它们对文档和历史的影响不同：
 
 | 操作 | 当前地址、文档与历史的结果 |
 |---|---|
@@ -22,11 +24,11 @@
 | `pushState(...)` | 保留当前 `Document` 并新增一项历史状态；调用本身不请求新文档 |
 | `replaceState(...)` | 保留当前 `Document` 并修改当前历史项；调用本身不请求新文档 |
 
-History API 的目标 URL 必须符合当前文档可改写 URL 的规则。对本例的 HTTPS 页面，可以改路径、查询和片段；scheme、username、password、host、port 要保持相同。`pushState()` 和 `replaceState()` 都不会发起该地址的网络请求，也不会因调用本身派发 `popstate` 或 `hashchange`。应用若要显示与新 URL 对应的内容，仍须自己同步界面；目标是别的服务器资源时，应正常导航或显式发出请求。
+History API 的目标 URL 必须符合当前文档可改写 URL 的规则。对本例的 HTTPS 页面，可以改路径、查询和片段；scheme、username、password、host、port 要保持相同。`pushState()` 和 `replaceState()` 都不会请求新地址，调用本身也不会派发 `popstate` 或 `hashchange`。所以应用若要显示与新 URL 对应的内容，必须自己更新界面；若需要服务器上的其他资源，应正常导航或显式发出请求。本例的排序只需在客户端重排已有数据，因此选用 `pushState()`。
 
 ## 让排序状态跟随地址栏与前进后退
 
-报表页面初始地址是 `/reports?sort=recent#summary`。浏览器用收到的 HTML 创建 `Document`，其中已有 `h1#summary`、两个排序按钮以及 May、April 两行；下面 HTML 示例中的普通模块脚本由 `<script type="module" src="/reports.js"></script>` 引用。本例把行数据放进客户端 `records` 数组，让 `renderReports()` 每次从 URL 状态重建行。若数据由服务器提供，更新 URL 后还需按该状态请求新结果，并处理加载、错误和过期响应。
+报表页面初始地址是 `/reports?sort=recent#summary`。浏览器用收到的 HTML 创建 `Document`，其中已有 `h1#summary`、两个排序按钮以及 May、April 两行，并通过 `<script type="module" src="/reports.js"></script>` 加载客户端模块。为了简化，本例把行数据放在客户端的 `records` 数组里，由 `renderReports()` 每次根据 URL 中的排序重建列表。若数据要从服务器获取，更新 URL 后还需按新状态请求结果，并处理加载中、错误和过期响应。
 
 ~~~html
 <!-- /reports?sort=recent 的服务端 HTML 初始状态 -->
@@ -100,7 +102,7 @@ window.addEventListener("popstate", () => renderReports(sortFromUrl()));
 renderReports(sortFromUrl());
 ~~~
 
-`renderReports()` 先按 URL 状态选顺序，再同步两个按钮的 `aria-pressed`，最后用 `replaceChildren()` 写入行。初始服务器 HTML 已显示 May → April；用户点“最早优先”后，新地址是 `/reports?sort=oldest#summary`，按钮切成 `false/true`，行变为 April → May。这里创建的是新 `li` 节点；DOM 章将同一结果与移动既有行节点的做法对照。若用户分享一条 `sort=oldest` 深链，`reports.js` 的初次运行会按 URL 修正列表；要让首批 HTML 本身就显示正确顺序，服务器也应按查询参数生成行和按钮状态。若地址是未知值，例如 `sort=other`，本例只按 `recent` 显示；点已经选中的 “Most recent” 会提前返回，只有选另一种排序才会改写地址。
+`renderReports()` 先按 URL 状态选顺序，再同步两个按钮的 `aria-pressed`，最后用 `replaceChildren()` 写入行。初始服务器 HTML 已显示 May → April；用户点“最早优先”后，新地址是 `/reports?sort=oldest#summary`，按钮切成 `false/true`，行变为 April → May。这里创建的是新的 `li` 节点；另一种做法是移动已有的行节点，见[浏览器怎样查询、更新 DOM 并响应用户输入？](../browser-apis/dom-manipulation-and-events.md#什么时候用父级监听器处理子控件？)。若用户分享一条 `sort=oldest` 深链，`reports.js` 的初次运行会按 URL 修正列表；要让首批 HTML 本身就显示正确顺序，服务器也应按查询参数生成行和按钮状态。若地址是未知值，例如 `sort=other`，本例只按 `recent` 显示；点已经选中的 “Most recent” 会提前返回，只有选另一种排序才会改写地址。
 
 委托监听器用 `event.target.closest("button[data-sort]")` 从点击目标向上找按钮，因此点按钮内的文字或 SVG 图标都会进入同一处理器；`controls.contains(button)` 再确认匹配到的按钮属于这组控件。
 
@@ -111,15 +113,17 @@ renderReports(sortFromUrl());
 | 浏览器 Back | 激活先前的同文档历史项并派发 `popstate`；`#summary` 没变，本例不涉及 `hashchange`。 | 监听器读取当前 URL，恢复 `sort=recent`、`true/false` 与 May → April。 |
 | 浏览器 Forward | 再激活 `sort=oldest` 历史项并派发 `popstate`。 | 监听器再次从 URL 得到 oldest，恢复 `false/true` 与 April → May。 |
 
-本例用 `pushState(null, "", url.href)` 添加新历史项并记录 URL，不把排序状态另存进 `history.state`；点击处理器再主动调用 `renderReports()`。因此本例 `popstate` 的 `event.state` 为 `null`，排序仍从当前 URL 读取。`pushState()` 也可在第一个参数中保存应用状态，其他应用可在 `popstate` 的事件对象中读取。若用户再后退离开这个文档，当前 listener 不接管另一文档的恢复或重新加载；浏览器处理的是另一条历史项及其页面状态。
+本例用 `pushState(null, "", url.href)` 添加新历史项并记录 URL，不把排序状态另存进 `history.state`；点击处理器再主动调用 `renderReports()`。因此本例 `popstate` 的 `event.state` 为 `null`，排序仍从当前 URL 读取。应用也可以把状态放进 `pushState()` 的第一个参数，之后从 `popstate` 事件的 `event.state` 读回。若用户继续后退，离开了这个文档，当前页面的 `popstate` 监听器就不再参与；另一个文档的恢复或重新加载由浏览器负责。
 
-只有目标 URL 与当前 URL 除 fragment 外完全相同，且目标含 fragment 时，普通导航才走同文档片段路径。以已有的 `ol#reports` 为例，从 `/reports?sort=oldest#summary` 执行 `location.hash = "#reports"` 会沿用当前 `Document`、增加一项历史记录并滚到列表。片段定位和滚动由浏览器完成，但本例的 `popstate` 监听器仍会从 URL 重读排序并重建列表，显示顺序不变。本机 Chrome 157 在该路径先派发 `popstate`（`state` 为 `null`），再派发 `hashchange`。反过来，从 `/reports?sort=recent#summary` 用 `location.assign("?sort=oldest#summary")` 改查询，即使保留 `#summary` 也会导航到另一个 `Document`。History API 调用 `pushState()` 改成另一个片段不会自动滚动，也不会因调用本身派发 `popstate` 或 `hashchange`；若用户稍后遍历该历史项，才按历史遍历步骤处理。本例的排序历史项只改 query、保留 `#summary`，Back/Forward 由 `popstate` 同步排序而不触发 `hashchange`。客户端路由器可以复用这些历史项，但 URL 变化与视图绘制是两项不同工作。
+片段变化与 History API 容易混淆，单独对比一下。普通导航只有在目标含 fragment、且与当前 URL 除 fragment 外完全相同时，才会走同文档的片段导航。以页面已有的 `ol#reports` 为例，在 `/reports?sort=oldest#summary` 上执行 `location.hash = "#reports"`，会沿用当前 `Document`、新增一项历史记录并滚动到列表。滚动由浏览器完成；本例的 `popstate` 监听器也会被触发，从 URL 重读排序并重建列表，顺序不变。本机 Chrome 157 在这条路径上先派发 `popstate`（`state` 为 `null`），再派发 `hashchange`，与规范的顺序一致。
 
-浏览器首次收到 `.../reports?sort=recent#summary` 时，`#summary` 是浏览器用来定位的片段，服务器只处理路径与查询。排序点击改成 `sort=oldest` 后，仍是同一个 `Document`：浏览器不重新解析 `/reports`，应用继续负责产生新列表节点。这个边界让地址可复制、可返回，同时不把 History API 误解成网络导航。
+反过来，在 `/reports?sort=recent#summary` 上用 `location.assign("?sort=oldest#summary")` 改查询，即使保留了 `#summary`，也会导航到一个新的 `Document`。而用 `pushState()` 改成另一个片段时，浏览器不会滚动，调用本身也不派发 `popstate` 或 `hashchange`；只有用户之后通过前进后退回到该历史项时，才按历史遍历的步骤处理。本例的排序历史项只改 query、保留 `#summary`，所以前进后退只触发 `popstate`，不触发 `hashchange`。客户端路由器也建立在这些历史项之上，但改 URL 和更新视图始终是两件事。
+
+回到开头的三个时刻：首次打开时，服务器只处理路径和查询，`#summary` 由浏览器用来定位；点击排序改成 `sort=oldest` 后，仍是同一个 `Document`，浏览器不重新请求或解析 `/reports`，新列表由应用自己生成；后退时由 `popstate` 监听器按 URL 恢复顺序。这样地址既能复制、能返回，又不会把 History API 误当成网络导航。
 
 ## 定时导航怎样用文本更新并允许取消？
 
-这个倒计时为普通文档导航留下等待和取消窗口。`setInterval(..., 1000)` 中的 1000 毫秒是请求间隔，不承诺每秒准时执行；主线程繁忙或浏览器对后台页面的计时器节流会让回调变晚。此代码按回调次数减秒，延迟会把实际跳转推迟；若需要按真实截止时刻倒数，应每次用当前时间重算剩余量。只有最后一次回调开始导航前点取消，清除定时器才能阻止跳转。一旦归零回调开始 `location.assign()`，取消按钮会先禁用并显示“正在跳转…”，`clearInterval()` 不能撤销已经开始的导航。
+前面的排序始终留在同一文档内。有时页面确实要离开当前文档，但想先给用户一个等待和取消的机会，例如显示“5 秒后打开 example.com”。下面用倒计时文本加取消按钮实现。`setInterval(..., 1000)` 中的 1000 毫秒只是期望间隔，不保证每秒准时执行；主线程繁忙或浏览器对后台页面的计时器节流会让回调变晚。此代码按回调次数减秒，延迟会把实际跳转推迟；若需要按真实截止时刻倒数，应每次用当前时间重算剩余量。只有在归零回调执行之前点取消，清除定时器才能阻止跳转。归零回调一旦执行，会先禁用取消按钮、显示“正在跳转…”，再调用 `location.assign()`；此时 `clearInterval()` 已无法撤销已经开始的导航。
 
 ~~~html
 <p id="countdown" role="status">5 秒后打开 example.com。</p>
@@ -150,7 +154,7 @@ cancel.addEventListener("click", () => {
 });
 ~~~
 
-**延伸：** [DOM 事件如何传播，何时适合事件委托？](../browser-apis/dom-manipulation-and-events.md)解释点击处理器如何收到按钮事件；如果路由切换还要等待数据加载器并显示 pending/error 状态，见[React 路由怎样把地址映射到界面并加载数据？](../frameworks/react-routing-and-navigation.md)中的 Data Mode（数据模式）；组件状态更新见[React 如何把用户操作变成更新后的界面？](../frameworks/react-basics.md)。
+**延伸：** [DOM 事件如何传播，何时适合事件委托？](../browser-apis/dom-manipulation-and-events.md)解释点击处理器如何收到按钮事件；如果路由切换还要等待数据加载器并显示 pending/error 状态，见[React 路由怎样把地址映射到界面并加载数据？](../frameworks/react-routing-and-navigation.md)中的 Data Mode（数据模式）；组件状态更新见[React如何把一次用户操作变成界面更新？](../frameworks/react-basics.md)。
 
 > [!info]- 来源
 > - URL 分量和序列化：[WHATWG URL Standard：URL representation](https://url.spec.whatwg.org/#url-representation)，Living Standard（2026-10-19 更新），URL record 组成。核对日期：2026-11-12。

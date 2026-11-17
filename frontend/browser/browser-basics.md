@@ -1,6 +1,6 @@
 # 浏览器如何把 URL 变成第一帧？
 
-案例背景：用户打开 Uniform Resource Locator (URL，统一资源定位符)`https://example.test/reports?sort=recent#summary`，需要看到最近报表；随后点击“最早优先”，期望列表更新。先沿初次导航走到可见页面，再从同一页跟进点击。
+**案例：** 用户在地址栏打开 Uniform Resource Locator（URL，统一资源定位符）`https://example.test/reports?sort=recent#summary`，想看到最近的报表；随后点击“最早优先”，期望列表改为按时间正序排列。本章先沿这次初始导航走到页面可见，再在同一页面上跟进这次点击。
 
 ~~~mermaid
 flowchart TD
@@ -16,17 +16,19 @@ flowchart TD
     I --> J[后续渲染机会显示新顺序]
 ~~~
 
-这张图跟踪两种不同的就绪条件：浏览器已有足够的超文本标记语言（HyperText Markup Language，HTML）和当前可显示内容所需的层叠样式表（Cascading Style Sheets，CSS）规则，可以先给出一帧；`/reports.js` 的模块依赖下载完成、HTML 解析结束且阻塞它的样式表处理完后，才注册点击处理器。两条线可以交叠推进：HTML 流还在解析时，浏览器就能获取 CSS、模块及图片；图片也可在 Document Object Model (DOM，文档对象模型) 构建和布局工作继续时下载、解码。图表示这条报表路线上的依赖，不表示所有浏览器必有同一组线程或逐步流水线。下文的成功点击假设发生在两个条件汇合之后；若用户在静态首帧出现、监听器尚未注册时就点按钮，这份 HTML 没有原生提交或其他后备动作，因此不会排序。模块或依赖获取失败、注册前脚本报错，也可能留下可见却不能筛选的页面。
+这张图跟踪两条不同的就绪条件。第一条决定画面何时出现：浏览器拿到足够的 HyperText Markup Language（HTML，超文本标记语言），以及当前可显示内容所需的 Cascading Style Sheets（CSS，层叠样式表）规则后，就能先给出一帧。第二条决定点击何时有效：`/reports.js` 及其依赖模块下载完成、HTML 解析结束、阻塞脚本的样式表也已处理完，模块才会执行并注册点击处理器。
+
+两条线可以交叠推进：HTML 还在解析时，浏览器就能获取 CSS、模块和图片；Document Object Model（DOM，文档对象模型）构建和布局继续进行时，图片也可以同时下载和解码。图只表示这条报表路线上的依赖关系，不表示所有浏览器都用同一组线程或同一条固定流水线。下文假设点击发生在两条线汇合之后。若用户在首帧已显示、处理器还没注册时就点按钮，由于这份 HTML 没有表单提交之类的后备行为，列表不会排序。模块或依赖获取失败、注册前脚本报错，同样会留下一个看得见却不能排序的页面。
 
 ## 先确定浏览器要打开什么
 
-地址栏文本先被判定为搜索词还是 URL；这里已给出 URL，因此例子从跨文档导航开始。浏览器拆分 URL：`https`、主机和端口共同确定 origin（源）；`/reports` 与 `?sort=recent` 是请求所针对的资源，`#summary` 是文档内的位置标识，不会发给服务器。`sort=recent` 因而可以影响服务端返回的初始行序，片段则在文档中定位到 `id="summary"` 的标题。
+浏览器先判断地址栏里的文本是搜索词还是 URL。这里输入的是完整 URL，因此开始一次跨文档导航（加载一个新文档）。浏览器拆分 URL：scheme `https`、主机和端口共同确定 origin（源）；路径 `/reports` 与查询 `?sort=recent` 标识要请求的资源；片段 `#summary` 只标识文档内的位置，不会发给服务器。所以 `sort=recent` 可以影响服务端返回的初始行顺序，而片段用于在文档中定位到 `id="summary"` 的标题。
 
-若活动且匹配的 Service Worker（服务工作线程）正在控制此导航，它的 fetch 事件处理器（fetch handler）可以返回合成响应，也可以自己继续取网络资源；这可以让页面不必重新向源站取 HTML。Hypertext Transfer Protocol (HTTP，超文本传输协议) 响应缓存若有新鲜且匹配的响应，可以直接复用；若响应需要验证，浏览器会带条件请求确认它是否仍有效。需要走网络时，浏览器可以复用一条适用于这次请求的活动连接；若需新建连接，且系统没有可用的主机地址记录，才需要查询 Domain Name System (DNS，域名系统)。对本例的新 HTTPS 连接，浏览器按 Transport Layer Security (TLS，传输层安全协议) 验证服务端证书并保护传输，然后发送请求。若中间响应要求重定向，浏览器按 `Location` 继续导航；如果目标改变了主机或协议，后续连接条件也可能改变。实际发送的请求路径和返回的资源最终由这条导航链决定。
+确定目标后，浏览器要拿到 `/reports` 的 HTML，依次有几条可能的来源。若该 URL 范围内注册了处于活动状态的 Service Worker（服务工作线程），它的 fetch 事件处理器可以直接返回自己构造的响应，也可以自行向网络请求，因此页面不一定要向源站重新取 HTML。Hypertext Transfer Protocol（HTTP，超文本传输协议）缓存里若有新鲜且匹配的响应，可以直接复用；若响应需要验证，浏览器会带条件请求确认它是否仍有效。需要走网络时，浏览器可以复用一条适用于这次请求的活动连接；只有需要新建连接、且没有缓存的主机地址时，才要查询 Domain Name System（DNS，域名系统）。本例新建 HTTPS 连接时，浏览器通过 Transport Layer Security（TLS，传输层安全协议）握手验证服务端证书、建立加密通道，然后发送请求。若响应是重定向，浏览器按 `Location` 头继续导航；目标换了主机或协议时，连接也要按新目标重新确定。因此最终请求的路径和拿到的资源，由这整条重定向链决定。
 
 取得最终 HTML 响应后，浏览器不必等整个响应体下载完才开始工作。HTML 字节可以持续交给 parser（解析器）；解析器按到达的内容逐步建出新 `Document` 的 DOM，并发现外部样式表、模块和图片。完整 HTTP、DNS 与连接建立过程见[HTTP、DNS 与连接建立](../../engineering-foundations/networking/http-protocols-and-websockets.md)。
 
-`#summary` 指向当前文档里的位置。后续应用也能用 History API 改变当前 URL，而不获取该 URL 对应的新文档。浏览器后退时，浏览器可能直接恢复符合条件的既有页面状态（back/forward cache，前进/后退缓存）；这与从 HTTP 缓存重新使用响应不是一回事。见[每次 URL 变化都会加载新文档吗？](./browser-navigation-and-history.md)和[HTTP、DNS 与连接建立](../../engineering-foundations/networking/http-protocols-and-websockets.md)。
+这次打开报表是跨文档导航，但并非每次 URL 变化都会加载新文档：`#summary` 这样的片段只在当前文档内定位；页面脚本也能用 History API 改变当前 URL，而不去获取新文档。用户后退时，浏览器还可能直接恢复符合条件的整个旧页面（back/forward cache，前进/后退缓存），这与复用 HTTP 缓存中的响应是两回事。见[每次 URL 变化都会加载新文档吗？](./browser-navigation-and-history.md)和[HTTP、DNS 与连接建立](../../engineering-foundations/networking/http-protocols-and-websockets.md)。
 
 ## 响应到达时，解析和资源获取可以交叠
 
@@ -47,7 +49,7 @@ flowchart TD
 </main>
 ~~~
 
-浏览器可随着响应体到达开始解析，不必等完整文件。HTML parser 建立 DOM，并发现样式表、模块脚本和图片；这些独立资源可以在解析继续时并行获取，一些浏览器还会用预扫描提前发现资源。适用于当前环境的外部样式表可能阻止首次渲染。这里的普通模块脚本及其依赖在解析期间下载，但模块不会像未标记的经典同步脚本那样卡住 parser；模块要等 HTML 解析结束、依赖就绪，并且阻塞脚本的样式表不再等待，才开始求值。模块图下载就绪与处理器注册是不同的时点。JavaScript 引擎执行 `/reports.js`；渲染引擎负责把 DOM/CSS 转成可显示内容，浏览器将二者接在同一页面生命周期里。Chromium 常见组合是 V8 与 Blink，Firefox 使用 SpiderMonkey 与 Gecko，Safari 使用 JavaScriptCore 与 WebKit；这些名称说明不同组件的职责，不规定它们必须用同一进程或线程安排。具体脚本依赖关系见[脚本如何影响 HTML 解析与文档就绪？](../html-css/browser-html-and-css.md)。
+HTML parser 一边建立 DOM，一边发现样式表、模块脚本和图片；这些资源可以在解析继续时并行获取，一些浏览器还会用预扫描器（preload scanner）提前发现后面的资源。适用于当前媒体环境的外部样式表会阻塞首次渲染。本例的模块脚本（不带 `async`）及其依赖在解析期间下载，但它不像不带 `async`/`defer` 的经典脚本那样让 parser 停下等待；它要等 HTML 解析结束、依赖全部就绪、且没有阻塞脚本的样式表时才开始求值。所以“模块图下载就绪”与“处理器注册完成”是两个不同的时点。JavaScript 引擎执行 `/reports.js`；渲染引擎负责把 DOM/CSS 转成可显示内容，浏览器将二者接在同一页面生命周期里。Chromium 常见组合是 V8 与 Blink，Firefox 使用 SpiderMonkey 与 Gecko，Safari 使用 JavaScriptCore 与 WebKit；这些名称说明不同组件的职责，不规定它们必须用同一进程或线程安排。具体脚本依赖关系见[脚本如何影响 HTML 解析与文档就绪？](../html-css/browser-html-and-css.md)。
 
 **这段 HTML 中 `<main>` 的 DOM 子树**
 
@@ -114,9 +116,9 @@ button svg { display: block; width: 16px; height: 16px; flex: none; }
 
 ## 从首帧交接到筛选更新
 
-首帧可能先于 `load` 事件和客户端代码可交互的时点出现。比如 HTML 已显示报表，但模块脚本尚未完成下载、运行或注册点击处理器。此刻初始 HTML 已有 `sort=recent` 对应的顺序：按钮 `aria-pressed` 为 `true/false`，列表是 May 在前、April 在后。若报表由 React 服务端输出，hydration（客户端水合）还要在已有 DOM 上运行客户端代码并接入组件行为，见[Next.js 中的 hydration 与流式渲染](../frameworks/next-js.md#服务端与客户端组件在哪条线交接)。若点击没有反馈，先确认处理器何时可用；若处理器已经注册，则查看事件是否被主线程上其他工作挡住。
+前面的渲染流程产出了首帧，现在回到开头的第二条就绪线。首帧可能早于 `load` 事件，也早于客户端代码可以响应操作的时刻：HTML 已显示报表，但模块脚本还没下载完、没运行或还没注册点击处理器。此时页面显示的是初始 HTML 中 `sort=recent` 对应的状态：两个按钮的 `aria-pressed` 分别为 `true` 和 `false`，列表 May 在前、April 在后。若报表由 React 服务端输出，hydration（客户端水合）还要在已有 DOM 上运行客户端代码并接入组件行为，见[Next.js 中的 hydration 与流式渲染](../frameworks/next-js.md#服务端与客户端组件在哪条线交接)。若点击没有反馈，先确认处理器是否已经可用；处理器已注册仍无反馈，再看事件是否被主线程上的其他工作拖住。
 
-当用户点击“最早优先”，`/reports.js` 的处理器先用 History API（例如 `history.pushState`）把当前 URL 从 `https://example.test/reports?sort=recent#summary` 改为 `https://example.test/reports?sort=oldest#summary`。`pushState` 会新增一条同文档 history entry 并更新地址栏；它本身既不请求新 HTML，也不按查询参数替报表排序。随后仍由这个 click handler 分别把两个按钮的 `aria-pressed` 改为 `false/true`，并将列表节点顺序改成 April、May。DOM 改动立即生效；浏览器会在后续渲染机会按需重新计算样式、布局或绘制，再把新的像素送去合成。异步处理器与画面更新之间的关系见[浏览器 JavaScript 何时运行，画面何时更新？](../runtime/event-loop.md)，点击如何到达处理器见[DOM 事件如何传播，何时适合事件委托？](../browser-apis/dom-manipulation-and-events.md)，更新后可能需要的布局和绘制见[为什么一次 DOM 改动会增加布局或绘制工作？](../html-css/rendering-pipeline-and-forced-layout.md)。
+当用户点击“最早优先”，`/reports.js` 的处理器先用 History API（例如 `history.pushState`）把当前 URL 从 `https://example.test/reports?sort=recent#summary` 改为 `https://example.test/reports?sort=oldest#summary`。`pushState` 会新增一条同文档 history entry 并更新地址栏；它本身既不请求新 HTML，也不按查询参数替报表排序。随后由同一个点击处理器把两个按钮的 `aria-pressed` 分别改为 `false` 和 `true`，并把列表节点顺序改成 April、May。脚本随即就能读到改动后的 DOM，但画面不会马上变化；浏览器会在后续渲染机会按需重新计算样式、布局或绘制，再把新的像素送去合成。异步处理器与画面更新之间的关系见[浏览器 JavaScript 何时运行，画面何时更新？](../runtime/event-loop.md)，点击如何到达处理器见[DOM 事件如何传播，何时适合事件委托？](../browser-apis/dom-manipulation-and-events.md)，更新后可能需要的布局和绘制见[为什么一次 DOM 改动会增加布局或绘制工作？](../html-css/rendering-pipeline-and-forced-layout.md)。
 
 | 现象 | 优先检查的阶段 |
 |---|---|
