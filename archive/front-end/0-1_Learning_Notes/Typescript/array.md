@@ -1,6 +1,6 @@
 # TypeScript 数组怎样从类型声明走到运行时遍历与变换？
 
-**案例背景：** 一组测量值 `[1, 4, 9]` 要开平方，保留根值至少为 2 的项，再求总和。`number[]` 告诉 TypeScript 哪类值可以放进数组；编译后，遍历、空槽和修改仍由 JavaScript Array 决定。这里先走完这组数据，再查阅常用数组操作。关于筛选、排序、去重和浅复制的完整机制，见[数组怎样筛选、排序并保留对象身份？](../../../../frontend/javascript/arrays.md)。
+**案例背景：** 一组测量值 `[1, 4, 9]` 要开平方，保留根值至少为 2 的项，再求总和。`number[]` 告诉 TypeScript 哪类值可以放进数组；编译后，遍历、空槽和修改仍由 JavaScript Array 决定。本文先用这组数据走完一遍处理链，再列出常用数组操作供查阅。关于筛选、排序、去重和浅复制的完整机制，见[数组怎样筛选、排序并保留对象身份？](../../../../frontend/javascript/arrays.md)。
 
 ## 声明了元素类型，为何还会读到 undefined？
 
@@ -15,7 +15,7 @@ console.log(matrix.length, matrix[1]?.length); // 2, 3
 console.log(Array.isArray(values), typeof values); // true, "object"
 ```
 
-`number[]` 与 `Array<number>` 都表示元素类型为 `number`；它们只在编译时供 TypeScript 检查，编译后不会为每个位置加上运行时校验。`new Array<number>(3)` 运行时仍是 JavaScript 的 `new Array(3)`：长度为 3，但索引 0、1、2 都是 empty slot（空槽）。空槽与“索引存在、值为 `undefined`”不同；在原型链没有同索引属性时，`in` 可以区分两者，因为 `in` 也会沿原型链查找。构造器传入多个参数时语义又不同：`new Array(1, 2, 3)` 会把三个值装入数组，并非声明长度。类型声明也不保证索引一定存在；默认设置下 `values[8]` 静态类型仍为 `number`，实际读取却是 `undefined`。同时启用 `strictNullChecks` 和 `noUncheckedIndexedAccess`（`strict` 会启用前者）后，索引读取的静态类型才会包含 `undefined`；代码运行时仍需按需检查值。判断数组用 `Array.isArray`，因为 `typeof` 对数组和普通对象都返回 `"object"`。
+`number[]` 与 `Array<number>` 都表示元素类型为 `number`；它们只在编译时供 TypeScript 检查，编译后不会为每个位置加上运行时校验。`new Array<number>(3)` 运行时仍是 JavaScript 的 `new Array(3)`：长度为 3，但索引 0、1、2 都是 empty slot（空槽）。空槽与“索引存在、值为 `undefined`”不同，可以用 `in` 区分；但 `in` 也会沿原型链查找，所以前提是原型链上没有同名的索引属性。构造器传入多个参数时语义又不同：`new Array(1, 2, 3)` 会把三个值装入数组，并非声明长度。类型声明也不保证索引一定存在；默认设置下 `values[8]` 静态类型仍为 `number`，实际读取却是 `undefined`。同时启用 `strictNullChecks` 和 `noUncheckedIndexedAccess`（`strict` 会启用前者）后，索引读取的静态类型才会包含 `undefined`；代码运行时仍需按需检查值。判断数组用 `Array.isArray`，因为 `typeof` 对数组和普通对象都返回 `"object"`。
 
 ## map 传入什么，结果存到哪里？
 
@@ -79,7 +79,7 @@ console.log(userNames); // ["John", "Jane", "Doe"]
 
 没有初始值的 `reduce` 会从首个存在的索引取初值，自有属性和原型链上的同索引属性都计入；遍历范围内没有任何存在索引时才抛出 `TypeError`，例如普通空数组，或原型链也没有同索引属性的全空槽数组。显式给出初始值既定义了空数组的结果，也让 TypeScript 更容易确定累加器类型。
 
-`forEach`、`map`、`reduce`、`every` 和 `some` 都跳过不存在的索引；普通空槽经 `for...of` 读取时得到 `undefined`。若循环需要提前 `break`，用 `for`、`for...of` 等语句式循环，`forEach` 回调里的 `return` 不会结束整个遍历。数组解构 `const [first, second] = fruits` 按位置取值；栈可以直接用 `push` / `pop`，但要区分“栈为空”和“栈里存着 `undefined`”，见[两个栈如何得到队列？](leetcode30days/queueWith2Stacks.md)。
+`forEach`、`map`、`reduce`、`every` 和 `some` 都跳过不存在的索引；普通空槽经 `for...of` 读取时得到 `undefined`。若循环需要提前 `break`，用 `for`、`for...of` 等语句式循环，`forEach` 回调里的 `return` 不会结束整个遍历。数组解构按位置取值，例如 `const [first, second] = ['apple', 'banana']` 得到 `first = 'apple'`、`second = 'banana'`；栈可以直接用 `push` / `pop`，但要区分“栈为空”和“栈里存着 `undefined`”，见[两个栈如何得到队列？](leetcode30days/queueWith2Stacks.md)。
 
 > [!info]- 来源
 > - TypeScript 的类型擦除及运行时行为：[TypeScript Handbook — Erased Types](https://www.typescriptlang.org/docs/handbook/2/basic-types.html#erased-types)，核对 2026-11-12；索引读取可能为 `undefined` 的可选检查：[TypeScript TSConfig — `noUncheckedIndexedAccess`](https://www.typescriptlang.org/tsconfig/noUncheckedIndexedAccess.html)，核对 2026-11-12。

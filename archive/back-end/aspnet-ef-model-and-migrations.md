@@ -1,6 +1,6 @@
 # EF Core 模型怎样变成关系表，并让迁移与数据库结构保持一致？
 
-**案例：** `Auction` 引用一件 `Item`。C# 模型规定哪些值必需、哪些可以缺失；Entity Framework Core（EF Core，对象关系映射框架）把模型按约定和配置映射到关系数据库。添加商品描述时，迁移文件记录从旧模型到新模型的 schema（数据库结构）变化；它不是扫描在线数据库后猜出开发者意图。
+**案例：** 拍卖服务里，每场拍卖 `Auction` 引用一件商品 `Item`。C# 模型规定哪些值必需、哪些可以缺失；Entity Framework Core（EF Core，一种对象关系映射框架）按约定和显式配置，把模型映射成关系数据库中的表。本页先用 [上一篇](aspnet-entities-dtos-and-dbcontext-lifetime.md) 的模型建好初始表，再给商品加一个可选的描述、给起拍价加“必须为正”的约束，跟踪这次改动怎样变成 migration（迁移）并落到数据库。迁移文件记录的是旧模型到新模型的 schema（数据库结构）变化，由 EF 工具比较代码中的模型得出，而不是扫描在线数据库后猜测开发者意图。
 
 ## EF Core 按什么规则建立关系模型？
 
@@ -23,14 +23,16 @@ erDiagram
     }
 ~~~
 
-主键按约定可由 `Id` 或 `<类型名>Id` 识别，`Id` 不需要额外的 `[Key]`。这条必需的一对一关系在关系库中是 `Items.Id` 主键与 `Auctions.ItemId` 非空外键；唯一索引限制同一商品最多被一场拍卖引用。因此每个 `Auction` 必须有一件 `Item`，但 `Item` 可以尚未关联任何 `Auction`：
+上图和下表都是本页改动完成后的结构，标着“迁移后”的 `Description` 列和起拍价检查约束由后文的增量迁移添加。
+
+EF Core 按约定把名为 `Id` 或 `<类型名>Id` 的属性识别为主键，不需要再加 `[Key]`。拍卖与商品是一对一关系，而且拍卖一方必须有商品：在数据库里表现为 `Items.Id` 主键加上 `Auctions.ItemId` 非空外键，`ItemId` 上的唯一索引保证同一商品最多被一场拍卖引用。所以每个 `Auction` 必须有一件 `Item`，而 `Item` 可以暂时没有关联任何 `Auction`：
 
 | 表 | 关键列 | 约束 |
 | --- | --- | --- |
 | `Items` | `Id`、`Make`、`Model`、`Color` | `Id` 是主键；增量迁移后 `Description` 可为 `NULL` |
 | `Auctions` | `Id`、`ItemId`、`SellerId`、`Status`、`StartingBid` | `Id` 是主键；`ItemId` 非空、唯一且外键指向 `Items.Id`；增量迁移后 `StartingBid > 0` |
 
-下例显式配置这条关系：
+下面的代码就是改动后的完整模型，并在 `OnModelCreating` 中显式配置这条关系和起拍价检查约束：
 
 ~~~csharp
 using Microsoft.EntityFrameworkCore;
@@ -74,15 +76,19 @@ public sealed class AuctionDbContext(
 }
 ~~~
 
+`Auction.Item` 是导航属性，用来从拍卖访问关联商品。`= null!` 只是告诉编译器“这个必需导航由 EF 在加载时赋值”，从而消除可空警告；它本身不会创建 `Item` 对象。
+
 ## 哪一层决定字段必需和数据约束？
 
-启用了 C# nullable reference types（可空引用类型）时，`string` 按约定为必需属性，`string?` 为可选属性；EF Core 映射到关系数据库时通常分别生成非空列和可空列。`[Required]` 可以把 EF 模型属性配置为必需，但不会把 C# 的 `string?` 声明改成 `string`。请求 DTO 上的验证属性、EF 模型和数据库列约束是不同层，修改其中一层并不会自动保证其他层同步。已有项目启用 nullable reference types 前要审查模型差异，因为迁移可能把原可空列改为非空。本例的 PostgreSQL 检查约束在数据库写入处限制起拍价为正数；请求验证可更早反馈，但不是共享不变量的唯一守卫。
+项目启用 C# nullable reference types（可空引用类型）后，EF Core 按约定把 `string` 视为必需属性、`string?` 视为可选属性，映射到关系数据库时通常分别生成非空列和可空列。`[Required]` 可以把 EF 模型中的属性配置为必需，但不会把 C# 声明里的 `string?` 改成 `string`。
+
+“必需”和“取值范围”可以在三层分别声明：请求 DTO 上的验证属性、EF 模型、数据库列和约束。改了其中一层，其他层不会自动跟着变。已有项目中途启用 nullable reference types 前要先审查模型差异，因为下一次迁移可能把原来的可空列改成非空列。本例在 PostgreSQL 中用检查约束要求起拍价为正数：请求验证能更早给调用方反馈，但脚本、后台任务或其他服务可能绕过 API 直接写库，只有数据库约束能拦住所有写入路径。
 
 ## 迁移文件怎样表达模型变化？
 
-迁移（migration）由 EF 工具比较当前模型与上一次受版本控制的 model snapshot（模型快照）生成；数据库当前 schema 不是 scaffold 迁移的对照来源。重命名字段时，生成器可能把“改名”猜成删列再加列，执行前必须审查迁移和 SQL，确认旧数据如何保留。`Auction.Item` 是关系导航；`null!` 只消除由 EF 负责赋值的必需导航的编译器警告，不会生成 `Item` 对象。
+EF 工具生成（scaffold）迁移时，比较的是当前代码中的模型和项目里上一次提交的 model snapshot（模型快照），不会读取数据库当前的 schema。重命名字段时，生成器可能把“改名”误判为“删列再加列”，因此执行前必须审查迁移和 SQL，确认旧数据怎样保留。
 
-迁移与目标数据库经历不同状态。下面用 `Northstar / S1 / blue`、起拍价 100 的合成数据说明；新加的 `Description` 没有默认值，也没有回填逻辑：
+生成迁移和把迁移应用到某个数据库是两个独立步骤：代码仓库和目标数据库各自经历不同的状态。下表用一条合成旧数据（商品 `Northstar / S1 / blue`、起拍价 100）说明；新加的 `Description` 没有默认值，也没有回填逻辑：
 
 | 阶段 | 代码/快照 | 数据库及迁移历史 |
 | --- | --- | --- |
@@ -92,9 +98,9 @@ public sealed class AuctionDbContext(
 | 应用增量 | 同一组迁移代码 | `Items.Description` 新列对旧商品保持 `NULL`；增加 `StartingBid` 检查约束；历史追加增量 ID |
 | 核对完成 | snapshot 描述模型目标 | 同时核对真实 schema 和 `__EFMigrationsHistory`；历史行只表明 EF 记录过应用，不会发现人工改表造成的 schema 漂移 |
 
-对已有表，PostgreSQL 添加无默认值的可空列时旧行得到 `NULL`，这符合本例的 `string? Description`。`StartingBid <= 0` 的旧拍卖会让新增的 `CHECK (StartingBid > 0)` 验证失败；先查出并按业务修正这些行，再应用约束，不要默认删除数据。只看代码仓库中的 snapshot 不能判定某个库已经跑过 `InitialCreate`。
+PostgreSQL 给已有表添加无默认值的可空列时，旧行的该列为 `NULL`，正好对应本例的 `string? Description`。新增 `CHECK (StartingBid > 0)` 时，PostgreSQL 会立即检查已有行，只要有一场旧拍卖的 `StartingBid <= 0`，迁移就会失败。另外，仓库里的 snapshot 只描述代码，无法据此判断某个数据库是否已经执行过 `InitialCreate`。
 
-应用约束前，可在目标数据库检查会违反新条件的旧行；结果要按业务规则处置，不能仅为让迁移通过而删行：
+因此，应用约束前先在目标数据库查出会违反新条件的旧行，按业务规则修正；不能只为让迁移通过就删除数据：
 
 ~~~sql
 SELECT "Id", "StartingBid"
@@ -102,7 +108,7 @@ FROM "Auctions"
 WHERE "StartingBid" <= 0;
 ~~~
 
-这组 Npgsql 10.0.3 生成脚本中的关键语句展示约束方向：
+下面是 Npgsql provider 10.0.3 为初始迁移和增量迁移生成的 SQL 中的关键语句，可以看出外键和约束的方向：
 
 ~~~sql
 CREATE TABLE "Items" (
@@ -130,11 +136,11 @@ ALTER TABLE "Auctions" ADD CONSTRAINT "CK_Auctions_StartingBid_Positive"
     CHECK ("StartingBid" > 0);
 ~~~
 
-初始脚本把 `Items.Make`、`Model`、`Color` 及 `Auctions.SellerId`、`Status`、`StartingBid` 建为 `NOT NULL`。只有 `Auction.ItemId` 指向 `Items.Id`，没有把 `Items` 反向设成必须有拍卖的外键，所以先录入商品、稍后再建拍卖是允许的。
+初始脚本把 `Items.Make`、`Model`、`Color` 和 `Auctions.SellerId`、`Status`、`StartingBid` 都建为 `NOT NULL`。外键只有 `Auctions.ItemId` 指向 `Items.Id` 这一条，`Items` 上没有反向要求“必须有拍卖”的外键，所以可以先录入商品，稍后再创建拍卖。
 
 ## 本地和生产环境如何应用迁移？
 
-下例使用 .NET 10 与 EF Core 10 的 CLI 名称。项目模板默认创建 Minimal API（最小 API）；要沿用本组控制器示例，明确选择控制器模板。代码块展示改动后的模型：`Color` 与 `Status` 延续上一章，`Description` 和起拍价数据库检查约束是本次新增。运行 EF 命令前，须把这些实体和 `AuctionDbContext` 放入项目，并在应用启动时注册 Npgsql provider 与连接串：
+下面的命令基于 .NET 10 与 EF Core 10。`webapi` 模板默认生成 Minimal API（最小 API）项目；本组笔记用控制器，所以要显式选择控制器模板。第一节的代码是改动后的模型：`Color` 与 `Status` 沿用上一篇，`Description` 和起拍价检查约束是本次新增。运行 EF 命令前，先把这些实体和 `AuctionDbContext` 放进项目，并在应用启动代码中注册 Npgsql provider 和连接串：
 
 ~~~csharp
 var connectionString =
@@ -145,7 +151,7 @@ builder.Services.AddDbContext<AuctionDbContext>(options =>
     options.UseNpgsql(connectionString));
 ~~~
 
-连接串从 User Secrets 或环境变量读取；只有运行 `dotnet ef database update` 或执行生成的 SQL 时，指定的 PostgreSQL 目标必须可连接。要重放增量变化，先用上一章的模型（不含 `Description` 和该检查约束）生成 `InitialCreate` 并应用到目标库；如果项目已经有相应迁移与 snapshot，可不重建代码，但仍要按目标库的迁移历史确认它实际已应用初始结构。
+连接串从 User Secrets 或环境变量读取，本地数据库怎样启动见[本地 PostgreSQL 与 SQL Server 容器怎样连接到 .NET 服务？](aspnet-local-database-container-examples.md)。只有运行 `dotnet ef database update` 或执行生成的 SQL 时才需要连上目标 PostgreSQL。要完整重现这次增量变化，先用上一篇的模型（不含 `Description` 和检查约束）生成 `InitialCreate` 并应用到目标库；如果项目里已有对应的迁移和 snapshot，就不必重新生成，但仍要查目标库的迁移历史，确认它确实已应用初始结构。
 
 ~~~sh
 dotnet new sln
@@ -163,14 +169,14 @@ dotnet ef database update
 dotnet ef migrations add AddItemDescriptionAndBidCheck
 ~~~
 
-`migrations add` 只改项目里的迁移、元数据和 snapshot，不连接或更新数据库。对照生成的 SQL，确认增量相当于在 `Items` 添加可空 `text` 列、在 `Auctions` 添加 `CHECK ("StartingBid" > 0)`；Up 方法的源代码是 `AddColumn(... nullable: true)` 与 `AddCheckConstraint(...)`。如果目标库已有非正起拍价，后者会因为约束检查旧行而失败。审查无误后，在本地验证目标运行 `dotnet ef database update`；受控发布可生成并审查目标范围脚本，例如：
+`migrations add` 只修改项目里的迁移、元数据和 snapshot，不连接也不更新数据库。生成后先审查：增量迁移的 `Up` 方法应是 `AddColumn(... nullable: true)` 与 `AddCheckConstraint(...)`，对应的 SQL 是在 `Items` 添加可空 `text` 列、在 `Auctions` 添加 `CHECK ("StartingBid" > 0)`。如果目标库已有非正起拍价，后一步会因检查旧行而失败。审查无误后，先在本地验证库运行 `dotnet ef database update`；需要受控发布时，可以只为这段迁移范围生成脚本供审查，例如：
 
 ~~~sh
 dotnet ef migrations script InitialCreate AddItemDescriptionAndBidCheck \
   --output artifacts/add-item-description-and-bid-check.sql
 ~~~
 
-本地检查生成 SQL 和旧数据条件都满足后，再应用到已确认迁移起点的目标库：
+生成的 SQL 和旧数据检查都没有问题后，再应用到已确认迁移起点的目标库：
 
 ~~~sh
 dotnet ef database update
@@ -186,7 +192,7 @@ FROM "__EFMigrationsHistory"
 ORDER BY "MigrationId";
 ~~~
 
-若旧行是上一章的 Auction/Item 示例，可用查询核对其描述仍为空、起拍价仍为 100：
+如果旧数据是上一篇写入的那组 Auction/Item 示例，可以用下面的查询核对：描述应为空，起拍价仍为 100：
 
 ~~~sql
 SELECT auction."Id", item."Description", auction."StartingBid"
@@ -196,12 +202,12 @@ JOIN "Items" AS item ON item."Id" = auction."ItemId";
 
 检查约束应存在，历史同时包含 `InitialCreate` 和 `AddItemDescriptionAndBidCheck`。应把迁移历史与实际 schema 一起核对：EF 记录迁移已执行，不等于它会自动验证后来有人手工改动的列或约束。
 
-`dotnet new sln` 在 .NET 10 SDK 默认创建 `.slnx`；`dotnet package add` 是 .NET 10 的新名词优先命令形式。`dotnet-ef`、EF Core 主包、Tools/Design 包应选同一兼容主版本；Npgsql 的 EF Core provider（数据库提供程序）也须兼容该 EF Core 版本。上例使用 EF Core 10.0.15、`dotnet-ef` 10.0.15 和 Npgsql provider 10.0.3；局部 tool manifest 把 EF 命令固定在项目内，不需修改用户级工具目录。
+关于上面的命令和版本：.NET 10 SDK 中 `dotnet new sln` 默认创建 `.slnx` 格式的解决方案；`dotnet package add` 是 .NET 10 引入的“名词在前”命令形式。`dotnet-ef`、EF Core 主包和 Tools/Design 包应使用同一主版本，Npgsql 的 EF Core provider（数据库提供程序）也必须兼容该 EF Core 版本。上例使用 EF Core 10.0.15、`dotnet-ef` 10.0.15 和 Npgsql provider 10.0.3。EF Core 11.0.0 已于 2026-11-10 发布，但截至 2026-11-16，Npgsql 的 11.x provider 仍是 RC 版本，所以本例继续固定在 .NET 10 / EF Core 10。项目内的 tool manifest 把 `dotnet-ef` 版本固定在项目中，不需要改动用户级全局工具。
 
-对本地开发数据库，`dotnet ef database update` 可以直接应用待迁移版本。生产发布通常生成并审查 SQL 脚本，或生成迁移 bundle；脚本适合需要 DBA 审批、修改或归档 SQL 的流程。EF Core 迁移是 provider-specific（provider 专属）的；如果应用要部署到 PostgreSQL 和 SQL Server，应分别验证 provider 与迁移策略，不要把一个数据库 provider 生成的迁移当作另一个 provider 的通用 SQL。数据库约束仍是数据正确性的最终共享边界，见[如何用约束保护业务规则并为读取建立索引？](../../engineering-foundations/databases/database-constraints-and-indexes.md)。
+对本地开发数据库，可以直接用 `dotnet ef database update` 应用尚未执行的迁移。生产发布通常生成并审查 SQL 脚本，或生成迁移 bundle（打包好的可执行迁移程序）；需要 DBA 审批、修改或归档 SQL 时适合用脚本。EF Core 迁移与 provider 绑定；如果应用要同时部署到 PostgreSQL 和 SQL Server，应分别验证各自的 provider 和迁移，不要把一种数据库生成的迁移当作另一种数据库也能用的通用 SQL。数据库约束仍是数据正确性的最终共享边界，见[如何用约束保护业务规则并为读取建立索引？](../../engineering-foundations/databases/database-constraints-and-indexes.md)。
 
 > [!info]- 来源
-> - EF Core 10.0.15 包版本与目标框架：[Microsoft.EntityFrameworkCore NuGet](https://www.nuget.org/packages/Microsoft.EntityFrameworkCore/10.0.15)，于 2026-11-13 核对。
+> - EF Core 10.0.15 包版本与目标框架：[Microsoft.EntityFrameworkCore NuGet](https://www.nuget.org/packages/Microsoft.EntityFrameworkCore/10.0.15)，于 2026-11-13 核对；EF Core 11.0.0 于 2026-11-10 发布、Npgsql provider 11.0.0 仍为 rc.3：[NuGet 版本列表](https://www.nuget.org/packages/Microsoft.EntityFrameworkCore#versions-body-tab)、[Npgsql.EntityFrameworkCore.PostgreSQL 版本列表](https://www.nuget.org/packages/Npgsql.EntityFrameworkCore.PostgreSQL#versions-body-tab)，于 2026-11-16 核对。
 > - 主键、必需/可选属性和 nullable reference type 约定：[EF Core 属性与 nullability](https://learn.microsoft.com/en-us/ef/core/modeling/required-optional)，核对日期 2026-11-06。
 > - 一对一关系中必需外键方向、唯一索引及反向可选关系：[EF Core 一对一关系](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/one-to-one)、[关系约定索引](https://learn.microsoft.com/en-us/ef/core/modeling/relationships/conventions#indexes)，核对日期 2026-11-13。
 > - 迁移比较模型快照、而非数据库实况；历史表记录已应用迁移：[EF Core 迁移概览](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/)，核对日期 2026-11-13。
