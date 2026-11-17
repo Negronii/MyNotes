@@ -1,17 +1,17 @@
 # ahooks 怎样管理报表请求、分页与列表身份？
 
-**案例背景。** 报表从 `/reports?sort=recent#summary` 打开时，Uniform Resource Locator（统一资源定位符，URL）中的 `sort=recent` 是排序和历史状态的来源。
+**案例背景。** 一个报表列表页从 `/reports?sort=recent#summary` 打开，显示 May、April 两份报表。排序方式保存在 Uniform Resource Locator（统一资源定位符，URL）的 `sort` 参数里，所以它也进入浏览器历史；页面上的 **Oldest first** 按钮把它改成 `sort=oldest`。页面还有一个搜索框，搜索词只存在组件本地 state，不写进 URL。本章用 ahooks（阿里巴巴开源的 React Hooks 库，以 v3.11.0 为准）读取这份列表，依次看三种读取方式——`useRequest` 普通请求、`usePagination` 分页、`useInfiniteScroll` 游标续页——再看可编辑列表和若干工具 Hook。
 
-基准时间线假定搜索框为空、路由正常复用同一页面组件，且 **Oldest first** 使用默认的 PUSH（新增历史项）导航：点击后路由发起导航并运行父级 loader；等待期间 `navigation.location` 已指向 oldest，但 `window.location`、历史项和页面数据仍是 recent，loader 成功后才把新 URL 写入历史并提交 oldest。按 Back 时地址先回到 recent 并触发 loader；完成前路由的已提交 sort 仍是 oldest。搜索框的 `Ops` 值只存在组件本地，不在 URL 中；输入后再切换排序并按 Back，复用的组件会保留 `Ops`。下表先走空搜索的 `useRequest` 方案；分页和游标加载是替代读取方式，可编辑列表则是单独的编辑会话。
+页面用 React Router 的 Data Mode 管理路由。父级路由的 loader（路由数据加载函数）在导航时运行，负责解析 `sort`；只有 loader 成功后，新的 `sort` 才算“已提交”，页面组件才会收到它。点击 **Oldest first** 会发起默认的 PUSH（新增一条历史记录）导航：loader 等待期间，`useNavigation().location` 已经指向 oldest，但 `window.location`、当前历史项和页面数据都还是 recent；loader 成功后，路由才把新 URL 写入历史并提交 oldest。按 Back 时，浏览器地址先回到 recent，再触发 loader；loader 完成前，已提交的 sort 仍是 oldest。查询参数变化时路由复用同一个页面组件实例，所以组件本地的搜索词会一直保留。
 
-下表把父级 loader 提交与报表请求成功分开。精确请求序列假定正常挂载；根级开发 StrictMode 可能额外执行挂载 Effect。
+下表是搜索框为空时 `useRequest` 方案的完整时间线，把“父级 loader 提交新 sort”和“报表请求成功”分成不同时点。请求序列按正常挂载计算；开发环境根部启用 StrictMode 时，挂载 Effect 可能多执行一次。
 
 | 时点 | 已提交的 `sort` | `useRequest` 与屏幕上的列表 |
 |---|---|---|
 | 父级 loader 提交首次 `recent` | `recent` | 组件挂载，`useRequest` 开始请求 `(recent, "")`；列表请求尚未成功。 |
 | recent 请求成功 | `recent` | 显示 May、April。 |
 | 点击 Oldest first，目标路由尚未结算 | `recent` | 组件仍收到 recent；不提前发 oldest 请求，最近成功的列表仍可见。 |
-| 父级 loader（路由数据加载函数）结算并提交 `oldest` | `oldest` | `refreshDeps` 发起 oldest 请求；等待期间 `data` 可保留 May、April。 |
+| 父级 loader 结算并提交 `oldest` | `oldest` | `refreshDeps` 发起 oldest 请求；等待期间 `data` 可保留 May、April。 |
 | oldest 请求成功 | `oldest` | `data` 更新为 April、May。 |
 | 按 Back，recent loader 尚未结算 | `oldest` | 已提交值仍是 oldest；不提前发 recent 请求。 |
 | Back 的 loader 提交 `recent` | `recent` | `refreshDeps` 请求 `(recent, "")`；列表仍显示上次成功的 April、May。 |
@@ -19,7 +19,7 @@
 
 ## 请求 Hook（钩子）管本地请求状态，不自动取得传输控制权
 
-下面的例子假定采用 React Router 的 Data Mode，且父级只负责路由：它从 URL loader 的**已提交数据**中取出 `sort` 并传给组件；不要把 `navigation.location` 中尚未提交的目标值提前传入。父 loader 在这个替代方案中只解析并校验 `sort`，不取报表：其返回值为 `{ sort }`，父组件再将 `useLoaderData()` 中已提交的 `sort` 传给 `ReportPanel`。发起默认 PUSH 导航后，`navigation.location` 已指向 oldest，但 `window.location` 和历史项还停在 recent，页面也保留已提交数据；loader 成功后 React Router 才把目标 URL 推入历史并提交新页面，随后复用 `ReportPanel` 实例，因此未写进 URL 的本地搜索值会继续保留。此处由组件独自拥有列表请求，不同时配置 React Router loader 或 TanStack Query 请求同一份列表。`fetchReports` 是会校验响应形状的 Application Programming Interface（应用程序编程接口，API）客户端。初次渲染会自动请求；`refreshDeps` 改变时，Hook 使用最新的服务函数再次请求。等待期间 `data` 可以保留上次成功的列表：
+这个方案里，父级 loader 只解析并校验 `sort`、返回 `{ sort }`，不读取报表；父组件把 `useLoaderData()` 里已提交的 `sort` 传给 `ReportPanel`。不要把 `navigation.location` 中尚未提交的目标值提前传进来，否则列表会在路由提交前就切换。报表列表只由 `ReportPanel` 里的 `useRequest` 读取，不要同时让 React Router loader 或 TanStack Query 再请求同一份列表。`fetchReports` 是一个会校验响应形状的 Application Programming Interface（应用程序编程接口，API）客户端函数。`useRequest` 在首次渲染后自动请求；`refreshDeps` 中的值变化时，用最新的服务函数再请求一次。等待新结果期间，`data` 保留上次成功的列表：
 
 ~~~tsx
 import { useState } from "react";
@@ -58,13 +58,13 @@ function ReportPanel({ sort }: { sort: SortOrder }) {
 }
 ~~~
 
-`useDebounce` 返回延迟后的值，不返回网络请求。假设输入前搜索条件为空，用户输入 `Ops` 后立刻切换到 oldest，且路由在 300 ms 防抖到期前已经提交 oldest，服务调用顺序是 `recent/"" → oldest/"" → oldest/"Ops"`：排序导航一开始，路由仍保留 recent 的已提交页面；等 oldest loader 成功，父级才把 `sort=oldest` 交给这个组件，随后 `refreshDeps` 触发请求；300 ms 到期后搜索值再触发一次。若路由更慢，搜索值会先在 recent 下生效，调用顺序也随之改变；决定请求参数的是当时已提交的 sort 和已稳定的搜索值。
+`useDebounce` 返回的是一个延迟更新的值，它本身不发请求；请求由 `settledQuery` 变化后的 `refreshDeps` 触发。现在加入搜索：假设搜索框原本为空，用户输入 `Ops` 后立刻点 **Oldest first**，并且路由在 300 ms 防抖到期前就提交了 oldest，那么服务调用顺序是 `recent/"" → oldest/"" → oldest/"Ops"`：导航刚开始时组件仍收到 recent；oldest loader 成功后，父级才把 `sort=oldest` 传进来，`refreshDeps` 触发第二次请求；300 ms 到期后，`settledQuery` 变成 `Ops`，再触发第三次。若路由更慢，搜索值会先在 recent 下生效，调用顺序也随之改变；决定请求参数的是当时已提交的 sort 和已稳定的搜索值。
 
 新的 `useRequest` 调用会让前一次结果过期，但等新数据成功前，屏幕上的旧列表仍是最近一次成功结果，不代表它已经符合 oldest 或 `Ops` 条件。
 
 排序 URL 不包含搜索值；若 oldest/`Ops` 已成功，按 Back 只把排序改回 recent，服务会请求 `(recent, "Ops")`，而非空搜索的 `(recent, "")`。这条完整路径的服务参数是 `recent/"" → oldest/"" → oldest/"Ops" → recent/"Ops"`。输入防抖不延迟路由导航。若 React Router loader 或 TanStack Query 已经负责同一份列表，就不要再挂这段 `useRequest` 重复读取。
 
-`useRequest` 默认自动运行（且 `ready` 为 true）；`manual: true` 才等待调用 `run` 或 `runAsync`。`ready: false` 会阻止请求，即使手动调用 `run` 也不会绕过它。`run` 返回 `void`，失败由 `onError` 等回调处理；`runAsync` 返回 Promise，调用方应处理失败。v3.11.0 的 `Fetch.runAsync` 会等服务 Promise 结算后才比较请求代次；若它已过期，才以 `CancelledError` 拒绝，`run` 会处理这个取消错误。`cancel()` 会立即让 Hook 忽略当前 Promise 的结果并结束 Hook 的等待状态，但 `runAsync` 仍需等原服务 Promise 结算后才能拒绝；如果服务 Promise 永不结算，调用方的 `runAsync` 也可能一直 pending。它不会撤销已经发给浏览器或服务端的网络请求。若传输必须停止，服务本身还要接收并响应 AbortSignal（请求取消信号），通常由 AbortController（请求控制器）发出。
+上面用的是自动模式。`useRequest` 默认自动运行（`ready` 默认为 true）；设 `manual: true` 后，要等调用 `run` 或 `runAsync` 才请求。`ready: false` 会阻止请求，即使手动调用 `run` 也不会绕过它。`run` 返回 `void`，失败由 `onError` 等回调处理；`runAsync` 返回 Promise，调用方应处理失败。每次发起请求，Hook 都会递增一个内部的请求代次（count），用来识别过期请求。v3.11.0 的 `Fetch.runAsync` 等服务 Promise 结算后才比较代次；若这次请求已过期，才以 `CancelledError` 拒绝，`run` 会内部吞掉这个取消错误。`cancel()` 会立即让 Hook 忽略当前请求的结果并结束 `loading`，但 `runAsync` 返回的 Promise 仍要等原服务 Promise 结算后才拒绝；服务 Promise 若永不结算，它也会一直 pending。`cancel()` 也不会撤销已经发给浏览器或服务端的网络请求。若传输必须停止，服务本身还要接收并响应 AbortSignal（请求取消信号），通常由 AbortController（请求控制器）发出。
 
 常用状态和控制各自回答不同问题：
 
@@ -83,7 +83,7 @@ v3.11.0 的其他 `useRequest` 选项还包括首次自动调用时使用的 `de
 
 ## 分页服务返回 total 与 list，滚动加载返回下一段
 
-`usePagination` 的服务接收 `current` 和 `pageSize`，解析为 `{ total, list }`；排序变化时 `refreshDeps` 会把页码重置到第 1 页并重新请求。下表是假定 recent 与 oldest 都各有 42 条报表、每页 20 条的成功轨迹：
+如果报表很多，需要分页显示，可以把 `useRequest` 换成 `usePagination`。它的服务函数接收 `{ current, pageSize }`，返回解析为 `{ total, list }` 的 Promise；排序变化时，`refreshDeps` 会把页码重置为第 1 页并重新请求。下表是假定 recent 与 oldest 都各有 42 条报表、每页 20 条的成功轨迹：
 
 | 操作 | 服务收到的参数 | 返回列表长度 | `current` 与总数 |
 |---|---|---:|---|
@@ -144,7 +144,7 @@ function PagedReports({ sort }: { sort: SortOrder }) {
 // API 响应形状：{ total: 42, list: Report[] }；pageSize 为 20 时可依次到第 2、3 页。
 ~~~
 
-`useInfiniteScroll` 把已累计数据交回服务，让服务用当前游标获取下一页；Hook 会把新列表接到已有列表后面。本例把游标看作排序专属：父级用已提交的 `sort` 作为子组件的 React key，切换排序时新挂载一个空 Hook 实例。这样旧排序的累计数据和游标不会被新排序复用；代价是切换时旧列表暂时消失。如果产品必须保留旧列表，就要同时记录列表所属的 sort，并在新首页成功前禁止以旧游标续页。下面只用显式按钮触发后续页，便于看清每次请求的来源。
+另一种方式是游标续页：不按页码跳转，而是每次接着上一段往下取。`useInfiniteScroll` 把已累计的数据交回服务函数，服务从中取出游标（cursor，指向下一段起点的标记）获取下一段；Hook 会把新列表接到已有列表后面。本例把游标看作排序专属：父级用已提交的 `sort` 作为子组件的 React key，切换排序时新挂载一个空 Hook 实例。这样旧排序的累计数据和游标不会被新排序复用；代价是切换时旧列表暂时消失。如果产品必须保留旧列表，就要同时记录列表所属的 sort，并在新首页成功前禁止以旧游标续页。下面只用显式按钮触发后续页，便于看清每次请求的来源。
 
 ~~~tsx
 import { useInfiniteScroll } from "ahooks";
@@ -215,7 +215,7 @@ function ReportFeed({ sort }: { sort: SortOrder }) {
 
 ## 可编辑表单行要用可复现的稳定身份
 
-`useState(() => reports)` 只把 props 当作首次初始化值；父路由后来传来 oldest 列表时，已编辑列表不会自动同步。下面明确把表单定义成一次编辑会话的快照：要放弃草稿并换数据时，调用者应显式开始新会话或重置列表。服务端报表使用自己的 `report.id`；新增草稿在点击事件中只生成一次 ID：
+前面的列表都只读。若用户要在列表里新增、删除行，列表就成了组件自己的 state。`useState(() => reports)` 只把 props 当作首次初始化值；父路由后来传来 oldest 列表时，已编辑列表不会自动同步。下面明确把表单定义成一次编辑会话的快照：要放弃草稿并换数据时，调用者应显式开始新会话或重置列表。服务端报表使用自己的 `report.id`；新增草稿在点击事件中只生成一次 ID：
 
 ~~~tsx
 function EditableReportList({ reports }: { reports: Report[] }) {
@@ -254,17 +254,17 @@ function EditableReportList({ reports }: { reports: Report[] }) {
 
 假设 May 行的输入框已保存了局部值 `"检查空名称"`，April 行保存了 `"核对响应码"`。若用数组下标作 key，插入草稿后位置 0 仍复用原 key 0，草稿会接到 May 的输入值；May 移到位置 1 后又会接到 April 的值。用 `report.id` 时，May 的身份 key 随行移动，局部输入仍留在 May。
 
-ahooks v3.11.0 文档把 `useDynamicList.getKey(index)` 描述为可保持列表项身份的 key；但在 React 19.3.1 开发 StrictMode 下实测，初始化和 `insert(0, draft)` 都触发其内部 key ref 的重复递增：插入前是 `[May:2, April:3]`，插入后是 `[Draft:5, May:4, April:2]`，和常见使用者预期不符。这是该版本与开发 StrictMode 的实测问题，不应泛化为 React 的 key 契约；主例因此用业务 `report.id` 和每次新增只生成一次的草稿 ID。若维护依赖 `getKey` 的代码，应在实际 React、ahooks 版本和 StrictMode 配置下覆盖插入、移动、重置行为。`useDynamicList` v3.11.0 还提供 `move`、`batchRemove`、`replace`、`push` / `pop`、`unshift` / `shift` 和 `resetList`；`merge(index, items)` 是把多项插入列表的位置操作，不是 Lodash 的对象深合并。`sortList` 会保留 `0`、`false` 和空字符串，只剔除 `null` 与 `undefined`。
+ahooks 自带的 `useDynamicList` 也管理可编辑列表，v3.11.0 文档把它的 `getKey(index)` 描述为可保持列表项身份的 key；但在 React 19.3.1 开发 StrictMode 下实测，初始化和 `insert(0, draft)` 都触发其内部 key ref 的重复递增：插入前是 `[May:2, April:3]`，插入后是 `[Draft:5, May:4, April:2]`，和常见使用者预期不符。这是该版本与开发 StrictMode 的实测问题，不应泛化为 React 的 key 契约；主例因此用业务 `report.id` 和每次新增只生成一次的草稿 ID。若维护依赖 `getKey` 的代码，应在实际 React、ahooks 版本和 StrictMode 配置下覆盖插入、移动、重置行为。`useDynamicList` v3.11.0 还提供 `move`、`batchRemove`、`replace`、`push` / `pop`、`unshift` / `shift` 和 `resetList`；`merge(index, items)` 是把多项插入列表的位置操作，不是 Lodash 的对象深合并。`sortList` 会保留 `0`、`false` 和空字符串，只剔除 `null` 与 `undefined`。
 
-`useVirtualList` 在 v3.11.0 返回 `[visibleRows, scrollTo]`，每项带 `data` 和源 `index`，通过 `containerTarget` / `wrapperTarget` 配置滚动容器；`itemHeight` 可为固定数值或按行计算的函数，行高要与实际布局相符。源数组每次渲染都换引用时，计算可见范围的 Effect 会再次运行并写入新的可见列表 state，带来额外渲染；内容未变时保持引用稳定，或用 `useMemo` 记住。归档 ahooks v2.6 使用对象返回值 `{ list, containerProps, wrapperProps, scrollTo }`；其 `itemHeight` 函数按源索引给出高度，没有独立的 `estimateSize` 参数，不要混用版本。虚拟化只减少挂载的 Document Object Model（文档对象模型，DOM）行数，不会减少网络分页或完整源数组的内存；变高行、可访问边界与滚动成本见[大列表如何在网络、DOM 和可访问性之间取舍？](../performance/rendering-and-computation-optimization.md)。
+列表很长时，还可以只渲染可见的几行。`useVirtualList` 在 v3.11.0 返回 `[visibleRows, scrollTo]`，每项带 `data` 和源 `index`，通过 `containerTarget` / `wrapperTarget` 配置滚动容器；`itemHeight` 可为固定数值或按行计算的函数，行高要与实际布局相符。源数组每次渲染都换引用时，计算可见范围的 Effect 会再次运行并写入新的可见列表 state，带来额外渲染；内容未变时保持引用稳定，或用 `useMemo` 记住。归档 ahooks v2.6 使用对象返回值 `{ list, containerProps, wrapperProps, scrollTo }`；其 `itemHeight` 函数按源索引给出高度，没有独立的 `estimateSize` 参数，不要混用版本。虚拟化只减少挂载的 Document Object Model（文档对象模型，DOM）行数，不会减少网络分页或完整源数组的内存；变高行、可访问边界与滚动成本见[大列表如何在网络、DOM 和可访问性之间取舍？](../performance/rendering-and-computation-optimization.md)。
 
 ## 轻量状态和时序工具也有边界
 
-`useBoolean` 提供显式布尔动作，`useToggle` 切换两个值，`useMap` 和 `useSet` 管集合；`useCreation(factory, deps)` 按依赖复用创建结果，但不提供资源生命周期或永久语义缓存保证。不要在其 factory 中做 Effect 副作用。
+除了请求和列表，ahooks 还提供大量小工具 Hook，它们用起来简单，但各有不明显的边界。`useBoolean` 提供显式的布尔切换动作，`useToggle` 在两个值之间切换，`useMap` 和 `useSet` 管集合；`useCreation(factory, deps)` 按依赖复用创建结果，但不提供资源生命周期或永久语义缓存保证。不要在其 factory 中做 Effect 副作用。
 
-`useLatest(value)` 在 ahooks v3.11.0 的实现中会在每次 render（渲染）期间直接写入 `ref.current = value`。已安装的长生命周期回调因此不必重建即可读取新 render 的值；但 React 把组件渲染和提交分成两个阶段，并要求不要在 render 中读写 ref。若 React 正在进行一次 concurrent rendering（并发渲染），这次写入发生在提交前；如果这次渲染最终被放弃，共享 ref 仍可能保留该值，所以回调可能读到未提交的值；这是由实现与 React 渲染规则推得的边界，不是 `useLatest` 的“最新已提交值”保证。
+`useLatest(value)` 返回一个 ref，ahooks v3.11.0 的实现在每次 render（渲染）期间直接执行 `ref.current = value`。这样，已经注册好的长期回调不必重建，就能读到最新一次 render 的值。但 React 把一次更新分成 render 和 commit（提交）两个阶段，并要求不要在 render 中读写 ref。在 concurrent rendering（并发渲染）中，render 可能被中断并最终放弃；此时 ref 已被写入一个从未提交到屏幕上的值，回调就可能读到它。这个边界是从实现和 React 渲染规则推出来的：`useLatest` 并不保证给出“最新已提交的值”。
 
-若某段逻辑只由 Effect（副作用）调用，且确实要读取最新已提交的 props/state 而不重建 Effect，可用 React 19.2 起提供的 `useEffectEvent`（效果事件）；它只能由所属组件中的 Effect 或另一个 Effect Event 调用，不能作为普通事件回调或传给子组件，详见[React 如何在 Effect 中读取最新已提交值？](../frameworks/react-component-composition.md#%E7%94%A8%E8%87%AA%E5%AE%9A%E4%B9%89Hook%E5%A4%8D%E7%94%A8%E7%8A%B6%E6%80%81%E8%A1%8C%E4%B8%BA)。
+若某段逻辑只在 Effect（副作用）里调用，又需要读取最新已提交的 props/state 而不想因此重建 Effect，可以用 React 19.2 起提供的 `useEffectEvent`；它只能在定义它的组件或自定义 Hook 内、由本地 Effect 或另一个 Effect Event 调用，不能当作普通事件回调，也不能传给子组件。详细规则见[React 如何用自定义 Hook 复用状态行为？](../frameworks/react-component-composition.md#%E7%94%A8%E8%87%AA%E5%AE%9A%E4%B9%89Hook%E5%A4%8D%E7%94%A8%E7%8A%B6%E6%80%81%E8%A1%8C%E4%B8%BA)。
 
 `useMemoizedFn(fn)` 返回身份稳定的函数包装器，并在渲染期间把传入的新函数写入内部 ref；和 `useLatest` 返回调用者可读写的 ref 不同，它解决的是函数身份是否变化。与 `useLatest` 一样，不应把“最新函数体”理解成只读取最新已提交的闭包：被放弃的渲染也可能先改写该 ref。
 
@@ -279,7 +279,7 @@ ahooks v3.11.0 文档把 `useDynamicList.getKey(index)` 描述为可保持列表
 | `useDebounceFn(fn)` | `{ run, cancel, flush }`；默认 `wait` 1000 ms、leading false、trailing true。 |
 | `useThrottleFn(fn)` | `{ run, cancel, flush }`；默认 `wait` 1000 ms、leading / trailing true。 |
 
-debounce 的 `cancel` 只取消尚未执行的函数调用；请求已经开始后，必须另行管理网络取消。排序点击应立即发起导航，地址与列表的提交时点由路由决定；输入搜索适合等待停顿后再查。更多 React Hook 生命周期见[React 组件如何组合状态与行为？](../frameworks/react-component-composition.md)，服务端查询与乐观更新见[React界面如何维护服务端数据与乐观更新的正确性？](../frameworks/react-server-state-and-optimistic-updates.md)。
+回到报表页：debounce 的 `cancel` 只取消尚未执行的函数调用，请求一旦发出，网络取消要另行管理。排序点击应立即发起导航，地址和列表何时提交由路由决定；只有搜索输入适合等用户停顿后再查。更多 React Hook 生命周期见[React 组件如何组合状态与行为？](../frameworks/react-component-composition.md)，服务端查询与乐观更新见[React界面如何维护服务端数据与乐观更新的正确性？](../frameworks/react-server-state-and-optimistic-updates.md)。
 
 > [!info]- 来源与版本核验（ahooks v3.11.0；当前稳定版于 2026-11-12 核验）
 > - 当前稳定版本和 v3.11.0 的分页、取消、空页、动态列表假值修复：[ahooks v3.11.0 release](https://github.com/alibaba/hooks/releases/tag/v3.11.0)，发布于 2026-10-27；GitHub 的 latest release 在 2026-11-12 仍指向 v3.11.0。

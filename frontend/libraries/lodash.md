@@ -1,10 +1,10 @@
 # Lodash 何时适合处理报表列表，哪些方法会修改输入？
 
-**案例背景。** 用户在 `/reports?sort=recent#summary` 看到 May、April 两份报表；切换到 oldest 后，完整顺序由服务端变成 April、May。这里用同一数据观察 Lodash 4.18.1 的三个常见行为：排序如何返回新数组、合并如何改变已有对象，以及延迟搜索调用时怎样保留正确的参数。完整远端排序归服务端是本例的选择；组件若拥有完整本地数据，也可以在本地排序。
+**案例背景。** 用户在报表列表页 `/reports?sort=recent#summary` 看到 May、April 两份报表；切换到 oldest 后，服务端返回按时间正序排列的 April、May。本章用这份数据观察 Lodash（常用的 JavaScript 工具函数库，以 4.18.1 为准）的三类常见行为：排序是否返回新数组、深合并怎样改动已有对象，以及防抖搜索怎样带上正确的参数。
 
 ## 排序逻辑应跟着数据来源走
 
-这里约定服务端决定远端报表的完整顺序，返回值已经按 `recent` 或 `oldest` 排好；这是本例的数据归属选择，不是每个应用都必须服务端排序。若组件已经拥有完整的相关数据集，本地排序也成立。下面刻意切到只有 May、April 的本地数组，沿用同一数据来单独观察 Lodash 的返回值和对象身份；它不是上面那条远端查询路径。`_.orderBy` 按指定字段和方向返回新数组，不会改动传入的 recent 数组：
+本例约定由服务端决定报表的完整顺序，返回的列表已经按 `recent` 或 `oldest` 排好。这是本例的数据归属选择：数据只有一部分在前端时，前端排序会得到错误的整体顺序；若组件已经拥有完整数据，本地排序同样成立。为了单独观察 Lodash 的返回值和对象身份，下面换成只含 May、April 的本地数组，它不经过服务端查询。`_.orderBy` 按指定字段和方向返回新数组，不改动传入的 `recent` 数组：
 
 ~~~javascript
 const recent = [
@@ -19,11 +19,11 @@ recent.map(report => report.period); // ["May", "April"]
 oldest[0] === recent[1]; // true：新数组仍共享 April 行对象
 ~~~
 
-`_.sortBy` 同样返回新数组，按升序排列；要写清升降序或多个字段时用 `_.orderBy`。新数组只是行引用的新顺序，`oldest[0]` 仍是 `recent[1]` 那个 April 对象；改行对象会同时改到两边。若本例确实需要完整数据在组件内排序，就不要再让另一份排序状态和 URL 互相覆盖；而已经由路由 loader 返回顺序的数据，不需要再走这段本地转换。
+`_.sortBy` 同样返回新数组，按升序排列；要写清升降序或多个字段时用 `_.orderBy`。新数组只是行引用的新顺序，`oldest[0]` 仍是 `recent[1]` 那个 April 对象；改行对象会同时改到两边。若确实在组件内对完整数据排序，排序方式也只应有 URL 这一个来源，不要再另存一份排序 state 与 URL 互相覆盖；已经由路由 loader（路由数据加载函数）按顺序返回的数据，则不必再在本地排一次。
 
 ## 深合并为什么会改到已有报表数据
 
-`_.merge(target, ...sources)` 会递归合并并修改第一个参数，然后返回这个目标对象。数组按索引合并，不会拼接：
+排序不改输入，深合并却会。假设页面缓存了一份报表数据，现在要把一个补丁合并进去。`_.merge(target, ...sources)` 递归合并，直接修改第一个参数并返回它；数组按索引逐项合并，不会拼接：
 
 ~~~javascript
 const cached = {
@@ -42,7 +42,7 @@ cached.reports[0].owner.reviewed; // true
 cached.reports.length; // 2，patch 的第 0 项合并进原第 0 项
 ~~~
 
-把同一个引用传回 React state，可能因引用没变而跳过渲染；若 `cached` 还被请求缓存、其他组件或测试共享，也会一起看到被改的值。要建立新值，可以把新对象作为目标：
+把这个被改过的同一引用再传给 React 的 state setter，React 可能因引用没变而跳过渲染；若 `cached` 还被请求缓存、其他组件或测试共享，也会一起看到被改的值。要建立新值，可以把新对象作为目标：
 
 ~~~javascript
 const next = _.merge({}, cached, { reports: [{ owner: { reviewed: false } }] });
@@ -57,7 +57,7 @@ next.reports.length; // 2
 
 此例把数组中的对象也合并到新目标，因此 `reports` 与嵌套 `owner` 是新对象，原 `cached` 保持 `reviewed: true`。但它仍不会让数组按 ID 匹配；合并按索引进行。纯列表补项应显式拼接，例如 `[...cached.reports, newReport]`。`_.assign` 也会修改目标，只做浅层赋值。用库方法前，先看它返回哪个对象以及是否改变输入。
 
-同一个 `patch.reports[0]` 会随当前排序改到不同报表：
+按索引合并还有一个隐患：同一个 `patch.reports[0]` 会随当前排序落到不同的报表上：
 
 | 正在合并的顺序 | 第 0 行 | 补丁结果落到 |
 |---|---|---|
@@ -109,9 +109,9 @@ name ?? "Unknown";                            // "Unknown"，null 也触发这�
 
 ## 搜索输入可以延迟，排序导航不应延迟
 
-搜索可以等待用户暂停输入，排序导航则应立即交给路由器。本例用 React Router v8.5.1 Data Mode（数据模式）：父级 loader（路由数据加载函数）从本次请求的 `request.url` 读取并校验目标 `sort`，读取完整列表后返回 `{ sort, reports }`。搜索 Hook（React 自定义钩子）只消费已经提交的 loader 数据中的 `sort`。Uniform Resource Locator（统一资源定位符，URL）保存排序，本地 `query` 保存搜索词；同一个搜索面板在查询参数导航中保持挂载，因此搜索词可跨排序保留。
+最后看计时类方法。报表页同时有搜索框和排序按钮：搜索可以等用户停止输入再发请求，排序导航则应立即交给路由。本例的路由用 React Router v8.5.1 Data Mode（数据模式）：父级 loader 从本次请求的 `request.url` 读取并校验目标 `sort`，取完整列表后返回 `{ sort, reports }`。Uniform Resource Locator（统一资源定位符，URL）保存排序，组件本地的 `query` state 保存搜索词。搜索逻辑写成一个 React 自定义 Hook，它只使用 loader 已提交数据中的 `sort`。只改查询参数的导航不会卸载搜索面板，所以搜索词在切换排序后仍然保留。
 
-先分清“导航目标”和“当前显示的数据”。点击 **Oldest first** 发起 PUSH（新增历史项）后，目标 loader 已收到 oldest，但等待期间浏览器地址、历史当前项、`useLocation()`、`useLoaderData()` 和列表仍属于 recent；`useNavigation().location` 才是等待中的 oldest。成功后，地址和 April、May 列表一起提交。Back / Forward 触发 POP（历史遍历）时，浏览器地址先变，已提交路由和列表暂留原值，等 loader 成功才换。这里采用默认的查询参数重验证，没有自定义 `shouldRevalidate` 跳过 sort 变化；完整导航时序见[React 路由怎样把地址映射到界面并加载数据？](../frameworks/react-routing-and-navigation.md)。
+先分清“导航目标”和“当前显示的数据”。点击 **Oldest first** 会发起 PUSH（新增历史项）导航；此时目标 loader 已收到 oldest，但等待期间浏览器地址、历史当前项、`useLocation()`、`useLoaderData()` 和列表仍属于 recent；`useNavigation().location` 才是等待中的 oldest。成功后，地址和 April、May 列表一起提交。Back / Forward 触发 POP（历史遍历）时，浏览器地址先变，已提交路由和列表暂留原值，等 loader 成功才换。这里采用默认的查询参数重验证，没有自定义 `shouldRevalidate` 跳过 sort 变化；完整导航时序见[React 路由怎样把地址映射到界面并加载数据？](../frameworks/react-routing-and-navigation.md)。
 
 下图只比较 loader 成功返回后的两个已提交状态，等待阶段仍按上面的规则处理：
 
@@ -125,7 +125,7 @@ flowchart LR
 
 `_.debounce` 实现 debounce（防抖）：默认等最后一次调用后静默一段时间，再处理仍待执行的最后一次输入。`leading`（首沿）、`trailing`（尾沿）和 `maxWait`（最大等待时间）会改变触发时机。本例等待 300ms，同时设置 `maxWait: 1000`，避免一直输入就永远不发搜索。
 
-同一面板必须持续复用同一个 debounce 实例。每次输入更新参数和请求代次，不能在每次 `query` 变化时取消这个实例，否则 `maxWait` 也会被重置。只有清空输入、排序成功提交或组件卸载才取消旧计时器；请求代次同时让过时响应失效。
+同一面板必须一直复用同一个 debounce 实例。每次输入只更新参数和请求代次（每次输入或排序提交递增的计数，用来识别过时响应），不能在每次 `query` 变化时取消这个实例，否则 `maxWait` 的计时也会被重置。只有清空输入、排序成功提交或组件卸载时，才取消旧计时器；同时递增请求代次，让已发出的旧请求结果作废。
 
 > [!example] maxWait 已处理的输入，不会被尾沿重复发送
 > 假设第一次输入发生在 0ms，之后每隔 120ms 输入一次，依次为 `Ops 0`、`Ops 1`……。下表是计时到期顺序；真实事件循环可能推迟执行，不保证精准到毫秒。
@@ -137,13 +137,13 @@ flowchart LR
 >
 > 尾沿会处理最后一次输入，前提是它仍待执行，且下一次 maxWait 尚未先处理它。
 
-把它接回报表页面，数据依次变化：
+把这套规则放回报表页面，数据依次这样变化：
 
 1. recent 的基础列表是 May、April。输入 `Ops` 后，计时器调用 `fetchReports({ sort: "recent", query: "Ops" })`；合成服务返回 `[May Ops, April Ops]`。只有请求代次及 `(committedSort, query)` 仍有效，结果才替代基础列表。
 2. 点击 oldest 后立即导航。PUSH 等待期间，搜索仍属于当前 recent 页面。loader 成功提交 oldest 后，Hook 保留 `Ops`；Effect 清理旧计时器、使旧 recent 请求失效，再排入 `(oldest, Ops)`。等待搜索时先显示基础 April、May，得到当前结果后显示 `[April Ops, May Ops]`。
 3. Back / Forward 也以成功提交的 sort 驱动重查，不能只观察排序按钮点击或地址栏。点击已提交的当前排序是空操作，不取消当前搜索，也不重复导航。
 
-query 改变或 sort 提交后先清空旧结果。页面用 `searchResults ?? loaderReports` 选择当前搜索结果或基础列表，错误也按同一对 `(committedSort, query)` 匹配。
+`query` 改变或 sort 提交后，先清空旧的搜索结果。页面用 `searchResults ?? loaderReports` 在当前搜索结果和 loader 返回的基础列表之间选择；搜索错误也只在 `(committedSort, query)` 与当前一致时才显示。
 
 `_.debounce.cancel()` 只撤销尚未执行的调用，不中止已发出的网络请求；请求代次负责阻止旧响应写回当前界面。若还要停止浏览器传输，由调用方创建 `AbortController`，把 `controller.signal` 交给使用 `fetch` 的请求函数，并在排序提交或卸载时调用 `controller.abort()`。该请求函数需要接收并使用 signal。
 
@@ -246,7 +246,7 @@ Lodash 的 throttle（节流）方法 `_.throttle` 则限制调用频率，适�
 
 ## 何时优先用原生操作
 
-路径明确时，原生可选链、`Array.prototype.flat`（数组扁平化）、Set 或对象展开常常更易读。需要 Lodash 的边界行为时，先核对版本和输入形状，再决定是否使用。按方法导入可以帮助构建器裁剪依赖，但最终包体还受模块格式和构建配置影响；要用生产产物测量，不能只凭写法推断体积。
+路径明确时，原生的可选链、`Array.prototype.flat`（数组扁平化）、Set 或对象展开往往更易读。需要 Lodash 的边界行为时，先核对版本和输入形状，再决定是否使用。按方法导入可以帮助构建器裁剪依赖，但最终包体还受模块格式和构建配置影响；要用生产产物测量，不能只凭写法推断体积。
 
 相关内容见[现代 JavaScript 特性](../javascript/modern-javascript-features.md)与[前端性能测量](../performance/performance-metrics-and-analysis.md)。
 
