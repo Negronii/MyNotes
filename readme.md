@@ -12,7 +12,7 @@
 - [写作规范](maintenance/writing-guide.md)、[知识正文重写记录](maintenance/rewrite-plan.md) — 内容标准、本轮范围和 DeepSeek 三篇的沉淀去向。
 - [2026-10-27 全库知识审查记录](maintenance/knowledge-review-2026-10-27.md) — 当时 140 篇原始文章的审查范围、证据与修正。
 - [迁移说明](maintenance/migration-notes.md)
-- [Agent 提示词与工具设计](.agents/skills/design-agent-prompts-tools/SKILL.md) — 在本仓库持续维护的可复用 Skill。
+- 可复用 Skill。[Agent 提示词与工具设计](.agents/skills/design-agent-prompts-tools/SKILL.md) · [文档冷读](.agents/skills/document-cold-read/SKILL.md)
 
 `archive` 表示低频或暂停维护，`review` 保存导航与阅读入口，`maintenance` 保存仓库规范和工具。
 
