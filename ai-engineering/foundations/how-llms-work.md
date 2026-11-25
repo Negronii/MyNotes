@@ -133,6 +133,8 @@ $$
 
 不同层、任务和输入中的 attention head 行为可能不同。某个头可能经常关注前一个位置，但仅凭权重图并不能确定它的完整功能。它的 V 向量、输出投影以及后续层也都会影响结果。
 
+要检验一个机制猜想，可以改动内部表示，观察输出是否随之改变。Anthropic 在 Claude 3.5 Haiku 写押韵诗的个案中，用近似模型画出特征间的归因图，发现模型会在写第二行前考虑韵脚，再用干预实验检验这条路径。近似模型只解释了部分计算，固定 attention 权重也会漏掉路径。这种证据能说明特定提示下发生了什么。
+
 ### 注意力头共享 K 和 V 时会怎样？
 
 上面的计算使用 MHA，每个 Q 头都有一个 K/V 头。grouped-query attention (分组查询注意力，GQA) 让一组 Q 头共享一个 K/V 头。如果仍保留两个 Q 头、但只使用一个 K/V 头，那么 `W_Q` 仍是 `8 × 8`，而 `W_K` 和 `W_V` 会变为 `8 × 4`。两个 Q 仍各自生成宽度为 `4` 的输出，所以拼接后的形状和 `W_O` 都不变。
@@ -318,6 +320,8 @@ prefill (预填充) 会让初始序列通过各层。末位置的 logits 选出�
 
 每一层的输入表示和投影权重都不同，所以各层有自己独立的 cache。全量注意力下，输出越长，cache 越大；滑动窗口层的 cache 达到窗口长度后可以不再增长，具体取决于该层的注意力结构。
 
+有些层连历史的存储单位也换了。Kimi Delta Attention（KDA）每个头用一张固定矩阵保存 key 和 value 的关联。处理新词元时，先用它的 key 检查矩阵给出的 value，再按实际 value 修正状态。[KDA 的一次写入怎么算？](recurrent-attention-state.md#二维例子怎样经过一次写入？)
+
 生成会在以下任一情况下结束：模型输出结束词元、应用匹配到停止序列、达到长度上限，或调用被取消。这几种结束原因含义不同：长度上限可能截断一个尚未写完的回答，所以应用要保留结束原因，并判断是否需要提示回答不完整。对本例的字节级玩具 tokenizer，正常结束后可以把要返回的生成 ID 查回各自的字节，按顺序拼接，再整体解码为 UTF-8 文本；真实 tokenizer 应使用它自带的解码接口，特殊结束词元还要按模型或 API 的约定处理。[服务容量](../systems/llm-serving-and-kv-cache.md) 会进一步说明内存影响；[应用运行状态与恢复](../systems/ai-application-architecture.md) 会展开生成结束或中断后的处理。
 
 ### 应用应如何选择解码设置？
@@ -331,6 +335,12 @@ prefill (预填充) 会让初始序列通过各层。末位置的 logits 选出�
 做受控比较时，应固定模型版本、指令、工具和案例集，只改变所选的解码设置。对每个候选设置重复完整运行，并衡量工具选择及参数是否正确、解释是否有依据、故障处理是否恰当，以及成本和时延。用一组数据开发设置，再用单独的留出集验收。这是一种工程测试方法，并非宣称较低或较高的温度必然更好。[如何构建可比较的评估集](../evaluation/llm-evaluation-methods.md#用独立验收集比较基线和候选) 会进一步介绍评估方法，而不只关注这一项设置。
 
 ## 下一个词元训练如何更新这些参数？
+
+### 预训练网页语料怎样变成训练文本？
+
+网页抓取内容需要先提取正文、过滤低质量页面并处理重复内容，才能成为预训练语料。FineWeb 的具体流程是从 Common Crawl 的 Web ARChive（WARC）抓取文件提取正文，执行基础过滤，再按抓取快照分别做 MinHash（最小哈希）去重，之后加选定的 C4 过滤与自定义过滤。这个顺序属于 FineWeb 的构建方案。其过滤消融使用 28B token 子集，论文还在 350B token 规模做部分去重与累计过滤收益比较，并提醒较小样本可能看不出跨快照去重的影响。比较语料或过滤策略时，应固定模型架构与参数规模、训练 token 预算及下游评测任务，并在接近目标规模的预算下确认效果。
+
+FineWeb2 显示，多语种网页数据还要按语言识别置信分布设置阈值，并根据各语言的语料统计分别调整文本质量过滤规则。语言识别决定文档归属，质量过滤评估文本是否适合训练，这两步解决不同问题。预训练语料的处理规则也不能直接替代 SFT 数据审查，指令样本仍需单独核验问题、目标回答和标注是否一致。
 
 ### 为每个位置设置目标
 
@@ -386,6 +396,8 @@ $$
 > [!info]- 来源
 > 下列来源支持对应机制或具体模型配置。文中的 `ababca`、小矩阵、路由值和训练概率是教学数例；除特别标明外均按正文手算。
 >
+> - **如何检验诗句中的韵脚规划。** Anthropic 的[研究导读](https://www.anthropic.com/research/tracing-thoughts-language-model)、[Claude 3.5 Haiku 个案](https://transformer-circuits.pub/2025/attribution-graphs/biology.html)与[归因方法及其限制](https://transformer-circuits.pub/2025/attribution-graphs/methods.html#limitations)（2025-03-27）分别说明观察、干预和替代模型的覆盖边界。后续[关于内部工作空间的实验](https://www.anthropic.com/research/global-workspace)（2026-07-06）也通过替换表示来检验韵脚对后续整行的影响。
+> - **逐位置缓存与固定状态。** [Kimi Linear，arXiv v2，§3](https://arxiv.org/html/2510.26692v2) 给出每个 KDA 头的状态更新，完整模型中还有按位置保留历史的 MLA 层。
 > - **BPE 和精确 tokenizer 对照。** [Sennrich et al., ACL 2016, §3.2](https://aclanthology.org/P16-1162/) 支持按频率合并相邻子词对；[OpenAI tiktoken 0.12.0 educational implementation](https://github.com/openai/tiktoken/blob/0.12.0/tiktoken/_educational.py) 说明字节级合并实现。正文英文对照在本机 `tiktoken 0.12.0`、`cl100k_base` 上复现：原句得到 ID `[10445, 1550, 1977, 220, 2983, 3775, 30]`；边界样例 `The transformer architecture revolutionized NLP.` 得到 `[791, 43678, 18112, 14110, 1534, 452, 12852, 13]`。
 > - **Transformer 的因果前向、Attention、FFN 与词表投影。** [Attention Is All You Need, v7, §§3.1–3.5、§5.1](https://arxiv.org/html/1706.03762v7#S3) 支持 decoder 的未来位置掩码、scaled dot-product、多头拼接后输出投影、逐位置 FFN、嵌入/softmax 和右移训练目标。原论文是 encoder–decoder 且采用 post-norm；本页另选 decoder-only、pre-norm、RoPE 与 SwiGLU 作为教学组合，不把它说成原论文原样。
 > - **RoPE 与 RMSNorm。** [RoFormer, v5, §§3.2.1–3.2.2](https://arxiv.org/html/2104.09864v5#S3.SS2) 给出旋转位置嵌入及相对角度形式；本页的点积恒等式对应 §3.2.1 的式 (12)–(13)。[Root Mean Square Layer Normalization, v1, §4](https://arxiv.org/html/1910.07467#S4) 支持 RMSNorm。向量 `[3,4]` 的 `[0.849,1.131]` 是本页按单位缩放、忽略 epsilon 的手算值。
@@ -394,6 +406,8 @@ $$
 > - **SwiGLU 与 FFN 解释范围。** [GLU Variants Improve Transformer, v1, §2](https://arxiv.org/html/2002.05202#S2) 给出 SwiGLU 的门控逐元素乘法及第三个降维投影；[Geva et al., EMNLP 2021](https://aclanthology.org/2021.emnlp-main.446/) 分析其研究的若干 FFN 中的文本模式与输出影响。Geva 的发现不能推广成每个 FFN 都是字面事实库。
 > - **解码策略和 API 边界。** [The Curious Case of Neural Text Degeneration, v2, §3](https://arxiv.org/abs/1904.09751v2) 支持 top-p 的最小累计概率集合定义；[Transformers Generation Strategies (核对日期：2026-11-11)](https://huggingface.co/docs/transformers/generation_strategies#basic-decoding-methods) 区分 greedy argmax 与按分布采样。[OpenAI Responses 创建接口](https://developers.openai.com/api/reference/resources/responses/methods/create) 与 [GPT-6 参数兼容说明](https://developers.openai.com/api/docs/guides/latest-model?model=gpt-6-astra) 展示采样参数会因 endpoint、模型和推理配置变化；[Claude API 参数迁移说明](https://platform.claude.com/docs/en/about-claude/model-deprecations) 记录其 2026-10-21 API version 移除 temperature/top-p/top-k。正文因此不把温度零等同为跨接口通用的行为。
 > - **主训练目标与其他目标。** [Llama 3 Herd, v3, §3](https://arxiv.org/html/2407.21783v3#S3) 支持自回归预训练目标；[PyTorch 2.10 `CrossEntropyLoss`](https://docs.pytorch.org/docs/2.10/generated/torch.nn.CrossEntropyLoss.html) 说明 logits、目标索引、逐项损失与平均 reduction；`p−onehot(y)` 和 `h^T δ` 是由 softmax cross-entropy 与线性 LM head 用链式法则得到的手算式。[BERT, 2019, §3.1](https://arxiv.org/html/1810.04805#S3.SS1) 支持 masked LM 与左右上下文的区别；[Wang & Cho, 2019, §3](https://arxiv.org/html/1902.04094#S3) 是从 masked model 构造不同迭代生成方式的研究，并非把 BERT 的训练任务直接改成因果 next-token。
+> - **预训练语料构造与评估。** Penedo et al., *The FineWeb Datasets: Decanting the Web for the Finest Text Data at Scale*（arXiv v2，2024-10-31；§§3.2–3.7、Appendix E.2），[v2 HTML](https://arxiv.org/html/2406.17557v2)。FineWeb 记录 WARC 正文提取、基础过滤、按快照去重与后续过滤的具体顺序；过滤消融使用 28B token 子集，部分去重与累计收益实验使用 350B tokens，并说明较小样本可能无法体现更大范围的去重影响。
+> - **多语种语料过滤。** Penedo et al., *FineWeb2: One Pipeline to Scale Them All — Adapting Pre-Training Data Processing to Every Language*（arXiv v1，2025-06-26；§4.2 的语言识别置信阈值、§4.4 的按语言调整质量过滤），[v1 HTML](https://arxiv.org/html/2506.20920v1)。两种过滤步骤分开评估，相关结果受论文所选语言、数据、训练预算与任务限制。
 > - **标准残差与 mHC。** [Identity Mappings in Deep Residual Networks, v3, §2](https://arxiv.org/html/1603.05027v3#S2) 支持恒等旁路的前向/反向路径解释。[mHC, v2, §§4.1–4.2](https://arxiv.org/html/2512.24880v2#S4) 定义非负双随机残差映射、谱范数界与动态参数化；[DeepSeek-V4 Technical Report, v1, §§2.2、4.2.1](https://arxiv.org/html/2606.19348v1#S2.SS2) 指定 V4 的 4 流 mHC、20 次 Sinkhorn-Knopp 迭代和模型配置。官方 [V4-Pro config](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/main/config.json) 的 `hc_mult=4`、`hc_sinkhorn_iters=20`、`hc_eps=1e-6` 与 [V4-Pro 推理层实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/a1fd202632e91bc0efe4eedb63ce554649c53997/inference/model.py)、[Sinkhorn kernel](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/5607980f3a4b8ea0371b9f11e1848ac41f14979e/inference/kernel.py) 一致（核对日期：2026-11-11）。有限次且含 `eps` 的实现只是逼近双随机约束；本文把固定 `B` 的线性界与动态全层梯度分开。
 > - **MoE 路由与版本。** [DeepSeek-V3 Technical Report, v2, §2.1.2](https://arxiv.org/html/2412.19437v2#S2.SS1.SSS2) 支持 sigmoid 亲和度、偏置只改 top-k 选择、原分数重新归一化和 sequence-wise balance loss；[§4.2 “Model Hyper-Parameters”](https://arxiv.org/html/2412.19437v2#S4.SS2.SSS0.Px1) 给出 V3 的 1 个 shared / 256 个 routed / 每 token 选 8 个，[§4.2 “Training Hyper-Parameters”](https://arxiv.org/html/2412.19437v2#S4.SS2.SSS0.Px2) 记录批次偏置的 `γ` 调度与序列级平衡项的 `α` 数值，§§4.5.2–4.5.3 讨论平衡机制。[V3 官方 Gate 实现](https://github.com/deepseek-ai/DeepSeek-V3/blob/main/inference/model.py#L576-L599) 对照原分数与偏置后的选择；教学例令 `route_scale=1` 并省略真实组/节点约束。[V4 report v1, §§2.1、4.2.1](https://arxiv.org/html/2606.19348v1#S2.SS1) 说明 V4 改用 sqrt-softplus affinity 和初始 Hash routing；Pro / Flash 的专家数与每词元路由数分别见 §4.2.1。本页只在 V3 路由段使用 sigmoid 数例。
 > - **MTP 与推测解码。** [DeepSeek-V3 Technical Report, v2, §2.2](https://arxiv.org/html/2412.19437v2#S2.SS2) 支持真实偏移词元 embedding、串接预测深度、共享 embedding/output head、MTP loss，并在末段 “MTP in Inference” 说明模块可从推理模型中移除或用作 speculation proposer；[§4.2 “Model Hyper-Parameters”](https://arxiv.org/html/2412.19437v2#S4.SS2.SSS0.Px1) 记录 V3 的 `D=1` 配置；[§4.2 “Training Hyper-Parameters”](https://arxiv.org/html/2412.19437v2#S4.SS2.SSS0.Px2) 记录 `λ` schedule，§4.5.1 给出对应消融。DeepSeek-V4 report v1 §2.1 说其 MTP strategy/configuration 沿用 V3；这不表示任意框架均能运行。[vLLM MTP guide (核对日期：2026-11-11)](https://docs.vllm.ai/en/latest/features/speculative_decoding/mtp/) 限定该路径适用于运行时支持的模型族及其原生 MTP 模块。[Leviathan et al., ICML 2023](https://proceedings.mlr.press/v202/leviathan23a.html) 支持目标模型并行验证与保持分布的 speculative sampling 思路。

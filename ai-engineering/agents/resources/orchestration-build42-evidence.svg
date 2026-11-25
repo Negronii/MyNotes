@@ -16,7 +16,7 @@
 
   <rect class="box" x="125" y="28" width="450" height="86" fill="#EAF3FB" stroke="#6E9CC2"/>
   <text class="text label" x="350" y="57" text-anchor="middle">P2 输入：同一主运行中的状态</text>
-  <text class="text body" x="350" y="84" text-anchor="middle">run-r42-7 · c2：预期 400，实际 200</text>
+  <text class="text body" x="350" y="84" text-anchor="middle">run-r42-10 · c2：预期 400，实际 200</text>
   <text class="text body" x="350" y="104" text-anchor="middle">用户已追加“查代码根因”</text>
 
   <path class="arrow" d="M350 114 L350 146"/>

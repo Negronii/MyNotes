@@ -42,7 +42,7 @@ SQLAlchemy 2.0 的 `Session.get()` 按主键取对象。使用默认选项时，
 | 得到 200 | 保护条件可能丢失，但还不能单凭状态码定根因 | 确认当前主体、实际入口、取数调用及结果归属、缓存命中和响应映射 |
 | 得到 404 | 状态码符合预期，但仍需确认响应没有带出 A 的数据 | 检查测试是否走到同一入口、确实使用 B、装入 A/42 数据，以及响应对象归属和正文；若要验证隐藏存在性，再与不存在的 43 比较 |
 
-若 B 得到 200，就追踪这一次实际取数：认证依赖给出的是否是 B，路由是否把 `tenant-b` 和 42 都传了下去，读取调用到底返回了什么，响应是否真的用了这个对象。若发出了 SQL，就核对最终的 WHERE 条件和绑定值；若 `Session.get()` 直接从 identity map 返回，就核对调用时用的主键和返回对象的归属。只有确认实际取到了 A 的行或对象、且它进入了 200 响应，才能证实这是一次授权回归。若 SQL 正确限定了租户、查不到可见的行，响应却仍含 A 的数据，就继续追查旁路缓存、备用读取或序列化分支。反例只说明出了问题，本身不是根因证据。
+若 B 得到 200，就追踪这一次实际取数：认证依赖给出的是否是 B，路由是否把 `tenant-b` 和 42 都传了下去，读取调用到底返回了什么，响应是否真的用了这个对象。若发出了 SQL，就核对最终的 WHERE 条件和绑定值；若 `Session.get()` 直接从 identity map 返回，就核对调用时用的主键和返回对象的归属。B 得到 200 已违反约定的响应策略。要进一步把数据泄漏定位到这条读取路径，还需确认路径返回了 A 的行或对象，并且响应包含其数据。即使状态码为 404，正文透露报表归属也违反隐藏策略。若 SQL 正确限定了租户、查不到可见的行，响应却仍含 A 的数据，就继续追查旁路缓存、备用读取或序列化分支。反例只说明出了问题，本身不是根因证据。
 
 ## 沿调用路径找出丢失的条件
 
@@ -67,7 +67,21 @@ report = session.scalar(
 
 在实际代码里，还要核对 ORM 生成的查询，确认两个绑定值都进入了最终 SQL，而不是只存在于调用方的局部变量里。改用显式查询后，结果不再从 identity map 直接返回，每次都按租户条件查询。另外，若成功响应的 cache 键只包含 `report_id`，即使修好了数据库查询，请求仍可能命中缓存绕过检查；缓存返回之前也必须执行同样的主体范围检查。逐次授权规则、查询与缓存边界见[如何逐次授权租户内的报表资源？](../security/web-security-and-authentication.md)。
 
-修完后，用同一入口和输入重放：A 仍得到 200；B 请求 A/42 和不存在的 43 都得到相同的通用 404，正文不含 A 的归属或报表数据；匿名请求按本例入口策略得到 401，真实的认证方案还必须返回并测试适用的 `WWW-Authenticate` 质询。再检查相邻的参数校验、错误映射和缓存路径，确保修正没有改变无关的响应，也没有留下另一条绕行路径。真实路由、SQLite 查询和测试夹具的完整可运行例子见[测试边界页](../testing/software-testing-strategy.md)；那一页也说明了 SQLite 和 TestClient 不能代表生产数据库或真实网络。
+修完后，用同一入口和输入重放：A 仍得到 200；B 请求 A/42 和不存在的 43 都得到相同的通用 404，正文不含 A 的归属或报表数据；匿名请求得到 401，并带本例测试断言的 `WWW-Authenticate: Bearer realm="reports"` 质询。再检查相邻的参数校验、错误映射和缓存路径，确保修正没有改变无关的响应，也没有留下另一条绕行路径。真实路由、SQLite 查询和测试夹具的完整可运行例子见[测试边界页](../testing/software-testing-strategy.md)；那一页也说明了 SQLite 和 TestClient 不能代表生产数据库或真实网络。
+
+## 自动审查意见怎样用证据指导改进？
+
+安全扫描或代码审查 Agent（智能体）的 finding（审查发现）应能让另一位工程师沿着同一差异和执行路径复核。报告固定检查的基准与候选提交、覆盖或跳过范围和 finding 位置。每项结论再给出所依据的调用路径、授权条件、成立前提与可观察影响。引用应能重新打开，例如指向准确的差异行、测试名及运行记录、授权检查或响应证据。严重度和置信度要说明各自依据。若问题依赖未改动的上下文，也要指出它怎样与这次差异共同改变行为。
+
+本例若报告“`tenant-b` 可读取 `tenant-a` 的报表 42”，证据应能沿可信主体 B、实际读取或缓存范围、对象归属和 HTTP 响应逐项回查，并指向通过认证入口运行的回归测试。单写“缺少租户过滤”不能证明数据进入了 B 的响应，单列一个 404 测试也不能证明它经过了这条路径。
+
+核实误报时，沿同一个 B 请求继续检查路由、数据层、identity map、缓存和序列化。若 finding 只因 `session.get` 没有租户条件便断定泄露，要确认下游是否存在可靠的对象归属检查，且该检查在响应或缓存返回前执行。再用 A/42 与不存在的 43 验证实际入口的响应正文和状态。只有路径证据与测试结果共同表明 A 的对象不会进入 B 的响应，才可判为误报。否则应标为已确认或证据不足，而不是从 `session.get` 的名字、单条 404 或测试标签推断结论。
+
+本例涉及跨租户数据，可以请熟悉该授权边界、未参与补丁编写的工程师独立验收。验收人拿到基准与候选提交、finding 引用和固定测试夹具后，独立确认主体来源、实际读取路径和测试入口，并重放前文已定义的 A/B 业务契约。保留验收人、候选版本、测试运行记录和未覆盖路径。无法重现或证据链断开的意见标为证据不足。
+
+复核结论可归类为已确认、误报、重复或证据不足，并附相应依据。已确认问题进入回归集。其他结论再指向上下文、检测规则、报告门槛或待补的证据。修复提交、仓库写入权限和合并审批仍按仓库策略授权，自动审查结果只是供审查者核验的证据。Agent 工具的逐次授权见[生产 AI 如何阻止不可信内容诱导模型越权](../../ai-engineering/safety/ai-safety-in-production.md)。
+
+仓库也可以把审查、修正和批准分配给不同角色。例如 2026 年 11 月发布的 Claude Ship 中，Code Review 提出并复核问题，PR Steward 可处理失败的检查并修改 PR，Claude Approvals 根据默认分支上的团队策略决定能否批准，合并仍受仓库的必需检查和分支保护约束。对这里的跨账户访问问题，团队可以把访问控制变更留给指定人员，并要求提交同一反例的修复前后结果。
 
 ## 独立阅读实现与测试
 
@@ -79,7 +93,7 @@ report = session.scalar(
 > - **输入：** 数据库只有 A 持有的全局 `report_id=42`；认证依赖为请求给出可信主体 B。
 > - **修复前 (重构之后)：** `session.get(Report, 42)` 可能从 identity map 返回 A/42，也可能按全局主键查询。确认实际返回的对象属于 A，且该对象进入 B 的 200 响应，才定位到这条越权路径；是否发出 SQL 要以本次执行为准。
 > - **修复：** 用 `report_id=42` 和可信主体的租户值 `tenant-b` 同时过滤。
-> - **修复后：** A 仍读到自己的行并得到 200；B 对已有的 A/42 与不存在的 43 都得到相同通用 404，正文不含 A 的归属或报表数据；匿名请求按本例策略得到 401，真实认证实现还要带适用的质询。
+> - **修复后：** A 仍读到自己的行并得到 200；B 对已有的 A/42 与不存在的 43 都得到相同通用 404，正文不含 A 的归属或报表数据；匿名请求得到 401，测试同时核对模拟 Bearer 质询头。
 >
 > 这些输出只覆盖所测路由与缓存状态。后台导出、其他查询入口和缓存各自有独立访问路径，应按相应数据边界核对。
 
@@ -90,3 +104,6 @@ report = session.scalar(
 > - IETF [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html) §§15.5.2、15.5.4–15.5.5：401 必须含适用 `WWW-Authenticate` 质询；服务可用 404 隐藏当前禁止访问的资源，但正文是否披露归属仍需由响应与测试保证。核对于 2026-11-12。
 > - GitHub 官方 [Reviewing proposed changes in a pull request](https://docs.github.com/en/pull-requests/how-tos/review-pull-requests/reviewing-proposed-changes-in-a-pull-request) 与[Giving reviews](https://docs.github.com/en/pull-requests/concepts/giving-reviews)：支持阅读文件差异、对具体改动评论和提交审查；代码根因与修复结论来自本页合成例的查询和测试证据。核对于 2026-11-12。
 > - 租户授权的完整规则与缓存边界由[如何逐次授权租户内的报表资源？](../security/web-security-and-authentication.md)承担；本文只追踪一次范围条件回归。
+> - **自动安全审查的范围与发现报告。** OpenAI，[Building Security Review into Your SDLC with Codex Security](https://developers.openai.com/blog/building-security-review-into-your-sdlc-with-codex-security)，2026-11-23，“Review at the right level”“Security context gives reviewers something to reason from”“An automated review loop returns reports”。文章提供产品工程实践说明，解释如何组织报告、修复建议与覆盖范围。目标仓库的效果仍需另行评估。
+> - **审查、修改与批准的权限分工。** [Introducing Claude Ship](https://claude.com/resources/articles/introducing-claude-ship)，Anthropic，2026-11-23。发布时 Code Review 已正式推出，PR Steward 和 Claude Approvals 为 beta。
+> - **Codex Security 当前审查实现。** OpenAI，[Review code changes for security](https://developers.openai.com/codex/security/plugin/code-changes)，在线文档，核对日期：2026-11-25。用于核对安全上下文、检查范围、finding 和覆盖状态等当前产品输出。具体字段以所用版本为准。

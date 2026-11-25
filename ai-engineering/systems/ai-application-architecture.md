@@ -100,6 +100,21 @@
 
 初始 `POST /runs` 可能已经创建运行，只是响应未到客户端。客户端应在服务支持时用同一调用者与资源范围查询幂等键，或用该键重试完全相同的请求；不能改写请求后复用键，也不能换新键盲目重提。HTTP 规范只把方法语义定义为幂等或非幂等；业务应用需为 `POST` 另设明确的去重契约。流事件只能在服务保留相应游标时补齐，断线后应先查运行记录。
 
+## 异步用户输入和时间提醒怎样进入同一次运行？
+
+用户补充信息可以在模型等待期间到达，不必把整条运行变成新的任务。设 `run-r42-7` 读取 `c1` 后还不确定空名称规则是否包括 `None`。它可以提出澄清问题，同时继续不依赖答案的只读检查，并把待答输入作为一个挂起事件保存。
+
+| 状态或事件 | 应用持久化的关联 | 运行处理 |
+|---|---|---|
+| 发出异步问题 | `runId`、异步工具 `call_id`、发送时间、绝对 `deadline_at` 与待答状态 | 只继续不依赖答案的步骤，不把提问当成批准。 |
+| 在期限内收到答复 | 原 `runId`、匹配的 `call_id`、答复内容、接收时间与去重标记 | 将答复作为同一运行的新观察；若它改变缺陷单目标或正文，就生成新载荷摘要并重新经过审批。 |
+| 到期仍无答复 | 原 `runId`、`call_id`、截止时间与 `no_answer` 终态 | 按预先定义的安全分支结束或继续不依赖答案的步骤，不把沉默当作同意。 |
+| 截止后才收到答复 | 原 `call_id`、接收时间、已过期状态 | 不再回填已关闭的等待点；由应用把它记作迟到事件或转成一个新用户输入。 |
+
+时间由应用管理。将用户本地时间解析成带时区的绝对截止时刻并持久化，答复处理器与超时 worker 竞争同一条待答记录。本例按应用受理时间裁定，两者在取得该记录更新权后才读取同一应用时钟，答复处理器用该时刻生成 `received_at`。即使网络数据包先到了，到截止后才获受理的答复仍记作迟到。答复事务核对原 `runId`、`call_id`、等待版本、等待状态及 `received_at ≤ deadline_at`，再在一笔事务中保存答复、`answered` 状态和 outbox（事务发件箱）续跑唤醒；超时事务核对同一等待版本与状态、没有已保存的及时答复且当前时刻晚于 `deadline_at`，再写入 `no_answer` 状态和续跑唤醒。对同一待答记录的条件事务让其中一条状态转移提交。应用以事务提交作为答复已受理的边界，失败后按同一答复事件标识重试，已提交的重复答复返回原结果。发布器可重试投递唤醒，恢复后的 worker 按运行、调用和等待版本核验重复唤醒。OpenAI 的 personal-agent 文章展示了 time awareness（时间感知）提醒和异步用户输入工具怎样让模型继续工作、再把答复关联回对应调用。接入文中 Agents API 时，将应用的等待记录与服务端 session、turn 和 call ID 绑定，每个仍挂起的调用只提交一份结果；若运行先终结，则关闭等待。时间提醒向模型提供当前时刻和剩余期限，应用依据持久状态裁定答复。
+
+异步澄清与外部副作用使用不同状态。针对 `create_issue` 的批准仍绑定目标和完整载荷摘要；用户对澄清问题的答复只有在明确满足审批契约时才可推进审批，不能仅因它晚到就授权新写入。若原写入已登记发送意图或仍处于 `effect_unknown`，新答复不会撤销远端动作，也不允许换键重试；运行仍按原操作键查询、对账或交给人工处理。
+
 ## 取消请求与断线有什么不同？
 
 本例中，持久运行的取消由独立鉴权请求触发；浏览器断线只结束交付。对没有发送意图的 `accepted`、`queued`、`running` 或 `awaiting_approval`，条件事务可以直接标记 `canceled`；若已有意图，则写入 `cancel_requested` 并登记只读对账唤醒，保留原键和结果状态。只有对账证实目标上没有已创建的工单、每个已登记意图都已不可再发送或确定不会提交、没有已受理且仍可能提交的请求，并且接收方会拒绝可能迟到的请求后，才标记 `canceled`。已终态收到取消时返回已存结果；确认已创建就记录 `completed` 并停止后续步骤，未知时继续只读对账或人工处理。
@@ -227,6 +242,7 @@ LangChain 的 Agent middleware（智能体中间件）属于常规模型—工�
 > - **HTTP 重试与异步接收的协议边界：** IETF，[RFC 9110: HTTP Semantics](https://www.rfc-editor.org/rfc/rfc9110.html)，2022，§9.2.2（幂等方法与失败后重试）及 §15.3.3（`202 Accepted` 只表示接收处理，不表示完成）；核对日期：2026-11-06。本文额外的 `POST` 幂等键是应用契约，不是该 RFC 自动提供的保证。
 > - **事件历史重建运行状态：** Temporal，[Event History](https://docs.temporal.io/encyclopedia/event-history)，核对日期：2026-11-06；说明工作流命令和活动结果如何记录、worker 崩溃后如何重放。它是运行时实现例，不能证明外部系统未记录的副作用状态。
 > - **运行态与人审恢复：** OpenAI，[Running agents](https://developers.openai.com/api/docs/guides/agents/running-agents) 与 [Guardrails and human review](https://developers.openai.com/api/docs/guides/agents/guardrails-approvals)，核对日期：2026-11-06；当前 Agents SDK 文档说明运行循环、可保存会话状态、暂停审批并恢复同一 run 的做法。具体 API 属于该 SDK。
+> - **时间提醒与异步用户答复：** OpenAI，[“Time awareness and async input for personal agents”](https://developers.openai.com/blog/time-awareness-and-async-input-for-personal-agents)，2026-11-20。文章以 Agents API 实验说明向模型注入当前时间提醒、异步等待用户答复并关联回原调用的做法；应用负责持久化运行标识、绝对截止时刻、迟到处理和外部动作状态。
 > - **模型上下文缓存的服务边界：** OpenAI，[Prompt caching](https://developers.openai.com/api/docs/guides/prompt-caching)，核对日期：2026-11-06，“What is the prompt cache?”“Cache lifetime”和常见问题；说明可重用的是匹配前缀的 KV 张量，缓存按模型/配置过期且不能保证每次复用。Anthropic，[Effective context engineering for AI agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)，2025-09-29，“Compaction”“Structured note-taking”；讨论上下文整理与外部笔记。运行身份、外部动作和审批账本是本文的应用架构扩展。
 > - **LangGraph 图状态、中断、恢复与持久化：** LangGraph Python [1.2.20](https://pypi.org/project/langgraph/1.2.20/)；示例运行条件为 Python 3.11.13 与 LangGraph 1.2.20。[Define and update state](https://docs.langchain.com/oss/python/langgraph/graph-api-state) 的 State / Reducers、[Interrupts](https://docs.langchain.com/oss/python/langgraph/interrupts) 的 Rules of interrupts / Side effects called before interrupt must be idempotent、[Persistence](https://docs.langchain.com/oss/python/langgraph/persistence) 的 Checkpointer vs. store 与内存 saver 限制。模拟的远端去重与应用账本是本文明确声明的假设。
 > - **PostgreSQL 行锁与时钟：** PostgreSQL 14 官方 [Date/Time Functions](https://www.postgresql.org/docs/14/functions-datetime.html) 区分事务起始时的 `CURRENT_TIMESTAMP` 与调用时读取实际时间的 `clock_timestamp()`；[Explicit Locking](https://www.postgresql.org/docs/14/explicit-locking.html) 说明竞争事务可能等待行锁。本文的取锁后复核与行锁时序也在 PostgreSQL 14.24 上复现过；这是本例持久状态事务的实现依据，不是远端副作用保证。

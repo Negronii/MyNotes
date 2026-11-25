@@ -131,7 +131,7 @@ $$
 7. **冻结选择后独立比较。** 对基线和候选使用相同输入（包括相同的端点事实、标签集和其他判断上下文）与推理设置，检查总体成功率、关键标签切片、非法 JSON、安全、成本和时延；最终测试结果不能再用于选参。
 8. **谨慎部署并监控。** 对模型和回滚路径做版本管理，遵守数据保留与同意规则，并持续观察相同业务结果。线上失败能提示新增评估样例，但未经核验的用户反馈不自动成为训练标签。
 
-第 6 步提到的几个训练超参数含义如下。学习率决定优化器每次更新的步长：对给定的模型、数据和批次，太大可能让训练不稳定，太小则可能在预算内学不到目标。epoch（训练轮数）指完整过一遍训练集；轮数增加可能拟合得更好，也可能过拟合。batch size（批次大小）决定一次参数更新综合多少样本。设每张卡的微批次为 `b`、设备数为 `D`、梯度累积步数为 `K`，在每个样本等权的常见配置下，有效批次约为 `bDK`。梯度累积是先把几个较小微批次的梯度累加起来，再做一次参数更新：有效批次不变时，它只改变每次更新前分几次计算，不改变每次更新代表的样本数；若 `b` 和 `D` 不变而增大 `K`，有效批次随之变大，每遍数据的更新次数就会减少。样本长度差异较大时，还要确认训练器是按样本还是按词元聚合损失。
+第 6 步提到的几个训练超参数含义如下。学习率决定优化器每次更新的步长。对给定的模型、数据和批次，太大学习率可能让训练不稳定，太小则可能在预算内学不到目标。epoch（训练轮数）指完整过一遍训练集，轮数增加可能拟合得更好，也可能过拟合。batch size（批次大小）决定一次参数更新综合多少样本。设每个数据并行副本的微批次为 `b`、参与梯度同步的数据并行副本数为 `D`、梯度累积步数为 `K`，在每个样本等权的常见配置下，有效批次约为 `bDK`。这里的 `D` 只计数据并行副本数，不是集群里的设备总数，张量并行或流水线并行设备不应再作为额外数据副本乘入。梯度累积是先把几个较小微批次的梯度累加起来，再做一次参数更新。有效批次不变时，它只改变每次更新前分几次计算，不改变每次更新代表的样本数。若 `b` 和 `D` 不变而增大 `K`，有效批次随之变大，每遍数据的更新次数就会减少。样本长度差异较大时，还要确认训练器是按样本还是按词元聚合损失。
 
 训练损失和验证损失有助于诊断，但不能代替任务指标。验证集参与挑选模型之后，就不再是最终的独立证据；反复根据最终测试集调参，也会让它变相进入开发过程。至少要把微调候选与未微调的基线比较，并查清提升是否覆盖了重要的输入切片。任务契约与独立评估的设计见[如何判断 AI 系统是否满足任务契约？](../evaluation/llm-evaluation-methods.md)。
 
@@ -151,9 +151,13 @@ SFT 让模型模仿示范中的回答。它教的是样例实际表达的行为�
 
 “奖励模型 + 强化学习”的典型代表是 InstructGPT 论文中的 reinforcement learning from human feedback（RLHF，基于人类反馈的强化学习）。它分三个阶段：先用人工示范做 SFT；再让人对同一提示下的多个回答排序，用这些偏好训练奖励模型；最后用 proximal policy optimization（PPO，近端策略优化）优化模型（策略），让它拿到更高奖励，同时用 Kullback–Leibler（KL）散度惩罚限制它偏离 SFT 模型太远。这是一项具体研究的流程，不要当成所有助手模型的通用训练流程。
 
-DPO 直接用同一提示下“被选中”和“被拒绝”的两条回答训练策略。论文基于一个偏好模型假设，推导出一个类似二元分类的目标函数，因此不必先单独训练奖励模型。它仍然依赖偏好数据、参考策略和目标函数；训练流程更简单，不代表结果一定更准确、更安全，也不能省掉独立验收。
+DPO 使用同一提示下成对的偏好数据。相对于参考策略，它要提高被选回答相对被拒回答的对数概率差，因此可以直接训练策略，省去单独拟合奖励模型。这个差值也可能因被拒回答的概率下降而变大。部署时仍需用独立任务检验回答是否真的更正确、更符合标注者想表达的偏好。
 
 RLVR 用规则或可复核的结果产生奖励，适合有可靠结果检查的任务。分类任务也可以把人工确认的目标标签做成精确匹配奖励，但既然每条样本已有明确的目标回答，SFT 通常更直接；只有当采样探索、策略学习或结果奖励确实带来额外价值时，才考虑强化学习。奖励也只能表达检查器真正覆盖的标准。推理任务中的采样、判分、组内优势与长度处理见[可验证奖励如何训练推理能力？](reward-based-reasoning-training.md)。
+
+s1 先为约 5.9 万道候选题收集 Gemini Flash Thinking 的推理轨迹和答案，再挑选微调样本。作者过滤 API 错误和低质量格式，直接保留 384 条高质量来源的样本。其余样本按难度和多样性挑选，其中一个难度指标是让 Claude 3.5 Sonnet 对照参考答案，判断两种规模的 Qwen 能否解出该题。最终用 1,000 条示范对 Qwen2.5-32B-Instruct 做 SFT。论文的评审模型只将其中 53.6% 的蒸馏答案判为正确，作者仍保留了部分答错的轨迹。选出难题和验收教师示范是两件事。
+
+训练结束后，s1 在生成时另设思考预算。模型过早发出结束思考的标记时，可压住标记并追加 `Wait`，让它继续计算；达到上限时则强制转入作答，可加上 `Final Answer:` 引导输出。这个步骤不更新参数。论文观察到延长思考的收益会趋于平坦。要判断多算是否值得，应在同一模型和同一批题上同时比较正确率、生成词元数和时延。
 
 偏好标签可能互相矛盾，或只反映标注者和 rubric（评分准则）的选择。无论 SFT、DPO 还是强化学习，训练目标分数上升都不等于任务质量已改善；应在未参与训练、调参或样本筛选的输入上验收，并检查事实、安全、分布变化、成本和时延。
 
@@ -168,6 +172,7 @@ RLVR 用规则或可复核的结果产生奖励，适合有可靠结果检查的
 > - **Adapter、prefix tuning 与 prompt tuning。** Houlsby et al., *Parameter-Efficient Transfer Learning for NLP*（arXiv:1902.00751v2，2019-06-13，§2 与 §2.1 的 adapter 模块和 Transformer 插入位置），[论文 HTML](https://arxiv.org/html/1902.00751)；Li and Liang, *Prefix-Tuning: Optimizing Continuous Prompts for Generation*（arXiv:2101.00190v1，2021-01-01，§4.1–4.2 的连续前缀与冻结语言模型），[论文 HTML](https://arxiv.org/html/2101.00190)；Lester et al., *The Power of Scale for Parameter-Efficient Prompt Tuning*（arXiv:2104.08691v2，2021-09-02，§2 的软提示），[论文 HTML](https://arxiv.org/html/2104.08691)。这些工作定义各自方法，不表示任意模型或服务都支持。
 > - **训练监督区间。** Hugging Face TRL [SFT Trainer](https://huggingface.co/docs/trl/en/sft_trainer#train-on-assistant-messages-only) 的 assistant-only 与 completion-only 选项说明损失掩码；实际可用性还依赖数据类型和 chat template（对话模板）。核对于 2026-11-12。
 > - **SFT、数据与评估。** Vaswani et al., [*Attention Is All You Need*, v7, §3.1](https://arxiv.org/html/1706.03762v7#S3.SS1) 的 decoder causal mask 与目标移位；Ouyang et al., *Training language models to follow instructions with human feedback*（arXiv:2203.02155v1，2022-03-04，§3.1 的 SFT→奖励模型→PPO 流程、§3.2 的按用户分组数据切分与个人身份信息过滤、§3.4–3.5 的人工数据和模型训练、§4.3 记录的简单失败），[论文 HTML](https://arxiv.org/html/2203.02155v1)。OpenAI [SFT 指南](https://developers.openai.com/api/docs/guides/supervised-fine-tuning)和[微调最佳实践](https://developers.openai.com/api/docs/guides/fine-tuning-best-practices)支持示范数据、基线评估与训练结果验收；页面截至 2026-11-12 核对。训练流程和事故分组建议是工程实践，不是上述论文或平台规定的通用保证。
-> - **DPO。** Rafailov et al., *Direct Preference Optimization: Your Language Model is Secretly a Reward Model*（arXiv:2305.18290，§3 的偏好数据与典型 RLHF 流程、§4 的直接策略目标与偏好模型假设），[论文 HTML](https://arxiv.org/html/2305.18290)。
+> - **DPO。** Rafailov et al., *Direct Preference Optimization: Your Language Model is Secretly a Reward Model*（arXiv:2305.18290，§3 的偏好数据与典型 RLHF 流程、§4 的直接策略目标与偏好模型假设），[论文 HTML](https://arxiv.org/html/2305.18290)。Hugging Face [TRL `v1.18.2` 发布记录](https://github.com/huggingface/trl/releases/tag/v1.18.2)（2026-11-19，截至 2026-11-25 为最新发布版）及其 [`DPOTrainer`](https://github.com/huggingface/trl/blob/v1.18.2/trl/trainer/dpo_trainer.py#L374) 与 [`_compute_loss`](https://github.com/huggingface/trl/blob/v1.18.2/trl/trainer/dpo_trainer.py#L1273-L1371) 提供一个版本化实现参考。
 > - **可验证奖励。** DeepSeek-AI, *DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning*（arXiv:2501.12948v2，2026-01-04，§2.2 以正确性和格式检查产生规则奖励），[v2 HTML](https://arxiv.org/html/2501.12948v2)。正文把精确匹配奖励用于分类只是教学上的延伸；具体结论仍限于检查器覆盖的目标。
+> - **s1 的数据筛选、SFT 与预算强制。** Muennighoff et al., *s1: Simple test-time scaling*（arXiv:2501.19393v3，2025-03-01，§§2.1–2.2 的候选题、难度筛选和最终样本选择，§4.1 的 SFT，§§3.1、5.2 的 budget forcing，Appendix C.3 的 grader 与 Appendix D.2 的训练样例），[v3 HTML](https://arxiv.org/html/2501.19393v3)。论文明确允许部分轨迹答错，筛题判分不能替代对训练回答的验收。
 > - **OpenAI API 当前可用性。** [OpenAI API 弃用说明](https://developers.openai.com/api/docs/deprecations)的“Update to OpenAI’s self-serve fine-tuning”小节列出 2026-05-07、2026-07-02 和 2027-01-06 的训练资格节点；[SFT 指南](https://developers.openai.com/api/docs/guides/supervised-fine-tuning)导言说明既有客户自 2027-01-06 起不能新建训练任务，若基础模型更早关闭则以更早日期为准，微调模型推理持续至底座关闭。弃用说明页面于 2026-11-16 复核，日期未变。时间线仅适用于该平台。

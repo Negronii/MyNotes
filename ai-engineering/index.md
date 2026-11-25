@@ -22,6 +22,7 @@
 
 - [语言模型如何把提示词变成文本？](foundations/how-llms-work.md)
 - [DeepSeek 的长上下文 Attention 怎样节省存储与读取？](foundations/long-context-attention.md)
+- [Kimi Delta Attention（KDA）怎样用固定状态读写历史？](foundations/recurrent-attention-state.md)
 - [KV 缓存与调度怎样决定大语言模型的服务容量？](systems/llm-serving-and-kv-cache.md)
 - [如何测量并降低 AI 应用的时延与成本，同时守住任务质量？](systems/ai-latency-and-cost-optimization.md)
 - [怎样让模型 API 调用在限额、失败和截止时间内有界？](systems/bounded-model-api-calls.md)

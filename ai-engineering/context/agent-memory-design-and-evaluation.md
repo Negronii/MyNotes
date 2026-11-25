@@ -4,7 +4,7 @@
 
 [上下文工程原则](context-engineering-principles.md)已经说明了来源授权、读写范围、更新和遗忘流程；本章只讨论三件事：怎样从获准使用的历史中构造跨任务可用的信息，什么时候常驻注入、什么时候按需读取，以及怎样验收。以下的 build 和用户都是合成例子。
 
-**案例背景。** 延续上下文工程章的 build 42 案例：旧运行 `run-r42-7` 中的工具调用 `c1` 读到了 build 42 的测试失败日志；用户 `user-42` 在之后的 `run-r42-8` 中确认“以后摘要默认用中文”。现在，用户在新任务 `run-r42-9` 中再次问：“按当前 CI 手册，build 42 应不应该重跑？”应用可以读取 `c1` 的日志观察，也可以检索当前已授权的手册 `CI-RETRY-v3@fixture-r1`。记忆可以保存这条偏好，也可以把以往排查 CI 根因的步骤归纳成以后可复用的经验；但旧运行的身份、结论和执行许可，都要在新任务中分别重新核对。
+**案例背景。** 延续上下文工程章的 build 42 案例：旧运行 `run-r42-6` 中的工具调用 `c1` 读到了 build 42 的测试失败日志；用户 `user-42` 在之后的 `run-r42-8` 中确认“以后摘要默认用中文”。现在，用户在新任务 `run-r42-9` 中再次问：“按当前 CI 手册，build 42 应不应该重跑？”应用可以读取 `c1` 的日志观察，也可以检索当前已授权的手册 `CI-RETRY-v3@fixture-r1`。记忆可以保存这条偏好，也可以把以往排查 CI 根因的步骤归纳成以后可复用的经验；但旧运行的身份、结论和执行许可，都要在新任务中分别重新核对。
 
 ![在同一授权历史上比较原文检索与派生记忆；相对收益目标和绝对底线均达成才保留候选策略。](resources/memory-strategy-comparison.svg)
 
@@ -30,12 +30,14 @@ Memory Tax 论文采用的就是这样一条基线，记作 `naive RAG (1rd)`。
 
 读取方式主要看使用频率和内容长短：稳定、已确认、几乎每次任务都要用的少量偏好，可以常驻在提示中；较长的历史证据、不常用的偏好和步骤经验，适合按需查找。按需读取减少了无关内容的注入，但会增加检索、权限检查和回查原文的成本。每次读取都要重新检查当前调用者、来源版本、有效期和适用范围；出现冲突或权限变化时，旧条目不能压过新证据。
 
-什么时候写入、什么时候读取，是产品可以自行设计的。以开源 Codex 在固定提交 `c320b5c…`（核对于 2026-11-12）中的实现为例：
+条目成为本轮可用上下文，需要经常驻注入，或在本轮检索后进入实际模型输入；因此应分别记录已存储、检索命中和进入上下文这几个状态。
 
-- **写入**：当会话不是临时会话、属于根会话（不是子智能体会话），且 `MemoryTool` 功能已开启时，系统先要求 provider auth context（模型提供方认证上下文）已就绪，再启动一个异步任务。该任务先确认记忆存储可用、再检查速率限制，通过后才抽取符合条件的旧运行记录（第一阶段），并进行合并（第二阶段）。
-- **读取**：只有 `MemoryTool` 和 `config.memories.use_memories` 都启用、且非空的摘要文件可读时，系统才把摘要和检索指引注入提示；专用记忆工具另需开启 `dedicated_tools` 配置。读取模板随记忆版本配置而定，例如 v1 模板让模型先看摘要，需要时再查登记表和对应的运行轨迹。
+什么时候写入、什么时候读取，是产品可以自行设计的。以截至 2026-11-25 可见的公开稳定 tag `rust-v0.172.0`（2026-11-24 发布）为例：
 
-这只是一个固定提交中的实现选择，不代表所有 Codex 配置、ChatGPT 或其他产品都采用相同的写入和读取机制；provider auth context 也不是针对应用数据的逐用户授权规则。
+- **写入**：非临时根会话启动时，如果记忆功能已开启且状态数据库可用，系统会在后台依次执行两个阶段。第一阶段从符合时间与会话条件的历史运行中抽取逐次记忆，保存详细记忆和运行摘要；第二阶段选择可合并的记忆，更新文件系统中的原始记忆、逐次摘要和综合记忆文件，并交给专用智能体完成整理。
+- **读取**：`MemoryTool` 与 `config.memories.use_memories` 都开启时，Codex 才会读取非空 `memory_summary.md` 并把摘要及读取指引加入开发者上下文；`dedicated_tools` 另行控制专用记忆查询工具。记忆版本决定采用哪个读取模板。v2 模板明确把注入摘要当作历史上下文，要求对易变化的重要信息按需要核验，并只引用实际使用过的运行记录。
+
+这是 Codex 仓库在该稳定 tag 的实现快照。其他产品的写入与读取机制、应用数据的逐用户授权，应依其当前实现和权限规则判断。
 
 ## 两种用途怎样走完一次新任务？
 
@@ -45,7 +47,7 @@ Memory Tax 论文采用的就是这样一条基线，记作 `naive RAG (1rd)`。
 
 | 来源 | 可核对内容 |
 |---|---|
-| `run-r42-7#c1` | `build_id=42`；`step=unit-tests`；`test=reject_empty_name`；预期 HTTP `400`、实际 HTTP `200`、`exit_status=1`。这是旧运行的观察，不是根因证明。 |
+| `run-r42-6#c1` | `build_id=42`；`step=unit-tests`；`test=reject_empty_name`；预期 HTTP `400`、实际 HTTP `200`、`exit_status=1`。这是旧运行的观察，不是根因证明。 |
 | 旧政策 `CI-RETRY-v2@fixture-r0` | 曾把重跑范围概括为“失败即可重试”；发布者在 v3 的版本记录中声明它已被替代。 |
 | 当前政策 `CI-RETRY-v3@fixture-r1` | 仅工作节点或网络中断可重试；断言失败须先调查，不自动重跑。 |
 | 偏好 `run-r42-8#preference-1` | 用户 `user-42` 在上次任务中明确确认“以后摘要默认用中文”；只影响该用户的摘要语言。 |
@@ -56,7 +58,7 @@ Memory Tax 论文采用的就是这样一条基线，记作 `naive RAG (1rd)`。
 
 ```text
 用户偏好：摘要默认用中文；来源：run-r42-8#preference-1；scope=user-42。
-历史观察：build 42 的 c1 是 reject_empty_name 断言失败；保留 run-r42-7#c1 来源定位。
+历史观察：build 42 的 c1 是 reject_empty_name 断言失败；保留 run-r42-6#c1 来源定位。
 政策提示：v3 的版本记录标记 v2 已被替代；查询时取当前已授权手册。
 ```
 
@@ -89,6 +91,19 @@ Memory Tax 论文采用的就是这样一条基线，记作 `naive RAG (1rd)`。
 |---|---|---|---|
 | build 42 是否自动重跑 | 取回 c1、当前手册和偏好，判断断言失败须先调查；摘要按同一有效偏好生成 | 从带来源的条目回查相同资料，得出同一重跑结论和摘要偏好 | 重跑建议和摘要都记为同对；有/无偏好是行为对照，不是策略优劣比较 |
 | build 84 的连接失败根因 | 先按该构建的 commit 查询；同版证据齐全且一致才确认根因，缺证或错版时报告未知 | 取回过程条目后按相同条件查询；缺证或错版也报告未知 | 两边都遵守相同的 commit/未知评分契约才合格；另记证据覆盖率，再比较查证成本 |
+
+## 已有实验显示哪些记忆路径？
+
+这些研究将不同对象写入记忆，并在各自的任务和评测协议中观察复用效果。它们有助于说明记忆设计的候选形态，应连同各自的模型、数据和基线解读。
+
+| 研究 | 复用的记忆对象 | 结果与适用范围 |
+|---|---|---|
+| MemGPT | 将对话历史放在可搜索的外部记忆中，需要时再取回细节。 | 在基于 Multi-Session Chat 数据集构造的 Deep Memory Retrieval（深层记忆检索，DMR）任务中，作者报告 GPT-4 仅凭有损历史摘要的基线准确率为 32.1%，MemGPT 为 92.5%。对话记录由人工标注者在多轮会话中持续扮演同一角色生成，任务问答对由另一个 LLM 生成；结果限于这一测试设置，说明可检索完整历史有助于找回摘要遗漏的细节。 |
+| Reflexion | 把失败反馈整理成文字经验，供后续尝试读取。 | 编程任务最多保留一条经验，HotPotQA 与 ALFWorld 的记忆预算分别按任务设置最多保留三条经验。它的评测展示了任务反馈复用的作用，使用少量经验引导后续任务。 |
+| Anthropic 的 Agent Memory 方案 | 区分原始轨迹、记忆笔记、知识 wiki 和本轮注入上下文。 | wiki 与搜索的内部评测及按问题类型出现的收益见 [RAG 章](../rag/rag-architecture-and-implementation.md#%E7%B2%BE%E7%A1%AE%E8%A7%84%E5%88%99%E6%9F%A5%E8%AF%A2%E5%92%8C%E8%B7%A8%E6%96%87%E6%A1%A3%E8%B6%8B%E5%8A%BF%E6%80%8E%E6%A0%B7%E9%80%89%E6%8B%A9%E6%A3%80%E7%B4%A2%E8%A1%A8%E7%A4%BA%EF%BC%9F)；这些设置支持按需把多份资料整理成可查询视图，仍须回到来源核对当前事实。 |
+| WikiTrace | 让经验条目链接到解释它的摘要及原始运行轨迹，遇到冲突或缺少细节时再下钻查证。 | 在五个智能体基准的八个测试套件中，论文报告平均分为无记忆 79.5、仅提供相同经验条目 87.0、WikiTrace 90.2；相对重试基线，Insights Only 和 WikiTrace 的记忆诱发回退率分别为 6.5% 和 4.5%。这是论文指定模型和测试协议的结果。 |
+
+这些评测共同说明，保存经验、保留原始记录和本轮实际读取证据是不同设计环节。应用要按同一来源快照比较原文检索与派生记忆，再决定加工收益是否抵得过维护和查询成本。
 
 ## 同题逐项比较：有多少得到，多少失去？
 
@@ -169,11 +184,11 @@ $$
 
 用历史离线生成监督，还要防止未来信息泄漏：为每道待回答的题设定明确的“当时可见记录”快照，只能用该时点之前的材料生成记忆和训练题。开发集用于构造与修订，验证集用于选配置；最终测试按未参与这些步骤的题、用户或之后的任务时间段隔离。MemSteer v1 的 Appendix A.3 说明训练/验证/评估题目的使用关系，但论文没有报告按每个查询时点截断源记录的规则；仅凭这些划分无法判断是否落实了该时间边界，实际系统仍须显式落实。论文也提醒发布问答数据、对第三方模型 API 发送历史和跨记录合成可能泄露敏感事实；历史来源需要适当授权与数据保护。
 
-回到本章的两个 CI 案例，它们可以转化为可观察的验收门槛。不过 build 42、65、84 已经用来挑选和说明记忆内容，只能作为开发和诊断案例；最终比较须冻结记忆构造、索引、读取规则、回答器和评分，再用未参与监督生成、修订或选型的题目、用户或后续时间段验收。
+回到本章的两个 CI 案例，它们可以转化为可观察的验收门槛。不过 build 42、65、84 已经用来挑选和说明记忆内容，只能作为开发和诊断案例；最终比较须冻结记忆构造、建索引和读取的规则，以及回答器和评分方式。对每道新题，两种策略都只能使用查询时点已可见且获准访问的同一批来源，按已冻结的规则更新索引。验收的题目、用户或时间段应独立于监督生成、修订和选型。
 
 | 用途 | 独立验收要检查什么 | 失败例 |
 |---|---|---|
-| 历史事实与偏好 | 来源记录是否完整；是否读取当前政策版本；旧偏好是否被当前明确要求覆盖。比较同题正确回答、证据支持、偏好遵从与全成本。 | 摘要丢掉 `c1` 的预期 HTTP 400、实际 HTTP 200、测试名或 `run-r42-7` 来源，仍建议重跑；或把旧运行观察称成当前构建事实。 |
+| 历史事实与偏好 | 来源记录是否完整；是否读取当前政策版本；旧偏好是否被当前明确要求覆盖。比较同题正确回答、证据支持、偏好遵从与全成本。 | 摘要丢掉 `c1` 的预期 HTTP 400、实际 HTTP 200、测试名或 `run-r42-6` 来源，仍建议重跑；或把旧运行观察称成当前构建事实。 |
 | 跨次过程经验 | 先按该构建的 commit 查询；可取得时以同版契约、实现与日志核对根因，缺证或错版时把未知判为正确。证据覆盖率另行统计。 | 将 build 65 的 `8081` 直接套到 build 84，绕过按 `84b61d2` 查询 `CI-PORT-v2` 及对应实现的要求。 |
 
 相对收益/回退目标未达成、质量底线未通过、旧事实误用/权限/冲突超过门槛，或成功任务全成本超预算，就不保留该策略；低频信息可继续按需读取原文。阈值和复跑量按应用风险制定，不把论文百分比当通用门槛。错误样本如何进入受控迭代见[Agent 改进与版本验收](../agents/agent-improvement-and-version-acceptance.md)，任务契约与留出条件见[LLM 评估方法](../evaluation/llm-evaluation-methods.md)。
@@ -187,5 +202,8 @@ $$
 > [!info]- 来源
 > - **原文 RAG 与派生记忆的逐题收益/损失、证据忠实度、访问成本和资源量。** [Memory Tax: Dissecting the Net Value of Agent Memory](https://arxiv.org/html/2610.34073v1)，arXiv v1，2026-10-25：§2；§3.1/Table 1；§4.1–4.3、Figure 2–6 与 Table 2；§5.1；Appendix A.1 的 benchmark 抽样、A.2 的 naive RAG 配置、A.3 的质量/成本定义、A.4 的 retrieval scope；Appendix B.1 的 RAG 消融。Benefit/Tax 仅相对论文的 `naive RAG (1rd)` 定义。
 > - **从历史生成 QA–evidence 监督，并在固定回答器下改记忆设计。** [MemSteer: Turning User Histories into Supervision for Agent Memory Optimization](https://arxiv.org/html/2610.39276v1)，arXiv v1，2026-10-29：§3.2–3.3、§4.2/Table 1–2；Appendix A.3 的官方 QA 与完整评估题复用关系；Appendix B.4/Table 9 的训练/验证/留出用户结果；Appendix C 的分布偏差、有限设计空间与合成人格限制；Ethics Statement。盲恢复和模型审计不等同人工认证。
-> - **公开 Codex 的记忆写入触发与两阶段后台处理。** OpenAI [`codex` 固定提交 `c320b5c69e74755a6efd4075ff01d4524ad6a4bf`](https://github.com/openai/codex/commit/c320b5c69e74755a6efd4075ff01d4524ad6a4bf)，检查于 2026-11-12：[`start.rs` 的根会话条件与 auth context](https://github.com/openai/codex/blob/c320b5c69e74755a6efd4075ff01d4524ad6a4bf/codex-rs/memories/write/src/start.rs#L20-L43)、[异步任务中的记忆存储、速率限制和两阶段调用](https://github.com/openai/codex/blob/c320b5c69e74755a6efd4075ff01d4524ad6a4bf/codex-rs/memories/write/src/start.rs#L64-L95) 和 [`README.md` 的抽取/合并说明](https://github.com/openai/codex/blob/c320b5c69e74755a6efd4075ff01d4524ad6a4bf/codex-rs/memories/README.md#L24-L67)。这是固定提交实现，不是 SDK 的通用默认行为。
-> - **公开 Codex 的读取注入和按需查询边界。** 同一提交的 [`extension.rs` 功能开关与 policy fragment](https://github.com/openai/codex/blob/c320b5c69e74755a6efd4075ff01d4524ad6a4bf/codex-rs/ext/memories/src/extension.rs#L41-L104)、[`prompts.rs` 的非空摘要读取](https://github.com/openai/codex/blob/c320b5c69e74755a6efd4075ff01d4524ad6a4bf/codex-rs/ext/memories/src/prompts.rs#L27-L59)、[`dedicated_tools` 条件](https://github.com/openai/codex/blob/c320b5c69e74755a6efd4075ff01d4524ad6a4bf/codex-rs/ext/memories/src/extension.rs#L127-L150) 和 [`read_path.md` 摘要/检索指引](https://github.com/openai/codex/blob/c320b5c69e74755a6efd4075ff01d4524ad6a4bf/codex-rs/ext/memories/templates/memories/read_path.md#L1-L41)。仅代表该公开代码版本。
+> - **MemGPT 将长期对话历史放入可检索的外部记忆。** Packer et al., [“MemGPT: Towards LLMs as Operating Systems,” arXiv v2](https://arxiv.org/html/2310.08560v2), 2024-02-12：§3.1.1、Table 2 与 Appendix §6.1.3；Deep Memory Retrieval（DMR）基于 Multi-Session Chat 对话记录，问题由另一个 LLM 生成；32.1% 与 92.5% 分别来自 GPT-4 有损摘要基线和 MemGPT 配置，不代表一般记忆准确率。
+> - **Reflexion 用任务反馈指导后续尝试。** Shinn et al., [“Reflexion: Language Agents with Verbal Reinforcement Learning,” arXiv v4 / NeurIPS 2023](https://arxiv.org/html/2303.11366v4), §§3–4 与 Table 2：按任务使用不同记忆上限，程序合成最多保留一条经验，HotPotQA 和 ALFWorld 设置最多保留三条。
+> - **原始轨迹、记忆笔记、知识 wiki 与注入上下文的层次。** Anthropic, [“Components of Agent Memory”](https://www.anthropic.com/research/components-of-agent-memory), 2026-11-06，Memory architecture 与 evaluation 小节；知识 wiki 的评测细节见 RAG 章来源说明。
+> - **经验条目到原始轨迹的可回溯链接。** Lee et al., [“Don’t Just Trust Your Memory: Evidence-Linked Memory Reduces Memory-Induced Degradation in LLM Agents,” WikiTrace](https://arxiv.org/html/2611.14320v1), arXiv v1，2026-11-10，§§3.3–3.4、4.1–4.3 与 Tables 1–2：结果基于五个智能体基准、八个测试套件、每套三次试验和论文指定的模型与提示。
+> - **公开 Codex 的记忆写入与读取路径。** OpenAI [`codex` 稳定 tag `rust-v0.172.0`](https://github.com/openai/codex/releases/tag/rust-v0.172.0)，发布于 2026-11-24，核对于 2026-11-25：[记忆 pipeline README](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/memories/README.md#when-it-runs) 描述根会话触发条件、逐运行抽取与全局合并；[`extension.rs`](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/ext/memories/src/extension.rs) 和 [`prompts.rs`](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/ext/memories/src/prompts.rs) 展示读取开关、摘要注入和版本选择；[`read_path_v2.md`](https://github.com/openai/codex/blob/rust-v0.172.0/codex-rs/ext/memories/templates/memories/read_path_v2.md) 把记忆总结明确定位为历史上下文，并要求只引用实际读取过的运行记录。这是固定 tag 的实现，不代表其他配置的默认行为。

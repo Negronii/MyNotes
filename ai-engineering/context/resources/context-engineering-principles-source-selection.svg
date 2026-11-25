@@ -30,7 +30,7 @@
   <text class="small" x="108" y="262">仅查询本轮获准的用户与构建记录</text>
 
   <rect class="source" x="78" y="305" width="624" height="190" rx="16"/>
-  <text class="body" x="108" y="348">run-r42-7#c1 · 旧工具调用 ID</text>
+  <text class="body" x="108" y="348">run-r42-6#c1 · 旧工具调用 ID</text>
   <text class="small" x="108" y="389">read_build_log(build_id=42) 已完成</text>
   <text class="small" x="108" y="428">观察：reject_empty_name，预期 400</text>
   <text class="small" x="108" y="467">实际 200；完整日志仍按 ID 留存</text>
@@ -55,7 +55,7 @@
   <text class="small" x="928" y="262">“按当前 CI 手册，这个构建该重跑吗？”</text>
 
   <rect class="request" x="898" y="305" width="624" height="190" rx="16"/>
-  <text class="body" x="928" y="348">历史观察：run-r42-7#c1</text>
+  <text class="body" x="928" y="348">历史观察：run-r42-6#c1</text>
   <text class="small" x="928" y="389">build 42 的断言失败，预期 400、实际 200</text>
   <text class="small" x="928" y="428">它是既有证据，不重放旧工具调用</text>
   <text class="small" x="928" y="467">可追到完整日志与原始事件记录</text>

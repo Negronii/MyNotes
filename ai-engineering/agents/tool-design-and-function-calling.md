@@ -103,6 +103,19 @@ Responses API 中两种条目的实际形状如下。本例把业务结果序列
 
 有用的错误结果也是契约的一部分：`not_found` 表示目标不存在；结构错误要指出缺少或格式不对的字段；临时不可用则说明这次没有可用结果。执行阶段的失败同样要用原来的 `c1` 回传对应的错误结果；只有读取成功时，才返回 `status: "ok"` 和日志观察。错误信息要帮助模型选择下一步，不应把内部堆栈或敏感内容原样塞回上下文。对于分页数据、大日志或复杂资料，提供范围查询，并返回来源 ID、段落位置或续读标识，可以减少无关输出。Anthropic 的工具设计研究也报告了类似工程经验：工具要有清晰且互不重叠的用途，结果应高信号，并通过任务评估检查工具选择和输出质量；具体效果依赖模型与任务。
 
+## 真实任务的反馈怎样指导工具改进？
+
+从代表性工作流抽取完整任务，固定初始状态、用户目标、模型能看到的工具定义和可核验的结束状态。主结果回答用户是否完成了任务。工具选择、参数有效率、工具错误、重复调用、返回内容、时延和成本帮助定位原因。若多个工具路径都能得到正确结果，评分器应检查任务结果和关键边界，不要求模型复现某一条参考轨迹。保存每次运行实际看到的工具目录、调用名和参数、宿主处理结果、工具返回值及环境结束状态。模型对自己为何失败的解释可作调查线索，判断依据取自运行记录和最终状态。
+
+| 可观察到的现象 | 应核对的证据 | 可验证的改动方向 |
+|---|---|---|
+| 未选工具或选错工具 | 用户任务、当轮可用工具、模型实际选择和最终状态 | 改清工具名称与用途说明，按任务收窄可见工具集合 |
+| 参数缺失、格式错误或反复重试 | 原始 arguments、schema、宿主校验结果和返回的错误类别 | 澄清字段含义、单位和可选条件，给出可执行的结构化错误 |
+| 调用成功却仍未完成任务 | 工具实际返回内容、来源标识、最终回答及权威状态 | 补足后续决策所需字段，调整筛选、分页或确定性预处理 |
+| 调用冗余或成本升高 | 完整调用轨迹、成功结果、调用数、时延和费用 | 检查工具边界、返回规模和是否能由确定性处理完成一段工作 |
+
+先用已复现的失败定位名称和描述、参数契约、执行语义或返回数据中的具体缺口，再按[任务契约评估](../evaluation/llm-evaluation-methods.md)中的配对比较和独立样本验收候选版本。线上反馈要经核验和归类后才成为新案例，具体流程见[生产反馈如何变成可复核证据](../systems/ai-production-observability-and-feedback.md#把线上信号变成独立验证，而不是直接喂训练)。工具调用的身份、资源范围和副作用仍须由宿主逐次授权，见[生产 AI 如何阻止不可信内容诱导模型越权](../safety/ai-safety-in-production.md)。
+
 ## API 如何约束模型能提出哪些调用
 
 除了设计工具本身，应用还可以在每次请求中限制模型能提出哪些调用。OpenAI API 的 `tool_choice` 就是这样一个**调用选择控制**：它只影响模型本轮能否提出、以及怎样提出函数调用，不授予业务权限，也不保证应用一定执行：
@@ -121,9 +134,9 @@ Responses API 中两种条目的实际形状如下。本例把业务结果序列
 
 ## MCP 怎样把模型工具请求接到 server？
 
-前面假设 `read_build_log` 由应用自己实现。若工具由外部 server 提供，就要用到 Model Context Protocol（MCP，模型上下文协议）。MCP 定义 host（宿主应用）、client（客户端）和 server（服务端）之间怎样交换工具、资源和提示；它不等于模型供应商的函数调用 schema，也不会替应用授予业务权限。host 管理 MCP client，client 按 host 的信任配置与 server 通信。
+前面假设 `read_build_log` 由应用自己实现。外部工具可以由应用直接调用，也可以通过 Model Context Protocol（MCP，模型上下文协议）接入。MCP 定义 host（宿主应用）、client（客户端）和 server（服务端）之间怎样交换工具、资源和提示；它不等于模型供应商的函数调用 schema，也不会替应用授予业务权限。host 管理 MCP client，client 按 host 的信任配置与 server 通信。
 
-以 `c1` 为例：client 先用 `tools/list` 获取工具目录，host 从中筛选本轮提供给模型的工具。host 接受模型提出的 `c1` 后，把它关联到一个 MCP JSON-RPC 请求 ID，client 用这个 ID 发送 `tools/call`，附上 `read_build_log` 的参数。收到响应后，host 把请求 ID 映射回 `c1`，再把结果作为工具输出放进下一次 Responses API 请求的 `input`。模型调用 ID、MCP 请求 ID 和整次运行的 ID 分属不同层，不能互相替代。
+以 `c1` 为例：client 先用 `tools/list` 获取工具目录，host 从中筛选本轮提供给模型的工具。host 接受模型提出的 `c1` 后，把它关联到一个 MCP JSON-RPC 请求 ID，client 用这个 ID 发送 `tools/call`，附上 `read_build_log` 的参数。收到响应后，host 把请求 ID 映射回 `c1`，再把结果作为工具输出放进下一次 Responses API 请求的 `input`。模型提出的工具调用 ID（`c1`）、MCP 请求 ID 和整次运行的 ID 分属不同层，不能互相替代。
 
 传输连接、2026-07-28 版协议中每个请求携带的元数据、远端授权、结果处理和注入边界，见[主机怎样把 MCP 工具从发现接到有权限的执行？](./mcp-tool-connections.md)。
 
@@ -141,5 +154,6 @@ Responses API 中两种条目的实际形状如下。本例把业务结果序列
 >
 > - **模型请求、应用执行、工具结果配对、工具选择、并行调用和严格 schema。** OpenAI API，[Function calling](https://developers.openai.com/api/docs/guides/function-calling)，复核于 2026-11-12，`The tool calling flow`、`Tool call outputs`、`Formatting results`、`Incorporating results into response`、`Tool choice`、`Parallel function calling`、`Strict mode`；模型支持和 API 的默认严格行为可能不同。`previous_response_id` 与 `instructions` 的续接规则见 [Responses Create](https://developers.openai.com/api/reference/resources/responses/methods/create.md)，手动上下文回传见 [Reasoning guide](https://developers.openai.com/api/docs/guides/reasoning)。
 > - **JSON Schema 默认值的验证语义。** [JSON Schema 2020-12: Annotations](https://json-schema.org/understanding-json-schema/reference/annotations)，检查 `default`；默认值是注释，不在验证时填入缺失字段。
-> - **为 Agent 设计工具用途、描述和高信号结果。** Anthropic Research，[Writing effective tools for AI agents](https://www.anthropic.com/research/writing-tools-for-agents)，检查 `Choosing the right tools for agents`、`Returning meaningful context from tools`、`Prompt-engineering your tool descriptions`；文章中的效果实例属于其作者评估条件。
+> - **工具用途、描述、结果和任务评估。** Anthropic Research，[Writing effective tools for AI agents — with agents](https://www.anthropic.com/research/writing-tools-for-agents)，2025-09-11，“Choosing the right tools for agents”“Returning meaningful context from tools”“Prompt-engineering your tool descriptions”。文章中的效用结果属于其作者的内部任务和留出评估条件。
+> - **Agent 评测的任务结果与评分器。** Anthropic Research，[Demystifying evals for AI agents](https://www.anthropic.com/research/demystifying-evals-for-ai-agents)，2026-01-09，“The structure of an eval”“Types of graders for agents”“Analyzing results and closing the loop”。文章说明应保存任务上下文和运行轨迹，并按可验证结果选择程序、人或模型评分器。
 > - **协议中的角色、无状态请求、工具发现和执行。** Model Context Protocol，[2026-07-28 Specification](https://modelcontextprotocol.io/specification/2026-07-28)，`Overview`；[Tools](https://modelcontextprotocol.io/specification/2026-07-28/server/tools) 说明 `tools/list` 与 `tools/call`；[该版发布说明](https://blog.modelcontextprotocol.io/posts/2026-07-28/)列出无状态协议核心及多轮往返更新。

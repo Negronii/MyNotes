@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="700" height="660" viewBox="0 0 700 660" role="img" aria-labelledby="title desc">
   <title id="title">RAG 回答主张与证据核验</title>
-  <desc id="desc">输入实际送达模型的三项证据：run-r42-7#c1 中构建 42 的观察、HTTP-CONTRACT-v1 的空名称 HTTP 400 规则、CI-RETRY-v3 的断言失败规则。应用逐条核验后，支持充分则回答两项问题；不支持的主张删除或改写，缺少关键证据时说明不足并停止。只被引用但未实际进入模型输入的段落不能作依据。</desc>
+  <desc id="desc">输入实际送达模型的三项证据：run-r42-6#c1 中构建 42 的观察、HTTP-CONTRACT-v1 的空名称 HTTP 400 规则、CI-RETRY-v3 的断言失败规则。应用逐条核验后，支持充分则回答两项问题；不支持的主张删除或改写，缺少关键证据时说明不足并停止。只被引用但未实际进入模型输入的段落不能作依据。</desc>
   <defs>
     <marker id="arrow" markerWidth="11" markerHeight="11" refX="9.5" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L11 5.5 L0 11 Z" fill="#3d6684"/></marker>
     <marker id="passArrow" markerWidth="11" markerHeight="11" refX="9.5" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0 L11 5.5 L0 11 Z" fill="#4c8c63"/></marker>
@@ -27,7 +27,7 @@
 
   <rect class="box input" x="55" y="38" width="590" height="122"/>
   <text class="head" x="350" y="64" text-anchor="middle">本轮实际输入 · 三项证据</text>
-  <text class="body" x="350" y="91" text-anchor="middle">run-r42-7#c1：build 42 预期 400、实际 200</text>
+  <text class="body" x="350" y="91" text-anchor="middle">run-r42-6#c1：build 42 预期 400、实际 200</text>
   <text class="body" x="350" y="117" text-anchor="middle">HTTP-CONTRACT-v1：空名称预期返回 HTTP 400</text>
   <text class="body" x="350" y="143" text-anchor="middle">CI-RETRY-v3：断言失败先调查，不自动重跑</text>
 

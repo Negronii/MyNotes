@@ -14,7 +14,11 @@ reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学
 - **学得的 verifier、评审模型或 reward model（奖励模型，RM）。** RM 可以用成对偏好数据训练，也可以让一个模型对照参考答案判断简短答案是否正确。它能评价难以写成规则的质量，但分数只是代理信号，会受评分准则（rubric）、评审偏差和训练数据影响。这类分数可以用来做基于学得奖励模型的强化学习，但只要评分本身无法独立复核，就不算可验证奖励。策略越擅长优化这个分数，越可能钻到评审器的漏洞。
 - **process reward model（PRM，过程奖励模型）。** 它给每个推理步骤分别打分，比只看最终答案提供更多过程信号；但要先定义步骤边界、收集可靠的步骤标签，并检查评审器是否被策略利用。步骤怎样切分、标注质量如何，都可能成为新的误差来源。
 
+任务格式也会影响检查器的可靠性。DAPO 的 DAPO-Math-17K 数据构造把数学题的参考答案统一成整数，并相应改写问题，以降低公式解析器引入的奖励误差。借鉴这类做法时，工程上还要一起核验改写后的题意、参考整数与解析规则，确保奖励仍然检查预期目标。答案容易解析只说明检查器有稳定输入，不证明题目改写保留了原任务。
+
 “可验证”指检查目标能被独立执行或复核，不代表用 formal verification（形式化验证）证明了程序的全部行为。outcome reward（结果奖励）和 process reward（过程奖励）是另一个维度，区分的是“给整段结果打分”还是“给中间步骤打分”，与奖励是否可验证无关：程序可以判最终答案，带误差的模型评委也可以给整段回答打分；PRM 可以逐步打分，但它的标注和评审照样可能出错。如果结果检查器只看最终答案，它就没有逐步核对 chain-of-thought（CoT，思维链）；即使最终答案由程序精确判定，也不能据此认为轨迹中的每一步推理都正确。
+
+看起来会自我纠错的轨迹也要按实际证据判断。DAPO §4.4 的几何题示例展示模型在推导中回看二面角并尝试用坐标重新分析，但输出在新思路展开前就截断了，不能据此确认它完成了纠错或得到了正确答案。
 
 两种监督的差别还体现在信号落到哪些 token 上。结果监督在回答结束时打一个分，再把这条回答的组内优势（下一节定义）原样分给它生成的每个 token；过程监督在每个推理步骤末尾打分，不同步骤位置的 token 可以得到不同的优势。本文先走完结果奖励这条主线，再用一个单独的合成例子说明过程奖励的计分粒度。
 
@@ -31,7 +35,7 @@ reinforcement learning with verifiable rewards（RLVR，可验证奖励强化学
 | C | `<think>4×3=12；加2仍是12</think><answer>12</answer>` | 0 | 1 | 1 |
 | D | `<think>4×3=12；12+2=14</think><answer>14</answer>` | 1 | 1 | 2 |
 
-C 在中间把 `4×3+2` 算成了 `12`，最终答案 `12` 与正确答案 `14` 不符；教学检查器分别核对最终数值和标记格式，所以 C 只拿到格式分。这个分数只反映最终结果，不是逐步正确性的标签。
+C 在中间把 `4×3+2` 算成了 `12`，最终答案 `12` 与正确答案 `14` 不符。准确性奖励只核对最终数值，格式奖励则单独核对标记，两项都没有逐步验证推理过程。由于两项等权相加，答案正确但格式错的 B 与答案错误但格式正确的 C 总分都是 `1`。训练和验收报告应分别呈现正确性、格式和合计奖励，避免把不同失败混为一类。
 
 R1 论文 §2.2 中，数学准确性奖励检查的是放在指定格式里的最终答案；格式奖励则明确要求把推理放在 `<think>` 标记里。上表为了把两项信号分开演算，允许教学解析器从不带标记的输出中读出数值；不要把这条玩具解析规则当成 R1 的实现细节。
 
@@ -56,7 +60,7 @@ $$
 
 ## 概率比、裁剪与 KL 怎样约束参数更新？
 
-优势只说明方向。为了不让一次更新把模型改得太远，GRPO 沿用 PPO 的做法，用概率比和裁剪限制每个 token 的更新幅度，并可以用 KL 项把模型拉向参考策略。
+优势只说明方向。GRPO 沿用 PPO 的概率比和裁剪代理目标。概率比比较同一已采样 token 在当前策略与旧策略下的概率。沿着会继续增加单项代理收益的方向越过阈值时，裁剪会让该项进入平台。若启用 KL 项，它还会惩罚当前策略偏离参考策略。
 
 以 D 最终答案中的 `14` 为例，教学中假定它恰好是一个 token，它前面的前缀 `o_{i,<t}` 已包含之前的推理和 `<answer>` 标记。设旧策略给这个 token 的概率是 `0.20`；经过若干次参数更新后，当前策略在同一题目、同一前缀上给同一个 token 的概率变成 `0.26`。（这是专门用来演示“超出裁剪上界”的假设状态；后面的单 logit 推导会另设当前概率为 `0.22`，两者互不相干。）两个概率之比叫 importance ratio（概率比）：
 
@@ -71,7 +75,7 @@ proximal policy optimization（PPO，近端策略优化）的 clipped surrogate�
 
 所以裁剪并不硬性限制实际的概率比，也不会把答案“裁”成正确或错误；它只改变 surrogate 中特定优势项的梯度。优势为负时，概率比低于下界也会出现对应的平台。裁剪范围太窄，可能削弱大量 token 的学习信号；太宽，又可能放任不稳定的大幅更新，需要在目标任务上验证。
 
-KL 项用到的参考策略和采样时的旧策略作用不同。旧策略 $\pi_{\theta_{old}}$ 是生成这一批回答的分布，出现在概率比的分母上；参考策略 $\pi_{ref}$ 是一个固定的锚点（例如训练开始时的模型），用来限制策略漂移得太远。Kullback–Leibler divergence（KL 散度）衡量两个概率分布的差异。例如参考分布为 `[0.9,0.1]`、当前分布为 `[0.8,0.2]` 时，以当前分布的概率为权重求和，得到
+KL 项用到的参考策略和采样时的旧策略作用不同。旧策略 $\pi_{\theta_{old}}$ 是生成这一批回答的分布，出现在概率比的分母上。参考策略 $\pi_{ref}$ 在一段使用同一参考快照的更新期间保持固定，用来限制策略漂移。训练配方可以每隔若干步刷新参考快照，例如 DeepSeek-R1 报告每 400 步刷新一次（见后文）。Kullback–Leibler divergence（KL 散度）衡量两个概率分布的差异。例如参考分布为 `[0.9,0.1]`、当前分布为 `[0.8,0.2]` 时，以当前分布的概率为权重求和，得到
 
 $$
 D_{KL}([0.8,0.2]\Vert[0.9,0.1])
@@ -112,7 +116,7 @@ $$
 \end{aligned}
 $$
 
-DeepSeek-R1 正文 Eq. 2 对整条采样回答 $o_i$ 的概率比使用相同的标量变换；这与此处按 token、同一前缀计算的粒度不同。若此处的 token 按当前策略 $\pi_{\theta}$ 采样，这个非负形式的期望对应 $D_{KL}(\pi_{\theta}\Vert\pi_{ref})$；训练批次通常先按旧策略采样，更新过程中当前策略也会移动，因此不能把一次 sampled KL 数值等同于枚举当前策略的完整词表 KL。
+DeepSeek-R1 正文 Eq. 2 对整条采样回答 $o_i$ 的概率比使用相同的标量变换。这与此处按 token、同一前缀计算的粒度不同。只有当 token 按当前策略 $\pi_{\theta}$ 采样时，$\exp(\delta)-\delta-1$ 的期望才对应完整的 $D_{KL}(\pi_{\theta}\Vert\pi_{ref})$。实际训练批次通常从旧策略采样，之后当前策略还会随更新移动，因此这批样本上的估计不能直接当作当前策略对整个词表计算出的 KL。
 
 ### 一个回答的优势怎样改变模型参数？
 
@@ -157,7 +161,7 @@ PPO 通常要训练一个 critic（价值函数/价值网络）来估计状态�
 
 ## 如果逐步评分，优势会怎样变化？
 
-前面的主线只用了结果奖励。现在看第一节提到的另一种记分方式。DeepSeekMath 的 process supervision（过程监督）在每个推理步骤的末尾给分。论文把同一道题的整组回答中、所有步骤末尾的奖励放进同一个集合一起标准化；设 $index_i(j)$ 是回答 $i$ 中第 $j$ 步结束 token 的位置，$\tilde r_i^{index_i(j)}$ 是回答 $i$ 在该步骤末端的标准化奖励。位置为 $t$ 的 token 会累计结束位置在 $t$ 或之后的步骤奖励：
+前面的主线只用了结果奖励。现在看第一节提到的另一种记分方式。DeepSeekMath 的 process supervision（过程监督）在每个推理步骤的末尾给分。论文把同一道题的整组回答中、所有步骤末尾的奖励放进同一个集合一起标准化。设 $index_i(j)$ 是回答 $i$ 中第 $j$ 步结束 token 的位置，$\tilde r_i^{index_i(j)}$ 是回答 $i$ 在该步骤末端的标准化奖励。每个 token 从所在步骤开始，累加该步及后续各步结束时的标准化奖励：
 
 $$
 \hat A_{i,t}^{process}=\sum_{j:\,index_i(j)\ge t}\tilde r_i^{index_i(j)}.
@@ -282,21 +286,25 @@ OPD 的多位教师只在训练时使用；学生把它们的能力吸收进自�
 
 前面讨论的组大小、标准差缩放、裁剪、KL、token 聚合和截断处理，在训练库里都对应具体的配置项。训练库的默认值只是某个实现版本的起点，不是适用于所有任务的推荐值。锁定版本后，应检查：奖励怎样合并、优势是否除以组内标准差、每条回答的 token 损失怎样聚合、概率比怎样裁剪、是否加载参考模型计算 KL，以及达到长度上限时哪些 token 参与 loss。
 
-截至 2026-11-17，Hugging Face TRL 的最新发布版是 `v1.18.0`（2026-11-13），它的 `GRPOConfig` 提供下列控制；下表五项的默认值与上一版 `v1.17.1` 相同。TRL 的 GRPO 指南还给出了一个可运行的入门样例，用 `GRPOTrainer`、prompt（提示）数据集和数学准确性奖励函数训练。要复现行为，应以版本 tag 下的配置和代码为准，不要只看不带版本号的网页文档。
+截至 2026-11-25，Hugging Face TRL 最新发布版是 `v1.18.2`（2026-11-19）。该 tag 的 `GRPOConfig` 默认值如下。标准 `GRPOTrainer` 中，`loss_type="dapo"` 采用全局 token 聚合；筛组、裁剪和长度处理仍需按实际 trainer 与 recipe 核对。TRL 的 GRPO 指南提供了用 `GRPOTrainer`、prompt（提示）数据集和数学准确性奖励函数训练的入门样例。要复现行为，应以版本 tag 下的配置和代码为准。
 
-| TRL `v1.18.0` 参数 | 发布版默认值 | 应按任务检查什么 |
+| TRL `v1.18.2` 参数 | 发布版默认值 | 应按任务检查什么 |
 | --- | --- | --- |
 | `beta` | `0.0` | 默认不加载参考模型、不加 KL 项。若要限制偏离参考策略，显式设非零值并记录内存与质量代价。 |
 | `epsilon` | `0.2` | PPO-style ratio clip 的基础幅度；低概率探索 token 是否能获得足够上调空间要单独观察。 |
-| `loss_type` | `"dapo"` | 默认采用 DAPO 式 token 聚合。还提供 `"grpo"` 与 `"dr_grpo"` 等选项，reduction 会改变长短回答的权重。 |
+| `loss_type` | `"dapo"` | 在标准 `GRPOTrainer` 中选择全局有效 token 聚合。还提供 `"grpo"` 与 `"dr_grpo"` 等选项，reduction 会改变长短回答的权重。 |
 | `scale_rewards` | `"group"` | 默认按组标准差缩放奖励。Dr.GRPO 风格配置还要考虑关闭这项缩放；只改 loss reduction 不等于复现论文算法。 |
 | `mask_truncated_completions` | `False` | 默认仍将截断回答纳入损失。若任务不能公平评分未完成答案，可显式启用 mask，并监控丢弃比例和长度分布。 |
 
-`epsilon_high` 可以设置与下界不同的上裁剪幅度，未设置时沿用 `epsilon`；DAPO 在其特定实验中用 `0.28`，这不是 TRL 的通用默认值（`v1.18.0` 只在 `loss_type="cispo"` 时把未设置的 `epsilon_high` 默认为 `5.0`）。所用版本的这些字段应连同模型、奖励函数、数据划分、生成长度上限、随机种子和有效 batch 一起记入实验配置。
+`AsyncGRPOTrainer` 另有 rollout 筛组逻辑：它会丢弃已评分的合计奖励全相同的组。这是该 trainer 独立实现的奖励筛选，不等同于 DAPO 论文的持续重采样机制，也不由 `loss_type` 这一设置单独决定。
 
-verl 的 `v0.9.1` 发布版（截至 2026-11-17 仍是最新发布版）也能做 GRPO，但它的通用 `ppo_trainer.yaml` 默认 `algorithm.adv_estimator=gae`，即 generalized advantage estimation（GAE，广义优势估计），不是 GRPO；要跑 GRPO，需显式设为 `grpo`。同一 tag 中 `algorithm.norm_adv_by_std_in_grpo=true`，而 `algorithm.use_kl_in_reward=false`、`actor.use_kl_loss=false`，即把 KL 加进奖励和把 KL 作为单独损失项这两条路径默认都关闭；actor 的 `loss_agg_mode` 默认是 `token-mean`。因此，verl 的基础 PPO 配置不等于 GRPO 论文的完整设置，要分别核对优势估计、奖励标准化、loss reduction 和两条 KL 路径的字段。`filter_groups.enable` 默认关闭，采用 DAPO 式筛组时要显式开启，并检查用来筛组的指标。
+`epsilon_high` 可以设置与下界不同的上裁剪幅度，未设置时沿用 `epsilon`；DAPO 在其特定实验中用 `0.28`，这不是 TRL 的通用默认值（`v1.18.2` 只在 `loss_type="cispo"` 时把未设置的 `epsilon_high` 默认为 `5.0`）。所用版本的这些字段应连同模型、奖励函数、数据划分、生成长度上限、随机种子和有效 batch 一起记入实验配置。
 
-TRL `v1.18.0` 和 verl `v0.9.1` 是本节核对过的具体发布版；新版本可能改变默认值或实现。一个可复现的训练说明至少应记录库的 tag/commit、模型 checkpoint、reward 函数与聚合权重、`G`、优势标准化和 `epsilon`、clip、loss reduction、KL 两项设置、完成长度及截断 mask。不要用一个显示 `GRPO` 的命令行参数概括这些差异。
+截至 2026-11-25，verl 最新发布版仍为 `v0.9.1`（2026-09-20）。它能运行 GRPO，但通用 `ppo_trainer.yaml` 默认 `algorithm.adv_estimator=gae`，即 generalized advantage estimation（GAE，广义优势估计），不是 GRPO；要跑 GRPO，需显式设为 `grpo`。同一 tag 中 `algorithm.norm_adv_by_std_in_grpo=true`，而 `algorithm.use_kl_in_reward=false`、`actor.use_kl_loss=false`，即把 KL 加进奖励和把 KL 作为单独损失项这两条路径默认都关闭；actor 的 `loss_agg_mode` 默认是 `token-mean`。`filter_groups.enable` 默认关闭，采用 DAPO 式筛组时要显式开启，并检查用来筛组的指标。基础 PPO 配置不等于 DAPO 论文的完整设置，要分别核对优势估计、奖励标准化、loss reduction 和两条 KL 路径。
+
+固定版本的 verl DAPO recipe 提供线性增加的 Overlong Reward Shaping，并说明多数实验（包括表现最佳的实验）没有启用 Overlong Filtering，因为作者认为它与软超长奖励的作用有重叠。这是该 recipe 对实验实现的说明，不应外推为 DAPO 论文每次运行都采用同一组合。
+
+TRL `v1.18.2` 和 verl `v0.9.1` 是截至 2026-11-25 核对过的发布版；新版本可能改变默认值或实现。一个可复现的训练说明至少应记录库的 tag/commit、模型 checkpoint、reward 函数与聚合权重、`G`、优势标准化和 `epsilon`、clip、loss reduction、KL 两项设置、完成长度及截断 mask。实验命令显示 `GRPO` 不能替代对这些配置的记录。
 
 ## 怎样独立验收训练结果？
 
@@ -311,11 +319,12 @@ TRL `v1.18.0` 和 verl `v0.9.1` 是本节核对过的具体发布版；新版本
 >
 > - **GRPO、同题组优势与 PPO 对照。** Shao et al., *DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models*（arXiv:2402.03300v3，2024-04-27；§4.1.1–4.1.3〔采样 KL 估计见 Eq. 4〕、Appendix A.1.6），[v3 HTML](https://arxiv.org/html/2402.03300v3)。原始算法、结果/过程监督和 token 级目标。
 > - **R1-Zero 奖励与完整 R1 流程。** DeepSeek-AI, *DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning*（arXiv:2501.12948v2，2026-01-04；§2.1 Eq. 2（KL 估计）、§2.2–2.3、§3.1–3.2、Appendix B.3/B.4.2/B.5、F.1、G.2），[v2 HTML](https://arxiv.org/html/2501.12948v2)。支持准确性/格式奖励、奖励模型使用范围、训练阶段、reward hacking、过程奖励模型和蒸馏比较。
-> - **DAPO。** Yu et al., *DAPO: An Open-Source LLM Reinforcement Learning System at Scale*（arXiv:2503.14476v2，2025-05-20；§3.1–3.4、§4），[v2 HTML](https://arxiv.org/html/2503.14476v2)。支持 Clip-Higher、动态筛组、token-level loss 和截断处理；结论限于该训练系统与实验。
+> - **DAPO。** Yu et al., *DAPO: An Open-Source LLM Reinforcement Learning System at Scale*（arXiv:2503.14476v2，2025-05-20；§§3.1–3.4 的算法改动、§3.5 的数据转换、§4.1 的训练设置与 §4.4 的案例轨迹），[v2 HTML](https://arxiv.org/html/2503.14476v2)。支持 Clip-Higher、动态筛组、token-level loss、超长奖励处理和答案格式转换；案例输出被截断，不能证明已成功纠错。结论限于该训练系统与实验。
 > - **Dr.GRPO。** Liu et al., *Understanding R1-Zero-Like Training: A Critical Perspective*（arXiv:2503.20783v2，2025-10-06；§3.1–3.2），[v2 HTML](https://arxiv.org/html/2503.20783v2)。支持回答长度与题目难度加权分析及 Dr.GRPO 的固定预算分母方案。
 > - **长度归一化的理论权衡。** Ding et al., *On the Impossibility of Unbiased and Length-Invariant Policy Optimization with Outcome Rewards*（arXiv:2607.23364v1，2026-07-25；§3、§4.1–4.4），[v1 HTML](https://arxiv.org/html/2607.23364v1)。在其 outcome-reward 设置和假设下，说明梯度无偏与轨迹长度不变贡献不能同时满足；这是理论预印本结论。
 > - **GSPO。** Zheng et al., *Group Sequence Policy Optimization*（arXiv:2507.18071v2，2025-07-28；§4.1、§5.1、§5.3），[v2 HTML](https://arxiv.org/html/2507.18071v2)。支持几何平均序列概率比、序列级裁剪，以及 Qwen3-30B-A3B 冷启动实验中的 MoE expert 激活稳定性报告；结果限于论文设置。
 > - **OPD 与 GRPO 的计算效率对照。** Liu et al., *Unpacking the Compute Efficiency of Strong-to-Weak OPD against GRPO*（arXiv:2611.08453v1，2026-11-05；§4–§6、Appendix E），[v1 HTML](https://arxiv.org/html/2611.08453v1)。比较外部 teacher 与 self-GRPO teacher 的 Qwen3 实验，并报告多域 specialist 合并的总 FLOPs；这是预印本证据，结果依赖其训练与评估设置。
-> - **TRL 当前配置。** Hugging Face [TRL `v1.18.0` 发布记录](https://github.com/huggingface/trl/releases/tag/v1.18.0)（2026-11-13，截至 2026-11-17 为最新发布版）与[该 tag 的 `grpo_config.py`](https://github.com/huggingface/trl/blob/v1.18.0/trl/trainer/grpo_config.py)；上一版 [`v1.17.1`](https://github.com/huggingface/trl/releases/tag/v1.17.1)（2026-10-30）的[`grpo_config.py`](https://github.com/huggingface/trl/blob/v1.17.1/trl/trainer/grpo_config.py)；[当前 GRPOTrainer 文档](https://huggingface.co/docs/trl/grpo_trainer)。两个 tag 的配置均于 2026-11-17 核对，默认 `beta=0`、`epsilon=0.2`、`epsilon_high=None`（回落到 `epsilon`）、`loss_type="dapo"`、`scale_rewards="group"`、`mask_truncated_completions=False`；`v1.18.0` 发布记录说明 `loss_type="cispo"` 时未设置的 `epsilon_high` 改为默认 `5.0`。无版本文档可能晚于 tag 更新。
+> - **TRL 当前配置。** Hugging Face [TRL `v1.18.2` 发布记录](https://github.com/huggingface/trl/releases/tag/v1.18.2)（2026-11-19，截至 2026-11-25 为最新发布版）及其 [`grpo_config.py`](https://github.com/huggingface/trl/blob/v1.18.2/trl/trainer/grpo_config.py)、[`grpo_trainer.py`](https://github.com/huggingface/trl/blob/v1.18.2/trl/trainer/grpo_trainer.py#L3344-L3357) 和 [`async_grpo_trainer.py`](https://github.com/huggingface/trl/blob/v1.18.2/trl/trainer/async_grpo_trainer.py#L1812-L1850)。`GRPOConfig` 默认 `beta=0`、`epsilon=0.2`、`epsilon_high=None`（除 `loss_type="cispo"` 时改为 `5.0`）、`loss_type="dapo"`、`scale_rewards="group"`、`mask_truncated_completions=False`；标准 `GRPOTrainer` 的 DAPO loss 分支使用全局 token 归约，`AsyncGRPOTrainer` 另行丢弃已评分合计奖励全相同的组。配置于 2026-11-25 核对。
 > - **verl 当前配置。** [verl `v0.9.1` 发布记录](https://github.com/verl-project/verl/releases/tag/v0.9.1)（2026-09-20）、[通用 PPO trainer 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/ppo_trainer.yaml)、[actor 配置](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/config/actor/actor.yaml)、[GRPO 结果优势实现](https://github.com/verl-project/verl/blob/v0.9.1/verl/trainer/ppo/core_algos.py)。配置说明默认优势估计是 GAE、组奖励标准差归一化打开、两种 KL 路径关闭，actor 聚合默认 `token-mean`；实际训练还须检查所用 recipe 的覆盖值。
+> - **verl DAPO recipe 的超长处理。** verl-project [`verl-recipe` 固定 commit `b27e321`](https://github.com/verl-project/verl-recipe/blob/b27e321a57427a23159c167ca12a7ea381a2453d/dapo/README.md#L146-L180)（§“Overlong Reward Shaping”和 FAQ）展示线性软惩罚，并说明大多数实验（包括表现最佳的一项）没有启用 Overlong Filtering。该说明只适用于此 recipe 与其记录的实验。
 > - **DeepSeek-V4 奖励与多教师 OPD。** DeepSeek-AI, *DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence*（arXiv:2606.19348v1；§2.1、§4.2.1、§5.1.1–5.1.2、§5.2.2），[v1 HTML](https://arxiv.org/html/2606.19348v1)。支持初始 MoE 层的 token ID hash 路由、specialist 阶段 SFT+GRPO、难验证任务的 rubric-guided GRM，以及 student 前缀上的多教师 reverse KL 与全词表 logits 蒸馏。V4-Pro 的[固定版本 Gate 实现](https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro/blob/b5968e9190ef611bbf34a7229255be88a0e937c1/inference/model.py#L546-L584)区分按 token ID 查表与按当前表示打分后选择 expert 的路径；具体层数由配置决定。论文描述的是 V4 特定流程；不将其教师权重、按任务分配或生成式评审设计推广为通用规则。

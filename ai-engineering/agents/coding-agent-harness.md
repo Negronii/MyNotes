@@ -46,6 +46,16 @@ Codex 的 Skill（技能说明）在发现阶段向模型提供名称和描述�
 | 操作系统沙箱 | 限制子进程实际可读写的目录和网络 | 不代替业务服务判断当前身份能否操作资源 |
 | 测试与人工审阅 | 判断观测结果是否满足本次代码契约，并检查 diff（代码差异） | 只覆盖已检查的代码与用例，不能单独证明生产行为 |
 
+### Skill 怎样承载业务规则，而不替代模型能力？
+
+Skill 可以把可复用的领域知识、业务规则和操作步骤带入任务，但不会改变模型权重，也不保证模型能正确应用规则。仍以本章的合成样例为例，API 输入校验 Skill 可以记录“空串和全空白名称应返回 400，`Ada` 应返回 200”，要求先查看现有测试，再运行边界测试和检查差异。模型负责理解当前代码、提出实现并使用已开放的工具；harness 负责授权和执行；测试负责判定结果。Codex 的 `SKILL.md` 本身不注册工具或授予文件与业务资源权限，Skill 中附带的脚本也必须由宿主按各自权限边界执行。
+
+### 规划器怎样约束验收结果，同时保留实现选择？
+
+长任务可以由 planner 先确定可观察的功能契约，再让实现者决定代码组织方式。Anthropic 的长时应用开发案例要求用户拖过画布上的矩形区域后，区域内每个格子都填入当前选中的 tile；评估者用浏览器测试检查这个结果，并发现实现只修改了起点和终点，因为拖动结束时没有调用矩形填充逻辑。契约可以说明区域内格子都应变化、区域外格子保持原样，并留出测试方法；事件处理、状态结构和渲染实现则由实现者选择，除非产品约束另有规定。
+
+同一系列实验也显示模型升级会改变旧脚手架的必要性。文章报告 Sonnet 4.5 在长时开发中需要多次重置上下文，Opus 4.5 可在同一会话中配合 compaction（上下文压缩）继续，而 Opus 4.6 完成超过两小时的 DAW 任务时不再需要 sprint 切分。planner 和 evaluator 仍有价值，后续 QA 也找出需求缺口。这个结果只适用于文章中的模型和任务；迁移模型后应重新测量 context reset、分 sprint、额外总结等组件对目标任务的质量与成本贡献，再保留确有作用的部分。
+
 本机 `codex-cli 0.167.0` 的帮助列出 `read-only`（只读）、`workspace-write`（工作区可写）、`danger-full-access`（完整访问）三种 shell 沙箱选项，以及 `on-request`、`never` 两种审批策略。沙箱限制命令在操作系统层可以做什么；审批策略决定是否以及何时请求批准。此版本中 `on-request` 表示模型可以决定何时请求批准，不表示每个受限命令必然弹窗；`never` 则不请求用户批准，也不会因此把沙箱外请求变成获准操作。官方文档和较新配置可能另有用语，具体选项以正在运行的版本为准。
 
 在 Codex CLI 或集成开发环境（IDE）扩展启用 `workspace-write` 并沿用其默认网络设置时，shell 网络访问关闭，工作区外写入可能触发审批。官方当前文档说明，可写根目录内的 `.git`、`.agents`、`.codex` 和 `.aws` 仍递归只读；对本机 0.167.0 或不同会话，实际目录和限制应以正在运行的配置为准。`--add-dir` 可显式增加可写目录，`danger-full-access` 移除 shell 沙箱限制，但不替业务服务授予资源权限。shell 网络、托管网页搜索、远端 MCP 服务和连接器是不同的工具或连接边界，不能从一个本地 shell 配置推断其他工具是否联网。
@@ -57,6 +67,8 @@ codex --sandbox workspace-write --ask-for-approval on-request
 ~~~
 
 当前边界内的本地读取、补丁或测试可以执行。若 shell 尝试写入 `/srv/another-project/report.md` 或访问 `https://updates.example.test`，沙箱会阻止未获准访问；在本机 0.167.0 的 `on-request` 策略下，模型可以请求审批，批准只适用于该请求的实际范围，而且不保证进程执行成功。`never` 不弹审批，也不会让越界请求自动获准。MCP 服务端和业务 API 仍须依据自己的凭据、资源权限和副作用规则执行。
+
+OpenAI 于 2026-11-18 发布的工程说明把 Codex sandbox 描述为包在子进程外的操作系统隔离层，并指出进程后代继续受同一限制。文章列出 macOS 的 Seatbelt、Linux 的 bubblewrap 加 seccomp-BPF，以及当时仍在迁移到 MXC 的 Windows 实现。这是该文章对当前产品设计的说明，不是本机 Codex CLI 0.167.0 每个平台都使用同一实现的证据；验证具体行为仍应看运行产品、版本和操作系统。这个本地子进程边界也不自动涵盖远端 MCP 服务或业务 API。
 
 ## 一个本地修复怎样通过 harness 前进？
 
@@ -141,7 +153,7 @@ Codex CLI 0.167.0 源码列出 14 个事件名。它们分属不同生命周期�
 
 - Codex CLI 的 `session_id` 定位会话，`tool_use_id` 标识会话中的一次工具调用。
 - `c1` 和 `c2` 是两次不同运行中的只读日志调用：`c1` 来自上游诊断，`c2` 来自编排章节。
-- 编排章节用应用运行 ID `run-r42-7` 追踪 `c2` 所在的运行；`run-r42-7:create-issue:v1` 标识其后单独的工单创建意图，可以拿它向接收端查询。
+- 编排章节用应用运行 ID `run-r42-10` 追踪 `c2` 所在的运行；`run-r42-10:create-issue:v1` 标识其后单独的工单创建意图，可以拿它向接收端查询。
 
 `resume`（恢复会话）只载入会话记录，不会恢复原进程，也不会撤销副作用；网络断开也可能只是失去了观察，动作本身仍在进行或已经完成。所以要先靠标识定位同一个动作，再向进程或接收端核对状态；查不到可靠状态时，按下表最后一行处理。
 
@@ -157,6 +169,12 @@ Codex CLI 0.167.0 源码列出 14 个事件名。它们分属不同生命周期�
 | 有部分效果或未能可靠核实 | 先记录并核对已知文件改动/远端回执，再对账未知部分；无法核实时保持未知。 | 不盲目重放；必要时停止并由维护者决定如何恢复。 |
 
 对 `git push`，检查远端目标分支是否指向预期提交，并考虑并发更新；对创建工单等服务请求，查询原业务操作键。如果原会话记录（transcript）没有成功回执，只说明记录里没有回执，不能推出动作未发生。应用运行恢复和副作用对账见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](../systems/ai-application-architecture.md)。
+
+### 长任务的接续要保存哪些状态？
+
+长运行的接续也需要可检查的项目状态，而不只是一份对话摘要。Anthropic 的 long-running agent 实验使用 initializer 准备仓库、启动脚本和带优先级的 `feature_list.json`，后续编码会话读取进度与 Git 状态，逐项实现、测试并更新记录。该实验展示了持久化进度如何帮助新上下文接手，不证明摘要能验证功能是否完成。本例中仍应从 `c1` 读取失败证据，从工作树和测试结果核对修复状态。
+
+接续记录应同时指向会话和项目状态，注明当前工作树、检出的提交与未提交差异、测试命令及退出码，以及被测工具版本。本例合成夹具可用 `python3 -B -m unittest discover -s . -v` 复放；本章 hooks 与权限范围的 Codex CLI 被测版本为 `0.167.0`。只有来源、代码状态和测试结果对应同一版本时，旧会话中的结论才能用于判断当前修复。
 
 相关机制：
 
@@ -183,5 +201,13 @@ Codex CLI 0.167.0 源码列出 14 个事件名。它们分属不同生命周期�
 > - **hook 事件、发现配置、信任、matcher、PreToolUse 与 PermissionRequest 输出契约。** OpenAI，[Hooks](https://developers.openai.com/codex/hooks)，检查事件表、“Where Codex looks for hooks”、“Review and trust hooks”、“Matcher patterns”、“Tool coverage”、“PreToolUse”、“PermissionRequest” 和 “PostToolUse”。当前页面说明 PostToolUse 怎样替换普通结果；本机 0.167.0 对应输出 schema 还由固定源码核对。
 >
 > - **0.167.0 的事件列表和 schema。** OpenAI Codex [rust-v0.167.0 release](https://github.com/openai/codex/releases/tag/rust-v0.167.0)，源码固定于 [commit `086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a`](https://github.com/openai/codex/tree/086ccc833bc9cf01024ad2dd6af7dbd421b6bf9a)：`codex-rs/hooks/src/lib.rs` 的 `HOOK_EVENT_NAMES` 与 `HOOK_EVENT_NAMES_WITH_MATCHERS`；`codex-rs/hooks/src/schema.rs` 的 hook command input/output wire 类型；`codex-rs/core/src/hook_runtime.rs` 的调用前、权限请求和调用后调度；`codex-rs/core/src/tools/approvals.rs` 的审批决策流程。
+>
+> - **Agent Skill 的渐进式披露与可组合资源。** Anthropic，[“Equipping agents for the real world with Agent Skills”](https://www.anthropic.com/research/equipping-agents-for-the-real-world-with-agent-skills)，2025-10-16。文章说明 Skill 先以元数据发现，再按需读取详细指引和资源；它承载领域知识与程序，不改变基础模型能力。
+>
+> - **长时运行的初始化、项目进度和编码循环。** Anthropic，[“Effective harnesses for long-running agents”](https://www.anthropic.com/research/effective-harnesses-for-long-running-agents)，2025-11-26。文章以长时 Web 应用开发实验说明进度清单、启动脚本、Git 和测试怎样帮助后续编码会话接手；适用范围限于其模型与任务。
+>
+> - **Planner、实现者与评估者的功能契约及模型升级。** Anthropic，[“Harness design for long-running application development”](https://www.anthropic.com/research/harness-design-long-running-apps)，2026-03-24。文章在其交互式应用和 DAW 实验中比较 Opus 4.5、Opus 4.6 等设置，并用可观察功能合同让评估者检查实现；结果不构成跨模型的固定脚手架建议。
+>
+> - **当前 Codex 本地沙箱的操作系统隔离设计。** OpenAI，[“Inside the Codex sandbox”](https://openai.com/index/inside-the-codex-sandbox/)，2026-11-18。文章说明 Codex 如何用平台特定的 OS 机制隔离子进程及其后代；具体行为依产品、版本、平台和权限配置，本章 0.167.0 本机核验不据此外推。
 >
 > - **运行身份与副作用核对。** [AI 应用架构](../systems/ai-application-architecture.md)说明本地会话状态与应用运行状态、接收端副作用核对的边界；此处在合成案例中沿用该机制，没有执行远端写入。
