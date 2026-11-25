@@ -7,7 +7,7 @@
 个人待追问内容可写在下方受管区域之外；同步会逐字保留区域外内容。
 若笔记路径被重命名或移除，请先将本页备份到仓库外，移走本页后运行同步生成新清单，再对照备份手动恢复勾选与个人笔记；不要直接修改受管区域内的路径。
 <!-- MYNOTES:READING-PROGRESS:BEGIN -->
-<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=8f973bb0435be35ad45162825f6683dcbb00d4aab10532513707c72afeb7bd39 -->
+<!-- MYNOTES:READING-PROGRESS:SNAPSHOT sha256=d6ebf701648ebda1d1b5e10834d44154cd03b389605762b02b86626f9f1c475a -->
 ## AI Engineering
 
 - [ ] 1. [AI 服务如何将一条消息变成完整回答？](../ai-engineering/systems/from-message-to-answer.md)
@@ -26,7 +26,7 @@
 - [ ] 14. [什么时候值得把历史加工成 Agent 记忆？](../ai-engineering/context/agent-memory-design-and-evaluation.md)
 - [ ] 15. [应用怎样设计并执行模型提出的工具请求？](../ai-engineering/agents/tool-design-and-function-calling.md)
 - [ ] 16. [主机怎样把 MCP 工具从发现接到有权限的执行？](../ai-engineering/agents/mcp-tool-connections.md)
-- [ ] 17. [无人值守 Agent 怎样在用户授权内继续第三方操作？](../ai-engineering/agents/delegated-oauth-for-agent-tools.md)
+- [ ] 17. [无人值守 Agent（智能体）怎样在用户授权内继续第三方操作？](../ai-engineering/agents/delegated-oauth-for-agent-tools.md)
 - [ ] 18. [什么时候应该让模型决定下一步？](../ai-engineering/agents/agent-fundamentals.md)
 - [ ] 19. [模型选到 shell 或文件工具后，由谁决定能否执行？](../ai-engineering/agents/coding-agent-harness.md)
 - [ ] 20. [怎样按依赖、并行性和控制权组织多阶段 AI 任务？](../ai-engineering/agents/orchestration-patterns.md)
