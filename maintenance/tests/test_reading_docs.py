@@ -276,6 +276,8 @@ class ReadingDocsTests(unittest.TestCase):
         self.assertEqual(expected, actual)
         check = self.run_generator("--check")
         self.assertEqual(check.returncode, 0, check.stderr)
+        frontend = (self.root / "review/generated/frontend.md").read_text(encoding="utf-8")
+        self.assertNotIn("可从各分部首章开始阅读。", frontend)
 
         generated.write_text(content + "\n[broken](#no-such-heading)\n", encoding="utf-8")
         broken = generated.read_bytes()
@@ -319,6 +321,69 @@ class ReadingDocsTests(unittest.TestCase):
             content,
             r'### <a id="note-[0-9a-f]{12}-a1" href="https://example\.test/">Linked note</a>',
         )
+
+    def test_group_navigation_links_only_to_each_nonempty_groups_first_numbered_chapter(self):
+        write(
+            self.root / "ai-engineering/index.md",
+            """# AI Engineering
+
+## Reading order / 阅读顺序
+### 请求路径：输入 [A/B] 与输出？ ###
+[Agent 基础 / Agent Fundamentals?](AIagents/agent-fundamentals.md)
+### 仅有标题的空分部
+### 接口：A/B 与 C？
+[空间 / Space Note?](nested/notes%20with%20space.md)
+""",
+        )
+
+        result = self.run_generator()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        generated = self.root / "review/generated/ai-engineering.md"
+        content = generated.read_text(encoding="utf-8")
+
+        first_fragment = READING_DOCS.encode_native_fragment(
+            "1. Agent 基础 / Agent Fundamentals?"
+        )
+        second_fragment = READING_DOCS.encode_native_fragment("2. 空间 / Space Note?")
+        first_link = f"- [请求路径：输入 \\[A/B\\] 与输出？](#{first_fragment})"
+        second_link = f"- [接口：A/B 与 C？](#{second_fragment})"
+        navigation = content.index("可从各分部首章开始阅读。")
+        first_chapter = content.index("## 1. Agent 基础 / Agent Fundamentals?")
+        navigation_content = content[navigation:first_chapter]
+        self.assertIn(first_link, content)
+        self.assertIn(second_link, content)
+        self.assertNotIn("仅有标题的空分部", content)
+        self.assertEqual(navigation_content.count("](#"), 2)
+        self.assertLess(navigation, content.index(first_link))
+        self.assertLess(content.index(first_link), content.index(second_link))
+        self.assertLess(content.index(second_link), first_chapter)
+
+        checked = self.run_generator("--check")
+        self.assertEqual(checked.returncode, 0, checked.stderr)
+
+    def test_group_navigation_rejects_an_ambiguous_numbered_chapter_heading(self):
+        write(
+            self.root / "engineering-foundations/index.md",
+            """# Foundations
+
+## Reading order / 阅读顺序
+### HTTP 通信
+[HTTP / WebSockets](networking/http.md)
+""",
+        )
+        write(
+            self.root / "engineering-foundations/networking/http.md",
+            "# HTTP Protocol\n## 1. HTTP / WebSockets\n",
+        )
+
+        result = self.run_generator()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(
+            "engineering-foundations/index.md:4: ambiguous native heading target '1. HTTP / WebSockets'; duplicate generated headings cannot be distinguished",
+            result.stderr,
+        )
+        self.assertFalse((self.root / "review/generated").exists())
 
     def test_check_rejects_gfm_or_mismatched_native_fragments(self):
         first = self.run_generator()

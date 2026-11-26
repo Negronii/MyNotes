@@ -69,11 +69,19 @@ class MapEntry:
 
 
 @dataclass
+class ReadingGroup:
+    title: str
+    line: int
+    first_target: Path | None = None
+
+
+@dataclass
 class DomainPlan:
     name: str
     title: str
     map_path: Path
     entries: list[MapEntry] = field(default_factory=list)
+    groups: list[ReadingGroup] = field(default_factory=list)
     notes: list["SourceNote"] = field(default_factory=list)
 
 
@@ -245,6 +253,10 @@ def native_title(markdown: str) -> str:
 
 def encode_native_fragment(title: str) -> str:
     return quote(title, safe="-._~;/?:@&=+$,")
+
+
+def escape_markdown_link_label(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]")
 
 
 def decode_native_fragment(fragment: str) -> str:
@@ -504,14 +516,17 @@ def parse_map(plan: DomainPlan, root: Path, issues: list[Issue]) -> None:
     end = next((index for index, _ in h2 if index > matching[0][0]), len(lines))
     seen: dict[Path, int] = {}
     domain_root = plan.map_path.parent.resolve()
+    active_group: ReadingGroup | None = None
     for index in range(start, end):
         if fenced[index]:
             continue
         plain = without_line_ending(lines[index]).strip()
         if not plain:
             continue
-        group = ATX_HEADING.match(plain)
-        if group and len(group.group(1)) == 3 and group.group(2).strip():
+        heading = ATX_HEADING.match(plain)
+        if heading and len(heading.group(1)) == 3 and heading.group(2).strip():
+            active_group = ReadingGroup(native_title(heading.group(2)), index + 1)
+            plan.groups.append(active_group)
             continue
         match = MAP_ENTRY.fullmatch(without_line_ending(lines[index]))
         if not match:
@@ -563,6 +578,8 @@ def parse_map(plan: DomainPlan, root: Path, issues: list[Issue]) -> None:
             add_issue(issues, plan.map_path, index + 1, f"map target does not exist: {raw_target!r}")
             continue
         plan.entries.append(MapEntry(title, target, index + 1))
+        if active_group is not None and active_group.first_target is None:
+            active_group.first_target = target
 
     source_files = {
         path.resolve()
@@ -1066,11 +1083,32 @@ def build(root: Path) -> tuple[dict[Path, str], list[Issue]]:
         output = root / OUTPUT_DIR / f"{plan.name}.md"
         map_url = relative_url(plan.map_path, output.parent)
         provenance = (
-            f"> Generated from the [{plan.name} reading map]({map_url}). "
-            "Edit the map and its linked source notes. Internal section links use Obsidian heading fragments; "
-            "source notes remain standard Markdown.\n\n"
+            f"> 本卷由[领域地图]({map_url})及其中的 Markdown 正文生成。"
+            "卷内链接按 Obsidian 标题跳转。修订内容请到对应的章节原文。\n\n"
         )
         pieces = [f"# {plan.title}\n\n", provenance]
+        navigation: list[str] = []
+        for group in plan.groups:
+            if not group.title or group.first_target is None:
+                continue
+            first_note = notes_by_path.get(group.first_target)
+            if first_note is None:
+                continue
+            if first_note.native_heading_counts.get(first_note.section_native_title, 0) > 1:
+                add_issue(
+                    issues,
+                    plan.map_path,
+                    group.line,
+                    f"ambiguous native heading target {first_note.section_native_title!r}; duplicate generated headings cannot be distinguished",
+                )
+                continue
+            label = escape_markdown_link_label(group.title)
+            fragment = encode_native_fragment(first_note.section_native_title)
+            navigation.append(f"- [{label}](#{fragment})\n")
+        if navigation:
+            pieces.append("可从各分部首章开始阅读。\n\n")
+            pieces.extend(navigation)
+            pieces.append("\n")
         for note in plan.notes:
             pieces.append(render_note(note, output, notes_by_path, root, issues))
         expected[output] = "".join(pieces)

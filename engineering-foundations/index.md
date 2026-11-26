@@ -1,23 +1,30 @@
 # 工程基础
 
-先从最后一件库存的预留看请求怎样变成可靠的数据提交，再追问超时之后如何确认结果。账户报表的异步作业把队列、运行时容量、部署和故障诊断连起来；算法与内存布局解释这些系统背后的访问成本；最后一组讨论设计原则与团队协作怎样应对变化。
+只剩一件库存，两个请求同时到达，服务怎样保证只预留一次？如果数据库已经提交，响应却在途中丢了，用户又怎样找回这笔预留？从这两个问题入手，就能把数据库事务和 API 的重试约定接起来。
 
 ## 从问题开始
 
-- [两个请求争夺最后一件库存时，怎样保证只预留一次？](databases/database-fundamentals.md)——建议先读，从库存约束走到事务提交。
-- [请求超时后如何确认结果并安全重试？](reliability/api-reliability-and-async-delivery.md)——接着看服务端已提交、客户端却未收到响应时，如何沿请求标识确认结果并安全重试。
-- [怎样从报表服务信号定位发布后的故障？](reliability/observability-slos-and-incident-response.md)——先用指标、追踪和日志定位环节，再决定改哪里。
+- **库存到底扣了吗？** 先看[最后一件库存怎样连同预留记录一起提交](databases/database-fundamentals.md)，接着直接读[用原键和原请求重放，取回同一笔预留的当前状态](reliability/api-reliability-and-async-delivery.md)。想知道并发请求各自能看见什么，再展开[事务隔离与恢复](databases/database-transactions-isolation-and-recovery.md)或 [InnoDB 的实现](databases/mysql-innodb-index-lock-and-recovery.md)。
+- **导出已受理，什么时候才有文件可下载？** [账户报表的设计](architecture/system-design-fundamentals.md)用一个任务串起持久受理、队列、执行和授权下载。若只是想让页面在断线后继续显示报表进度，走[快照和事件续读](networking/real-time-web-updates.md)这条独立路线。
+- **发布后，报表变慢、导出也迟迟没结果，先查哪里？** 沿[生产故障演练](reliability/observability-slos-and-incident-response.md)分别衡量读取与导出，再判断该停止放量还是扩大排查。
 
 ## Reading order / 阅读顺序
 
-### 从请求到受约束的数据提交
+### 最后一件库存怎样预留，丢了回执怎么查？
 
 - [两个请求争夺最后一件库存时，怎样保证只预留一次？](databases/database-fundamentals.md)
+- [请求超时后如何确认结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
+
+### 一次报表请求怎样从网络走到权限检查？
+
 - [浏览器请求如何到达 HTTP 响应？](networking/http-protocols-and-websockets.md)
 - [如何设计可预期的 HTTP API 契约？](backend/http-api-contracts.md)
 - [Cookie 会话与 OIDC 令牌怎样建立身份？](security/web-sessions-and-oidc.md)
 - [如何逐次授权租户内的报表资源？](security/web-security-and-authentication.md)
 - [浏览器安全控制分别保护什么信任边界？](security/web-browser-security-boundaries.md)
+
+### 怎样保护数据库写入并高效读取？
+
 - [SQL 空值、连接与分组会怎样改变报表 42 的结果？](databases/sql-null-joins-and-aggregates.md)
 - [如何用约束保护业务规则并为读取建立索引？](databases/database-constraints-and-indexes.md)
 - [事务隔离与预写日志能保证什么？](databases/database-transactions-isolation-and-recovery.md)
@@ -26,13 +33,15 @@
 - [怎样缓存数据库读取并说明陈旧窗口？](backend/caching-and-redis.md)
 - [单库接近容量上限时，怎样分片并在搬迁中保持唯一写入者？](databases/database-sharding-and-rebalancing.md)
 
-### 超时之后：确认结果与恢复任务
+### 导出任务怎样受理、执行和交付？
 
-- [请求超时后如何确认结果并安全重试？](reliability/api-reliability-and-async-delivery.md)
 - [怎样设计一个可持久查询的账户报表？](architecture/system-design-fundamentals.md)
 - [报表任务的发布确认、消费者确认与业务完成各证明什么？](reliability/queue-delivery-and-acknowledgement.md)
 - [Webhook（回调通知）接收方如何验证并可靠受理？](reliability/webhook-delivery-and-verification.md)
 - [怎样用 Kafka 分区保序、推进偏移并安全接手？](reliability/kafka-partitions-and-offsets.md)
+
+### 报表的实时进度怎样送到页面？
+
 - [何时选择轮询、SSE、流式 Fetch 或 WebSocket？](networking/real-time-web-updates.md)
 
 ### 运行时如何承接与限制工作

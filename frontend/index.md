@@ -1,11 +1,11 @@
 # 前端
 
-主线跟随同一个报表页面：先看浏览器怎样完成一次导航、显示第一帧，再看一次筛选点击怎样变成下一帧。读完主线后，可以继续深入布局、JavaScript 的值与调用、异步任务，最后是类型、构建和交付验收。
+先跟一张报表从输入网址走到第一帧。页面上的「最早优先」按钮有原生 JavaScript 和 React 两种实现，跟其中一种就能看到 May、April 两行怎样交换位置。两条路都接到浏览器怎样画出下一帧。遇到延迟、复杂表单或异步状态，再进入对应分部。
 
 ## 从问题开始
 
 - [浏览器如何把 URL 变成第一帧？](browser/browser-basics.md)——建议先读，沿同一个报表页面从地址栏走到画面出现。
-- [一次操作怎样变成界面更新？](../review/index.md#%E4%B8%80%E6%AC%A1%E6%93%8D%E4%BD%9C%E6%80%8E%E6%A0%B7%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)——先看原生事件与调度，再切换到同一筛选意图的 React 实现，沿状态提交走到下一帧。
+- [一次操作怎样变成界面更新？](../review/index.md#%E4%B8%80%E6%AC%A1%E6%93%8D%E4%BD%9C%E6%80%8E%E6%A0%B7%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)——先分清点击处理器还没装好，还是已经注册、点击却在排队，再沿页面的实现追到画面更新。
 - [页面已经可见，为什么操作还很慢？](performance/performance-metrics-and-analysis.md)——从性能录制定位延迟落在哪一段。
 
 ## Reading order / 阅读顺序
@@ -16,20 +16,26 @@
 - [每次 URL 变化都会加载新文档吗？](browser/browser-navigation-and-history.md)
 - [脚本如何影响 HTML 解析与文档就绪？](html-css/browser-html-and-css.md)
 
-### 从筛选点击到下一帧
+### 从点击“最早优先”到下一帧
 
 - [浏览器怎样查询、更新 DOM 并响应用户输入？](browser-apis/dom-manipulation-and-events.md)
 - [浏览器 JavaScript 何时运行，画面何时更新？](runtime/event-loop.md)
 - [React如何把一次用户操作变成界面更新？](frameworks/react-basics.md)
-- [如何在 React 中组合组件与复用行为？](frameworks/react-component-composition.md)
+- [为什么一次 DOM 改动会增加布局或绘制工作？](html-css/rendering-pipeline-and-forced-layout.md)
+- [如何测量并诊断网页性能问题？](performance/performance-metrics-and-analysis.md)
+
+### 继续诊断并控制高成本更新
+
+- [如何测量并减少不必要的React工作？](performance/react-rendering-optimization.md)
 - [如何让报表筛选在昂贵更新时保持响应？](frameworks/advanced-react.md)
+- [长报表列表何时适合虚拟滚动？](performance/rendering-and-computation-optimization.md)
+
+### 复杂交互与状态恢复
+
+- [如何在 React 中组合组件与复用行为？](frameworks/react-component-composition.md)
 - [React界面如何维护服务端数据与乐观更新的正确性？](frameworks/react-server-state-and-optimistic-updates.md)
 - [管理表格打开多步骤编辑后，怎样在查询变化与提交冲突中保住用户意图？](frameworks/management-table-and-form-workflows.md)
 - [React错误边界能恢复哪些失败？](frameworks/react-error-boundaries.md)
-- [为什么一次 DOM 改动会增加布局或绘制工作？](html-css/rendering-pipeline-and-forced-layout.md)
-- [如何测量并诊断网页性能问题？](performance/performance-metrics-and-analysis.md)
-- [如何测量并减少不必要的React工作？](performance/react-rendering-optimization.md)
-- [长报表列表何时适合虚拟滚动？](performance/rendering-and-computation-optimization.md)
 
 ### 结构、布局与可访问交互
 

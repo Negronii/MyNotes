@@ -1,6 +1,19 @@
 # Frontend
 
-> Generated from the [frontend reading map](../../frontend/index.md). Edit the map and its linked source notes. Internal section links use Obsidian heading fragments; source notes remain standard Markdown.
+> 本卷由[领域地图](../../frontend/index.md)及其中的 Markdown 正文生成。卷内链接按 Obsidian 标题跳转。修订内容请到对应的章节原文。
+
+可从各分部首章开始阅读。
+
+- [从 URL 到第一帧](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)
+- [从点击“最早优先”到下一帧](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)
+- [继续诊断并控制高成本更新](#9.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)
+- [复杂交互与状态恢复](#12.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)
+- [结构、布局与可访问交互](#16.%20%E8%AF%AD%E4%B9%89%E5%8C%96%20HTML%20%E8%A1%A8%E5%8D%95%E5%A6%82%E4%BD%95%E6%94%AF%E6%8C%81%E9%94%AE%E7%9B%98%E4%B8%8E%E8%BE%85%E5%8A%A9%E6%8A%80%E6%9C%AF%E7%94%A8%E6%88%B7%EF%BC%9F)
+- [JavaScript 的值、对象与调用](#28.%20JavaScript%20%E5%80%BC%E5%A6%82%E4%BD%95%E8%BD%AC%E6%8D%A2%E3%80%81%E6%AF%94%E8%BE%83%EF%BC%8C%E5%B9%B6%E6%88%90%E4%B8%BA%E5%B1%9E%E6%80%A7%E9%94%AE%EF%BC%9F)
+- [异步任务与错误恢复](#40.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)
+- [类型、模块与构建产物](#45.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)
+- [浏览器状态、通信与流式结果](#52.%20%E6%8A%A5%E8%A1%A8%E9%A1%B5%E9%9D%A2%E9%87%8C%E7%9A%84%E7%8A%B6%E6%80%81%E5%BA%94%E8%AF%A5%E6%94%BE%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F)
+- [框架、工具选择与交付验收](#60.%20Redux%20%E5%A6%82%E4%BD%95%E7%BB%84%E7%BB%87%E5%85%B1%E4%BA%AB%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%B8%8E%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)
 
 ## 1. 浏览器如何把 URL 变成第一帧？
 
@@ -13,7 +26,7 @@ flowchart TD
     C --> D[已有可显示内容<br/>当前渲染所需 CSS 就绪]
     C --> E[HTML 解析结束、模块图就绪<br/>样式不再阻塞脚本]
     D --> F[渲染机会：样式、布局、绘制<br/>栅格化与合成后显示首帧]
-    E --> G[reports.js 模块求值<br/>注册筛选处理器]
+    E --> G[reports.js 模块求值<br/>注册最早优先处理器]
     F --> H[画面可见且处理器已就绪]
     G --> H
     H --> I[点击最早优先<br/>更新 URL、选中态与行顺序]
@@ -122,16 +135,16 @@ button svg { display: block; width: 16px; height: 16px; flex: none; }
 
 前面的渲染流程产出了首帧，现在回到开头的第二条就绪线。首帧可能早于 `load` 事件，也早于客户端代码可以响应操作的时刻：HTML 已显示报表，但模块脚本还没下载完、没运行或还没注册点击处理器。此时页面显示的是初始 HTML 中 `sort=recent` 对应的状态：两个按钮的 `aria-pressed` 分别为 `true` 和 `false`，列表 May 在前、April 在后。若报表由 React 服务端输出，hydration（客户端水合）还要在已有 DOM 上运行客户端代码并接入组件行为，见[Next.js 中的 hydration 与流式渲染](#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E4%B8%8E%E5%AE%A2%E6%88%B7%E7%AB%AF%E7%BB%84%E4%BB%B6%E5%9C%A8%E5%93%AA%E6%9D%A1%E7%BA%BF%E4%BA%A4%E6%8E%A5)。若点击没有反馈，先确认处理器是否已经可用；处理器已注册仍无反馈，再看事件是否被主线程上的其他工作拖住。
 
-当用户点击“最早优先”，`/reports.js` 的处理器先用 History API（例如 `history.pushState`）把当前 URL 从 `https://example.test/reports?sort=recent#summary` 改为 `https://example.test/reports?sort=oldest#summary`。`pushState` 会新增一条同文档 history entry 并更新地址栏；它本身既不请求新 HTML，也不按查询参数替报表排序。随后由同一个点击处理器把两个按钮的 `aria-pressed` 分别改为 `false` 和 `true`，并把列表节点顺序改成 April、May。脚本随即就能读到改动后的 DOM，但画面不会马上变化；浏览器会在后续渲染机会按需重新计算样式、布局或绘制，再把新的像素送去合成。异步处理器与画面更新之间的关系见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)，点击如何到达处理器见[DOM 事件如何传播，何时适合事件委托？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)，更新后可能需要的布局和绘制见[为什么一次 DOM 改动会增加布局或绘制工作？](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+当用户点击“最早优先”，`/reports.js` 的处理器先用 History API（例如 `history.pushState`）把当前 URL 从 `https://example.test/reports?sort=recent#summary` 改为 `https://example.test/reports?sort=oldest#summary`。`pushState` 会新增一条同文档 history entry 并更新地址栏；它本身既不请求新 HTML，也不按查询参数替报表排序。随后由同一个点击处理器把两个按钮的 `aria-pressed` 分别改为 `false` 和 `true`，并把列表节点顺序改成 April、May。脚本随即就能读到改动后的 DOM，但画面不会马上变化；浏览器会在后续渲染机会按需重新计算样式、布局或绘制，再把新的像素送去合成。异步处理器与画面更新之间的关系见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)，点击如何到达处理器见[DOM 事件如何传播，何时适合事件委托？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)，更新后可能需要的布局和绘制见[为什么一次 DOM 改动会增加布局或绘制工作？](#7.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 | 现象 | 优先检查的阶段 |
 |---|---|
 | 首个 HTML 字节迟迟不到 | 重定向、缓存命中、连接建立、服务端响应和网络瀑布 |
 | HTML 已到，主要内容仍迟 | 关键 CSS/脚本的阻塞关系、Largest Contentful Paint（最大内容绘制，LCP）资源发现与渲染时机 |
-| 页面可见，筛选点击没有反馈 | 首先确认 `/reports.js` 已求值且按钮处理器已注册；再查主线程阻塞、处理器运行时间和后续渲染工作 |
+| 页面可见，点击“最早优先”没有反馈 | 首先确认 `/reports.js` 已求值且按钮处理器已注册；再查主线程阻塞、处理器运行时间和后续渲染工作 |
 | 内容出现后位置跳动 | 图片或字体的尺寸和到达时机、后插入内容及布局偏移记录 |
 
-先沿测得的依赖关系定位，再决定要改请求、脚本、布局还是绘制。相同的“首屏慢”现象可能来自服务器响应、资源发现或内容渲染，单独改 CSS 选择器无法同时解释这些原因。见[如何测量并诊断网页性能问题？](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
+先沿测得的依赖关系定位，再决定要改请求、脚本、布局还是绘制。相同的“首屏慢”现象可能来自服务器响应、资源发现或内容渲染，单独改 CSS 选择器无法同时解释这些原因。见[如何测量并诊断网页性能问题？](#8.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
 > [!info]- 来源
 > - **URL、片段、History API 与导航请求。** [RFC 3986 §3.5 Fragment](https://www.rfc-editor.org/rfc/rfc3986.html#section-3.5) 说明片段用于标识主资源中的次级内容；[HTML Standard §7.2.5，History interface](https://html.spec.whatwg.org/multipage/nav-history-apis.html#the-history-interface) 规定 `pushState` 添加 history entry 并更新其 URL，Living Standard，核对日期：2026-11-11；[WHATWG Fetch Standard，HTTP-network-or-cache fetch 与 URL 处理](https://fetch.spec.whatwg.org/#http-network-or-cache-fetch)，Living Standard，核对日期：2026-11-11；[WHATWG URL Standard，origin](https://url.spec.whatwg.org/#origin)，核对日期：2026-11-11。
@@ -461,7 +474,7 @@ if (document.readyState === "loading") {
 
 回顾 `readyState` 的三个值：`loading` 表示 HTML parser 仍在解析；`interactive` 表示解析已结束，但延后脚本和子资源可能尚未完成；`complete` 表示文档已加载完成。这个就绪检查只保证 DOM 已可查询：若初始化依赖尚未执行的 defer/module 脚本副作用，应等待该脚本自己的就绪信号。文档状态也不代表报表 API 请求、React hydration 或其他应用异步初始化已经完成；若初始化包含这类异步工作，仍需单独表示并等待。
 
-所以，判断主要内容何时出现要看绘制，判断排序按钮能否使用要看它的初始化状态，两者不能用同一个事件代替。首帧可以早于 `load`；报表内容已经显示时，模块也可能还没注册排序处理器。反过来，`DOMContentLoaded` 触发后，主线程上的一个长任务仍会让点击处理排队等待。可见时点和就绪事件的区别见[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)；用户侧的加载与交互数据见[如何测量并诊断网页性能问题？](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
+所以，判断主要内容何时出现要看绘制，判断排序按钮能否使用要看它的初始化状态，两者不能用同一个事件代替。首帧可以早于 `load`；报表内容已经显示时，模块也可能还没注册排序处理器。反过来，`DOMContentLoaded` 触发后，主线程上的一个长任务仍会让点击处理排队等待。可见时点和就绪事件的区别见[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)；用户侧的加载与交互数据见[如何测量并诊断网页性能问题？](#8.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
 > [!info]- 来源
 > - 解析器插入的经典脚本、`async`、`defer` 与模块调度：[WHATWG HTML：script processing model](https://html.spec.whatwg.org/multipage/scripting.html#script-processing-model)，Living Standard（2026-11-11 更新），外部/内联脚本、defer 模块列表与 async 集合。核对日期：2026-11-12。
@@ -1031,7 +1044,7 @@ console.log("end");
 
 `requestAnimationFrame(callback)` 把 callback 注册到文档的动画帧 callback 列表。它不是独立 task，也不是微任务；用户代理选中更新渲染 task 后，HTML 在执行这一轮的常规样式和布局更新之前运行列表中的动画帧 callbacks。若页面有可呈现的渲染机会且用户代理没有跳过更新，这能让动画写入和当前更新对齐。DOM 修改并不要求应用一定调用 rAF，普通 DOM 改动也可以在后续更新渲染中反映出来。
 
-rAF callback 本身通过 Web IDL callback 调用。callback 返回后，Web IDL 先清理 callback 状态，再清理 script；如果执行上下文栈变空，后者就在同一个渲染 task 内运行微任务检查点。排空后控制返回当前更新渲染算法，继续运行后续 rAF callback，再进入常规样式和布局步骤；检查点不会把这次渲染 task 结束掉。rAF callback 内排入的 Promise reaction 因而能在该轮样式与布局步骤之前执行，但不会额外获得一轮输入或绘制机会。HTML 的更新渲染算法随后按需重算样式、布局和其他文档更新步骤。浏览器如何把更新结果继续交给绘制、合成和屏幕呈现，取决于引擎实现；见[一次 DOM 改动怎样进入布局与绘制？](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+rAF callback 本身通过 Web IDL callback 调用。callback 返回后，Web IDL 先清理 callback 状态，再清理 script；如果执行上下文栈变空，后者就在同一个渲染 task 内运行微任务检查点。排空后控制返回当前更新渲染算法，继续运行后续 rAF callback，再进入常规样式和布局步骤；检查点不会把这次渲染 task 结束掉。rAF callback 内排入的 Promise reaction 因而能在该轮样式与布局步骤之前执行，但不会额外获得一轮输入或绘制机会。HTML 的更新渲染算法随后按需重算样式、布局和其他文档更新步骤。浏览器如何把更新结果继续交给绘制、合成和屏幕呈现，取决于引擎实现；见[一次 DOM 改动怎样进入布局与绘制？](#7.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 rAF 的回调时刻受渲染机会与页面状态影响，不是固定的 `60 Hz` 定时器；隐藏页面或被节流时，回调可能延迟。它给出的时间戳适合计算动画经过时间，但 callback 中大量计算仍会拖慢当前渲染更新。读几何值还可能促使同步布局，不能假定把读写放进 rAF 就只做合成。
 
@@ -1055,7 +1068,7 @@ requestIdleCallback(runIdleSlice, { timeout: 2000 });
 
 Node.js 有另一套宿主边界：它按 libuv 阶段处理 I/O、定时器和 `setImmediate()`，并额外提供 `process.nextTick()` 队列；CommonJS 顶层和 ES module 顶层中，nextTick 与 Promise 微任务的相对顺序也可能不同。这里的渲染机会与 rAF 讨论针对浏览器窗口，不要把它改写成 Node 的固定阶段图；见 [Node.js 事件循环阶段与微任务队列如何交互？](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
 
-**延伸：**[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)说明解析期间的脚本调度；[DOM 事件如何传播，何时适合事件委托？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)说明 click 如何到达处理器；[JavaScript 异步](#40.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)解释 Promise 本身的语言行为；[如何测量并诊断网页性能？](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)帮助区分点击前等待、handler 执行和后续呈现延迟。
+**延伸：**[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F)说明解析期间的脚本调度；[DOM 事件如何传播，何时适合事件委托？](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)说明 click 如何到达处理器；[JavaScript 异步](#40.%20%E5%9B%9E%E8%B0%83%E3%80%81Promise%20%E4%B8%8E%20async%20%E5%87%BD%E6%95%B0%E6%80%8E%E6%A0%B7%E7%BB%84%E5%90%88%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)解释 Promise 本身的语言行为；[如何测量并诊断网页性能？](#8.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)帮助区分点击前等待、handler 执行和后续呈现延迟。
 
 > [!info]- 来源
 > - **任务源、task queue、task 结束检查点、task 选择与渲染机会。** [WHATWG HTML §8.1.7 Event loops](https://html.spec.whatwg.org/multipage/webappapis.html#event-loops)，Living Standard，核对日期：2026-11-11；重点对照 §8.1.7.1 Definitions、§8.1.7.2 Queuing tasks 和 [§8.1.7.3 Processing model](https://html.spec.whatwg.org/multipage/webappapis.html#event-loop-processing-model)。定义段说明 task source 如何映射到 task queue、不同来源可合并；processing model 规定从所选队列取最早的可运行 task、task 步骤结束后的微任务检查点，以及渲染机会如何在并行步骤中排入 rendering task source。规范的用户交互优先示例只是实现自由度示意，不是固定策略。
@@ -1068,9 +1081,9 @@ Node.js 有另一套宿主边界：它按 libuv 阶段处理 I/O、定时器和 
 > - **本地重放。** 用 headless Chrome `157.0.8103.50` 经 CDP `Input.dispatchMouseEvent` 对本地按钮模拟一次鼠标输入，产生可信的 click 事件，观察到 `click A → promise microtask → queueMicrotask → microtask queued by promise → click B → rAF A → microtask from rAF A → rAF B → timer task`。另一次从同步脚本调用 `button.click()`，观察到 `click A → click B → outer end → promise microtask → queueMicrotask → microtask queued by promise → timer task → rAF A → microtask from rAF A → rAF B`。这两次本机运行观察到相反先后；它们不构成不同 task source 的固定优先级保证。另以文档中的同一语句块重放同步代码例，只在 `console.log` 外包了一层记录器，观察到 `start → end → Promise reaction → queued microtask → queued by reaction → timer task`。本地 CDP 模拟鼠标输入 trace 和代码示例的运行记录在本轮报告目录；同步 `.click()` 的对照记录来自独立复读。
 ## 6. React如何把一次用户操作变成界面更新？
 
-**案例背景。** 沿用浏览器章节里的报表页 `/reports?sort=recent#summary`，本章用 React 实现它的筛选控件和列表。`#summary` 是浏览器定位片段，不会发给服务端；服务端按 `sort=recent` 给出 May、April。现在用户点 **Oldest first**。React 把 `sort` 改为 `oldest` 后，会先用手头已有的两条记录在本地排成 April、May，再在提交后请求服务端确认。若很快又选回 **Most recent**，界面再次先排成 May、April；较早的请求不能把较新的选择误标成已确认。
+**案例背景。** 沿用浏览器章节里的报表页 `/reports?sort=recent#summary`，本章用 React 实现它的排序控件和列表。`#summary` 是浏览器定位片段，不会发给服务端；服务端按 `sort=recent` 给出 May、April。现在用户点 **Oldest first**。React 把 `sort` 改为 `oldest` 后，会先用手头已有的两条记录在本地排成 April、May，再在提交后请求服务端确认。若很快又选回 **Most recent**，界面再次先排成 May、April；较早的请求不能把较新的选择误标成已确认。
 
-以下示例按 React 19.3.0 与对应 React DOM 核验。本章从点击处理器接手，解释一次状态更新如何经过 `render`（渲染）和 `commit`（提交）改变 React 管理的 DOM（文档对象模型）。`useEffect`（副作用同步）在提交后协调需要跟随已提交状态的外部工作，例如网络请求。完整页面由路由把选择写入浏览器历史，并在 Back 时恢复；这里展示 React 内部轮次，省略 URL（统一资源定位符）与历史栈接线，细节见[筛选状态与前进后退](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。本章停在 React 已提交 DOM；后续是否需要样式计算、布局或绘制，由浏览器决定，接回[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)。
+以下示例按 React 19.3.0 与对应 React DOM 核验。本章从点击处理器接手，解释一次状态更新如何经过 `render`（渲染）和 `commit`（提交）改变 React 管理的 DOM（文档对象模型）。`useEffect`（副作用同步）在提交后协调需要跟随已提交状态的外部工作，例如网络请求。完整页面由路由把选择写入浏览器历史，并在 Back 时恢复。示例聚焦 React 内部的更新，URL（统一资源定位符）与历史栈怎样同步见[排序状态与前进后退](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。当 React 把 April 移到 May 前面，DOM 里已经是新顺序。接着看[浏览器怎样把两行的新位置画出来](#7.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 先看点击后没有再次切换选择的一轮；快速反选时，后文再展开旧响应的处理。
 
@@ -1106,7 +1119,7 @@ function addFromQueue() {
 
 **用户动作直接触发的一次性工作放在事件处理器里；从 props（属性）和 state 可算出的值在 render 里计算；只有需要随着已提交界面同步外部系统的工作才放进 Effect。** 本例点击处理器记录新的排序意图，`sortReports` 在 render 中派生可见行，Effect 在 commit 后请求与这份选择相符的数据。把可见行再写进一份 state 并用 Effect 同步，会多出一次不必要的更新轮次。
 
-下面的 TypeScript JSX（TSX）代码把 `fetchReports` 作为路由传入的数据层函数：它接收排序值，成功时返回已验证的 `Report[]`，失败时以拒绝的 Promise 表示。`initialReports` 常量是“路由已经取得并验证首屏服务端数据”的合成输入；组件从收到这份数据开始，不实现首屏读取。列表以每条报表稳定的 `key`（键）作为身份，排序不会更换报表身份。`periodStart` 用固定格式日期排序；`period` 只作 May、April 这样的显示标签，不按月份单词的字母顺序比较。两个排序按钮用 `aria-pressed` 暴露当前选择。初始数据由路由先给好，所以 `requestId=0` 时跳过请求。示例刻意只保留 React 状态和请求身份；真实的 URL 与历史接线见开头链接的浏览器章节。若需知道排序状态由哪些组件共同持有，见[如何在 React 中组合组件与复用行为？](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)。
+下面的 TypeScript JSX（TSX）代码把 `fetchReports` 作为路由传入的数据层函数：它接收排序值，成功时返回已验证的 `Report[]`，失败时以拒绝的 Promise 表示。`initialReports` 常量是“路由已经取得并验证首屏服务端数据”的合成输入；组件从收到这份数据开始，不实现首屏读取。列表以每条报表稳定的 `key`（键）作为身份，排序不会更换报表身份。`periodStart` 用固定格式日期排序；`period` 只作 May、April 这样的显示标签，不按月份单词的字母顺序比较。两个排序按钮用 `aria-pressed` 暴露当前选择。初始数据由路由先给好，所以 `requestId=0` 时跳过请求。示例刻意只保留 React 状态和请求身份；真实的 URL 与历史接线见开头链接的浏览器章节。若需知道排序状态由哪些组件共同持有，见[如何在 React 中组合组件与复用行为？](#12.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)。
 
 > [!info]- 输入类型与首屏示意数据
 >
@@ -1319,7 +1332,7 @@ function ReportsPage({
 
 `initialSort` 和 `initialReports` 是首屏输入；`useState` 只在首次挂载时用它们初始化。后续 URL 变化不能只改这两个 prop 就期待状态自动重置。由于 `fetchReports` 在依赖中，同一数据域内应传入稳定的数据层函数；若每次 render 都新建函数，Effect 会把它当作依赖变化而重新请求。若 `fetchReports` 内部读取原始 JSON，也应先在数据边界验证形状，而不是只用 TypeScript 类型断言；见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](#45.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
 
-完整路由需要在用户选择筛选时用 `pushState` 新增历史项；若用 `replaceState` 覆盖当前项，Back 就无法返回之前的选择。路由还要在 `popstate` 到来时把 URL 中的排序交给状态所有者。若 Back 恢复的排序需要重新向服务端确认，即使排序值和上一次相同，路由也要为这次读取发出新请求身份；若能复用该历史项对应的有效数据，则不必为了编号而强制请求。React Router 与单页应用（SPA）/多页应用（MPA）的边界见[React 路由如何把 URL 映射到视图？](#62.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
+完整路由需要在用户选择排序时用 `pushState` 新增历史项；若用 `replaceState` 覆盖当前项，Back 就无法返回之前的选择。路由还要在 `popstate` 到来时把 URL 中的排序交给状态所有者。若 Back 恢复的排序需要重新向服务端确认，即使排序值和上一次相同，路由也要为这次读取发出新请求身份；若能复用该历史项对应的有效数据，则不必为了编号而强制请求。React Router 与单页应用（SPA）/多页应用（MPA）的边界见[React 路由如何把 URL 映射到视图？](#62.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)。
 
 请求身份只约束同一数据域内的确认结果，不负责隔离界面正在显示的数据。切换账户时，仅增加请求编号仍会让 `lastSuccess.reports` 中的旧账户行留在列表里，等待期间和失败时尤其明显。路由应在数据域变化时同时隔离或清空成功数据；一种直接做法是按账户 ID 重新挂载 `ReportsPage`，并传入该账户已取得的首屏数据。
 
@@ -1334,7 +1347,7 @@ function ReportsPage({
 
 若请求 `1` 的失败回调在 cleanup 前运行，它只记下编号 `1` 的失败，不改 `lastSuccess`，也不能把请求 `2` 标成失败；cleanup 后运行则直接被忽略。无论哪条路径，编号 `1` 都不能确认编号 `2`。请求身份决定哪个响应可以确认当前轮次；`lastSuccess` 决定等待或失败时屏幕拿哪份同一数据域的成功数据来显示。若当前请求失败，独立的 `role="alert"` 会报错，列表保留同一数据域最近成功的数据，并按当前选择排序；不会把旧数据说成服务端刚确认的结果。
 
-cleanup 守卫是“Effect 已被 React 清理后不再采用它的结果”，不是取消网络请求的承诺。Back 若需重新向服务端确认同一排序，也由路由创建新的请求身份；若重用缓存数据，则由路由提供相应有效结果。生产应用要缓存、去重、取消、重试或协调多组件请求时，通常由路由数据层或查询库承担这些契约，见[React 如何维护服务端数据与乐观更新？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
+cleanup 守卫是“Effect 已被 React 清理后不再采用它的结果”，不是取消网络请求的承诺。Back 若需重新向服务端确认同一排序，也由路由创建新的请求身份；若重用缓存数据，则由路由提供相应有效结果。生产应用要缓存、去重、取消、重试或协调多组件请求时，通常由路由数据层或查询库承担这些契约，见[React 如何维护服务端数据与乐观更新？](#13.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
 
 ### 渲染、协调与提交是不同工作
 
@@ -1357,7 +1370,7 @@ React 不能保证 Effect 总在浏览器 paint（绘制）之后运行。与点
 
 根组件包在 `StrictMode`（严格模式）中时，开发环境首次挂载会额外执行一次 Effect 的 `setup → cleanup`，再执行正式 setup，用来检查清理能否撤销建立工作。这只发生在开发环境，生产环境不会因此重复请求。本例初次调用因 `requestId=0` 提前返回，既不启动请求也没有可调用的 cleanup；之后排序更新才会为请求建立清理函数。即便使用 ignore，网络请求本身也可能继续运行；它解决的是清理后旧闭包不能采用结果。
 
-类组件的 `render()` 同样必须保持纯计算。维护旧类组件时，`componentDidMount` 和 `componentDidUpdate` 可在 DOM 提交后同步外部系统，`componentWillUnmount` 可清理连接；若要在 DOM 更新前读取布局快照，使用 `getSnapshotBeforeUpdate`。这些生命周期帮助定位阶段，但不与函数组件的 Effect 一一对应；React 仍支持 class components（类组件），但新组件通常使用函数组件。若一次排序确实让用户输入变慢，再看[如何让报表筛选在昂贵更新时保持响应？](#8.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E6%8A%A5%E8%A1%A8%E7%AD%9B%E9%80%89%E5%9C%A8%E6%98%82%E8%B4%B5%E6%9B%B4%E6%96%B0%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F)；若是渲染抛出的异常需要恢复，则看[React 错误边界能恢复哪些失败？](#11.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)。
+类组件的 `render()` 同样必须保持纯计算。维护旧类组件时，`componentDidMount` 和 `componentDidUpdate` 可在 DOM 提交后同步外部系统，`componentWillUnmount` 可清理连接；若要在 DOM 更新前读取布局快照，使用 `getSnapshotBeforeUpdate`。这些生命周期帮助定位阶段，但不与函数组件的 Effect 一一对应；React 仍支持 class components（类组件），但新组件通常使用函数组件。若一次排序确实让用户输入变慢，再看[如何让报表筛选在昂贵更新时保持响应？](#10.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E6%8A%A5%E8%A1%A8%E7%AD%9B%E9%80%89%E5%9C%A8%E6%98%82%E8%B4%B5%E6%9B%B4%E6%96%B0%E6%97%B6%E4%BF%9D%E6%8C%81%E5%93%8D%E5%BA%94%EF%BC%9F)；若是渲染抛出的异常需要恢复，则看[React 错误边界能恢复哪些失败？](#15.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（当前 React 文档 19.3；历史行为按 React 18 核验，日期 2026-11-12）
 >
@@ -1380,307 +1393,406 @@ React 不能保证 Effect 总在浏览器 paint（绘制）之后运行。与点
 > - 类组件 render、`getSnapshotBeforeUpdate` 与 mount/update/unmount lifecycle：[Component](https://react.dev/reference/react/Component)，React 19.3 文档。
 >
 > - URL 片段只供客户端定位且不会随 HTTP（超文本传输协议）请求发给服务端：[RFC 3986 §3.5](https://www.rfc-editor.org/rfc/rfc3986#section-3.5)，核验日期 2026-11-12。
-## 7. 如何在 React 中组合组件与复用行为？
+## 7. 为什么一次 DOM 改动会增加布局或绘制工作？
 
-**案例背景。** 报表页地址为 `/reports?sort=recent#summary`：查询参数决定排序，片段 `#summary` 只负责浏览器定位。路由把服务端给出的 May、April 两行与 `initialSort="recent"` 传入；初次提交选中 **Most recent**，显示 May 在 April 前。用户点 **Oldest first** 后，工具栏要选中旧序，列表要排成 April、May。因为同一份 `sort`（排序状态）同时决定两个界面，包含工具栏和列表的最近共同父组件负责持有它。父组件把状态和派生结果传给子组件，工具栏把用户意图通过回调交还状态所有者。远距离组件要共享行距偏好时，可选 Context；多个组件要复用同种外部监听行为时，可选自定义 Hook；父组件确实需要子组件的窄范围命令式动作时，才暴露 ref。
+本章用一个报表排序的例子贯穿：用户打开 `https://example.test/reports?sort=recent#summary`，看到 May、April 两行报表；点击“最早优先”后，页面把地址中的 `sort` 参数改为 `oldest`，并把 Document Object Model (DOM, 文档对象模型) 中的行顺序换成 April → May。[DOM 更新与事件章节](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)解释了点击处理器怎样改动节点；本章从“新 DOM 已经写入”接着讲：浏览器怎样让之后显示的画面跟上新状态，以及脚本读取元素尺寸、位置时，为什么有时要等浏览器先把布局算完。
 
-本章代码按 React 19.3 与 React DOM 19.3 核验。状态所有权示例省略 URL 与历史栈；若要让排序选择进入浏览器历史，可用 `pushState` 写入排序，并在 `popstate` 时把 Back/Forward 恢复的排序同步给同一状态所有者，见[浏览器主线](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。
+### 浏览器需要让哪些信息重新一致？
 
-> [!info]- 读旧版示例时需要识别的 API 差异
->
-> React 19 的 Context 可直接用 `<Context value={...}>` 作为 Provider（提供者）；React 18 及更早版本需用 `<Context.Provider>`。React 19 函数组件也能把 `ref` 当作 prop，旧版本需 `forwardRef`。本章使用自动 JSX 转换，TSX 使用对应的 React 19 类型声明。下面使用当前写法；`use` 和 `useEffectEvent` 的调用规则在对应小节解释。
+DOM 换了顺序，屏幕上的像素并不会自己改变，中间还有几层派生数据要跟着更新。HyperText Markup Language (HTML, 超文本标记语言) 标准规定了浏览器何时有机会更新渲染，但没有规定各浏览器使用同样的内部阶段、线程或绘图技术。概念上，把报表变成画面可以分成几层：Cascading Style Sheets (CSS, 层叠样式表) 规则针对当前 DOM 计算 computed style (计算样式)；layout (布局) 为盒子求出尺寸与位置；paint (绘制) 生成描述可见内容的绘制操作；需要生成新像素时再做 rasterization (栅格化)；compositing (合成) 把已有与更新后的绘制表面组合，再交给显示过程。
 
-### 把状态放在共同使用者之上的最近一层
+![点击后的 DOM 状态怎样经过按需的样式、布局与绘制更新进入画面](../../frontend/html-css/resources/rendering-update.svg)
 
-本例由调用方传入 `<ReportsPage reports={reports} initialSort="recent" />`。`reports` 只有 May、April 两行：May 的 `periodStart` 是 `2026-05-01`，April 的是 `2026-04-01`；本例日期固定为 `YYYY-MM-DD`。显示标签 `period` 不参与排序。`ReportsPage` 是工具栏和列表的最近共同祖先；它持有 `sort` 并在 render（渲染）中派生行顺序。
+这张图是说明依赖关系的概念模型，不表示每次改动都要按顺序重做每一层。浏览器可以推迟并合并工作，复用仍然有效的结果，跳过没有失效的阶段。
 
-这一次数据流从父组件向下、用户意图再向上：
+这些更新在什么时候发生？点击处理器返回时，DOM 已经是新顺序，但浏览器不保证每个任务结束后立即画一帧（任务与渲染机会的关系见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)）；DOM 写入也不代表网络请求或其他异步操作已经完成。报表行按 DOM 顺序从上到下排布，所以 April 从第二行移到第一行，May 移到第二行；等相关几何与绘制结果更新后，下一次呈现的画面才显示 April 在上。脚本读取几何可以拿到算好的值，但读取本身不会让屏幕立即多画一帧。
 
-~~~mermaid
-flowchart TD
-    P["ReportsPage<br/>持有 sort<br/>派生有序 rows"] -->|"sort 与回调"| T["ReportToolbar<br/>显示选中按钮"]
-    P -->|"有序 reports"| L["ReportList<br/>按顺序显示行"]
-    T -->|"点击调用 onSortChange"| P
+不同改动让哪些数据失效，取决于改了什么：
+
+| 对这张报表做什么 | 浏览器可能要更新什么 | 仅凭操作名称不能推出什么 |
+| --- | --- | --- |
+| 把两行从 May → April 调成 April → May | 更新受影响的样式、几何或绘制结果 | 失效范围取决于选择器依赖、布局关系与引擎优化 |
+| 只把按钮文字颜色改成强调色 | 重算适用样式并更新相应绘制结果 | 若尺寸与换行不变，原有几何可能仍可复用 |
+| 改宽度、字体或会占空间的内容 | 重新计算受影响盒子的尺寸与后续位置，再更新绘制 | 重排范围不一定只限于被改的节点 |
+| 改变 `transform` 或 `opacity` | 某些实现路径可不重新布局，甚至复用绘制结果 | 不能仅凭属性名保证提升图层、只走合成或使用 GPU |
+| DOM / 样式写入后读取几何 | 若所需样式或布局已失效，读取前可能同步更新 | 同一几何读取接口并非每次调用都触发布局 |
+
+reflow (重排) 和 repaint (重绘) 是常见的工程说法，不是可以跨浏览器比较的性能指标。一个节点尺寸变化后，排在它后面的内容位置可能一起变化；反过来，属性改了但布局几何没有失效时，也可能不必重做布局。`transform` 和 `opacity` 常被选作动画候选，是因为它们在某些渲染路径中可以绕过布局或复用绘制内容；目标页面是否真的走这条路，应看目标浏览器的性能录制。
+
+### 为什么读几何会让脚本停下来？
+
+上表最后一行值得单独展开。DOM 写入后，浏览器通常只把样式或布局结果标记为“待更新”，继续运行 JavaScript，把计算留到下一次渲染更新。但用来测量几何的 application programming interface (API, 应用程序接口) 必须返回调用时的当前值：`offsetWidth` 在普通单盒案例中返回未应用变换的整数边框盒宽度；`getBoundingClientRect()` 返回相对视口的包围矩形，并把变换计入。如果前面的 DOM / CSS 写入使返回值依赖的数据失效，实现就可能在返回前同步重算样式或布局。若数据仍然是最新的，读取可以复用结果，不必新做一次布局。
+
+![几何读取遇到失效布局时，浏览器先同步更新再把当前值交回脚本](../../frontend/html-css/resources/geometry-read-flow.svg)
+
+同步刷新会让脚本等所需计算完成后才继续；其中同步执行布局的情况，Chrome 文档称为 forced reflow (强制重排)。被等待的工作不一定是 API 本身的固定成本：它取决于此前哪些数据失效、布局影响范围多大，以及实现是否能复用结果。图示的是“读取当前值”这一契约带来的实现压力，不意味着每次读取都会刷新。
+
+为了单独观察读写顺序的影响，下面换成一个与报表无关的小例子：两个普通块级元素，没有最小 / 最大宽度约束，也没有变换，边框盒宽度分别为 100px 和 160px。任务是把每个元素加宽 10px。`box-sizing: border-box` 让声明的 `width` 直接表示边框盒宽度，所以目标宽度分别是 110px 和 170px。
+
+~~~html
+<div id="width-demo">
+  <div class="item" style="width: 100px"></div>
+  <div class="item" style="width: 160px"></div>
+</div>
 ~~~
 
-首次 render 中 `sort="recent"`，提交后 **Most recent** 被选中，列表为 May、April。排序按钮不直接改列表：工具栏接收 `sort` 和 `onSortChange`，其中回调就是父组件的 `setSort`；点击时调用它，安排下一轮 render。状态所有者从 `oldest` 派生新 `rows`，commit（提交）后工具栏与列表一起显示 Oldest first、April/May。`sortReports` 复制数组再排，不原地修改路由给的报表；`ReportList` 只显示派生结果，并用稳定的报表 ID 做 `key`（列表项标识）。当多个组件需要协调同一份状态时，通常由一处更新、其他组件读取，把 state 提到它们的最近共同祖先；提得更高会让职责和更新路径变宽，不会自动改善性能。
+~~~css
+#width-demo .item {
+  box-sizing: border-box;
+  padding: 4px;
+  border: 1px solid;
+}
+~~~
 
-`initialSort` 只用于首次挂载时初始化 `useState`。完整路由若在 `popstate` 后拿到新排序，不能只换这个 prop 就期待组件状态自动重置；应让路由直接拥有排序状态并把它作为受控 prop 传入，或显式更新/重新挂载状态所有者。例如，只把同一实例的 `initialSort` prop 改成 `oldest`，按钮和列表仍保持 recent、May/April；调用 `setSort("oldest")` 才会安排状态更新，提交后显示 oldest、April/May。当前片段只展示组件通信，不实现 URL/history。
+`querySelectorAll()` 返回的 `NodeList` 没有 `Array.prototype.map()`，所以先用 `Array.from()` 转成数组：
 
-props（属性）适合父子层级清楚的数据向下传和 callback prop（回调属性）向上交互。若两个组件没有共享状态，贸然把 state 上移只会扩大维护范围。跨较深子树读取主题、地区或行距偏好时，可考虑 Context（上下文）；多处功能需共享并统一更新策略的客户端状态，可再考虑 store（共享状态容器），如 Redux；服务端拥有的报表记录仍归查询层，不因放进 Context 就获得缓存、请求身份或取消语义。Redux 的 action（动作）、reducer（归约器）、selector（选择器）和异步工作流见[Redux 如何组织共享界面状态与异步工作？](#60.%20Redux%20%E5%A6%82%E4%BD%95%E7%BB%84%E7%BB%87%E5%85%B1%E4%BA%AB%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%B8%8E%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+~~~javascript
+const items = Array.from(
+  document.querySelectorAll("#width-demo .item")
+);
+~~~
 
-> [!example]- 完整示例：排序状态、按钮与报表列表
->
-> ~~~tsx
-> import { useState } from "react";
->
-> type SortOrder = "recent" | "oldest";
-> type Report = {
->   id: string;
->   period: string;
->   periodStart: string;
->   title: string;
-> };
->
-> function sortReports(reports: Report[], sort: SortOrder): Report[] {
->   return [...reports].sort((a, b) => {
->     const order = a.periodStart.localeCompare(b.periodStart);
->     return sort === "recent" ? -order : order;
->   });
-> }
->
-> export function ReportsPage({
->   reports,
->   initialSort
-> }: {
->   reports: Report[];
->   initialSort: SortOrder;
-> }) {
->   const [sort, setSort] = useState(initialSort);
->   const rows = sortReports(reports, sort);
->
->   return (
->     <main>
->       <ReportToolbar sort={sort} onSortChange={setSort} />
->       <ReportList reports={rows} />
->     </main>
->   );
-> }
->
-> function ReportToolbar({
->   sort,
->   onSortChange
-> }: {
->   sort: SortOrder;
->   onSortChange: (sort: SortOrder) => void;
-> }) {
->   return (
->     <div role="group" aria-label="报表排序">
->       <button
->         type="button"
->         aria-pressed={sort === "recent"}
->         onClick={() => onSortChange("recent")}
->       >
->         Most recent
->       </button>
->       <button
->         type="button"
->         aria-pressed={sort === "oldest"}
->         onClick={() => onSortChange("oldest")}
->       >
->         Oldest first
->       </button>
->     </div>
->   );
-> }
->
-> function ReportList({ reports }: { reports: Report[] }) {
->   return (
->     <ul>
->       {reports.map(report => (
->         <li key={report.id}>
->           {report.period} — {report.title}
->         </li>
->       ))}
->     </ul>
->   );
-> }
->
-> const reports: Report[] = [
->   {
->     id: "may",
->     period: "May",
->     periodStart: "2026-05-01",
->     title: "May report"
->   },
->   {
->     id: "april",
->     period: "April",
->     periodStart: "2026-04-01",
->     title: "April report"
->   }
-> ];
->
-> export function ReportsDemo() {
->   return <ReportsPage reports={reports} initialSort="recent" />;
-> }
-> ~~~
+下面两段代码是两种可选写法，各自从相同的起始宽度运行，不是先后执行。第一段每写完一个宽度就立即读取该元素的新宽度；写入使布局失效后紧接着读取，会迫使浏览器先把当前尺寸算出来：
 
-### 用Context传递远距离视图偏好
+~~~javascript
+const widthsAfterEachWrite = [];
+for (const item of items) {
+  item.style.width = (item.offsetWidth + 10) + "px";
+  widthsAfterEachWrite.push(item.offsetWidth);
+}
+~~~
 
-排序状态只需跨过一层父子关系，用 props 传递很自然。行距偏好不同：读取它的按钮和列表隔着布局组件，逐层转发 props 会让中间组件接收自己并不使用的值。这时可以用 Context。
+如果每个新值只依赖它自己的原宽度，而且不必观察前一项写入后的中间几何，就不必在每次写入后立即读回。先读取所有原值，再统一写入；若仍需要验证最终几何，可在最后集中读取：
 
-`ReportsView` 把视图内容作为 `children`（子节点）交给 `ReportViewProvider`；Provider 决定把这些内容放进 Context 子树。调用方提供内容、组件决定插入位置，这就是 children 组合。中间的 `ReportPanel` 只负责把收到的 children 放在 `<section>` 中，不用接收或转发 `density`。因此行距消费者即使隔着普通布局组件，仍能读到最近的 Provider。
+~~~javascript
+const nextWidths = items.map(item => item.offsetWidth + 10);
+items.forEach((item, index) => {
+  item.style.width = nextWidths[index] + "px";
+});
+const widthsAfterBatch = items.map(item => item.offsetWidth);
+~~~
 
-下面的框表示组件包含关系。蓝色外框内的两个消费者读取同一份 `density`，中间布局组件只转交 `children`，不必转交行距值：
+两种写法的结果是否相同、布局次数是否不同，可以实测。测试脚本（下称探针）在开始记录前先读一次两个元素的 `offsetWidth`，确保初始布局已经算好。在同一版 headless Chrome (无头 Chrome) 中重复运行，两种写法都得到 110px、170px：逐项版本第一次读取原值 100px，写入 110px 后立即读取时，浏览器更新当前几何；随后第二项从原值 160px 写成 170px 并再次读取，又需要更新几何。批量版本先读到 `[100, 160]`，再写入两个新值；末尾第一次读取处理两项变更，第二次读取复用刚更新的结果。用 Chrome DevTools Protocol (CDP, Chrome 开发者工具协议) 记录这一段脚本时，逐项写后读观察到 2 次布局事件，批量读写并在末尾读回观察到 1 次。若开始时的布局本来已失效，批量代码开头的读取也可能先触发更新；这次计数只说明这个小例子的读写次序，不证明任何批量操作在所有页面都更快。应先在性能录制里确认同步布局，再定位让数据失效的写入和紧跟其后的读取。
 
-![Provider持有行距状态，布局组件内的两个消费者读取同一Context](../../frontend/frameworks/resources/report-context-ownership.svg)
+几何读取接口返回的盒子与坐标系不同：例如，变换会影响 `getBoundingClientRect()` 的结果，却不影响 `offsetWidth`。按问题选择测量方式，见[哪个 DOM 几何 API 能回答哪种测量问题？](#25.%20%E5%93%AA%E4%BA%9B%E7%BD%91%E9%A1%B5%E5%87%A0%E4%BD%95%E6%8E%A5%E5%8F%A3%E8%83%BD%E6%B5%8B%E9%87%8F%E5%93%AA%E4%B8%80%E7%A7%8D%E7%9B%92%E5%AD%90%EF%BC%9F)。
 
-`useContext` 向上查找这个 Context 最近的 Provider；子树里若再嵌一个同类型 Provider，只有它下面的消费者改读内层值。Context 对象本身不保存状态；这里真正持有 `density` 的是 Provider 中的 `useState`。初始 `density="comfortable"`：按钮写“切换紧凑行距”，列表 `lineHeight=1.8`。点击调用 `setDensity("compact")` 后，Provider 提供的新 value 让两个消费者更新：按钮变为“恢复舒适行距”，列表 `lineHeight=1.2`。若消费者上方没有该 Context 的 Provider，`useReportView` 会读到默认 `null` 并报错，明确要求调用方补齐 Provider。
+### 引擎怎样实现这些步骤？
 
-此例每次 Provider render 都新建 `{ density, setDensity }` 对象，因此 value 引用也改变。React 用 `Object.is` 比较新旧 `value`；即使两个对象字段完全相同，只要引用不同，Context 消费者就会更新。点击行距按钮时 `density` 确实变化，两个消费者需要新值。若父组件因其他状态或 `reports` 更新而重新 render，即使 `density` 没变，Provider 仍会创建新对象并使 Context 消费者更新；即使消费者包在 `memo`（按 props 浅比较跳过子组件渲染的优化）中，也挡不住 Context 值变化。确认这造成可见成本后，再考虑稳定 value 或拆分 Context。TypeScript 中为 Context 值和消费者建立类型边界的旧例仍见[归档中的旧 TypeScript Context 与自定义 Hook 示例](../../archive/front-end/0-1_Learning_Notes/react_typescript/typed-hooks-and-context.md)。Context 不会改变报表记录的服务端所有权，查询身份、新鲜度、取消与变更协调仍由[服务端状态章节](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)负责。
+前面的分层和计数都是从脚本能观察到的结果来讲的。Web 平台规定 DOM、CSS 和几何 API 的可观察结果，不要求各浏览器共享同一条内部管线。以 Chromium 的 RenderingNG 为例，渲染器会处理样式、布局、预绘制和绘制记录；后续把绘制内容分块栅格化，再提交 compositor frame (合成帧)，由 Chromium 的 Viz 组件聚合可见表面并绘制。Chromium 文档展示的 graphics processing unit (GPU, 图形处理器) 纹理 tile (图块) 是这一实现中的数据结构；实际设备可能使用不同的栅格后端或回退路径，其他引擎的组件名称和阶段安排也会不同。因此，跨浏览器的解释应停留在“输入状态、哪些数据失效、画面结果”这一层，具体性能判断要看目标引擎的录制。
 
-> [!example]- 完整示例：Provider、children 与两个消费者
->
-> ~~~jsx
-> import { createContext, useContext, useState } from "react";
->
-> const ReportViewContext = createContext(null);
->
-> function ReportViewProvider({ children }) {
->   const [density, setDensity] = useState("comfortable");
->
->   return (
->     <ReportViewContext value={{ density, setDensity }}>
->       {children}
->     </ReportViewContext>
->   );
-> }
->
-> function ReportPanel({ children }) {
->   return <section>{children}</section>;
-> }
->
-> function useReportView() {
->   const value = useContext(ReportViewContext);
->   if (value === null) {
->     throw new Error("useReportView 必须在 ReportViewProvider 内调用");
->   }
->   return value;
-> }
->
-> function DensityControl() {
->   const { density, setDensity } = useReportView();
->   const nextDensity = density === "compact" ? "comfortable" : "compact";
->
->   return (
->     <button type="button" onClick={() => setDensity(nextDensity)}>
->       {density === "compact" ? "恢复舒适行距" : "切换紧凑行距"}
->     </button>
->   );
-> }
->
-> function ReportRows({ reports }) {
->   const { density } = useReportView();
->   return (
->     <ul style={{ lineHeight: density === "compact" ? 1.2 : 1.8 }}>
->       {reports.map(report => (
->         <li key={report.id}>{report.title}</li>
->       ))}
->     </ul>
->   );
-> }
->
-> export function ReportsView({ reports }) {
->   return (
->     <ReportViewProvider>
->       <ReportPanel>
->         <DensityControl />
->         <ReportRows reports={reports} />
->       </ReportPanel>
->     </ReportViewProvider>
->   );
-> }
-> ~~~
+如果报表增长到许多行，先区分网络传输、服务端查询、客户端数据计算和已挂载节点的样式与布局成本。虚拟滚动主要减少同时挂载的 DOM 节点，不会自动减少已下载数据或消除对全量数据的计算。窗口计算、可变行高、焦点与辅助技术边界见[长报表列表何时适合虚拟滚动？](#11.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)；性能录制怎样区分处理时长、布局与绘制成本，见[如何测量并诊断网页性能问题？](#8.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
-### 用自定义Hook复用状态行为
+> [!info]- 来源与核验
+> - **渲染机会与更新渲染。** [WHATWG HTML §8.1.7 Event loops / update the rendering](https://html.spec.whatwg.org/multipage/webappapis.html#update-the-rendering)，Living Standard，更新于 2026-11-11，核对于 2026-11-12。规范定义渲染机会与更新渲染中的样式、布局等步骤；图示的绘制、栅格化和合成阶段是概念说明，不是 HTML 要求的跨浏览器固定管线。
+> - **盒子生成与布局模型。** [CSS Display Module Level 3](https://www.w3.org/TR/css-display-3/)，W3C Candidate Recommendation Draft，2026-06-05；用于解释元素生成的盒与格式化模型。
+> - **几何读取的返回值。** [CSSOM View Module Level 1](https://drafts.csswg.org/cssom-view/)，Editor’s Draft，2026-11-05，`offsetWidth` 与 `getBoundingClientRect()` 算法；[CSS Sizing Module Level 3](https://www.w3.org/TR/css-sizing-3/#box-sizing)，`box-sizing` 的尺寸解释。CSSOM View 当前页面标明是讨论中的编辑草案，核对于 2026-11-12。
+> - **强制重排诊断。** [Chrome Performance Insights: Forced reflow](https://developer.chrome.com/docs/performance/insights/forced-reflow)，Chrome DevTools 官方文档，更新于 2025-10-08；其强制重排描述和诊断范围针对 Chrome 实现。
+> - **Chromium 实现路径。** [RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture) 与 [Key data structures in RenderingNG](https://developer.chrome.com/docs/chromium/renderingng-data-structures)，Chromium 官方架构文档；核对于 2026-11-12。文中的 Viz、tile (图块) 和 compositor frame (合成帧) 仅描述 Chromium。
+> - **本地探针。** 本轮 headless Chrome `157.0.8103.51` 使用 CDP 记录布局：记录前显式读取两个元素的 `offsetWidth` 使初始几何就绪；逐项写后读出现 2 个 `Layout` 完成事件，批量写入并在末尾读回出现 1 个；两种结果均为 `[110, 170]`。这是本机配置和该 DOM/CSS 的可重复观察，不作跨版本性能承诺。
+## 8. 如何测量并诊断网页性能问题？
 
-Context 让多个组件读取**同一份**值。另一类需求是多个组件重复同一种行为，但各自持有结果，例如都要监听窗口尺寸；这时用自定义 Hook。
+案例背景：用户打开 `https://example.test/reports?sort=recent#summary`，等报表首屏出现，再点击“最早优先”，把 May → April 排成 April → May。有人说“页面开得慢”，有人说“点击没反应”；这两句话描述的是不同体验。先用现场数据确定用户在哪条路径遇到问题，再用受控录制拆出浏览器花时间的阶段，最后用相同输入和动作验证修复。
 
-自定义 Hook 复用的是一段 Hook 行为，不会让不同调用自动共用 state。下面每个 `useWindowSize()` 调用都创建自己的 size 状态和 `resize` 监听器；多个组件可以用同样方式订阅窗口尺寸，各自独立更新。
+为复现排序问题，下面把原来的两条示意报表扩成 **50,000 条合成记录**，仍执行同一次“最早优先”操作。测试只把排序后前 50 行写入表格，避免把全量 Document Object Model (文档对象模型，DOM)的成本混进排序计算。这个规模只用于暴露重复日期解析，**不是浏览器门槛，也不是实际站点数据**。
+
+### 先判断用户感受到的是加载、交互还是位移
+
+Core Web Vitals（核心网页指标）是三项衡量实际用户体验的稳定指标。良好阈值用于评价现场样本分布，不是单次访问的保证，也不能单独指出根因。
+
+| 指标 | 用户感受到什么 | 良好目标 |
+| --- | --- | ---: |
+| Largest Contentful Paint（最大内容绘制，LCP） | 视口中最大的合格图片、文字块或视频何时绘制，近似反映主要内容何时可见 | ≤ 2.5 秒 |
+| Interaction to Next Paint（交互到下一次绘制，INP） | 点击、触屏或键盘操作开始后，浏览器何时首次能呈现下一帧 | ≤ 200 毫秒 |
+| Cumulative Layout Shift（累积布局偏移，CLS） | 页面中意外的内容移动有多严重 | ≤ 0.1 |
+
+这些目标看现场访问分布的第 75 百分位（p75），并分别按移动端和桌面端检查。INP 的分布只包含有可测交互值的访问；纯阅读或只滚动的访问可能没有 INP，不能把缺失值当作 0 毫秒。若某页面的 p75 达到目标，至少四分之三的该组样本不高于该值；其余访问仍可能更慢。INP 针对一次访问中的点击、触屏和键盘交互，通常记录最慢的一次；一页有很多交互时，每 50 次忽略其中最慢的一次。CLS 不是把页面生命周期内的所有偏移相加，而取分数最大的 session window（会话窗口）：连续偏移之间少于 1 秒，整个窗口最多 5 秒。离散点击、触屏或按键后 500 毫秒内的偏移可按近期输入规则排除；连续滚动不适用此规则，较晚发生的异步位移仍可能计入。
+
+指标各自回答不同问题。同一路由的 LCP 良好，不表示排序点击响应也良好；INP 良好也不表示异步请求返回得快，因为 INP 截止于浏览器能呈现下一帧的时点，不等待所有网络或业务工作完成。对长操作，若希望“正在排序”先出现在屏幕上，需要在同步工作前让出主线程，或启动异步工作；同一回调里先改文字再做同步排序，浏览器通常要等回调结束才有机会绘制。
+
+### 用现场分布选择要重现的动作
+
+field data（现场数据）来自真实访问，包含用户设备、网络、缓存与操作路径的差异；lab data（实验室数据）在指定环境中运行，适合重复动作、检查主线程和比较改动。两者回答不同问题，不能把一次实验室录制的数字当作真实用户分布。
+
+假设一个**纯教学用的合成报表**显示：`/reports?sort=recent` 的移动端 INP p75 为 430 毫秒，桌面端为 170 毫秒；路由 LCP、CLS 的 p75 都在良好目标内。这组数字不是来自任何站点。430 毫秒落在 INP“需改进”区间（高于 200 毫秒、至多 500 毫秒），170 毫秒达到良好目标；它只告诉我们移动端的交互响应需要调查，不能证明排序是根因。实际排查时，Real User Monitoring（真实用户监测，RUM）若自行保留页面路径、查询参数、版本、设备组、操作类型，并把 INP 归因到“最早优先”点击，就能更快选择复现路径。RUM 也可按版本分组，在同一时间比较灰度版和对照版。
+
+Chrome User Experience Report（Chrome 用户体验报告，CrUX）适合查看公开页面或整个来源的现场分布，但分组维度更少：它会去掉查询参数和片段，因此 `/reports?sort=recent#summary` 会归到 `/reports`；CrUX API 可以按页面或来源及设备类型查询，日常结果是 28 天滚动汇总，不提供应用部署版本这一维度。它能补充总体趋势，不能代替 RUM 的版本对照或具体按钮归因。
+
+先按相同页面、交互目标、设备组和版本查看 RUM，再针对慢交互在实验室录制。版本效果优先用同一时间的灰度/对照分组；若只能前后比较，至少选时长和星期分布相近的窗口，并检查设备、操作和加载状态组成是否变化。CrUX 的 28 天滚动窗口适合看更广的趋势；相邻窗口会重叠，且没有应用版本标签，不能当成精确的发布前后对照。Chrome DevTools（Chrome 开发者工具）的 Performance（性能）面板可以单独录制导航或运行时点击：Interactions（交互）轨道标出输入、处理和呈现延迟，Main（主线程）轨道则显示对应的 JavaScript 调用、框架工作和浏览器任务。若只运行一次 Lighthouse 页面加载且没有执行点击，它没有观察到该排序交互的 INP。Total Blocking Time（总阻塞时间，TBT）把 First Contentful Paint（首次内容绘制，FCP）后指定窗口内每个超过 50 毫秒的主线程长任务中、超出 50 毫秒的部分相加；Lighthouse 的默认页面加载窗口通常在 Time to Interactive（可交互时间，TTI）结束。它能提示“用户此时点击可能要等”，却不含真实用户何时点击，所以只能作为 INP 的诊断线索，不能替代现场 INP。
+
+### 把一次慢交互分成三个时间段
+
+INP 不是单个事件处理器的耗时。一次触屏点击可能包含 `pointerdown`、`pointerup`、`click` 等 Event Timing（事件计时）条目；浏览器用 `interactionId` 把同一动作关联起来，交互延迟取这些条目中最长的 `duration`。不要把最早条目的起点到最晚条目的终点当成交互时长：一次长按里，按下事件用了 80 毫秒，约 288 毫秒后抬起和 `click` 各用了 40 毫秒，交互延迟仍是 80 毫秒；328 毫秒的跨条目包络把手指等待时间也算进去了。
+
+阶段归因也要跟随这个最长条目所映射的帧。web-vitals 的当前实现按估算呈现时点 `startTime + duration` 分组，时点相差不超过 8 毫秒的条目作为同帧候选；输入延迟和处理时长取该帧组的处理边界，再以最长条目起点和时长做夹取。若最长时长并列且起点相同，库会保留这些并列条目用于归因；它仍不会把不同帧之间的等待并入处理时间。事件时长会按约 8 毫秒粒度量化，因此三段是定位主导阶段的估计值，不应按小数位理解为精确帧时间。下面的本地脚本按同一归因思路复核一个受控动作，不实现完整 INP 页面指标。
+
+其三段时间可按下面的问题定位：
+
+| 阶段 | 起止点 | 排查方向 |
+| --- | --- | --- |
+| input delay（输入延迟） | 最长 Event Timing 条目的 `startTime`，到其所属帧组开始处理；起点按这个条目夹取 | 此前的长任务、脚本执行或其他主线程占用 |
+| processing duration（处理时长） | 最长条目所属帧组的事件处理边界 | 排序、筛选、组件计算、同步布局读取或监听器工作 |
+| presentation delay（呈现延迟） | 该帧组处理结束，到最长条目估算的下一次呈现时点 | 后续主线程任务、样式计算、布局、绘制及帧提交 |
+
+一个合成时间线可以帮助分清归属：输入在 `0 ms` 开始，回调到 `90 ms` 才开始；回调内在 `105 ms` 读取布局信息，触发 `85 ms` 同步布局；回调在 `195 ms` 返回，下一帧在 `230 ms` 可呈现。三个阶段分别为 `90 / 105 / 35 ms`，合计 `230 ms`。那 `85 ms` 布局发生在回调内部，因此属于处理时长；如果布局在回调返回后才发生，它才会落入呈现延迟。这是阶段分类示例，不是报表测量结果。
+
+![从 0 ms 输入开始到 230 ms 下一帧可呈现；回调内的 85 ms 同步布局属于处理时长](../../frontend/performance/resources/interaction-latency-phase-example.svg)
+
+点击回调、微任务和浏览器何时获得下一次渲染机会的边界见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。如果轨迹显示处理器中的几何读取触发同步布局，或样式/布局/绘制延迟下一帧，再沿[为什么一次 DOM 改动会增加布局或绘制工作？](#7.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)检查具体读写顺序。
+
+若算法和输入规模已经合理，纯计算仍是主线程长任务，可以评估分块让出主线程，或把不依赖 DOM 的计算移到 Web Worker（网页工作线程）；Worker 会释放主线程处理界面，但不会消除总计算量，消息传递和结果提交也要计入。排序例子已通过预处理消除重复解析，先复测这个更简单的改动，再决定是否需要额外线程。
+
+点“最早优先”后处理时长很高，可能是排序数据计算，也可能是 React 更新；若处理时长低而呈现延迟高，再看浏览器样式、布局和绘制轨迹。看到 `Layout` 或 `Paint` 本身不证明它是缺陷：应沿具体调用关系找出占时的那段工作。若 React render（渲染）/commit（提交）占了主要时间，再沿[如何测量并减少不必要的 React 工作？](#9.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)定位组件；若 DOM 规模或数据量是疑点，再分辨[长报表列表何时适合虚拟滚动？](#11.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)里的网络、计算与挂载成本。
+
+### 沿同一动作从症状走到证据
+
+| 用户反馈 | 先看哪段证据 | 若证据支持，再检查什么 |
+| --- | --- | --- |
+| `/reports` 主要内容迟迟不出现 | 本次实际 LCP 元素、资源发现/请求/响应/绘制阶段 | LCP 图片是否过晚发现或被延迟加载；服务器响应或关键资源是否迟到；见下方 LCP 路径 |
+| 点击后很久才开始处理 | INP 输入延迟及点击之前的 Main 轨道 | 阻塞任务来自应用脚本、第三方脚本还是先前交互；若是路由脚本的解析/执行，检查[构建产物拆分](#51.%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%EF%BC%9F) |
+| 回调开始后列表迟迟未变 | 处理时长、事件调用栈、React render/commit | 排序、筛选、重复解析或框架计算是否占主导 |
+| 回调已结束，下一帧仍迟 | 呈现延迟及其后的样式、布局、绘制轨迹 | 是否有实际可避免的 DOM、样式或同步布局工作 |
+| 图片或异步内容出现时页面跳动 | CLS 的 Layout shifts（布局偏移）轨道及发生时刻 | 内容空间是否预留；变化是否由用户操作触发，是否确属意外偏移 |
+| 按钮已看见但无法操作 | 主线程是否阻塞、按钮处理器何时注册 | 可见时点与应用脚本就绪是否错开，见[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F) |
+
+对“页面开得慢”要录制导航，查看 LCP 候选和资源瀑布；对“点击没反应”要在相同页面状态下实际点按钮。不要用导航时的总耗时推断点击成本，也不要因为按钮已绘制就假设其处理器已经可用。一次轨迹只解释当前浏览器、设备模拟、缓存和数据条件；要说明多少真实用户遇到问题，还要回到相同设备组的现场分布。
+
+报表行数变多时，也要把网络传输、客户端筛选/排序等数据计算、同时挂载的行与 DOM/布局工作分开测。服务端分页或缩小输入可以减少传输和客户端数据处理；虚拟化主要减少视口外的挂载节点，并不会撤销已经下载的全量数据，也不会自动消除一次全量排序。这个例子仅渲染 50 行，所以不能把长交互归因给大量 DOM；更完整的成本与虚拟化取舍见[长报表列表何时适合虚拟滚动？](#11.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。
+
+### 若主要内容迟到，沿实际 LCP 资源路径处理
+
+导航录制先确认本次视口里被选为 LCP 的元素，再按首字节、资源发现等待、资源下载和元素绘制延迟拆分；视口和内容不同，最大候选元素也可能变化。若候选是文字，资源发现等待和下载两段可以为零。若图片是 LCP，不要对它启用延迟加载；为图片或嵌入内容声明尺寸主要是预留布局空间、降低位移，不会普遍缩短 LCP。只有轨迹显示非关键资源争抢关键路径时才延迟它们；若发现晚源于 CSS（层叠样式表）阻塞，内联首屏必需的少量 CSS 可能减少等待，但会增大 HTML（超文本标记语言）文档，且重复样式不能像独立 CSS 文件一样单独缓存。服务端渲染或静态输出可让内容更早进入 HTML，却不自动保证 LCP 或交互响应良好。结合[图片延迟加载](#26.%20%E5%9B%BE%E7%89%87%E4%B8%8E%E5%AA%92%E4%BD%93%E8%B5%84%E6%BA%90%E6%80%8E%E6%A0%B7%E5%8A%A0%E8%BD%BD%E5%B9%B6%E4%BF%9D%E6%8C%81%E9%A1%B5%E9%9D%A2%E7%A8%B3%E5%AE%9A%EF%BC%9F)和[HTTP（超文本传输协议）缓存](../../engineering-foundations/networking/http-protocols-and-websockets.md)按这条实际路径复测。
+
+### 复现报表排序后，修掉重复日期解析
+
+本次受控重现从相同的 50,000 条合成数据开始，每条 `createdAt` 都是 ISO 8601 时间字符串；首屏先显示按日期从新到旧排列的 50 行，点“最早优先”后复制数组、按日期升序排序，再生成并同步写入前 50 行。Performance 的主线程轨迹把时间集中在排序处理器中。计时器中的“50 行”阶段覆盖 HTML 字符串生成和 `innerHTML` 同步更新 DOM，计时在浏览器后续样式计算、布局和绘制之前结束；因此它不是浏览器渲染时间。DevTools 轨迹中的 Layout、PrePaint、Paint 出现在事件回调之后，属于后续呈现工作。
+
+基线在每次比较时都调用两次 `Date.parse`；Chrome 这组重放中点击内共调用 1,293,094 次。预处理把每条记录复制并增加毫秒字段、解析一次，再由点击只比较数值。两种排序都保留同一全量顺序；初始化预处理是额外成本，不是免费优化。
+
+`Date.parse` 对这些带 `Z` 的 UTC ISO 8601 时间返回自 Unix 纪元起的毫秒数。比如 2026 年 4 月 1 日的数值小于 5 月 1 日；升序比较器 `a.createdAtMs - b.createdAtMs` 因而返回负数，把更早的 4 月记录排在前面。
+
+~~~javascript
+const normalized = source.map(report => ({
+  ...report,
+  createdAtMs: Date.parse(report.createdAt)
+}));
+
+const oldestFirst = normalized
+  .slice()
+  .sort((a, b) => a.createdAtMs - b.createdAtMs);
+~~~
+
+`slice()` 让本次排序使用副本，避免 `sort()` 改写原数组。预处理把解析工作移到数据准备阶段，代价是增加一份数值字段并占用初始化时间；如果日期本来已是数值、只排序一次，或初始化成为新瓶颈，这种预处理未必划算。应按真实访问顺序选择在哪一阶段承担成本。
+
+在此浏览器中观察到的结果如下。每次点击可观察到 `pointerdown`、`pointerup`、`click` 条目；表中交互延迟取同一 `interactionId` 的最长 `duration`。九次实验的 p75 按最近秩法取第 `ceil(0.75 × 9) = 7` 个排序结果，只是重复单击这一固定操作的实验室摘要，不是一次真实页面访问的 INP，也不是稳定的现场百分位。处理器和 DOM 写入等阶段各自单独取 p75；阶段拆分例子则取达到交互延迟 p75 的那次原始样本，并按最长条目所属帧组计算。
+
+| 同一排序交互 | 优化前 | 优化后 |
+| --- | ---: | ---: |
+| Event Timing 最长条目交互延迟 p75 | 832 毫秒 | 128 毫秒 |
+| 监听器入口至结果记录的同步工作 p75 | 766.2 毫秒 | 70.6 毫秒 |
+| 数组复制与排序 p75 | 764.8 毫秒 | 69.2 毫秒 |
+| 生成 50 行标记并同步写入 DOM p75 | 1.7 毫秒 | 1.4 毫秒 |
+| 点击内的 `Date.parse` 次数 | 1,293,094 次 | 0 次 |
+| 数据准备（复制记录并解析日期）p75 | 未预处理 | 34.9 毫秒 |
+
+作为阶段例子，优化前达到交互 p75 的原始样本为 `1 / 762.3 / 68.7 ms`，合计 `832 ms`；优化后相应样本为 `1.5 / 76 / 50.5 ms`，合计 `128 ms`。九次点击的 p75 里，主要下降发生在处理阶段，与日期解析调用数和主线程轨迹相互印证。其他阶段各自的 p75 是独立统计，不能相加成表中的交互 p75。Event Timing 的时长量化也意味着这组阶段值只用于找出主导区段。
+
+独立复算比较了修复前后全部 50,000 个 ID 的排序位置，结果完全一致；排序后前三个 ID 是 `18771, 37492, 6263`。这证明本次固定合成输入的顺序一致，不覆盖其他日期格式、无效值或并列日期策略；生产代码还应按产品规则处理这些输入。
+
+### 用同口径复测，分别回答是否修好与是否惠及用户
+
+受控比较固定了浏览器、视口、4 倍 CPU（中央处理器）节流、50,000 条输入和同一点击动作；每种版本先预热 2 次，再交替测量 9 次。Event Timing 原始条目全部保留，并可从每次记录重算最长事件和帧组阶段；计时器分别记录数组复制/排序、标记生成/同步 DOM 写入和数据准备。因此这组结果回答的是：“在这个 Chromium 与节流条件下，这项计算修复是否缩短了该动作？”它不代表真实低端手机、网络下载、页面导航、完整报表渲染，也没有测 LCP 或 CLS；4 倍节流不是某一种真实手机的性能画像。
+
+部署后沿用上文的版本与时间窗规则，查看相同页面、相同移动/桌面分组的现场数据，确认 RUM 中慢交互确实减少；同时检查排序正确性和回退路径。实验室结果证明可复现环境中的变化，现场结果判断用户分布是否改善，两者应分别报告。若处理阶段已经下降而端到端 INP 仍高，就按新轨迹转查输入延迟或呈现延迟，不要继续优化已不占主导的排序。
+
+### 加载时间点能说明什么
+
+这些加载指标可补充导航诊断，但没有一个单独代表“页面已可用”。
+
+| 时间点 | 可用于观察 | 不能单独证明 |
+| --- | --- | --- |
+| FCP（首次内容绘制） | 首次有文本、图片等内容绘制 | 主要内容已经出现，或按钮已能响应 |
+| Time to First Byte（首字节时间，TTFB） | 导航开始到收到第一个响应字节的时间，包含重定向、连接、服务器处理等路径 | HTML 已接收完、应用已执行或内容已绘制 |
+| `DOMContentLoaded`（文档内容加载完成事件，DCL） | HTML 解析结束、解析后延迟脚本流程完成后到达该事件的时点 | 图片和所有资源已加载、应用异步初始化或请求已全部完成 |
+| `load` | 当前文档中延迟该事件的资源流程已经完成 | 用户何时首次看到有用内容，或交互何时有反馈 |
+
+DCL 会等 HTML 解析完成，并先执行延迟脚本；阻塞这些脚本的样式表也可能间接推迟它。模块脚本中 `top-level await` 暂停之后的部分、脚本启动的 `fetch()`、定时器或后续 Promise 工作仍可在 DCL 之后继续。`load` 也只等待会延迟该事件的文档资源，不是“所有应用逻辑结束”。First Input Delay (首次输入延迟，FID) 曾是核心网页指标，现已由 INP 取代；FCP、TTFB、TBT 仍可作为各自范围内的诊断信号。
+
+需要加载路径细节时，继续看[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)；此处用这些里程碑回答导航阶段问题，再回到真实 LCP 元素与资源时序，而不是把 DCL 或 `load` 当成体验终点。
+
+> [!info]- 来源与版本核验（核验日期：2026-11-13）
+> - Core Web Vitals 的当前三项指标、建议阈值和移动/桌面分组 p75：[web.dev：Web Vitals](https://web.dev/articles/vitals)，核心指标与评估阈值，2024-10-31 更新；[定义核心网页指标阈值](https://web.dev/articles/defining-core-web-vitals-thresholds)，阈值方法。
+> - LCP 候选内容、加载时间和 2.5 秒目标：[web.dev：Largest Contentful Paint](https://web.dev/articles/lcp)，2025-09-04 更新；CLS 会话窗口、间隔和 5 秒上限：[web.dev：Cumulative Layout Shift](https://web.dev/articles/cls)，定义与阈值。
+> - LCP 资源发现、请求到绘制的分段及延迟加载/尺寸建议：[web.dev：Optimize Largest Contentful Paint](https://web.dev/articles/optimize-lcp)，2025-03-31 更新，LCP breakdown 与图片优先级章节。
+> - INP 对页面生命周期内交互的汇总、每 50 次忽略最慢交互、交互条目及三阶段定义：[web.dev：Interaction to Next Paint](https://web.dev/articles/inp)，2025-09-02 更新，第“What is INP?”与“What’s in an interaction?”节；实验室应跟随现场数据选择真实动作：[web.dev：Optimize Interaction to Next Paint](https://web.dev/articles/optimize-inp)，2025-09-02 更新。
+> - 受控实验室与现场数据的来源差异，以及 TBT 不能观察用户何时交互：[web.dev：Why lab and field data can be different](https://web.dev/articles/lab-and-field-data-differences)，INP 与 TBT 节；TBT 长任务及超 50 毫秒部分的计算：[web.dev：Total Blocking Time](https://web.dev/articles/tbt)，2025-10-15 更新。
+> - Chrome DevTools 的 Main、Interactions 与 Layout shifts 轨道：[Performance features reference](https://developer.chrome.com/docs/devtools/performance/reference)，查看主线程、交互及布局偏移章节，核验日期 2026-11-13。
+> - 让出主线程以及把不依赖 DOM 的计算移入 Worker：[web.dev：Use web workers to run JavaScript off the browser's main thread](https://web.dev/articles/off-main-thread)，网页工作线程能力和适用场景；核验日期 2026-11-13。
+> - `interactionId` 和 Event Timing 条目定义：[W3C Event Timing API](https://www.w3.org/TR/2026/WD-event-timing-20261013/)，W3C Working Draft，2026-10-13；此稿是工作草案，不是 W3C Recommendation。本文的本地采样脚本仅用 Chromium 暴露的 Event Timing 条目复核单次动作，不是 Web Vitals 官方库的完整 INP 实现。
+> - 单次交互取最长 Event Timing 条目，以及将归因阶段映射到同帧组、对并列最长条目的处理：[GoogleChrome/web-vitals `InteractionManager`](https://github.com/GoogleChrome/web-vitals/blob/main/src/lib/InteractionManager.ts) 与 [`onINP` 阶段归因](https://github.com/GoogleChrome/web-vitals/blob/main/src/attribution/onINP.ts)，读取主分支实现，核验日期 2026-11-13。本文的实验脚本只复现最长条目与同帧分组这段测量，不是该库的完整 INP 实现。
+> - CrUX 页面归并会去掉查询参数与片段：[CrUX methodology](https://developer.chrome.com/docs/crux/methodology#page)；CrUX API 的页面/来源标识、设备类型和 28 天滚动采集期：[CrUX API](https://developer.chrome.com/docs/crux/api#collection-period)，核验日期 2026-11-13。
+> - FCP 的首次内容绘制含义：[web.dev：First Contentful Paint](https://web.dev/articles/fcp)；TTFB 定义及其连接/请求阶段：[web.dev：Time to First Byte](https://web.dev/articles/ttfb)，2025-11-18 更新。导航时间戳定义：[W3C Navigation Timing Level 2](https://www.w3.org/TR/navigation-timing-2/)，W3C Working Draft，2026-11-02。
+> - DCL 的解析完成、延迟脚本与事件顺序，及 load-delay 等待条件：[WHATWG HTML Living Standard，解析完成](https://html.spec.whatwg.org/multipage/parsing.html#the-end)，2026-11-12 更新。FID 由 INP 接替：[web.dev：First Input Delay](https://web.dev/articles/fid)，旧指标说明。
+## 9. 如何测量并减少不必要的React工作？
+
+**案例背景。** 沿用报表页 `/reports?sort=recent#summary`：服务端给 May、April 两行，用户选择 **Oldest first** 后，`sort=oldest` 让可见顺序变成 April、May。打开说明面板只改变面板自身，不改变报表数据。若这次点击让大量行重复执行组件函数，先定位主线程上由谁触发了哪些工作；若 React 组件计算不是主耗时，就按 Performance 轨迹标出的阶段继续排查，记忆化是否影响端到端时间仍要复测。排序 URL 和 Back 恢复由[浏览器历史栈机制](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)负责，本章聚焦这两个动作的工作量。
+
+**测量路径：** 先用浏览器 Performance 定位打开说明的点击，再按时间轨迹判断是否需要 React Profiler。
+
+![React 工作与浏览器呈现的诊断路径](../../frontend/performance/resources/react-rendering-triage.svg)
+
+### 先分清render和DOM变化
+
+React 的 render（渲染）是组件函数计算下一份界面描述；commit（提交）才把必要的变化应用到 DOM（文档对象模型）。组件运行了，不代表 DOM 一定改变；React 可能比较出宿主属性与顺序不变。浏览器还要根据 DOM 和 CSS 决定后续的样式、布局、绘制或合成，因此 React 的 render 耗时也不是用户完整等待时间。
+
+先用同一 URL、同一组报表、同一交互和目标设备在 Chrome DevTools（Chrome 开发者工具）的 Performance 面板录一次基线。Interactions（交互）轨道可定位“打开说明”这次点击及其输入、处理和呈现延迟；再顺着 Main（主线程）轨迹看时间花在事件处理、React、commit/Effect，还是样式、布局和绘制。若记录显示 React 子树 render 占主要成本，再用 React Developer Tools（React 开发者工具）的 Profiler（性能分析器）定位参与的组件；`<Profiler>` API 可在指定子树记录 `phase`、`actualDuration` 和 `baseDuration`。`actualDuration` 是该次已提交更新中子树实际花在 render 的时间；`baseDuration` 是按最近各组件耗时估计、没有跳过子树时的成本。Profiler 有额外开销，生产构建默认关闭程序化分析；比较线上构建时需使用启用 profiling 的构建，不能把开发构建耗时当成生产时延。
+
+render 不是主耗时时，不要只看提交后的浏览器工作：继续检查点击处理器、React commit 与 Effect，以及其后的样式、布局和绘制。`useLayoutEffect` 及其状态更新会在浏览器重绘前处理；其中测量 DOM 的操作可能把同步布局带入这段交互。React Performance tracks（React 性能轨道）可以在浏览器 Performance 时间线上区分 React render、commit/layout Effect 与剩余 Effect；这些 React 专用轨道只在开发构建和 profiling 构建中可见，且有额外开销。普通 `useEffect` 通常在 paint 后，但与交互相关时也可能在 paint 前运行。按轨迹里实际占时的阶段处理，不要从“React render 较短”直接推断布局/绘制就是唯一瓶颈。浏览器阶段边界见[如何测量并诊断网页性能问题？](#8.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)与[为什么一次 DOM 改动会增加布局或绘制工作？](#7.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。render 次数或控制台日志只能提示“谁可能运行过”，不能单独证明交互更快。
+
+若说明面板只在面板内部使用，最直接的修法通常是把 `helpOpen` 状态移进独立的 `HelpPanel`。这样面板自己的更新不必从 `ReportBoard` 向整张报表列表传播：
 
 ~~~jsx
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-export function useWindowSize() {
-  const [size, setSize] = useState({ width: 0, height: 0 });
-
-  useEffect(() => {
-    function update() {
-      setSize({ width: window.innerWidth, height: window.innerHeight });
-    }
-
-    window.addEventListener("resize", update);
-    update();
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
-  return size;
-}
-~~~
-
-`useEffect`（用于提交后同步外部系统的 Hook）在首次 commit（提交）后才运行，所以首次 render（渲染）暂时返回 `0 × 0`；随后 Effect 读取浏览器尺寸并更新。服务端也不会运行这个 Effect，服务端渲染与客户端首轮 hydration（水合）都会看到相同占位值。若两个组件都调用这个 Hook，在 `700×900` 窗口下它们会各自从占位值更新到 `700×900`；窗口变为 `720×900` 后，各自的监听器再把自己的 state 更新到新尺寸。相同输出是因为两次都读取同一个 `window`，不表示它们共用一份 state。卸载时每次调用都移除自己建立的监听器。若有很多消费者需要共享同一个外部窗口 store，应明确订阅同一 store（可用 React 的 [`useSyncExternalStore`](https://react.dev/reference/react/useSyncExternalStore)），而不是误以为每次调用同一自定义 Hook 就共享状态。
-
-大多数 Hook 必须在组件或其他 Hook 顶层按固定顺序调用。React 19 的 `use` API 是特殊例外：它可以在条件和循环里读 Promise 或 Context，但仍须处于组件或 Hook 中，而且不能放进 `try/catch`；`useContext` 等普通 Hook 仍遵守固定顺序。
-
-React 19.2 的 `useEffectEvent` 用于 Effect 里的 Effect Event（效果事件）逻辑：它在调用时读取最新提交的 props/state，但不因此让连接等 Effect 重新建立。它是一个 Hook，可在组件或自定义 Hook 顶层创建；自定义 Hook 可接收普通 callback 并用 `useEffectEvent(callback)` 包装，再由该 Hook 自己的 Effect 调用。Effect Event 要留在定义它的组件或 Hook 内，只能由本地 Effect 或另一个 Effect Event 调用；不能传给子组件、拿来当普通点击回调，也不能用它隐藏本来应该声明的 Effect 依赖。Effect Event 的函数身份每次 render 都会变化，不放进依赖数组。Effect 生命周期见[React 更新轮次](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。
-
-### ref用于窄范围的命令式能力
-
-界面需要随值变化时用 state；ref 可持有不驱动界面的可变值，也可引用已提交的 DOM。下面父工具栏只调用子组件公开的 `focus()`，输入节点始终由 `ReportSearchInput` 自己持有。
-
-~~~tsx
-import { useImperativeHandle, useRef, type Ref } from "react";
-
-type SearchHandle = {
-  focus(): void;
-};
-
-function ReportSearchInput({ ref }: { ref: Ref<SearchHandle> }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  useImperativeHandle(
-    ref,
-    () => ({
-      focus() {
-        inputRef.current?.focus();
-      }
-    }),
-    []
-  );
-  return <input ref={inputRef} aria-label="搜索报表" />;
-}
-
-export function ReportFocusControl() {
-  const searchRef = useRef<SearchHandle>(null);
+function HelpPanel() {
+  const [open, setOpen] = useState(false);
   return (
-    <>
-      <ReportSearchInput ref={searchRef} />
-      <button type="button" onClick={() => searchRef.current?.focus()}>
-        聚焦搜索
+    <section>
+      <button type="button" onClick={() => setOpen(value => !value)}>
+        {open ? "隐藏说明" : "显示说明"}
       </button>
-    </>
+      {open && <p>说明面板</p>}
+    </section>
   );
 }
 ~~~
 
-React 19 的函数组件可把 `ref`（引用）当作 prop 接收；React 18 及更早版本要用 `forwardRef` 转发。若父组件只需要 `focus()`，`useImperativeHandle` 暴露这个有限动作即可，不把内部节点和实现一起交出去。通过这种 API，调用者只依赖子组件承诺的行为。
+由 `ReportBoard` 同时渲染 `<HelpPanel />` 和报表列表，并让 `open` 由 `HelpPanel` 自己持有；点击时只有这棵子树更新，兄弟列表不必因 `helpOpen` 重算。组件状态由谁持有、何时该拆开组件见[如何在 React 中组合组件与复用行为？](#12.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)。下例故意把 `helpOpen` 留在列表父组件，单独展示它触发父组件 render 时，手工缓存怎样影响传给行的值；这是为了分析依赖身份的教学路径，不表示应先给每个组件加缓存。
 
-### 组合组件与旧式逻辑复用接口
+从同一个合成起点读下面这段代码：`reports` 为 May、April 两个对象，`query` 为空，`helpOpen=false`。此刻 `visible` 是两行的筛选结果，`toggleReviewed` 是切换某行状态的函数。
 
-`children`（子节点）组合让调用方提供内容，由接收组件决定把它插在哪里；前面的 `ReportPanel` 接收按钮和列表的 JSX，再把它们放进 `<section>`。render prop（渲染属性）是可由列表提供的扩展接口：如果 `ReportList` 接收 `renderRow` prop，调用方可传 `renderRow={report => <strong>{report.title}</strong>}`，列表对每条报表调用这个函数，并把返回的 JSX 放进对应行；当前 `ReportList` 只接收 `reports`，没有实现这个扩展 prop。higher-order component（高阶组件，HOC）包装组件并返回新组件。自定义 Hook 通常更适合复用 Hook 状态逻辑，但旧库的 render prop 或 HOC 也可能是稳定且清楚的 API，不必只为“改成 Hook”而重写。
+| `id` | `title` | `reviewed` |
+| --- | --- | --- |
+| `may` | `May summary` | `false` |
+| `april` | `April summary` | `false` |
 
-条件分支也是组合的一部分：二选一用三元表达式，只在条件为真时渲染用逻辑 AND，能早退时用 `if`。在 `ReportsPage` 里，`ReportList` 必须收到 `reports`；错误写法 `{rows.length && <ReportList reports={rows} />}` 在 `rows` 为空时得到数字 `0`，React 会把它渲染出来。改成 `{rows.length > 0 && <ReportList reports={rows} />}` 时，空数组得到布尔值 `false`，不会多出数字。
+先把案例入口的排序变化说清：初始 `sort=recent` 时，列表为 May、April；选择 **Oldest first** 后，`sort=oldest` 让同一组报表显示为 April、May。排序只改变列表顺序，不修改两个报表对象；稳定的 `key` 保留每行身份，但 key 本身不会跳过 render。在下方手工 `memo` 路径中，如果每行的对象与回调 props（属性）保持同一引用，行函数可以跳过，React 仍需协调并重排列表节点。下面的代码没有实现排序或 URL 历史处理，只隔离说明面板、搜索词和本地 `reviewed` 三种更新。
 
-这些模式解决状态归属和行为复用。若一次交互的 React render 成本已测出，再看[如何测量并减少不必要的 React 工作？](#14.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)；本章不把 memoization（记忆化）当作组件组合规则。
-
-> [!info]- 来源与版本核验（React 19.3；核验日期 2026-11-12）
+> [!example]- 查看这个案例的 React 实现
+> ~~~jsx
+> import { memo, useCallback, useMemo, useState } from "react";
 >
-> - props 传递、调用方提供 JSX children、共同使用者的 state 归属、Context 数据下传：[Passing Props to a Component](https://react.dev/learn/passing-props-to-a-component)、[Passing JSX as children](https://react.dev/learn/passing-props-to-a-component#passing-jsx-as-children)、[Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)、[useState](https://react.dev/reference/react/useState#returns)、[Passing Data Deeply with Context](https://react.dev/learn/passing-data-deeply-with-context)，React 19.3 文档。
-> - Context 的默认值、最近 Provider、value 变化触发消费者更新、React 19 新 Provider 语法与旧 `.Provider`：[createContext](https://react.dev/reference/react/createContext)、[useContext](https://react.dev/reference/react/useContext)，React 19.3 文档。
-> - 自定义 Hook 复用行为与调用限制：[Reusing Logic with Custom Hooks](https://react.dev/learn/reusing-logic-with-custom-hooks)、[Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks)；React 19 的 `use` 可在条件/循环中读资源，但不能在 `try/catch` 中：[use](https://react.dev/reference/react/use)。
-> - React 19.2 的 `useEffectEvent` 最新提交值、组件与自定义 Hook 中的定义/调用范围、依赖与身份限制：[useEffectEvent](https://react.dev/reference/react/useEffectEvent)、[Caveats](https://react.dev/reference/react/useEffectEvent#caveats)、[Using Effect Events in custom Hooks](https://react.dev/reference/react/useEffectEvent#using-effect-events-in-custom-hooks)、[React 19.2](https://react.dev/blog/2025/10/01/react-19-2)，React 官方文档。
-> - React 19 的自动 JSX 转换要求及对应类型声明：[React 19 Upgrade Guide — New JSX Transform is now required](https://react.dev/blog/2024/04/25/react-19-upgrade-guide#new-jsx-transform-is-now-required)。
-> - ref 与命令式 handle；React 19 可直接收 ref prop，旧版需 `forwardRef`：[useRef](https://react.dev/reference/react/useRef)、[useImperativeHandle](https://react.dev/reference/react/useImperativeHandle)、[forwardRef](https://react.dev/reference/react/forwardRef)，React 19.3 文档。
-> - 多处读取同一外部 store 的订阅 API：[useSyncExternalStore](https://react.dev/reference/react/useSyncExternalStore)，React 19.3 文档。
-> - 逻辑 AND 条件渲染：[Conditional Rendering](https://react.dev/learn/conditional-rendering#logical-and-operator)，React 19.3 文档。
-> - render prop 与 higher-order component 的旧式复用接口：[Render Props](https://legacy.reactjs.org/docs/render-props.html)、[Higher-Order Components](https://legacy.reactjs.org/docs/higher-order-components.html)，React 官方旧版文档；用于解释仍存在于库 API 中的接口。
-> - toggle button 的 `aria-pressed`：[WAI-ARIA APG — Button Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/button/)，W3C WAI 官方模式，核验日期 2026-11-12。
-> - 当前 React 文档版本：[Versions](https://react.dev/versions)，React 19.3，核验日期 2026-11-12。
-## 8. 如何让报表筛选在昂贵更新时保持响应？
+> function filterReports(reports, query) {
+>   const normalizedQuery = query.toLowerCase();
+>   return reports.filter(report =>
+>     report.title.toLowerCase().includes(normalizedQuery)
+>   );
+> }
+>
+> function replaceReviewed(reports, id) {
+>   return reports.map(report =>
+>     report.id === id
+>       ? { ...report, reviewed: !report.reviewed }
+>       : report
+>   );
+> }
+>
+> function ReportBoard({ initialReports }) {
+>   const [reports, setReports] = useState(initialReports);
+>   const [query, setQuery] = useState("");
+>   const [helpOpen, setHelpOpen] = useState(false);
+>
+>   const visible = useMemo(
+>     () => filterReports(reports, query),
+>     [reports, query]
+>   );
+>   const toggleReviewed = useCallback((id) => {
+>     setReports(current => replaceReviewed(current, id));
+>   }, []);
+>
+>   return (
+>     <>
+>       <input
+>         aria-label="筛选报表"
+>         value={query}
+>         onChange={event => setQuery(event.target.value)}
+>       />
+>       <button
+>         type="button"
+>         onClick={() => setHelpOpen(open => !open)}
+>       >
+>         {helpOpen ? "隐藏说明" : "显示说明"}
+>       </button>
+>       {helpOpen && <p>说明面板</p>}
+>       <ul>
+>         {visible.map(report => (
+>           <ReportRow
+>             key={report.id}
+>             report={report}
+>             onToggle={toggleReviewed}
+>           />
+>         ))}
+>       </ul>
+>     </>
+>   );
+> }
+>
+> const ReportRow = memo(function ReportRow({ report, onToggle }) {
+>   return (
+>     <li>
+>       {report.title}
+>       <button type="button" onClick={() => onToggle(report.id)}>
+>         {report.reviewed ? "已读" : "标为已读"}
+>       </button>
+>     </li>
+>   );
+> });
+> ~~~
+
+在这条手工记忆化路径里，`useMemo` 首次 render 仍会筛选；缓存仍在时，后续 render 只有 `reports` 或 `query` 按 `Object.is` 比较发生变化，才重跑筛选函数。`useCallback` 在依赖不变的后续 render 返回同一个函数引用；空依赖成立，是因为回调只调用 updater，并不读取某一轮的 `reports` 快照。`memo(ReportRow)` 默认逐项用 `Object.is` 比较 props；若同一行对象和回调都相同，React 可以跳过这行的父级传播 render。
+
+表中每项操作都从同一初始状态独立重放：`query=""`，May 与 April 两行都挂载。输入 `apr` 会让 May 行离开树；因此“把 May 标为已读”不是在该行后面连续进行，而是从初始两行仍可见时单独开始。作为对照，若不用缓存，打开说明会让父组件、过滤函数和两行函数重新执行，但不必改变行 DOM；使用这段手工缓存时，父组件与 `visible.map` 仍执行，依赖不变且缓存仍在时可以复用过滤结果，稳定 props 可让 memo 行跳过函数调用。
+
+| 操作 | 状态与引用如何变化 | 行组件会发生什么 |
+| --- | --- | --- |
+| 初始显示两行 | `reports`、`query` 首次出现，执行过滤并创建 `visible`；第一次创建 `toggleReviewed` | 两行首次 render |
+| 打开说明面板 | 只改 `helpOpen`；`reports`、`query` 不变，缓存仍在时 `useMemo` 可返回原 `visible`，`useCallback` 可返回原函数 | 父组件和 `visible.map` 仍执行；两行的 `report` 与 `onToggle` props 相同，已包 `memo` 的行可以跳过。React Compiler 生效时也可能自动建立等价缓存 |
+| 输入 `apr` | `query` 改变，过滤必须再扫描当前 `reports`，`visible` 只含 April | May 行离开树；April 仍有相同的行对象与回调，手工 memo 边界可以跳过它 |
+| 把 May 标为已读 | 不可变更新创建新 `reports` 数组和新的 May 对象；April 对象保持原引用 | 过滤重算；May 行 props 改变而需更新，April 行 props 不变时仍可能跳过 |
+
+这张表说明几种优化作用在不同环节：memoization（记忆化）中的 `useMemo` 省掉依赖未变时的 `filter`；`useCallback` 保持传给行的回调身份；`memo` 才检查行 props（属性）并决定是否跳过组件函数。行接收的是单个 `report` 对象，不是 `visible` 数组；即使 React 因特殊原因丢弃 `useMemo` 缓存、重新生成了数组，只要数组里的行对象引用没变，行 props 仍可相同。`memo` 管的是父组件传入的 props；行自身 state（状态）或它读取的 Context（上下文）变化，仍可让行 render。少了 `memo`，稳定值不会单独阻止子组件 render；若回调每次新建或行对象被原地改写，默认 props 比较也无法可靠地区分更新。筛选词变化时仍需检查每一条记录，`useMemo` 不能让一次新的全量过滤变成常数时间。对 May 的更新若要让 React 看见变化，应创建新数组和新对象，同时保留未变的 April 对象；不能为追求身份稳定而原地改写数据。
+
+这段 `reviewed` 示例只演示本地对象的不可变更新；真实写入服务端还要处理请求身份、确认和失败状态，见[React 服务端状态与乐观更新](#13.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。若说明面板只需暂时隐藏，CSS 隐藏会让它留在 React 树中，state 与 Effect 仍存在；条件移除则会卸载组件并运行 cleanup（清理），再次显示时创建新实例，按交互和生命周期需求选择。Fragment（片段）可避免纯包装用的额外 DOM 节点，但是否有性能收益仍要测量。
+
+### React Compiler改变手工memo的默认做法
+
+React Compiler（React 编译器）v1.0 已稳定；截至 2026-11-12，React 官方文档版本为 React 19.3。Compiler 是可选的构建期优化：项目必须在构建链中配置它，且具体文件和组件要被编译器识别。启用后，它可以在组件与 Hook（钩子）内自动记忆化可复用的子树和计算，通常无需新代码先手写 `memo`、`useMemo`、`useCallback`。先检查项目是否接入、构建是否覆盖本文件，再用 Profiler 观察结果；仅安装插件或看到新版本号，不足以证明某个组件已获得优化。
+
+编译范围有边界：Compiler 主要优化 React 组件和 Hook，不会将任意工具函数自动变成跨组件共享的缓存。同一昂贵纯函数若在多个独立组件中分别调用，组件内的记忆化不会自然共用一次结果；是否需要显式的共享缓存，要根据实际调用和数据所有权另作设计。启用 Compiler 后仍可保留确有意图的手工 memo，但不要叠加一层只为“更安全”的缓存。
+
+未启用 Compiler、某个模块未被覆盖，或 Profiler 显示一个稳定边界仍反复做昂贵工作时，才考虑手工 API。React 在特定情况下可丢弃 `useMemo` / `useCallback` 缓存，例如初次挂载时发生 Suspense；需要语义持久状态时应使用 state（状态）或 ref（引用）。新建的对象、数组和函数每次身份都不同；自定义 `memo` 比较必须保证函数行为和可见输出等价，否则可能保留旧闭包。React Compiler、组件编译范围与手工 memo 当前用途见下方来源。
+
+### 用结果决定优化是否值得保留
+
+按相同交互复测，从点击到界面呈现，并沿 Performance 轨迹比较原先占时阶段。若 Compiler 已覆盖，可比较编译前后的同一操作；若手工拆分状态或加入 `memo`，确认可见界面仍正确，并且目标 render 成本或点击到呈现时间能稳定、可重复地改善。是否覆盖 Compiler 只是解释优化从哪里来，不单独决定保留缓存；没有可重复收益，或维护成本超过收益时，可以移除手工缓存后复测。已有代码的手工缓存可能影响 Compiler 的编译结果，移除后也要重新验证界面行为和性能，不能仅凭启用 Compiler 就批量删除。Profiler 有额外开销，最终判断还要回到目标构建和设备上的浏览器 Performance 轨迹。
+
+稳定 `key`（列表键）用来保留列表项在排序、插入和删除中的身份，不是跳过 render 的性能 API；虚拟列表卸载行后，原组件的局部 state 也会销毁。如果测量显示成本随同时挂载的行数增加——无论来自 React 创建/更新行，还是 DOM、样式与布局——再评估[长报表列表何时适合虚拟滚动？](#11.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。若主要耗时在窗口选择之前的全量过滤，虚拟化不一定能缩短那段计算。React commit 后的浏览器工作与组件 render 分开看，并用同一交互复测端到端结果。
+
+> [!info]- 来源与版本核验（React 19.3；React Compiler v1.0；核验日期 2026-11-12）
+> - React 官方文档当前版本为 19.3，npm 版本 `v19.3.0` 发布于 2026-09-09：[Versions](https://react.dev/versions)、[React 19.3](https://react.dev/blog/2026/09/09/react-19-3)。
+> - render 是 React 调用组件求得界面，commit 才更新 DOM，render 不必导致 DOM 变化：[Render and Commit](https://react.dev/learn/render-and-commit)，React 19.3。
+> - Chrome Performance 的 Interactions 轨道显示输入、处理和呈现延迟，Main 轨道显示主线程调用栈和事件耗时：[Performance features reference](https://developer.chrome.com/docs/devtools/performance/reference#view-interactions)，核验日期 2026-11-12。
+> - React 性能轨道将 Update、Render、Commit（含 layout Effects）和剩余 Effects 放在浏览器时间线上；`useLayoutEffect` 与其状态更新会在重绘前执行：[React Performance tracks](https://react.dev/reference/dev-tools/react-performance-tracks#renders)、[useLayoutEffect](https://react.dev/reference/react/useLayoutEffect)，React 19.3。
+> - React Developer Tools 的 Profiler 面板与组件检查：[React Developer Tools](https://react.dev/learn/react-developer-tools)，React 19.3；`<Profiler>` 的 commit 回调、`actualDuration`、`baseDuration` 及生产 profiling 开销：[Profiler](https://react.dev/reference/react/Profiler)，React 19.3。
+> - Compiler 是可选且稳定的构建期优化；它主要在组件与 Hook 中跳过级联 render 和重复计算，不对任意工具函数共享缓存；先 profile 后再增加复杂度：[React Compiler Introduction](https://react.dev/learn/react-compiler/introduction)，React Compiler v1.0，2025-10-07。
+> - `memo` 默认以 `Object.is` 比较 props，状态或所读 Context 改变仍可 render；`useMemo` 的缓存与依赖比较、缓存可在特定条件丢弃：[memo](https://react.dev/reference/react/memo)、[useMemo](https://react.dev/reference/react/useMemo)，React 19.3。
+> - `useCallback` 只返回稳定函数引用、不主动执行函数，依赖按 `Object.is` 比较；缓存可被丢弃：[useCallback](https://react.dev/reference/react/useCallback)，React 19.3。
+> - 条件移除组件会重置其树位置上的 state、Effect 会在卸载时清理、Fragment 不增加包装 DOM：[Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state)、[useEffect](https://react.dev/reference/react/useEffect)、[Fragment](https://react.dev/reference/react/Fragment)，React 19.3。
+> - 状态所有权、组件边界和向下传值：本库[如何在 React 中组合组件与复用行为？](#12.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)；提交后的样式、布局与绘制：本库[为什么一次 DOM 改动会增加布局或绘制工作？](#7.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+## 10. 如何让报表筛选在昂贵更新时保持响应？
 
 **案例背景。** 报表页已经取到两条报表，标题分别是 May 和 April，列表可以按日期排序。用户在搜索框输入标题时，输入框应立即显示新字符；如果报表很多，结果列表可以稍后跟上。用户点击“查看摘要”时，也希望先保留当前列表，等摘要模块的代码加载好再切换。下面分别跟踪输入筛选和摘要切换这两个场景，借此区分紧急更新、可延后的 render（渲染）、commit（提交）、Transition（过渡更新）和 Suspense（挂起边界）。这些 API 只调整 React 安排工作的优先级，不会把 JavaScript 移到另一个线程，也不会设置固定的毫秒延迟。
 
-以下行为按 React 19.3 与 React DOM 19.3（2026-11 的当前版本）核验。先看同一次输入怎样产生两轮更新，再看等待摘要代码时怎样保留当前界面。状态快照见[React 更新轮次](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)，服务端查询仍由[服务端状态章节](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)管理。本章省略 URL 与 Back 接线，见[浏览器历史栈机制](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。
+以下行为按 React 19.3 与 React DOM 19.3（2026-11 的当前版本）核验。先看同一次输入怎样产生两轮更新，再看等待摘要代码时怎样保留当前界面。状态快照见[React 更新轮次](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)，服务端查询仍由[服务端状态章节](#13.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)管理。本章省略 URL 与 Back 接线，见[浏览器历史栈机制](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。
 
 > [!info]- 挂载方式与版本前提
 >
@@ -1900,7 +2012,7 @@ Suspense 可以等待多种资源，但等待资源不代表每次都会显示 f
 > }
 > ~~~
 
-如果长同步计算仍占住主线程，先优化计算或交给 Worker；若问题来自同时挂载过多结果行，继续看[长列表何时适合虚拟滚动？](#15.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。筛选子树的 memo 边界见[React 渲染优化](#14.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+如果长同步计算仍占住主线程，先优化计算或交给 Worker；若问题来自同时挂载过多结果行，继续看[长列表何时适合虚拟滚动？](#11.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。筛选子树的 memo 边界见[React 渲染优化](#9.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（React 19.3；核验日期 2026-11-12）
 >
@@ -1915,7 +2027,398 @@ Suspense 可以等待多种资源，但等待资源不代表每次都会显示 f
 > - React render 与 commit 不是一回事；`aria-busy` 标记仍在更新的区域：[Render and Commit](https://react.dev/learn/render-and-commit)，React 19.3；[WAI-ARIA 1.2 `aria-busy`](https://www.w3.org/TR/wai-aria-1.2/#aria-busy)，W3C。
 > - TanStack Query v5 专用 Suspense Hook、查询失败与错误边界恢复：[Suspense](https://tanstack.com/query/latest/docs/framework/react/guides/suspense)、[`useSuspenseQuery`](https://tanstack.com/query/latest/docs/framework/react/reference/useSuspenseQuery)、[Migrating to v5](https://tanstack.com/query/latest/docs/framework/react/guides/migrating-to-v5)，TanStack 官方文档。
 > - React 文档版本：[Versions](https://react.dev/versions)，当前 React 19.3，核验日期 2026-11-12。
-## 9. React界面如何维护服务端数据与乐观更新的正确性？
+## 11. 长报表列表何时适合虚拟滚动？
+
+**案例背景。** 报表页从 `/reports?sort=recent#summary` 得到 May、April 两行；选择 **Oldest first** 后，`sort=oldest` 让可见顺序变成 April、May。两行列表不需要虚拟化。下面有意把这个案例扩大为假设的 **100,000 条**历史报表，问题变成：用户到底要看什么，客户端要拿到哪些数据，浏览器要同时挂载多少节点？十万只是演算规模，不是启用虚拟滚动的门槛。先按真实交互分辨网络、React render（渲染）、DOM（文档对象模型）与布局成本，再选择处理方式。
+
+### 十万条报表先决定哪些数据需要传输
+
+把历史增长到 100,000 条后，至少有三种不同成本：从服务端拿来多少字节；客户端为筛选、排序和转换跑多少 JavaScript 并保留多少数据对象；React 与浏览器同时要处理多少组件、DOM 节点、样式和布局。100,000 条不是通用阈值：是否能承受全量处理还取决于设备、行复杂度、数据形状和交互，应分别测量请求、脚本、渲染与内存。用户只看总数或月度趋势时，服务端聚合可直接返回结果；用户要搜索、排序、分页浏览时，接口可以按条件处理后只发送当前页；若用户确实需要连续浏览已加载数据，虚拟滚动才处理挂载窗口。客户端过滤十万条仍要检查十万条：若 `n` 是记录数且每条记录的判定成本近似固定，扫描一次的过滤成本随 `n` 线性增长，常记作 `O(n)`；把剩余行从 DOM 移走，不会减少这次扫描、已下载数据或其 JavaScript 内存。
+
+| 经同一任务录制确认的主要成本 | 优先处理方向 | 要计入的代价或边界 |
+| --- | --- | --- |
+| 网络传输包含用户尚不需要的记录 | 服务端过滤、排序、分页或按需请求；只需统计时返回聚合 | 加载、错误、重试、结束状态和排序一致性 |
+| 客户端全量变换或查询占主线程 | 改算法、缩小输入、分块，或把可移出的纯计算交给 Web Worker（网页工作线程） | Worker 不减少算法工作量；对象消息通常要结构化复制，数据传递也要计时 |
+| React 组件函数反复执行 | 按[React 渲染优化](#9.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)检查状态范围、稳定的 `props`（属性）和已测量的 `memo`（记忆化）边界；若成本主要随同时挂载的行数增加，也可评估虚拟化 | 缓存跳过重复计算，虚拟化减少参与工作的行，两者作用不同 |
+| 大量已挂载节点让样式、布局或呈现变慢 | 虚拟化当前可视窗口 | 测量、滚动、焦点、键盘、读屏、打印和查找行为更复杂 |
+
+若从开场的 `sort=oldest` 切到跨请求分页，下面明确改用 `sort=recent`：按 `periodStart` 降序，再以唯一 `report.id` 升序打破同日并列。唯一 ID 让固定数据集的顺序确定；keyset pagination（键集分页）的游标记录页尾的完整排序键值，服务端按同一排序定义和方向继续，排序方向若已由查询配置固定，不必重复编码在游标里。只带可能重复的日期不足以区分并列报表。
+
+偏移边界如何移动，可以用页大小为 2 的小例子单独看：原顺序为 `A, B, C, D`，第一页是 `A, B`。若下一次请求前在头部插入 `X`，新顺序是 `X, A, B, C, D`；`OFFSET 2` 会返回 `B, C`，重复了 `B`。若另一种变化是第一页之后删除头部的 `A`，剩余顺序 `B, C, D` 的 `OFFSET 2` 只返回 `D`，跳过了 `C`。稳定的次级 ID 不会冻结两次请求间变化的数据集；需要一致的历史浏览时，还要由服务端定义快照或版本边界。分页减少单次传输；在客户端收到全量数据后再虚拟化，不会追溯减少之前的网络流量。
+
+### 固定行高怎样算出挂载窗口
+
+先用一个固定行高的小模型，明确索引约定：以下行号从 `0` 开始，区间右端不包含在内；每行的重复高度步长为 `40px`（若有行间距，也计入此步长），滚动窗口高 `480px`，上下各多渲染 4 行的 overscan（预渲染缓冲区）。在 `scrollTop = 4000px` 时，视口恰好从第 100 行开始，到第 112 行之前结束，因此可见区间是 `[100, 112)`，共 12 行。加上前后缓冲，挂载区间成为 `[96, 116)`，共 20 行。窗口顶端偏移为 `96 × 40 = 3840px`；整条列表仍要用 `100,000 × 40 = 4,000,000px` 的占位高度保留滚动范围。
+
+下面函数只演算固定高度窗口。示例中的 `items` 是浏览器已持有的 100,000 条合成报表；`totalRows` 是非负整数；`rowHeight` 是有限正数；视口高度是有限正数，`scrollTop` 是有限数；`overscan` 是非负整数。尚未测到正高的滚动容器先不计算窗口。滚动位置会限制在整条列表可滚动范围内。实际容器的尺寸和位置应从浏览器测量，不能一直把示例常数写死。
+
+~~~javascript
+const items = Array.from({ length: 100_000 }, (_, id) => ({ id }));
+
+function getWindow(
+  totalRows,
+  scrollTop,
+  viewportHeight,
+  rowHeight,
+  overscan = 4
+) {
+  const totalHeight = totalRows * rowHeight;
+  const maxScrollTop = Math.max(0, totalHeight - viewportHeight);
+  const offset = Math.min(Math.max(scrollTop, 0), maxScrollTop);
+  const firstVisible = Math.floor(offset / rowHeight);
+  const start = Math.max(0, firstVisible - overscan);
+  const end = Math.min(
+    totalRows,
+    Math.ceil((offset + viewportHeight) / rowHeight) + overscan
+  );
+
+  return {
+    start,
+    end,
+    offsetY: start * rowHeight,
+    totalHeight
+  };
+}
+
+const range = getWindow(items.length, 4_000, 480, 40);
+// { start: 96, end: 116, offsetY: 3840, totalHeight: 4000000 }
+const mountedItems = items.slice(range.start, range.end);
+~~~
+
+下图对应 `scrollTop=4000px`，局部窗口把视口中实际可见的 12 行与上下缓冲的 8 行分开；左侧只标出它在完整列表中的位置，不按 4,000,000px 高度比例绘制：
+
+![固定行高时完整占位区与局部挂载窗口的关系](../../frontend/performance/resources/rendering-window-ranges.svg)
+
+在真实组件中，滚动容器的 `scroll` 更新 `scrollTop` 后会重新计算窗口；下面列出前后两次状态。`getWindow` 本身只算范围，真正挂载和卸载由组件按新范围重绘时发生。
+
+| `scrollTop` | 可见半开区间 | 挂载半开区间 | 窗口容器 `offsetY` | 与上次相比 |
+| ---: | --- | --- | ---: | --- |
+| `4000px` | `[100, 112)` | `[96, 116)` | `3840px` | 初始窗口，挂载 20 行 |
+| `4040px` | `[101, 113)` | `[97, 117)` | `3880px` | 卸载第 96 行，挂载第 116 行；第 97–115 行继续挂载 |
+
+实现会把 `mountedItems` 放进一个从 `range.offsetY` 开始的定位容器；外层占位区高度为 `range.totalHeight`，让滚动条仍代表完整列表，内层只创建窗口中的报表行。代码逐项满足边界处理：靠近开头时 `start` 不会小于 0；靠近结尾时 `end` 不会超过 `totalRows`；列表短于视口时最大滚动位置为 0。窗口滚动只是选择当前要挂载的下标，不会改变 `items` 本身。
+
+`report.id` 应是跨排序和翻页稳定的唯一 key（键），不用当前窗口内的索引。React `key`（列表键）帮助 React 在同一棵已挂载列表中识别行；当某行滚出窗口并从树中卸载，它的局部 state 也会结束。若“已选中”或编辑草稿要在离开窗口后保留，把状态放在列表外并按报表 ID 关联。若离开页面后还要回到原阅读位置，可保存可见行 ID 与该行内的滚动偏移，再恢复到对应位置。窗口索引不是报表身份，排序后以 index 当 key 可能把旧行状态交给另一份报表。
+
+虚拟化只让当前窗口的行进入 DOM。用户必须看到所有数据时，它仍可与分页或增量请求组合；但请求下一页、保持 API 游标和处理失败，是独立的数据加载流程。若首要目标是让查询少扫描记录，应减少查询输入或改变算法；若主要成本是全量数据对象占用内存，减少挂载节点也不会清除那批对象。
+
+### 固定高度不适用时怎样跟上实际尺寸
+
+报表标题可能换行，说明行可能展开，字体或图片也可能在挂载后改变高度。此时初始只能按每行估算高度累加出后续位置；真实行挂载后，虚拟器测得实际高度，并更新它之后行的起点和总高度。沿用 `scrollTop=4000px` 的算例：视口上方的第 96 行原估 `40px`、实测 `52px`，相差 `12px`；第 100 行的内容坐标便从 `4000px` 移到 `4012px`。若滚动位置仍是 `4000px`，第 100 行会比原来低 `12px`；若它是锚点且实现把 `scrollTop` 补偿到 `4012px`，它仍在视口原位置。使用动态尺寸的虚拟器应有估算、实际测量及滚动锚定策略，并应在目标浏览器中检查展开行、异步内容和视口尺寸变化。TanStack Virtual 当前文档以 `estimateSize` 提供初始估计、`measureElement` 取得实际尺寸，并用 `shouldAdjustScrollPositionOnItemSizeChange` 控制视口上方行尺寸变化时是否校正滚动位置；具体配置按项目安装版本核对。
+
+### 让被卸载的行仍能被键盘和辅助技术使用
+
+虚拟窗口之外的行不存在于当前 DOM。若键盘焦点落在某行按钮上，而下一次滚动将该行卸载，焦点可能丢失；交互列表应按报表 ID 跟踪活动项，保证它仍被挂载，或在卸载前按其控件模式移动并恢复焦点。对使用方向键的虚拟 `grid`（网格），若目标单元格在窗口外，先算出目标报表 ID/索引并滚动到包含该行的窗口，待目标行挂载后再把焦点移到单元格。不要因为数据看起来像列表就随手加 `role="listbox"`：列表框是选择选项的复合控件，不适合把按钮或复选框等独立交互控件塞进每个选项；列表框、grid（网格）等复合控件也要求各自的方向键和焦点行为。只需展示和浏览报表时，带正确表头的原生 `<table>` 配合服务端分页通常更容易使用；单页表格呈现的仍只是当前页，要搜索或打印全量结果时还需相应的应用级搜索或导出能力。当测量确认同时挂载的行数带来主要成本——可能在 React 计算，也可能在 DOM、样式与布局——且用户需求能接受部分节点时，再承担虚拟表格的复杂性。
+
+当部分集合被渲染时，无障碍富互联网应用规范（WAI-ARIA）对适用的 `listitem` / `treeitem` 提供 `aria-posinset` 与 `aria-setsize`；位置从 1 开始，若总数未知，`aria-setsize="-1"` 表示未知。`table`、`grid`、`treegrid` 使用 `aria-rowindex` 与 `aria-rowcount`；行位置相对完整表格从 1 开始，总行数未知时 `aria-rowcount="-1"`。例如 100,000 条数据再加一行表头，完整表格应报告 `aria-rowcount="100001"`；表头行为 `aria-rowindex="1"`，挂载窗口首条数据（数组下标 96）为 `aria-rowindex="98"`。每一条当前挂载的表格行都要标出它在完整表格中的索引。ARIA 属性只描述集合中当前行的位置和总数，不会把未挂载行放回 DOM，也不能补上错误角色、缺失表头或不完整键盘模型。最终应在目标浏览器与屏幕阅读器中验证读序、焦点、滚动、加载、空结果和总数未知时的表达。
+
+决定虚拟化后，在[如何测量并诊断网页性能问题？](#8.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)用同一 URL、设备、数据和滚动交互比较挂载节点、布局与呈现成本；分别记录 React 计算与浏览器呈现的成本，再比较端到端交互。即使布局耗时不变，减少原先占主导的 React 工作仍可能有收益；若 React 计算仍是主要瓶颈，再沿[如何测量并减少不必要的React工作？](#9.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)继续定位。
+
+> [!info]- 来源与核验（核验日期 2026-11-12）
+> - 本章的成本区分、固定高度公式和是否虚拟化的选择来自本例的状态与计算推演；`100,000` 行不是库或浏览器规定的阈值。React render 与 commit 的边界见 React 19.3 官方[Render and Commit](https://react.dev/learn/render-and-commit)。
+> - TanStack Virtual 当前官方 v3 [Virtualizer API](https://tanstack.com/virtual/latest/docs/api/virtualizer) 的 `count`、`estimateSize`、`overscan`、`getItemKey`、`measureElement`、`getTotalSize`；`shouldAdjustScrollPositionOnItemSizeChange` 说明它处理视口上方测量值与估算值不同时的滚动位置校正，默认在未反向滚动时才应用，并且是实例属性。核验日期 2026-11-12；文中未把 `/latest` 当作具体安装版本。
+> - 分页的排序要求：[PostgreSQL 18，Sorting Rows (`ORDER BY`)](https://www.postgresql.org/docs/18/queries-order.html) 说明后续排序项在前项相等时继续决定顺序；[`LIMIT` and `OFFSET`](https://www.postgresql.org/docs/18/queries-limit.html) 要求分页查询使用能约束到唯一顺序的 `ORDER BY`，并说明 offset 会先跳过前序行。新数据插在两次请求间导致页边界移动是基于该规则的跨请求推演，不是 PostgreSQL 特有承诺。
+> - Web Worker 的 `postMessage()` 可发送结构化数据，`ArrayBuffer` 可放入 transfer list 转移；跨 realm 的序列化/反序列化称为 structured cloning：[WHATWG HTML Living Standard，Web Workers](https://html.spec.whatwg.org/multipage/workers.html)、[Safe passing of structured data](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning)，核验日期 2026-11-12。
+> - 虚拟窗口只呈现集合子集时，`aria-rowcount` 包含表头行，且每个挂载行（包括表头）都用 `aria-rowindex` 标出其在完整表格中的 1 基位置：[WAI-ARIA 1.2，`aria-rowindex` / `aria-rowcount`](https://www.w3.org/TR/wai-aria-1.2/#aria-rowindex)，W3C Recommendation，2023-06-06；[WAI-ARIA APG Grid and Table Properties](https://www.w3.org/WAI/ARIA/apg/practices/grid-and-table-properties/#using-aria-rowcount-and-aria-rowindex)，核验日期 2026-11-12。
+> - `grid` 是需要作者管理内部焦点移动的复合控件，而表格中的可聚焦元素仍在页面 Tab 顺序中：[WAI-ARIA APG Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/)，核验日期 2026-11-12。listbox 用于选择选项，其交互模型不支持在选项内操作链接、按钮或复选框：[WAI-ARIA APG Listbox Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/)，核验日期 2026-11-12。
+> - 对适用的 `listitem` / `treeitem` 使用 `aria-posinset` 与 `aria-setsize` 时，位置从 1 开始，未知总数为 `-1`：[WAI-ARIA 1.2，`aria-setsize`](https://www.w3.org/TR/wai-aria-1.2/#aria-setsize) 与 [`aria-posinset`](https://www.w3.org/TR/wai-aria-1.2/#aria-posinset)，W3C Recommendation，2023-06-06。
+## 12. 如何在 React 中组合组件与复用行为？
+
+**案例背景。** 报表页地址为 `/reports?sort=recent#summary`：查询参数决定排序，片段 `#summary` 只负责浏览器定位。路由把服务端给出的 May、April 两行与 `initialSort="recent"` 传入；初次提交选中 **Most recent**，显示 May 在 April 前。用户点 **Oldest first** 后，工具栏要选中旧序，列表要排成 April、May。因为同一份 `sort`（排序状态）同时决定两个界面，包含工具栏和列表的最近共同父组件负责持有它。父组件把状态和派生结果传给子组件，工具栏把用户意图通过回调交还状态所有者。远距离组件要共享行距偏好时，可选 Context；多个组件要复用同种外部监听行为时，可选自定义 Hook；父组件确实需要子组件的窄范围命令式动作时，才暴露 ref。
+
+本章代码按 React 19.3 与 React DOM 19.3 核验。状态所有权示例省略 URL 与历史栈；若要让排序选择进入浏览器历史，可用 `pushState` 写入排序，并在 `popstate` 时把 Back/Forward 恢复的排序同步给同一状态所有者，见[浏览器主线](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。
+
+> [!info]- 读旧版示例时需要识别的 API 差异
+>
+> React 19 的 Context 可直接用 `<Context value={...}>` 作为 Provider（提供者）；React 18 及更早版本需用 `<Context.Provider>`。React 19 函数组件也能把 `ref` 当作 prop，旧版本需 `forwardRef`。本章使用自动 JSX 转换，TSX 使用对应的 React 19 类型声明。下面使用当前写法；`use` 和 `useEffectEvent` 的调用规则在对应小节解释。
+
+### 把状态放在共同使用者之上的最近一层
+
+本例由调用方传入 `<ReportsPage reports={reports} initialSort="recent" />`。`reports` 只有 May、April 两行：May 的 `periodStart` 是 `2026-05-01`，April 的是 `2026-04-01`；本例日期固定为 `YYYY-MM-DD`。显示标签 `period` 不参与排序。`ReportsPage` 是工具栏和列表的最近共同祖先；它持有 `sort` 并在 render（渲染）中派生行顺序。
+
+这一次数据流从父组件向下、用户意图再向上：
+
+~~~mermaid
+flowchart TD
+    P["ReportsPage<br/>持有 sort<br/>派生有序 rows"] -->|"sort 与回调"| T["ReportToolbar<br/>显示选中按钮"]
+    P -->|"有序 reports"| L["ReportList<br/>按顺序显示行"]
+    T -->|"点击调用 onSortChange"| P
+~~~
+
+首次 render 中 `sort="recent"`，提交后 **Most recent** 被选中，列表为 May、April。排序按钮不直接改列表：工具栏接收 `sort` 和 `onSortChange`，其中回调就是父组件的 `setSort`；点击时调用它，安排下一轮 render。状态所有者从 `oldest` 派生新 `rows`，commit（提交）后工具栏与列表一起显示 Oldest first、April/May。`sortReports` 复制数组再排，不原地修改路由给的报表；`ReportList` 只显示派生结果，并用稳定的报表 ID 做 `key`（列表项标识）。当多个组件需要协调同一份状态时，通常由一处更新、其他组件读取，把 state 提到它们的最近共同祖先；提得更高会让职责和更新路径变宽，不会自动改善性能。
+
+`initialSort` 只用于首次挂载时初始化 `useState`。完整路由若在 `popstate` 后拿到新排序，不能只换这个 prop 就期待组件状态自动重置；应让路由直接拥有排序状态并把它作为受控 prop 传入，或显式更新/重新挂载状态所有者。例如，只把同一实例的 `initialSort` prop 改成 `oldest`，按钮和列表仍保持 recent、May/April；调用 `setSort("oldest")` 才会安排状态更新，提交后显示 oldest、April/May。当前片段只展示组件通信，不实现 URL/history。
+
+props（属性）适合父子层级清楚的数据向下传和 callback prop（回调属性）向上交互。若两个组件没有共享状态，贸然把 state 上移只会扩大维护范围。跨较深子树读取主题、地区或行距偏好时，可考虑 Context（上下文）；多处功能需共享并统一更新策略的客户端状态，可再考虑 store（共享状态容器），如 Redux；服务端拥有的报表记录仍归查询层，不因放进 Context 就获得缓存、请求身份或取消语义。Redux 的 action（动作）、reducer（归约器）、selector（选择器）和异步工作流见[Redux 如何组织共享界面状态与异步工作？](#60.%20Redux%20%E5%A6%82%E4%BD%95%E7%BB%84%E7%BB%87%E5%85%B1%E4%BA%AB%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%B8%8E%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+
+> [!example]- 完整示例：排序状态、按钮与报表列表
+>
+> ~~~tsx
+> import { useState } from "react";
+>
+> type SortOrder = "recent" | "oldest";
+> type Report = {
+>   id: string;
+>   period: string;
+>   periodStart: string;
+>   title: string;
+> };
+>
+> function sortReports(reports: Report[], sort: SortOrder): Report[] {
+>   return [...reports].sort((a, b) => {
+>     const order = a.periodStart.localeCompare(b.periodStart);
+>     return sort === "recent" ? -order : order;
+>   });
+> }
+>
+> export function ReportsPage({
+>   reports,
+>   initialSort
+> }: {
+>   reports: Report[];
+>   initialSort: SortOrder;
+> }) {
+>   const [sort, setSort] = useState(initialSort);
+>   const rows = sortReports(reports, sort);
+>
+>   return (
+>     <main>
+>       <ReportToolbar sort={sort} onSortChange={setSort} />
+>       <ReportList reports={rows} />
+>     </main>
+>   );
+> }
+>
+> function ReportToolbar({
+>   sort,
+>   onSortChange
+> }: {
+>   sort: SortOrder;
+>   onSortChange: (sort: SortOrder) => void;
+> }) {
+>   return (
+>     <div role="group" aria-label="报表排序">
+>       <button
+>         type="button"
+>         aria-pressed={sort === "recent"}
+>         onClick={() => onSortChange("recent")}
+>       >
+>         Most recent
+>       </button>
+>       <button
+>         type="button"
+>         aria-pressed={sort === "oldest"}
+>         onClick={() => onSortChange("oldest")}
+>       >
+>         Oldest first
+>       </button>
+>     </div>
+>   );
+> }
+>
+> function ReportList({ reports }: { reports: Report[] }) {
+>   return (
+>     <ul>
+>       {reports.map(report => (
+>         <li key={report.id}>
+>           {report.period} — {report.title}
+>         </li>
+>       ))}
+>     </ul>
+>   );
+> }
+>
+> const reports: Report[] = [
+>   {
+>     id: "may",
+>     period: "May",
+>     periodStart: "2026-05-01",
+>     title: "May report"
+>   },
+>   {
+>     id: "april",
+>     period: "April",
+>     periodStart: "2026-04-01",
+>     title: "April report"
+>   }
+> ];
+>
+> export function ReportsDemo() {
+>   return <ReportsPage reports={reports} initialSort="recent" />;
+> }
+> ~~~
+
+### 用Context传递远距离视图偏好
+
+排序状态只需跨过一层父子关系，用 props 传递很自然。行距偏好不同：读取它的按钮和列表隔着布局组件，逐层转发 props 会让中间组件接收自己并不使用的值。这时可以用 Context。
+
+`ReportsView` 把视图内容作为 `children`（子节点）交给 `ReportViewProvider`；Provider 决定把这些内容放进 Context 子树。调用方提供内容、组件决定插入位置，这就是 children 组合。中间的 `ReportPanel` 只负责把收到的 children 放在 `<section>` 中，不用接收或转发 `density`。因此行距消费者即使隔着普通布局组件，仍能读到最近的 Provider。
+
+下面的框表示组件包含关系。蓝色外框内的两个消费者读取同一份 `density`，中间布局组件只转交 `children`，不必转交行距值：
+
+![Provider持有行距状态，布局组件内的两个消费者读取同一Context](../../frontend/frameworks/resources/report-context-ownership.svg)
+
+`useContext` 向上查找这个 Context 最近的 Provider；子树里若再嵌一个同类型 Provider，只有它下面的消费者改读内层值。Context 对象本身不保存状态；这里真正持有 `density` 的是 Provider 中的 `useState`。初始 `density="comfortable"`：按钮写“切换紧凑行距”，列表 `lineHeight=1.8`。点击调用 `setDensity("compact")` 后，Provider 提供的新 value 让两个消费者更新：按钮变为“恢复舒适行距”，列表 `lineHeight=1.2`。若消费者上方没有该 Context 的 Provider，`useReportView` 会读到默认 `null` 并报错，明确要求调用方补齐 Provider。
+
+此例每次 Provider render 都新建 `{ density, setDensity }` 对象，因此 value 引用也改变。React 用 `Object.is` 比较新旧 `value`；即使两个对象字段完全相同，只要引用不同，Context 消费者就会更新。点击行距按钮时 `density` 确实变化，两个消费者需要新值。若父组件因其他状态或 `reports` 更新而重新 render，即使 `density` 没变，Provider 仍会创建新对象并使 Context 消费者更新；即使消费者包在 `memo`（按 props 浅比较跳过子组件渲染的优化）中，也挡不住 Context 值变化。确认这造成可见成本后，再考虑稳定 value 或拆分 Context。TypeScript 中为 Context 值和消费者建立类型边界的旧例仍见[归档中的旧 TypeScript Context 与自定义 Hook 示例](../../archive/front-end/0-1_Learning_Notes/react_typescript/typed-hooks-and-context.md)。Context 不会改变报表记录的服务端所有权，查询身份、新鲜度、取消与变更协调仍由[服务端状态章节](#13.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)负责。
+
+> [!example]- 完整示例：Provider、children 与两个消费者
+>
+> ~~~jsx
+> import { createContext, useContext, useState } from "react";
+>
+> const ReportViewContext = createContext(null);
+>
+> function ReportViewProvider({ children }) {
+>   const [density, setDensity] = useState("comfortable");
+>
+>   return (
+>     <ReportViewContext value={{ density, setDensity }}>
+>       {children}
+>     </ReportViewContext>
+>   );
+> }
+>
+> function ReportPanel({ children }) {
+>   return <section>{children}</section>;
+> }
+>
+> function useReportView() {
+>   const value = useContext(ReportViewContext);
+>   if (value === null) {
+>     throw new Error("useReportView 必须在 ReportViewProvider 内调用");
+>   }
+>   return value;
+> }
+>
+> function DensityControl() {
+>   const { density, setDensity } = useReportView();
+>   const nextDensity = density === "compact" ? "comfortable" : "compact";
+>
+>   return (
+>     <button type="button" onClick={() => setDensity(nextDensity)}>
+>       {density === "compact" ? "恢复舒适行距" : "切换紧凑行距"}
+>     </button>
+>   );
+> }
+>
+> function ReportRows({ reports }) {
+>   const { density } = useReportView();
+>   return (
+>     <ul style={{ lineHeight: density === "compact" ? 1.2 : 1.8 }}>
+>       {reports.map(report => (
+>         <li key={report.id}>{report.title}</li>
+>       ))}
+>     </ul>
+>   );
+> }
+>
+> export function ReportsView({ reports }) {
+>   return (
+>     <ReportViewProvider>
+>       <ReportPanel>
+>         <DensityControl />
+>         <ReportRows reports={reports} />
+>       </ReportPanel>
+>     </ReportViewProvider>
+>   );
+> }
+> ~~~
+
+### 用自定义Hook复用状态行为
+
+Context 让多个组件读取**同一份**值。另一类需求是多个组件重复同一种行为，但各自持有结果，例如都要监听窗口尺寸；这时用自定义 Hook。
+
+自定义 Hook 复用的是一段 Hook 行为，不会让不同调用自动共用 state。下面每个 `useWindowSize()` 调用都创建自己的 size 状态和 `resize` 监听器；多个组件可以用同样方式订阅窗口尺寸，各自独立更新。
+
+~~~jsx
+import { useEffect, useState } from "react";
+
+export function useWindowSize() {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    function update() {
+      setSize({ width: window.innerWidth, height: window.innerHeight });
+    }
+
+    window.addEventListener("resize", update);
+    update();
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  return size;
+}
+~~~
+
+`useEffect`（用于提交后同步外部系统的 Hook）在首次 commit（提交）后才运行，所以首次 render（渲染）暂时返回 `0 × 0`；随后 Effect 读取浏览器尺寸并更新。服务端也不会运行这个 Effect，服务端渲染与客户端首轮 hydration（水合）都会看到相同占位值。若两个组件都调用这个 Hook，在 `700×900` 窗口下它们会各自从占位值更新到 `700×900`；窗口变为 `720×900` 后，各自的监听器再把自己的 state 更新到新尺寸。相同输出是因为两次都读取同一个 `window`，不表示它们共用一份 state。卸载时每次调用都移除自己建立的监听器。若有很多消费者需要共享同一个外部窗口 store，应明确订阅同一 store（可用 React 的 [`useSyncExternalStore`](https://react.dev/reference/react/useSyncExternalStore)），而不是误以为每次调用同一自定义 Hook 就共享状态。
+
+大多数 Hook 必须在组件或其他 Hook 顶层按固定顺序调用。React 19 的 `use` API 是特殊例外：它可以在条件和循环里读 Promise 或 Context，但仍须处于组件或 Hook 中，而且不能放进 `try/catch`；`useContext` 等普通 Hook 仍遵守固定顺序。
+
+React 19.2 的 `useEffectEvent` 用于 Effect 里的 Effect Event（效果事件）逻辑：它在调用时读取最新提交的 props/state，但不因此让连接等 Effect 重新建立。它是一个 Hook，可在组件或自定义 Hook 顶层创建；自定义 Hook 可接收普通 callback 并用 `useEffectEvent(callback)` 包装，再由该 Hook 自己的 Effect 调用。Effect Event 要留在定义它的组件或 Hook 内，只能由本地 Effect 或另一个 Effect Event 调用；不能传给子组件、拿来当普通点击回调，也不能用它隐藏本来应该声明的 Effect 依赖。Effect Event 的函数身份每次 render 都会变化，不放进依赖数组。Effect 生命周期见[React 更新轮次](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。
+
+### ref用于窄范围的命令式能力
+
+界面需要随值变化时用 state；ref 可持有不驱动界面的可变值，也可引用已提交的 DOM。下面父工具栏只调用子组件公开的 `focus()`，输入节点始终由 `ReportSearchInput` 自己持有。
+
+~~~tsx
+import { useImperativeHandle, useRef, type Ref } from "react";
+
+type SearchHandle = {
+  focus(): void;
+};
+
+function ReportSearchInput({ ref }: { ref: Ref<SearchHandle> }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  useImperativeHandle(
+    ref,
+    () => ({
+      focus() {
+        inputRef.current?.focus();
+      }
+    }),
+    []
+  );
+  return <input ref={inputRef} aria-label="搜索报表" />;
+}
+
+export function ReportFocusControl() {
+  const searchRef = useRef<SearchHandle>(null);
+  return (
+    <>
+      <ReportSearchInput ref={searchRef} />
+      <button type="button" onClick={() => searchRef.current?.focus()}>
+        聚焦搜索
+      </button>
+    </>
+  );
+}
+~~~
+
+React 19 的函数组件可把 `ref`（引用）当作 prop 接收；React 18 及更早版本要用 `forwardRef` 转发。若父组件只需要 `focus()`，`useImperativeHandle` 暴露这个有限动作即可，不把内部节点和实现一起交出去。通过这种 API，调用者只依赖子组件承诺的行为。
+
+### 组合组件与旧式逻辑复用接口
+
+`children`（子节点）组合让调用方提供内容，由接收组件决定把它插在哪里；前面的 `ReportPanel` 接收按钮和列表的 JSX，再把它们放进 `<section>`。render prop（渲染属性）是可由列表提供的扩展接口：如果 `ReportList` 接收 `renderRow` prop，调用方可传 `renderRow={report => <strong>{report.title}</strong>}`，列表对每条报表调用这个函数，并把返回的 JSX 放进对应行；当前 `ReportList` 只接收 `reports`，没有实现这个扩展 prop。higher-order component（高阶组件，HOC）包装组件并返回新组件。自定义 Hook 通常更适合复用 Hook 状态逻辑，但旧库的 render prop 或 HOC 也可能是稳定且清楚的 API，不必只为“改成 Hook”而重写。
+
+条件分支也是组合的一部分：二选一用三元表达式，只在条件为真时渲染用逻辑 AND，能早退时用 `if`。在 `ReportsPage` 里，`ReportList` 必须收到 `reports`；错误写法 `{rows.length && <ReportList reports={rows} />}` 在 `rows` 为空时得到数字 `0`，React 会把它渲染出来。改成 `{rows.length > 0 && <ReportList reports={rows} />}` 时，空数组得到布尔值 `false`，不会多出数字。
+
+这些模式解决状态归属和行为复用。若一次交互的 React render 成本已测出，再看[如何测量并减少不必要的 React 工作？](#9.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)；本章不把 memoization（记忆化）当作组件组合规则。
+
+> [!info]- 来源与版本核验（React 19.3；核验日期 2026-11-12）
+>
+> - props 传递、调用方提供 JSX children、共同使用者的 state 归属、Context 数据下传：[Passing Props to a Component](https://react.dev/learn/passing-props-to-a-component)、[Passing JSX as children](https://react.dev/learn/passing-props-to-a-component#passing-jsx-as-children)、[Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)、[useState](https://react.dev/reference/react/useState#returns)、[Passing Data Deeply with Context](https://react.dev/learn/passing-data-deeply-with-context)，React 19.3 文档。
+> - Context 的默认值、最近 Provider、value 变化触发消费者更新、React 19 新 Provider 语法与旧 `.Provider`：[createContext](https://react.dev/reference/react/createContext)、[useContext](https://react.dev/reference/react/useContext)，React 19.3 文档。
+> - 自定义 Hook 复用行为与调用限制：[Reusing Logic with Custom Hooks](https://react.dev/learn/reusing-logic-with-custom-hooks)、[Rules of Hooks](https://react.dev/reference/rules/rules-of-hooks)；React 19 的 `use` 可在条件/循环中读资源，但不能在 `try/catch` 中：[use](https://react.dev/reference/react/use)。
+> - React 19.2 的 `useEffectEvent` 最新提交值、组件与自定义 Hook 中的定义/调用范围、依赖与身份限制：[useEffectEvent](https://react.dev/reference/react/useEffectEvent)、[Caveats](https://react.dev/reference/react/useEffectEvent#caveats)、[Using Effect Events in custom Hooks](https://react.dev/reference/react/useEffectEvent#using-effect-events-in-custom-hooks)、[React 19.2](https://react.dev/blog/2025/10/01/react-19-2)，React 官方文档。
+> - React 19 的自动 JSX 转换要求及对应类型声明：[React 19 Upgrade Guide — New JSX Transform is now required](https://react.dev/blog/2024/04/25/react-19-upgrade-guide#new-jsx-transform-is-now-required)。
+> - ref 与命令式 handle；React 19 可直接收 ref prop，旧版需 `forwardRef`：[useRef](https://react.dev/reference/react/useRef)、[useImperativeHandle](https://react.dev/reference/react/useImperativeHandle)、[forwardRef](https://react.dev/reference/react/forwardRef)，React 19.3 文档。
+> - 多处读取同一外部 store 的订阅 API：[useSyncExternalStore](https://react.dev/reference/react/useSyncExternalStore)，React 19.3 文档。
+> - 逻辑 AND 条件渲染：[Conditional Rendering](https://react.dev/learn/conditional-rendering#logical-and-operator)，React 19.3 文档。
+> - render prop 与 higher-order component 的旧式复用接口：[Render Props](https://legacy.reactjs.org/docs/render-props.html)、[Higher-Order Components](https://legacy.reactjs.org/docs/higher-order-components.html)，React 官方旧版文档；用于解释仍存在于库 API 中的接口。
+> - toggle button 的 `aria-pressed`：[WAI-ARIA APG — Button Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/button/)，W3C WAI 官方模式，核验日期 2026-11-12。
+> - 当前 React 文档版本：[Versions](https://react.dev/versions)，React 19.3，核验日期 2026-11-12。
+## 13. React界面如何维护服务端数据与乐观更新的正确性？
 
 **案例背景。** 报表路由当前账户为 `acct-a`，地址是 `/reports?sort=recent#summary`，服务端给出 May、April 两行。点击 **Oldest first** 后，路由把 `sort` 推入浏览器历史，当前排序变为 April、May；此时 UI（界面）可以先把手头同一账户的完整记录在本地重排，再等待对应查询返回服务端的确认结果。报表归服务端所有，TanStack Query（服务端数据查询与缓存库）的查询缓存只是客户端副本。账户 ID 和会改变结果的筛选条件都属于查询身份：切到 `acct-b` 时，查询键随账户改变；若没有 B 账户的路由行或缓存，就先显示等待或空状态，绝不能把 A 账户的行当作 B 的结果。下文的“路由行”指路由随页面一起交付的初始报表行。
 
@@ -1938,7 +2441,7 @@ Suspense 可以等待多种资源，但等待资源不代表每次都会显示 f
 
 `placeholderData`（占位数据）用途不同：它不写入 cache，查询结果带 `isPlaceholderData` 标记。若为了让排序切换更平滑而复用上一个 key 的行，应先确认上一个 key 的账户仍是当前账户，并在界面上标明这些行尚未得到新排序的服务端确认；绝不能拿其他账户的数据作占位。本文主示例不用这个选项，而是在数据成员完全相同的同账户列表上做本地排序。
 
-本文使用普通 TanStack Query v5 `useQuery` 的状态返回路径，没有设置 `throwOnError`：请求失败保存在 `isError`、`error`、`data` 中。若应用改为抛错配置或 Suspense 查询，失败会走不同界面路径，见[错误边界章节](#11.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)。当前 key 还没有数据时，查询处于 `isPending`。失败时结合 `isError` 与 `data` 判断：没有查询数据，就显示同账户的路由行（若有）并允许重试；已有上次成功的结果，就保留它并提示刷新失败。切换排序后若该 key 已有缓存，可以先显示缓存，再按 `staleTime` 等策略在后台重新读取。
+本文使用普通 TanStack Query v5 `useQuery` 的状态返回路径，没有设置 `throwOnError`：请求失败保存在 `isError`、`error`、`data` 中。若应用改为抛错配置或 Suspense 查询，失败会走不同界面路径，见[错误边界章节](#15.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)。当前 key 还没有数据时，查询处于 `isPending`。失败时结合 `isError` 与 `data` 判断：没有查询数据，就显示同账户的路由行（若有）并允许重试；已有上次成功的结果，就保留它并提示刷新失败。切换排序后若该 key 已有缓存，可以先显示缓存，再按 `staleTime` 等策略在后台重新读取。
 
 ### 变更先乐观显示，再与服务端协调
 
@@ -2292,7 +2795,7 @@ onSuccess: (saved, _change, snapshot, context) => {
 
 查询缓存和页面中任何已确认数据仍是服务端状态的副本，不是授权来源。若同一报表另有详情 key，也要按 `accountId` 更新/失效详情项，不能只修当前列表。切换账号时，query key 会把组件读取的缓存项按账户隔开；退出登录或权限范围变化时，若旧账户的数据不该留在客户端，还要显式移除对应缓存。任何账户对不上的备用显示，都不应临时展示旧账户的行。
 
-最后，若不用 TanStack Query 而在 `useEffect` 中手写请求，就要在 cleanup 中忽略过期结果或取消请求；这种写法与 TanStack Query 的 key/cache 管理可对照[React 更新轮次中的数据请求](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)学习。有关错误如何从查询状态进入错误边界，见[React 错误边界](#11.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)。网络 JSON 仍需在运行时校验，见[如何处理不可信 JSON？](#45.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
+最后，若不用 TanStack Query 而在 `useEffect` 中手写请求，就要在 cleanup 中忽略过期结果或取消请求；这种写法与 TanStack Query 的 key/cache 管理可对照[React 更新轮次中的数据请求](#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)学习。有关错误如何从查询状态进入错误边界，见[React 错误边界](#15.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)。网络 JSON 仍需在运行时校验，见[如何处理不可信 JSON？](#45.%20%E6%94%B6%E5%88%B0%E4%B8%8D%E5%8F%AF%E4%BF%A1%20JSON%20%E5%90%8E%EF%BC%8CTypeScript%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E5%8F%AF%E4%BF%A1%E7%9A%84%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（React 19.3；TanStack Query v5 Latest；核验日期 2026-11-12）
 > - Query key 应包含会改变 `queryFn` 结果的变量；此处账户和排序都影响数据：[Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)，TanStack Query v5 Latest。
@@ -2307,7 +2810,7 @@ onSuccess: (saved, _change, snapshot, context) => {
 > - query cache 可以按 query key 前缀移除：[QueryClient](https://tanstack.com/query/latest/docs/framework/react/reference/classes/QueryClient)，TanStack Query v5 Latest。
 > - HTTP URI 的 fragment 不作为请求目标发送：[RFC 3986 §3.5](https://www.rfc-editor.org/rfc/rfc3986#section-3.5)。浏览器历史恢复 `sort` 的完整路由流程见[浏览器导航路径](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。
 > - Effect cleanup 防止过期读取写回界面：[Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects)，React 19.3。
-## 10. 管理表格打开多步骤编辑后，怎样在查询变化与提交冲突中保住用户意图？
+## 14. 管理表格打开多步骤编辑后，怎样在查询变化与提交冲突中保住用户意图？
 
 **合成案例。** 管理员在合成账户 `acct-a` 打开 `/reports?sort=recent&status=published&page=1#summary`。每页两行；已发布第 1 页含报表标识符（ID）`17`、`42`，第 2 页含 `61`。用户选择 `42`，翻到第 2 页后仍从“已选 1 项”打开编辑抽屉。教学报表 API（应用程序编程接口）返回详情和强 ETag（实体标签）`"report-42-v7"`。用户编辑通知方式、收件人和备注；与此同时，表格查询可能变化，异步校验也可能乱序返回，另一位管理员还可能先保存同一份报表。本例的账户、地址、字段和响应都是合成数据。
 
@@ -2891,7 +3394,7 @@ ETag: "report-42-v9"
 >
 > `makePatch` 在基线与当前草稿之间只取变化字段；`draftFromServer` 以服务器规范表示重建字段，不会复活已删除的 recipients 或 note，但只可在成功回调确认当前表示与回执相同、且会话与提交归属仍有效后调用。缓存写入、复用与重读沿用上文三种情况；不能无条件用成功回执重建草稿。输入值或依赖变化时立即用新快照调用 `validateRecipient` 替换旧 ticket；切模式、删除行或关闭会话时调用 `invalidate`，它删除当前 ticket 并递增代次。`validateRecipient` 对当前票据返回显式 valid/invalid/unavailable；过期票据返回 stale，而不是用 `undefined` 混淆“通过、失败、已过期”。`createSaveCoordinator` 在开始 await 前同步占用 save owner，深拷贝这次输入，防止重复提交；取消只在 validating 阶段作废 attempt，迟到结果随后返回 stale，不会生成补丁。只有完整快照校验通过、会话仍相同的 attempt 才基于那一快照生成 PATCH。该片段展示关键纯逻辑；HTTP 授权、原子 If-Match 检查、错误契约和并发版本仍由服务器实现。
 
-**延伸阅读：**[Redux 如何组织共享选择和异步工作](#60.%20Redux%20%E5%A6%82%E4%BD%95%E7%BB%84%E7%BB%87%E5%85%B1%E4%BA%AB%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%B8%8E%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)定义本例复用的 `reportSelection` state；[React 路由](#62.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)解释 Data Mode 与 Declarative Mode 的路由数据边界；[服务端状态](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)说明查询键、缓存与过期结果；[HTTP API 条件更新契约](../../engineering-foundations/backend/http-api-contracts.md)定义 ETag、Merge Patch、Problem Details 和授权；[语义化 HTML 表单](#16.%20%E8%AF%AD%E4%B9%89%E5%8C%96%20HTML%20%E8%A1%A8%E5%8D%95%E5%A6%82%E4%BD%95%E6%94%AF%E6%8C%81%E9%94%AE%E7%9B%98%E4%B8%8E%E8%BE%85%E5%8A%A9%E6%8A%80%E6%9C%AF%E7%94%A8%E6%88%B7%EF%BC%9F)说明字段错误和焦点。
+**延伸阅读：**[Redux 如何组织共享选择和异步工作](#60.%20Redux%20%E5%A6%82%E4%BD%95%E7%BB%84%E7%BB%87%E5%85%B1%E4%BA%AB%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%B8%8E%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)定义本例复用的 `reportSelection` state；[React 路由](#62.%20React%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%E5%9C%B0%E5%9D%80%E6%98%A0%E5%B0%84%E5%88%B0%E7%95%8C%E9%9D%A2%E5%B9%B6%E5%8A%A0%E8%BD%BD%E6%95%B0%E6%8D%AE%EF%BC%9F)解释 Data Mode 与 Declarative Mode 的路由数据边界；[服务端状态](#13.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)说明查询键、缓存与过期结果；[HTTP API 条件更新契约](../../engineering-foundations/backend/http-api-contracts.md)定义 ETag、Merge Patch、Problem Details 和授权；[语义化 HTML 表单](#16.%20%E8%AF%AD%E4%B9%89%E5%8C%96%20HTML%20%E8%A1%A8%E5%8D%95%E5%A6%82%E4%BD%95%E6%94%AF%E6%8C%81%E9%94%AE%E7%9B%98%E4%B8%8E%E8%BE%85%E5%8A%A9%E6%8A%80%E6%9C%AF%E7%94%A8%E6%88%B7%EF%BC%9F)说明字段错误和焦点。
 
 > [!info]- 来源与版本
 > - **路由模式、查询参数与导航：** [React Router: Picking a Mode](https://reactrouter.com/start/modes)、[`useSearchParams`](https://reactrouter.com/api/hooks/useSearchParams)、[`useNavigate`](https://reactrouter.com/api/hooks/useNavigate)。截至 2026-11-13，当前官方文档显示 v8.5.1；示例选择 Declarative Mode，只用组件查询。
@@ -2900,7 +3403,7 @@ ETag: "report-42-v9"
 > - **React 会话状态与 key：** [Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state)，React 官方文档。
 > - **强 `If-Match` 比较和 `412`：** [RFC 9110 §13.1.1](https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.1)；**`null` 删除和数组整体替换：** [RFC 7396](https://www.rfc-editor.org/rfc/rfc7396.html)。字段形状、下载模式规范化和错误映射是本合成 API 的额外约定。
 > - **共享选择版本：** 本文引用的 Redux 选择 slice 按最终[Redux 主线](#60.%20Redux%20%E5%A6%82%E4%BD%95%E7%BB%84%E7%BB%87%E5%85%B1%E4%BA%AB%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%B8%8E%E5%BC%82%E6%AD%A5%E5%B7%A5%E4%BD%9C%EF%BC%9F)所核对的 Redux Toolkit 2.14.0 与 React Redux 9.3.1。
-## 11. React错误边界能恢复哪些失败？
+## 15. React错误边界能恢复哪些失败？
 
 **案例背景。** 延续报表页：服务端给出 May、April，用户选 **Oldest first** 后，路由状态变为 `sort=oldest`，父组件把排好序的 April、May 传给列表；排序状态怎样随浏览器前进/后退恢复，见[浏览器导航路径](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)。若列表组件在 `render`（渲染）时抛错，错误边界可以把这块列表换成备用界面，让边界外的排序区域继续留在页面。错误边界能接住的失败有三类：React 渲染子树时抛出的错误、React 调用组件代码时同步抛出的异常（如提交阶段和 Effect 中），以及 React 明确追踪的少数异步失败。普通点击处理器、定时器，以及 Effect 启动后自行运行的 Promise 拒绝，仍须在各自的位置处理。
 
@@ -3007,7 +3510,7 @@ React 19 文档把 Error Boundary 的用途描述为捕获子树的渲染错误�
 
 起始调用用账户 `a` 和已排序的 `initialReports` 显示 April、May。若父组件为同一账户传入 `reports = [null]`，列表在渲染这条空记录并读取其属性时会触发 `TypeError`，fallback 替代列表而工具栏继续留在页面。坏输入不变时，点击“重新渲染列表”会再次失败；父组件改传有效行后，边界仍保持 fallback，直到用户再点一次重试才恢复。若同时换成新的账户 ID 并传入有效行，`key` 会直接重建边界。真实的 API JSON 应先做运行时校验；这里人为注入的 render TypeError 只用来演示错误边界，不能代替对请求失败或数据校验失败的处理。
 
-“重新渲染列表”按钮只是把边界状态重置为“可以再试一次渲染”；它不会修复错误数据，也不会重新发送查询。若 `reports` 仍含 `null`，子树一重试就会再次报错。真正的恢复应先由持有数据的一方修复输入、重新读取或离开出错的路由，然后再重置或重新挂载边界。查询状态、重试和缓存由[报表服务端状态章节](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)负责。
+“重新渲染列表”按钮只是把边界状态重置为“可以再试一次渲染”；它不会修复错误数据，也不会重新发送查询。若 `reports` 仍含 `null`，子树一重试就会再次报错。真正的恢复应先由持有数据的一方修复输入、重新读取或离开出错的路由，然后再重置或重新挂载边界。查询状态、重试和缓存由[报表服务端状态章节](#13.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)负责。
 
 边界粒度按用户能理解、也能恢复的区域来定：把整页包起来，会连工具栏一起隐藏；给每一行都放边界，则可能留下许多零散的错误框，用户也难以判断列表是否完整。另外，在父组件里写 `try { return <ReportsList /> } catch { ... }` 无法代替边界：这一行只创建元素描述，子组件要等 React 之后渲染时才被调用，那时的错误已不在这个 `try` 里。
 
@@ -3028,496 +3531,6 @@ React 19 文档把 Error Boundary 的用途描述为捕获子树的渲染错误�
 > - TanStack Query `useQuery` 的 `throwOnError` 与 error-as-state 选项：[useQuery](https://tanstack.com/query/latest/docs/framework/react/reference/useQuery)，TanStack Query v5 Latest，核验日期 2026-11-12。
 > - `useSuspenseQuery` 无可显示数据时的错误边界路径、缓存存在时的后台刷新错误规则和 `QueryErrorResetBoundary`：[Suspense guide](https://tanstack.com/query/latest/docs/framework/react/guides/suspense)、[QueryErrorResetBoundary](https://tanstack.com/query/latest/docs/framework/react/reference/QueryErrorResetBoundary)，TanStack Query v5 Latest，核验日期 2026-11-12。
 > - Suspense 不侦测 Effect/事件处理器内的普通请求；更新中再次挂起时，Transition/`useDeferredValue` 可避免已显示内容立即切到 fallback：[Suspense](https://react.dev/reference/react/Suspense#what-activates-a-suspense-boundary)，React 19.3。
-## 12. 为什么一次 DOM 改动会增加布局或绘制工作？
-
-本章用一个报表排序的例子贯穿：用户打开 `https://example.test/reports?sort=recent#summary`，看到 May、April 两行报表；点击“最早优先”后，页面把地址中的 `sort` 参数改为 `oldest`，并把 Document Object Model (DOM, 文档对象模型) 中的行顺序换成 April → May。[DOM 更新与事件章节](#4.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E3%80%81%E6%9B%B4%E6%96%B0%20DOM%20%E5%B9%B6%E5%93%8D%E5%BA%94%E7%94%A8%E6%88%B7%E8%BE%93%E5%85%A5%EF%BC%9F)解释了点击处理器怎样改动节点；本章从“新 DOM 已经写入”接着讲：浏览器怎样让之后显示的画面跟上新状态，以及脚本读取元素尺寸、位置时，为什么有时要等浏览器先把布局算完。
-
-### 浏览器需要让哪些信息重新一致？
-
-DOM 换了顺序，屏幕上的像素并不会自己改变，中间还有几层派生数据要跟着更新。HyperText Markup Language (HTML, 超文本标记语言) 标准规定了浏览器何时有机会更新渲染，但没有规定各浏览器使用同样的内部阶段、线程或绘图技术。概念上，把报表变成画面可以分成几层：Cascading Style Sheets (CSS, 层叠样式表) 规则针对当前 DOM 计算 computed style (计算样式)；layout (布局) 为盒子求出尺寸与位置；paint (绘制) 生成描述可见内容的绘制操作；需要生成新像素时再做 rasterization (栅格化)；compositing (合成) 把已有与更新后的绘制表面组合，再交给显示过程。
-
-![点击后的 DOM 状态怎样经过按需的样式、布局与绘制更新进入画面](../../frontend/html-css/resources/rendering-update.svg)
-
-这张图是说明依赖关系的概念模型，不表示每次改动都要按顺序重做每一层。浏览器可以推迟并合并工作，复用仍然有效的结果，跳过没有失效的阶段。
-
-这些更新在什么时候发生？点击处理器返回时，DOM 已经是新顺序，但浏览器不保证每个任务结束后立即画一帧（任务与渲染机会的关系见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)）；DOM 写入也不代表网络请求或其他异步操作已经完成。报表行按 DOM 顺序从上到下排布，所以 April 从第二行移到第一行，May 移到第二行；等相关几何与绘制结果更新后，下一次呈现的画面才显示 April 在上。脚本读取几何可以拿到算好的值，但读取本身不会让屏幕立即多画一帧。
-
-不同改动让哪些数据失效，取决于改了什么：
-
-| 对这张报表做什么 | 浏览器可能要更新什么 | 仅凭操作名称不能推出什么 |
-| --- | --- | --- |
-| 把两行从 May → April 调成 April → May | 更新受影响的样式、几何或绘制结果 | 失效范围取决于选择器依赖、布局关系与引擎优化 |
-| 只把按钮文字颜色改成强调色 | 重算适用样式并更新相应绘制结果 | 若尺寸与换行不变，原有几何可能仍可复用 |
-| 改宽度、字体或会占空间的内容 | 重新计算受影响盒子的尺寸与后续位置，再更新绘制 | 重排范围不一定只限于被改的节点 |
-| 改变 `transform` 或 `opacity` | 某些实现路径可不重新布局，甚至复用绘制结果 | 不能仅凭属性名保证提升图层、只走合成或使用 GPU |
-| DOM / 样式写入后读取几何 | 若所需样式或布局已失效，读取前可能同步更新 | 同一几何读取接口并非每次调用都触发布局 |
-
-reflow (重排) 和 repaint (重绘) 是常见的工程说法，不是可以跨浏览器比较的性能指标。一个节点尺寸变化后，排在它后面的内容位置可能一起变化；反过来，属性改了但布局几何没有失效时，也可能不必重做布局。`transform` 和 `opacity` 常被选作动画候选，是因为它们在某些渲染路径中可以绕过布局或复用绘制内容；目标页面是否真的走这条路，应看目标浏览器的性能录制。
-
-### 为什么读几何会让脚本停下来？
-
-上表最后一行值得单独展开。DOM 写入后，浏览器通常只把样式或布局结果标记为“待更新”，继续运行 JavaScript，把计算留到下一次渲染更新。但用来测量几何的 application programming interface (API, 应用程序接口) 必须返回调用时的当前值：`offsetWidth` 在普通单盒案例中返回未应用变换的整数边框盒宽度；`getBoundingClientRect()` 返回相对视口的包围矩形，并把变换计入。如果前面的 DOM / CSS 写入使返回值依赖的数据失效，实现就可能在返回前同步重算样式或布局。若数据仍然是最新的，读取可以复用结果，不必新做一次布局。
-
-![几何读取遇到失效布局时，浏览器先同步更新再把当前值交回脚本](../../frontend/html-css/resources/geometry-read-flow.svg)
-
-同步刷新会让脚本等所需计算完成后才继续；其中同步执行布局的情况，Chrome 文档称为 forced reflow (强制重排)。被等待的工作不一定是 API 本身的固定成本：它取决于此前哪些数据失效、布局影响范围多大，以及实现是否能复用结果。图示的是“读取当前值”这一契约带来的实现压力，不意味着每次读取都会刷新。
-
-为了单独观察读写顺序的影响，下面换成一个与报表无关的小例子：两个普通块级元素，没有最小 / 最大宽度约束，也没有变换，边框盒宽度分别为 100px 和 160px。任务是把每个元素加宽 10px。`box-sizing: border-box` 让声明的 `width` 直接表示边框盒宽度，所以目标宽度分别是 110px 和 170px。
-
-~~~html
-<div id="width-demo">
-  <div class="item" style="width: 100px"></div>
-  <div class="item" style="width: 160px"></div>
-</div>
-~~~
-
-~~~css
-#width-demo .item {
-  box-sizing: border-box;
-  padding: 4px;
-  border: 1px solid;
-}
-~~~
-
-`querySelectorAll()` 返回的 `NodeList` 没有 `Array.prototype.map()`，所以先用 `Array.from()` 转成数组：
-
-~~~javascript
-const items = Array.from(
-  document.querySelectorAll("#width-demo .item")
-);
-~~~
-
-下面两段代码是两种可选写法，各自从相同的起始宽度运行，不是先后执行。第一段每写完一个宽度就立即读取该元素的新宽度；写入使布局失效后紧接着读取，会迫使浏览器先把当前尺寸算出来：
-
-~~~javascript
-const widthsAfterEachWrite = [];
-for (const item of items) {
-  item.style.width = (item.offsetWidth + 10) + "px";
-  widthsAfterEachWrite.push(item.offsetWidth);
-}
-~~~
-
-如果每个新值只依赖它自己的原宽度，而且不必观察前一项写入后的中间几何，就不必在每次写入后立即读回。先读取所有原值，再统一写入；若仍需要验证最终几何，可在最后集中读取：
-
-~~~javascript
-const nextWidths = items.map(item => item.offsetWidth + 10);
-items.forEach((item, index) => {
-  item.style.width = nextWidths[index] + "px";
-});
-const widthsAfterBatch = items.map(item => item.offsetWidth);
-~~~
-
-两种写法的结果是否相同、布局次数是否不同，可以实测。测试脚本（下称探针）在开始记录前先读一次两个元素的 `offsetWidth`，确保初始布局已经算好。在同一版 headless Chrome (无头 Chrome) 中重复运行，两种写法都得到 110px、170px：逐项版本第一次读取原值 100px，写入 110px 后立即读取时，浏览器更新当前几何；随后第二项从原值 160px 写成 170px 并再次读取，又需要更新几何。批量版本先读到 `[100, 160]`，再写入两个新值；末尾第一次读取处理两项变更，第二次读取复用刚更新的结果。用 Chrome DevTools Protocol (CDP, Chrome 开发者工具协议) 记录这一段脚本时，逐项写后读观察到 2 次布局事件，批量读写并在末尾读回观察到 1 次。若开始时的布局本来已失效，批量代码开头的读取也可能先触发更新；这次计数只说明这个小例子的读写次序，不证明任何批量操作在所有页面都更快。应先在性能录制里确认同步布局，再定位让数据失效的写入和紧跟其后的读取。
-
-几何读取接口返回的盒子与坐标系不同：例如，变换会影响 `getBoundingClientRect()` 的结果，却不影响 `offsetWidth`。按问题选择测量方式，见[哪个 DOM 几何 API 能回答哪种测量问题？](#25.%20%E5%93%AA%E4%BA%9B%E7%BD%91%E9%A1%B5%E5%87%A0%E4%BD%95%E6%8E%A5%E5%8F%A3%E8%83%BD%E6%B5%8B%E9%87%8F%E5%93%AA%E4%B8%80%E7%A7%8D%E7%9B%92%E5%AD%90%EF%BC%9F)。
-
-### 引擎怎样实现这些步骤？
-
-前面的分层和计数都是从脚本能观察到的结果来讲的。Web 平台规定 DOM、CSS 和几何 API 的可观察结果，不要求各浏览器共享同一条内部管线。以 Chromium 的 RenderingNG 为例，渲染器会处理样式、布局、预绘制和绘制记录；后续把绘制内容分块栅格化，再提交 compositor frame (合成帧)，由 Chromium 的 Viz 组件聚合可见表面并绘制。Chromium 文档展示的 graphics processing unit (GPU, 图形处理器) 纹理 tile (图块) 是这一实现中的数据结构；实际设备可能使用不同的栅格后端或回退路径，其他引擎的组件名称和阶段安排也会不同。因此，跨浏览器的解释应停留在“输入状态、哪些数据失效、画面结果”这一层，具体性能判断要看目标引擎的录制。
-
-如果报表增长到许多行，先区分网络传输、服务端查询、客户端数据计算和已挂载节点的样式与布局成本。虚拟滚动主要减少同时挂载的 DOM 节点，不会自动减少已下载数据或消除对全量数据的计算。窗口计算、可变行高、焦点与辅助技术边界见[长报表列表何时适合虚拟滚动？](#15.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)；性能录制怎样区分处理时长、布局与绘制成本，见[如何测量并诊断网页性能问题？](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
-
-> [!info]- 来源与核验
-> - **渲染机会与更新渲染。** [WHATWG HTML §8.1.7 Event loops / update the rendering](https://html.spec.whatwg.org/multipage/webappapis.html#update-the-rendering)，Living Standard，更新于 2026-11-11，核对于 2026-11-12。规范定义渲染机会与更新渲染中的样式、布局等步骤；图示的绘制、栅格化和合成阶段是概念说明，不是 HTML 要求的跨浏览器固定管线。
-> - **盒子生成与布局模型。** [CSS Display Module Level 3](https://www.w3.org/TR/css-display-3/)，W3C Candidate Recommendation Draft，2026-06-05；用于解释元素生成的盒与格式化模型。
-> - **几何读取的返回值。** [CSSOM View Module Level 1](https://drafts.csswg.org/cssom-view/)，Editor’s Draft，2026-11-05，`offsetWidth` 与 `getBoundingClientRect()` 算法；[CSS Sizing Module Level 3](https://www.w3.org/TR/css-sizing-3/#box-sizing)，`box-sizing` 的尺寸解释。CSSOM View 当前页面标明是讨论中的编辑草案，核对于 2026-11-12。
-> - **强制重排诊断。** [Chrome Performance Insights: Forced reflow](https://developer.chrome.com/docs/performance/insights/forced-reflow)，Chrome DevTools 官方文档，更新于 2025-10-08；其强制重排描述和诊断范围针对 Chrome 实现。
-> - **Chromium 实现路径。** [RenderingNG architecture](https://developer.chrome.com/docs/chromium/renderingng-architecture) 与 [Key data structures in RenderingNG](https://developer.chrome.com/docs/chromium/renderingng-data-structures)，Chromium 官方架构文档；核对于 2026-11-12。文中的 Viz、tile (图块) 和 compositor frame (合成帧) 仅描述 Chromium。
-> - **本地探针。** 本轮 headless Chrome `157.0.8103.51` 使用 CDP 记录布局：记录前显式读取两个元素的 `offsetWidth` 使初始几何就绪；逐项写后读出现 2 个 `Layout` 完成事件，批量写入并在末尾读回出现 1 个；两种结果均为 `[110, 170]`。这是本机配置和该 DOM/CSS 的可重复观察，不作跨版本性能承诺。
-## 13. 如何测量并诊断网页性能问题？
-
-案例背景：用户打开 `https://example.test/reports?sort=recent#summary`，等报表首屏出现，再点击“最早优先”，把 May → April 排成 April → May。有人说“页面开得慢”，有人说“点击没反应”；这两句话描述的是不同体验。先用现场数据确定用户在哪条路径遇到问题，再用受控录制拆出浏览器花时间的阶段，最后用相同输入和动作验证修复。
-
-为复现排序问题，下面把原来的两条示意报表扩成 **50,000 条合成记录**，仍执行同一次“最早优先”操作。测试只把排序后前 50 行写入表格，避免把全量 Document Object Model (文档对象模型，DOM)的成本混进排序计算。这个规模只用于暴露重复日期解析，**不是浏览器门槛，也不是实际站点数据**。
-
-### 先判断用户感受到的是加载、交互还是位移
-
-Core Web Vitals（核心网页指标）是三项衡量实际用户体验的稳定指标。良好阈值用于评价现场样本分布，不是单次访问的保证，也不能单独指出根因。
-
-| 指标 | 用户感受到什么 | 良好目标 |
-| --- | --- | ---: |
-| Largest Contentful Paint（最大内容绘制，LCP） | 视口中最大的合格图片、文字块或视频何时绘制，近似反映主要内容何时可见 | ≤ 2.5 秒 |
-| Interaction to Next Paint（交互到下一次绘制，INP） | 点击、触屏或键盘操作开始后，浏览器何时首次能呈现下一帧 | ≤ 200 毫秒 |
-| Cumulative Layout Shift（累积布局偏移，CLS） | 页面中意外的内容移动有多严重 | ≤ 0.1 |
-
-这些目标看现场访问分布的第 75 百分位（p75），并分别按移动端和桌面端检查。INP 的分布只包含有可测交互值的访问；纯阅读或只滚动的访问可能没有 INP，不能把缺失值当作 0 毫秒。若某页面的 p75 达到目标，至少四分之三的该组样本不高于该值；其余访问仍可能更慢。INP 针对一次访问中的点击、触屏和键盘交互，通常记录最慢的一次；一页有很多交互时，每 50 次忽略其中最慢的一次。CLS 不是把页面生命周期内的所有偏移相加，而取分数最大的 session window（会话窗口）：连续偏移之间少于 1 秒，整个窗口最多 5 秒。离散点击、触屏或按键后 500 毫秒内的偏移可按近期输入规则排除；连续滚动不适用此规则，较晚发生的异步位移仍可能计入。
-
-指标各自回答不同问题。同一路由的 LCP 良好，不表示排序点击响应也良好；INP 良好也不表示异步请求返回得快，因为 INP 截止于浏览器能呈现下一帧的时点，不等待所有网络或业务工作完成。对长操作，若希望“正在排序”先出现在屏幕上，需要在同步工作前让出主线程，或启动异步工作；同一回调里先改文字再做同步排序，浏览器通常要等回调结束才有机会绘制。
-
-### 用现场分布选择要重现的动作
-
-field data（现场数据）来自真实访问，包含用户设备、网络、缓存与操作路径的差异；lab data（实验室数据）在指定环境中运行，适合重复动作、检查主线程和比较改动。两者回答不同问题，不能把一次实验室录制的数字当作真实用户分布。
-
-假设一个**纯教学用的合成报表**显示：`/reports?sort=recent` 的移动端 INP p75 为 430 毫秒，桌面端为 170 毫秒；路由 LCP、CLS 的 p75 都在良好目标内。这组数字不是来自任何站点。430 毫秒落在 INP“需改进”区间（高于 200 毫秒、至多 500 毫秒），170 毫秒达到良好目标；它只告诉我们移动端的交互响应需要调查，不能证明排序是根因。实际排查时，Real User Monitoring（真实用户监测，RUM）若自行保留页面路径、查询参数、版本、设备组、操作类型，并把 INP 归因到“最早优先”点击，就能更快选择复现路径。RUM 也可按版本分组，在同一时间比较灰度版和对照版。
-
-Chrome User Experience Report（Chrome 用户体验报告，CrUX）适合查看公开页面或整个来源的现场分布，但分组维度更少：它会去掉查询参数和片段，因此 `/reports?sort=recent#summary` 会归到 `/reports`；CrUX API 可以按页面或来源及设备类型查询，日常结果是 28 天滚动汇总，不提供应用部署版本这一维度。它能补充总体趋势，不能代替 RUM 的版本对照或具体按钮归因。
-
-先按相同页面、交互目标、设备组和版本查看 RUM，再针对慢交互在实验室录制。版本效果优先用同一时间的灰度/对照分组；若只能前后比较，至少选时长和星期分布相近的窗口，并检查设备、操作和加载状态组成是否变化。CrUX 的 28 天滚动窗口适合看更广的趋势；相邻窗口会重叠，且没有应用版本标签，不能当成精确的发布前后对照。Chrome DevTools（Chrome 开发者工具）的 Performance（性能）面板可以单独录制导航或运行时点击：Interactions（交互）轨道标出输入、处理和呈现延迟，Main（主线程）轨道则显示对应的 JavaScript 调用、框架工作和浏览器任务。若只运行一次 Lighthouse 页面加载且没有执行点击，它没有观察到该排序交互的 INP。Total Blocking Time（总阻塞时间，TBT）把 First Contentful Paint（首次内容绘制，FCP）后指定窗口内每个超过 50 毫秒的主线程长任务中、超出 50 毫秒的部分相加；Lighthouse 的默认页面加载窗口通常在 Time to Interactive（可交互时间，TTI）结束。它能提示“用户此时点击可能要等”，却不含真实用户何时点击，所以只能作为 INP 的诊断线索，不能替代现场 INP。
-
-### 把一次慢交互分成三个时间段
-
-INP 不是单个事件处理器的耗时。一次触屏点击可能包含 `pointerdown`、`pointerup`、`click` 等 Event Timing（事件计时）条目；浏览器用 `interactionId` 把同一动作关联起来，交互延迟取这些条目中最长的 `duration`。不要把最早条目的起点到最晚条目的终点当成交互时长：一次长按里，按下事件用了 80 毫秒，约 288 毫秒后抬起和 `click` 各用了 40 毫秒，交互延迟仍是 80 毫秒；328 毫秒的跨条目包络把手指等待时间也算进去了。
-
-阶段归因也要跟随这个最长条目所映射的帧。web-vitals 的当前实现按估算呈现时点 `startTime + duration` 分组，时点相差不超过 8 毫秒的条目作为同帧候选；输入延迟和处理时长取该帧组的处理边界，再以最长条目起点和时长做夹取。若最长时长并列且起点相同，库会保留这些并列条目用于归因；它仍不会把不同帧之间的等待并入处理时间。事件时长会按约 8 毫秒粒度量化，因此三段是定位主导阶段的估计值，不应按小数位理解为精确帧时间。下面的本地脚本按同一归因思路复核一个受控动作，不实现完整 INP 页面指标。
-
-其三段时间可按下面的问题定位：
-
-| 阶段 | 起止点 | 排查方向 |
-| --- | --- | --- |
-| input delay（输入延迟） | 最长 Event Timing 条目的 `startTime`，到其所属帧组开始处理；起点按这个条目夹取 | 此前的长任务、脚本执行或其他主线程占用 |
-| processing duration（处理时长） | 最长条目所属帧组的事件处理边界 | 排序、筛选、组件计算、同步布局读取或监听器工作 |
-| presentation delay（呈现延迟） | 该帧组处理结束，到最长条目估算的下一次呈现时点 | 后续主线程任务、样式计算、布局、绘制及帧提交 |
-
-一个合成时间线可以帮助分清归属：输入在 `0 ms` 开始，回调到 `90 ms` 才开始；回调内在 `105 ms` 读取布局信息，触发 `85 ms` 同步布局；回调在 `195 ms` 返回，下一帧在 `230 ms` 可呈现。三个阶段分别为 `90 / 105 / 35 ms`，合计 `230 ms`。那 `85 ms` 布局发生在回调内部，因此属于处理时长；如果布局在回调返回后才发生，它才会落入呈现延迟。这是阶段分类示例，不是报表测量结果。
-
-![从 0 ms 输入开始到 230 ms 下一帧可呈现；回调内的 85 ms 同步布局属于处理时长](../../frontend/performance/resources/interaction-latency-phase-example.svg)
-
-点击回调、微任务和浏览器何时获得下一次渲染机会的边界见[浏览器 JavaScript 何时运行，画面何时更新？](#5.%20%E6%B5%8F%E8%A7%88%E5%99%A8%20JavaScript%20%E4%BD%95%E6%97%B6%E8%BF%90%E8%A1%8C%EF%BC%8C%E7%94%BB%E9%9D%A2%E4%BD%95%E6%97%B6%E6%9B%B4%E6%96%B0%EF%BC%9F)。如果轨迹显示处理器中的几何读取触发同步布局，或样式/布局/绘制延迟下一帧，再沿[为什么一次 DOM 改动会增加布局或绘制工作？](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)检查具体读写顺序。
-
-若算法和输入规模已经合理，纯计算仍是主线程长任务，可以评估分块让出主线程，或把不依赖 DOM 的计算移到 Web Worker（网页工作线程）；Worker 会释放主线程处理界面，但不会消除总计算量，消息传递和结果提交也要计入。排序例子已通过预处理消除重复解析，先复测这个更简单的改动，再决定是否需要额外线程。
-
-点“最早优先”后处理时长很高，可能是排序数据计算，也可能是 React 更新；若处理时长低而呈现延迟高，再看浏览器样式、布局和绘制轨迹。看到 `Layout` 或 `Paint` 本身不证明它是缺陷：应沿具体调用关系找出占时的那段工作。若 React render（渲染）/commit（提交）占了主要时间，再沿[如何测量并减少不必要的 React 工作？](#14.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)定位组件；若 DOM 规模或数据量是疑点，再分辨[长报表列表何时适合虚拟滚动？](#15.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)里的网络、计算与挂载成本。
-
-### 沿同一动作从症状走到证据
-
-| 用户反馈 | 先看哪段证据 | 若证据支持，再检查什么 |
-| --- | --- | --- |
-| `/reports` 主要内容迟迟不出现 | 本次实际 LCP 元素、资源发现/请求/响应/绘制阶段 | LCP 图片是否过晚发现或被延迟加载；服务器响应或关键资源是否迟到；见下方 LCP 路径 |
-| 点击后很久才开始处理 | INP 输入延迟及点击之前的 Main 轨道 | 阻塞任务来自应用脚本、第三方脚本还是先前交互；若是路由脚本的解析/执行，检查[构建产物拆分](#51.%20%E6%9E%84%E5%BB%BA%E5%B7%A5%E5%85%B7%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E5%8F%91%E5%B8%83%E4%BA%A7%E7%89%A9%EF%BC%9F) |
-| 回调开始后列表迟迟未变 | 处理时长、事件调用栈、React render/commit | 排序、筛选、重复解析或框架计算是否占主导 |
-| 回调已结束，下一帧仍迟 | 呈现延迟及其后的样式、布局、绘制轨迹 | 是否有实际可避免的 DOM、样式或同步布局工作 |
-| 图片或异步内容出现时页面跳动 | CLS 的 Layout shifts（布局偏移）轨道及发生时刻 | 内容空间是否预留；变化是否由用户操作触发，是否确属意外偏移 |
-| 按钮已看见但无法操作 | 主线程是否阻塞、按钮处理器何时注册 | 可见时点与应用脚本就绪是否错开，见[脚本如何影响 HTML 解析与文档就绪？](#3.%20%E8%84%9A%E6%9C%AC%E5%A6%82%E4%BD%95%E5%BD%B1%E5%93%8D%20HTML%20%E8%A7%A3%E6%9E%90%E4%B8%8E%E6%96%87%E6%A1%A3%E5%B0%B1%E7%BB%AA%EF%BC%9F) |
-
-对“页面开得慢”要录制导航，查看 LCP 候选和资源瀑布；对“点击没反应”要在相同页面状态下实际点按钮。不要用导航时的总耗时推断点击成本，也不要因为按钮已绘制就假设其处理器已经可用。一次轨迹只解释当前浏览器、设备模拟、缓存和数据条件；要说明多少真实用户遇到问题，还要回到相同设备组的现场分布。
-
-报表行数变多时，也要把网络传输、客户端筛选/排序等数据计算、同时挂载的行与 DOM/布局工作分开测。服务端分页或缩小输入可以减少传输和客户端数据处理；虚拟化主要减少视口外的挂载节点，并不会撤销已经下载的全量数据，也不会自动消除一次全量排序。这个例子仅渲染 50 行，所以不能把长交互归因给大量 DOM；更完整的成本与虚拟化取舍见[长报表列表何时适合虚拟滚动？](#15.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。
-
-### 若主要内容迟到，沿实际 LCP 资源路径处理
-
-导航录制先确认本次视口里被选为 LCP 的元素，再按首字节、资源发现等待、资源下载和元素绘制延迟拆分；视口和内容不同，最大候选元素也可能变化。若候选是文字，资源发现等待和下载两段可以为零。若图片是 LCP，不要对它启用延迟加载；为图片或嵌入内容声明尺寸主要是预留布局空间、降低位移，不会普遍缩短 LCP。只有轨迹显示非关键资源争抢关键路径时才延迟它们；若发现晚源于 CSS（层叠样式表）阻塞，内联首屏必需的少量 CSS 可能减少等待，但会增大 HTML（超文本标记语言）文档，且重复样式不能像独立 CSS 文件一样单独缓存。服务端渲染或静态输出可让内容更早进入 HTML，却不自动保证 LCP 或交互响应良好。结合[图片延迟加载](#26.%20%E5%9B%BE%E7%89%87%E4%B8%8E%E5%AA%92%E4%BD%93%E8%B5%84%E6%BA%90%E6%80%8E%E6%A0%B7%E5%8A%A0%E8%BD%BD%E5%B9%B6%E4%BF%9D%E6%8C%81%E9%A1%B5%E9%9D%A2%E7%A8%B3%E5%AE%9A%EF%BC%9F)和[HTTP（超文本传输协议）缓存](../../engineering-foundations/networking/http-protocols-and-websockets.md)按这条实际路径复测。
-
-### 复现报表排序后，修掉重复日期解析
-
-本次受控重现从相同的 50,000 条合成数据开始，每条 `createdAt` 都是 ISO 8601 时间字符串；首屏先显示按日期从新到旧排列的 50 行，点“最早优先”后复制数组、按日期升序排序，再生成并同步写入前 50 行。Performance 的主线程轨迹把时间集中在排序处理器中。计时器中的“50 行”阶段覆盖 HTML 字符串生成和 `innerHTML` 同步更新 DOM，计时在浏览器后续样式计算、布局和绘制之前结束；因此它不是浏览器渲染时间。DevTools 轨迹中的 Layout、PrePaint、Paint 出现在事件回调之后，属于后续呈现工作。
-
-基线在每次比较时都调用两次 `Date.parse`；Chrome 这组重放中点击内共调用 1,293,094 次。预处理把每条记录复制并增加毫秒字段、解析一次，再由点击只比较数值。两种排序都保留同一全量顺序；初始化预处理是额外成本，不是免费优化。
-
-`Date.parse` 对这些带 `Z` 的 UTC ISO 8601 时间返回自 Unix 纪元起的毫秒数。比如 2026 年 4 月 1 日的数值小于 5 月 1 日；升序比较器 `a.createdAtMs - b.createdAtMs` 因而返回负数，把更早的 4 月记录排在前面。
-
-~~~javascript
-const normalized = source.map(report => ({
-  ...report,
-  createdAtMs: Date.parse(report.createdAt)
-}));
-
-const oldestFirst = normalized
-  .slice()
-  .sort((a, b) => a.createdAtMs - b.createdAtMs);
-~~~
-
-`slice()` 让本次排序使用副本，避免 `sort()` 改写原数组。预处理把解析工作移到数据准备阶段，代价是增加一份数值字段并占用初始化时间；如果日期本来已是数值、只排序一次，或初始化成为新瓶颈，这种预处理未必划算。应按真实访问顺序选择在哪一阶段承担成本。
-
-在此浏览器中观察到的结果如下。每次点击可观察到 `pointerdown`、`pointerup`、`click` 条目；表中交互延迟取同一 `interactionId` 的最长 `duration`。九次实验的 p75 按最近秩法取第 `ceil(0.75 × 9) = 7` 个排序结果，只是重复单击这一固定操作的实验室摘要，不是一次真实页面访问的 INP，也不是稳定的现场百分位。处理器和 DOM 写入等阶段各自单独取 p75；阶段拆分例子则取达到交互延迟 p75 的那次原始样本，并按最长条目所属帧组计算。
-
-| 同一排序交互 | 优化前 | 优化后 |
-| --- | ---: | ---: |
-| Event Timing 最长条目交互延迟 p75 | 832 毫秒 | 128 毫秒 |
-| 监听器入口至结果记录的同步工作 p75 | 766.2 毫秒 | 70.6 毫秒 |
-| 数组复制与排序 p75 | 764.8 毫秒 | 69.2 毫秒 |
-| 生成 50 行标记并同步写入 DOM p75 | 1.7 毫秒 | 1.4 毫秒 |
-| 点击内的 `Date.parse` 次数 | 1,293,094 次 | 0 次 |
-| 数据准备（复制记录并解析日期）p75 | 未预处理 | 34.9 毫秒 |
-
-作为阶段例子，优化前达到交互 p75 的原始样本为 `1 / 762.3 / 68.7 ms`，合计 `832 ms`；优化后相应样本为 `1.5 / 76 / 50.5 ms`，合计 `128 ms`。九次点击的 p75 里，主要下降发生在处理阶段，与日期解析调用数和主线程轨迹相互印证。其他阶段各自的 p75 是独立统计，不能相加成表中的交互 p75。Event Timing 的时长量化也意味着这组阶段值只用于找出主导区段。
-
-独立复算比较了修复前后全部 50,000 个 ID 的排序位置，结果完全一致；排序后前三个 ID 是 `18771, 37492, 6263`。这证明本次固定合成输入的顺序一致，不覆盖其他日期格式、无效值或并列日期策略；生产代码还应按产品规则处理这些输入。
-
-### 用同口径复测，分别回答是否修好与是否惠及用户
-
-受控比较固定了浏览器、视口、4 倍 CPU（中央处理器）节流、50,000 条输入和同一点击动作；每种版本先预热 2 次，再交替测量 9 次。Event Timing 原始条目全部保留，并可从每次记录重算最长事件和帧组阶段；计时器分别记录数组复制/排序、标记生成/同步 DOM 写入和数据准备。因此这组结果回答的是：“在这个 Chromium 与节流条件下，这项计算修复是否缩短了该动作？”它不代表真实低端手机、网络下载、页面导航、完整报表渲染，也没有测 LCP 或 CLS；4 倍节流不是某一种真实手机的性能画像。
-
-部署后沿用上文的版本与时间窗规则，查看相同页面、相同移动/桌面分组的现场数据，确认 RUM 中慢交互确实减少；同时检查排序正确性和回退路径。实验室结果证明可复现环境中的变化，现场结果判断用户分布是否改善，两者应分别报告。若处理阶段已经下降而端到端 INP 仍高，就按新轨迹转查输入延迟或呈现延迟，不要继续优化已不占主导的排序。
-
-### 加载时间点能说明什么
-
-这些加载指标可补充导航诊断，但没有一个单独代表“页面已可用”。
-
-| 时间点 | 可用于观察 | 不能单独证明 |
-| --- | --- | --- |
-| FCP（首次内容绘制） | 首次有文本、图片等内容绘制 | 主要内容已经出现，或按钮已能响应 |
-| Time to First Byte（首字节时间，TTFB） | 导航开始到收到第一个响应字节的时间，包含重定向、连接、服务器处理等路径 | HTML 已接收完、应用已执行或内容已绘制 |
-| `DOMContentLoaded`（文档内容加载完成事件，DCL） | HTML 解析结束、解析后延迟脚本流程完成后到达该事件的时点 | 图片和所有资源已加载、应用异步初始化或请求已全部完成 |
-| `load` | 当前文档中延迟该事件的资源流程已经完成 | 用户何时首次看到有用内容，或交互何时有反馈 |
-
-DCL 会等 HTML 解析完成，并先执行延迟脚本；阻塞这些脚本的样式表也可能间接推迟它。模块脚本中 `top-level await` 暂停之后的部分、脚本启动的 `fetch()`、定时器或后续 Promise 工作仍可在 DCL 之后继续。`load` 也只等待会延迟该事件的文档资源，不是“所有应用逻辑结束”。First Input Delay (首次输入延迟，FID) 曾是核心网页指标，现已由 INP 取代；FCP、TTFB、TBT 仍可作为各自范围内的诊断信号。
-
-需要加载路径细节时，继续看[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)；此处用这些里程碑回答导航阶段问题，再回到真实 LCP 元素与资源时序，而不是把 DCL 或 `load` 当成体验终点。
-
-> [!info]- 来源与版本核验（核验日期：2026-11-13）
-> - Core Web Vitals 的当前三项指标、建议阈值和移动/桌面分组 p75：[web.dev：Web Vitals](https://web.dev/articles/vitals)，核心指标与评估阈值，2024-10-31 更新；[定义核心网页指标阈值](https://web.dev/articles/defining-core-web-vitals-thresholds)，阈值方法。
-> - LCP 候选内容、加载时间和 2.5 秒目标：[web.dev：Largest Contentful Paint](https://web.dev/articles/lcp)，2025-09-04 更新；CLS 会话窗口、间隔和 5 秒上限：[web.dev：Cumulative Layout Shift](https://web.dev/articles/cls)，定义与阈值。
-> - LCP 资源发现、请求到绘制的分段及延迟加载/尺寸建议：[web.dev：Optimize Largest Contentful Paint](https://web.dev/articles/optimize-lcp)，2025-03-31 更新，LCP breakdown 与图片优先级章节。
-> - INP 对页面生命周期内交互的汇总、每 50 次忽略最慢交互、交互条目及三阶段定义：[web.dev：Interaction to Next Paint](https://web.dev/articles/inp)，2025-09-02 更新，第“What is INP?”与“What’s in an interaction?”节；实验室应跟随现场数据选择真实动作：[web.dev：Optimize Interaction to Next Paint](https://web.dev/articles/optimize-inp)，2025-09-02 更新。
-> - 受控实验室与现场数据的来源差异，以及 TBT 不能观察用户何时交互：[web.dev：Why lab and field data can be different](https://web.dev/articles/lab-and-field-data-differences)，INP 与 TBT 节；TBT 长任务及超 50 毫秒部分的计算：[web.dev：Total Blocking Time](https://web.dev/articles/tbt)，2025-10-15 更新。
-> - Chrome DevTools 的 Main、Interactions 与 Layout shifts 轨道：[Performance features reference](https://developer.chrome.com/docs/devtools/performance/reference)，查看主线程、交互及布局偏移章节，核验日期 2026-11-13。
-> - 让出主线程以及把不依赖 DOM 的计算移入 Worker：[web.dev：Use web workers to run JavaScript off the browser's main thread](https://web.dev/articles/off-main-thread)，网页工作线程能力和适用场景；核验日期 2026-11-13。
-> - `interactionId` 和 Event Timing 条目定义：[W3C Event Timing API](https://www.w3.org/TR/2026/WD-event-timing-20261013/)，W3C Working Draft，2026-10-13；此稿是工作草案，不是 W3C Recommendation。本文的本地采样脚本仅用 Chromium 暴露的 Event Timing 条目复核单次动作，不是 Web Vitals 官方库的完整 INP 实现。
-> - 单次交互取最长 Event Timing 条目，以及将归因阶段映射到同帧组、对并列最长条目的处理：[GoogleChrome/web-vitals `InteractionManager`](https://github.com/GoogleChrome/web-vitals/blob/main/src/lib/InteractionManager.ts) 与 [`onINP` 阶段归因](https://github.com/GoogleChrome/web-vitals/blob/main/src/attribution/onINP.ts)，读取主分支实现，核验日期 2026-11-13。本文的实验脚本只复现最长条目与同帧分组这段测量，不是该库的完整 INP 实现。
-> - CrUX 页面归并会去掉查询参数与片段：[CrUX methodology](https://developer.chrome.com/docs/crux/methodology#page)；CrUX API 的页面/来源标识、设备类型和 28 天滚动采集期：[CrUX API](https://developer.chrome.com/docs/crux/api#collection-period)，核验日期 2026-11-13。
-> - FCP 的首次内容绘制含义：[web.dev：First Contentful Paint](https://web.dev/articles/fcp)；TTFB 定义及其连接/请求阶段：[web.dev：Time to First Byte](https://web.dev/articles/ttfb)，2025-11-18 更新。导航时间戳定义：[W3C Navigation Timing Level 2](https://www.w3.org/TR/navigation-timing-2/)，W3C Working Draft，2026-11-02。
-> - DCL 的解析完成、延迟脚本与事件顺序，及 load-delay 等待条件：[WHATWG HTML Living Standard，解析完成](https://html.spec.whatwg.org/multipage/parsing.html#the-end)，2026-11-12 更新。FID 由 INP 接替：[web.dev：First Input Delay](https://web.dev/articles/fid)，旧指标说明。
-## 14. 如何测量并减少不必要的React工作？
-
-**案例背景。** 沿用报表页 `/reports?sort=recent#summary`：服务端给 May、April 两行，用户选择 **Oldest first** 后，`sort=oldest` 让可见顺序变成 April、May。打开说明面板只改变面板自身，不改变报表数据。若这次点击让大量行重复执行组件函数，先定位主线程上由谁触发了哪些工作；若 React 组件计算不是主耗时，就按 Performance 轨迹标出的阶段继续排查，记忆化是否影响端到端时间仍要复测。排序 URL 和 Back 恢复由[浏览器历史栈机制](#%E8%AE%A9%E6%8E%92%E5%BA%8F%E7%8A%B6%E6%80%81%E8%B7%9F%E9%9A%8F%E5%9C%B0%E5%9D%80%E6%A0%8F%E4%B8%8E%E5%89%8D%E8%BF%9B%E5%90%8E%E9%80%80)负责，本章聚焦这两个动作的工作量。
-
-**测量路径：** 先用浏览器 Performance 定位打开说明的点击，再按时间轨迹判断是否需要 React Profiler。
-
-![React 工作与浏览器呈现的诊断路径](../../frontend/performance/resources/react-rendering-triage.svg)
-
-### 先分清render和DOM变化
-
-React 的 render（渲染）是组件函数计算下一份界面描述；commit（提交）才把必要的变化应用到 DOM（文档对象模型）。组件运行了，不代表 DOM 一定改变；React 可能比较出宿主属性与顺序不变。浏览器还要根据 DOM 和 CSS 决定后续的样式、布局、绘制或合成，因此 React 的 render 耗时也不是用户完整等待时间。
-
-先用同一 URL、同一组报表、同一交互和目标设备在 Chrome DevTools（Chrome 开发者工具）的 Performance 面板录一次基线。Interactions（交互）轨道可定位“打开说明”这次点击及其输入、处理和呈现延迟；再顺着 Main（主线程）轨迹看时间花在事件处理、React、commit/Effect，还是样式、布局和绘制。若记录显示 React 子树 render 占主要成本，再用 React Developer Tools（React 开发者工具）的 Profiler（性能分析器）定位参与的组件；`<Profiler>` API 可在指定子树记录 `phase`、`actualDuration` 和 `baseDuration`。`actualDuration` 是该次已提交更新中子树实际花在 render 的时间；`baseDuration` 是按最近各组件耗时估计、没有跳过子树时的成本。Profiler 有额外开销，生产构建默认关闭程序化分析；比较线上构建时需使用启用 profiling 的构建，不能把开发构建耗时当成生产时延。
-
-render 不是主耗时时，不要只看提交后的浏览器工作：继续检查点击处理器、React commit 与 Effect，以及其后的样式、布局和绘制。`useLayoutEffect` 及其状态更新会在浏览器重绘前处理；其中测量 DOM 的操作可能把同步布局带入这段交互。React Performance tracks（React 性能轨道）可以在浏览器 Performance 时间线上区分 React render、commit/layout Effect 与剩余 Effect；这些 React 专用轨道只在开发构建和 profiling 构建中可见，且有额外开销。普通 `useEffect` 通常在 paint 后，但与交互相关时也可能在 paint 前运行。按轨迹里实际占时的阶段处理，不要从“React render 较短”直接推断布局/绘制就是唯一瓶颈。浏览器阶段边界见[如何测量并诊断网页性能问题？](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)与[为什么一次 DOM 改动会增加布局或绘制工作？](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。render 次数或控制台日志只能提示“谁可能运行过”，不能单独证明交互更快。
-
-若说明面板只在面板内部使用，最直接的修法通常是把 `helpOpen` 状态移进独立的 `HelpPanel`。这样面板自己的更新不必从 `ReportBoard` 向整张报表列表传播：
-
-~~~jsx
-import { useState } from "react";
-
-function HelpPanel() {
-  const [open, setOpen] = useState(false);
-  return (
-    <section>
-      <button type="button" onClick={() => setOpen(value => !value)}>
-        {open ? "隐藏说明" : "显示说明"}
-      </button>
-      {open && <p>说明面板</p>}
-    </section>
-  );
-}
-~~~
-
-由 `ReportBoard` 同时渲染 `<HelpPanel />` 和报表列表，并让 `open` 由 `HelpPanel` 自己持有；点击时只有这棵子树更新，兄弟列表不必因 `helpOpen` 重算。组件状态由谁持有、何时该拆开组件见[如何在 React 中组合组件与复用行为？](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)。下例故意把 `helpOpen` 留在列表父组件，单独展示它触发父组件 render 时，手工缓存怎样影响传给行的值；这是为了分析依赖身份的教学路径，不表示应先给每个组件加缓存。
-
-从同一个合成起点读下面这段代码：`reports` 为 May、April 两个对象，`query` 为空，`helpOpen=false`。此刻 `visible` 是两行的筛选结果，`toggleReviewed` 是切换某行状态的函数。
-
-| `id` | `title` | `reviewed` |
-| --- | --- | --- |
-| `may` | `May summary` | `false` |
-| `april` | `April summary` | `false` |
-
-先把案例入口的排序变化说清：初始 `sort=recent` 时，列表为 May、April；选择 **Oldest first** 后，`sort=oldest` 让同一组报表显示为 April、May。排序只改变列表顺序，不修改两个报表对象；稳定的 `key` 保留每行身份，但 key 本身不会跳过 render。在下方手工 `memo` 路径中，如果每行的对象与回调 props（属性）保持同一引用，行函数可以跳过，React 仍需协调并重排列表节点。下面的代码没有实现排序或 URL 历史处理，只隔离说明面板、搜索词和本地 `reviewed` 三种更新。
-
-> [!example]- 查看这个案例的 React 实现
-> ~~~jsx
-> import { memo, useCallback, useMemo, useState } from "react";
->
-> function filterReports(reports, query) {
->   const normalizedQuery = query.toLowerCase();
->   return reports.filter(report =>
->     report.title.toLowerCase().includes(normalizedQuery)
->   );
-> }
->
-> function replaceReviewed(reports, id) {
->   return reports.map(report =>
->     report.id === id
->       ? { ...report, reviewed: !report.reviewed }
->       : report
->   );
-> }
->
-> function ReportBoard({ initialReports }) {
->   const [reports, setReports] = useState(initialReports);
->   const [query, setQuery] = useState("");
->   const [helpOpen, setHelpOpen] = useState(false);
->
->   const visible = useMemo(
->     () => filterReports(reports, query),
->     [reports, query]
->   );
->   const toggleReviewed = useCallback((id) => {
->     setReports(current => replaceReviewed(current, id));
->   }, []);
->
->   return (
->     <>
->       <input
->         aria-label="筛选报表"
->         value={query}
->         onChange={event => setQuery(event.target.value)}
->       />
->       <button
->         type="button"
->         onClick={() => setHelpOpen(open => !open)}
->       >
->         {helpOpen ? "隐藏说明" : "显示说明"}
->       </button>
->       {helpOpen && <p>说明面板</p>}
->       <ul>
->         {visible.map(report => (
->           <ReportRow
->             key={report.id}
->             report={report}
->             onToggle={toggleReviewed}
->           />
->         ))}
->       </ul>
->     </>
->   );
-> }
->
-> const ReportRow = memo(function ReportRow({ report, onToggle }) {
->   return (
->     <li>
->       {report.title}
->       <button type="button" onClick={() => onToggle(report.id)}>
->         {report.reviewed ? "已读" : "标为已读"}
->       </button>
->     </li>
->   );
-> });
-> ~~~
-
-在这条手工记忆化路径里，`useMemo` 首次 render 仍会筛选；缓存仍在时，后续 render 只有 `reports` 或 `query` 按 `Object.is` 比较发生变化，才重跑筛选函数。`useCallback` 在依赖不变的后续 render 返回同一个函数引用；空依赖成立，是因为回调只调用 updater，并不读取某一轮的 `reports` 快照。`memo(ReportRow)` 默认逐项用 `Object.is` 比较 props；若同一行对象和回调都相同，React 可以跳过这行的父级传播 render。
-
-表中每项操作都从同一初始状态独立重放：`query=""`，May 与 April 两行都挂载。输入 `apr` 会让 May 行离开树；因此“把 May 标为已读”不是在该行后面连续进行，而是从初始两行仍可见时单独开始。作为对照，若不用缓存，打开说明会让父组件、过滤函数和两行函数重新执行，但不必改变行 DOM；使用这段手工缓存时，父组件与 `visible.map` 仍执行，依赖不变且缓存仍在时可以复用过滤结果，稳定 props 可让 memo 行跳过函数调用。
-
-| 操作 | 状态与引用如何变化 | 行组件会发生什么 |
-| --- | --- | --- |
-| 初始显示两行 | `reports`、`query` 首次出现，执行过滤并创建 `visible`；第一次创建 `toggleReviewed` | 两行首次 render |
-| 打开说明面板 | 只改 `helpOpen`；`reports`、`query` 不变，缓存仍在时 `useMemo` 可返回原 `visible`，`useCallback` 可返回原函数 | 父组件和 `visible.map` 仍执行；两行的 `report` 与 `onToggle` props 相同，已包 `memo` 的行可以跳过。React Compiler 生效时也可能自动建立等价缓存 |
-| 输入 `apr` | `query` 改变，过滤必须再扫描当前 `reports`，`visible` 只含 April | May 行离开树；April 仍有相同的行对象与回调，手工 memo 边界可以跳过它 |
-| 把 May 标为已读 | 不可变更新创建新 `reports` 数组和新的 May 对象；April 对象保持原引用 | 过滤重算；May 行 props 改变而需更新，April 行 props 不变时仍可能跳过 |
-
-这张表说明几种优化作用在不同环节：memoization（记忆化）中的 `useMemo` 省掉依赖未变时的 `filter`；`useCallback` 保持传给行的回调身份；`memo` 才检查行 props（属性）并决定是否跳过组件函数。行接收的是单个 `report` 对象，不是 `visible` 数组；即使 React 因特殊原因丢弃 `useMemo` 缓存、重新生成了数组，只要数组里的行对象引用没变，行 props 仍可相同。`memo` 管的是父组件传入的 props；行自身 state（状态）或它读取的 Context（上下文）变化，仍可让行 render。少了 `memo`，稳定值不会单独阻止子组件 render；若回调每次新建或行对象被原地改写，默认 props 比较也无法可靠地区分更新。筛选词变化时仍需检查每一条记录，`useMemo` 不能让一次新的全量过滤变成常数时间。对 May 的更新若要让 React 看见变化，应创建新数组和新对象，同时保留未变的 April 对象；不能为追求身份稳定而原地改写数据。
-
-这段 `reviewed` 示例只演示本地对象的不可变更新；真实写入服务端还要处理请求身份、确认和失败状态，见[React 服务端状态与乐观更新](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。若说明面板只需暂时隐藏，CSS 隐藏会让它留在 React 树中，state 与 Effect 仍存在；条件移除则会卸载组件并运行 cleanup（清理），再次显示时创建新实例，按交互和生命周期需求选择。Fragment（片段）可避免纯包装用的额外 DOM 节点，但是否有性能收益仍要测量。
-
-### React Compiler改变手工memo的默认做法
-
-React Compiler（React 编译器）v1.0 已稳定；截至 2026-11-12，React 官方文档版本为 React 19.3。Compiler 是可选的构建期优化：项目必须在构建链中配置它，且具体文件和组件要被编译器识别。启用后，它可以在组件与 Hook（钩子）内自动记忆化可复用的子树和计算，通常无需新代码先手写 `memo`、`useMemo`、`useCallback`。先检查项目是否接入、构建是否覆盖本文件，再用 Profiler 观察结果；仅安装插件或看到新版本号，不足以证明某个组件已获得优化。
-
-编译范围有边界：Compiler 主要优化 React 组件和 Hook，不会将任意工具函数自动变成跨组件共享的缓存。同一昂贵纯函数若在多个独立组件中分别调用，组件内的记忆化不会自然共用一次结果；是否需要显式的共享缓存，要根据实际调用和数据所有权另作设计。启用 Compiler 后仍可保留确有意图的手工 memo，但不要叠加一层只为“更安全”的缓存。
-
-未启用 Compiler、某个模块未被覆盖，或 Profiler 显示一个稳定边界仍反复做昂贵工作时，才考虑手工 API。React 在特定情况下可丢弃 `useMemo` / `useCallback` 缓存，例如初次挂载时发生 Suspense；需要语义持久状态时应使用 state（状态）或 ref（引用）。新建的对象、数组和函数每次身份都不同；自定义 `memo` 比较必须保证函数行为和可见输出等价，否则可能保留旧闭包。React Compiler、组件编译范围与手工 memo 当前用途见下方来源。
-
-### 用结果决定优化是否值得保留
-
-按相同交互复测，从点击到界面呈现，并沿 Performance 轨迹比较原先占时阶段。若 Compiler 已覆盖，可比较编译前后的同一操作；若手工拆分状态或加入 `memo`，确认可见界面仍正确，并且目标 render 成本或点击到呈现时间能稳定、可重复地改善。是否覆盖 Compiler 只是解释优化从哪里来，不单独决定保留缓存；没有可重复收益，或维护成本超过收益时，可以移除手工缓存后复测。已有代码的手工缓存可能影响 Compiler 的编译结果，移除后也要重新验证界面行为和性能，不能仅凭启用 Compiler 就批量删除。Profiler 有额外开销，最终判断还要回到目标构建和设备上的浏览器 Performance 轨迹。
-
-稳定 `key`（列表键）用来保留列表项在排序、插入和删除中的身份，不是跳过 render 的性能 API；虚拟列表卸载行后，原组件的局部 state 也会销毁。如果测量显示成本随同时挂载的行数增加——无论来自 React 创建/更新行，还是 DOM、样式与布局——再评估[长报表列表何时适合虚拟滚动？](#15.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。若主要耗时在窗口选择之前的全量过滤，虚拟化不一定能缩短那段计算。React commit 后的浏览器工作与组件 render 分开看，并用同一交互复测端到端结果。
-
-> [!info]- 来源与版本核验（React 19.3；React Compiler v1.0；核验日期 2026-11-12）
-> - React 官方文档当前版本为 19.3，npm 版本 `v19.3.0` 发布于 2026-09-09：[Versions](https://react.dev/versions)、[React 19.3](https://react.dev/blog/2026/09/09/react-19-3)。
-> - render 是 React 调用组件求得界面，commit 才更新 DOM，render 不必导致 DOM 变化：[Render and Commit](https://react.dev/learn/render-and-commit)，React 19.3。
-> - Chrome Performance 的 Interactions 轨道显示输入、处理和呈现延迟，Main 轨道显示主线程调用栈和事件耗时：[Performance features reference](https://developer.chrome.com/docs/devtools/performance/reference#view-interactions)，核验日期 2026-11-12。
-> - React 性能轨道将 Update、Render、Commit（含 layout Effects）和剩余 Effects 放在浏览器时间线上；`useLayoutEffect` 与其状态更新会在重绘前执行：[React Performance tracks](https://react.dev/reference/dev-tools/react-performance-tracks#renders)、[useLayoutEffect](https://react.dev/reference/react/useLayoutEffect)，React 19.3。
-> - React Developer Tools 的 Profiler 面板与组件检查：[React Developer Tools](https://react.dev/learn/react-developer-tools)，React 19.3；`<Profiler>` 的 commit 回调、`actualDuration`、`baseDuration` 及生产 profiling 开销：[Profiler](https://react.dev/reference/react/Profiler)，React 19.3。
-> - Compiler 是可选且稳定的构建期优化；它主要在组件与 Hook 中跳过级联 render 和重复计算，不对任意工具函数共享缓存；先 profile 后再增加复杂度：[React Compiler Introduction](https://react.dev/learn/react-compiler/introduction)，React Compiler v1.0，2025-10-07。
-> - `memo` 默认以 `Object.is` 比较 props，状态或所读 Context 改变仍可 render；`useMemo` 的缓存与依赖比较、缓存可在特定条件丢弃：[memo](https://react.dev/reference/react/memo)、[useMemo](https://react.dev/reference/react/useMemo)，React 19.3。
-> - `useCallback` 只返回稳定函数引用、不主动执行函数，依赖按 `Object.is` 比较；缓存可被丢弃：[useCallback](https://react.dev/reference/react/useCallback)，React 19.3。
-> - 条件移除组件会重置其树位置上的 state、Effect 会在卸载时清理、Fragment 不增加包装 DOM：[Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state)、[useEffect](https://react.dev/reference/react/useEffect)、[Fragment](https://react.dev/reference/react/Fragment)，React 19.3。
-> - 状态所有权、组件边界和向下传值：本库[如何在 React 中组合组件与复用行为？](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)；提交后的样式、布局与绘制：本库[为什么一次 DOM 改动会增加布局或绘制工作？](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
-## 15. 长报表列表何时适合虚拟滚动？
-
-**案例背景。** 报表页从 `/reports?sort=recent#summary` 得到 May、April 两行；选择 **Oldest first** 后，`sort=oldest` 让可见顺序变成 April、May。两行列表不需要虚拟化。下面有意把这个案例扩大为假设的 **100,000 条**历史报表，问题变成：用户到底要看什么，客户端要拿到哪些数据，浏览器要同时挂载多少节点？十万只是演算规模，不是启用虚拟滚动的门槛。先按真实交互分辨网络、React render（渲染）、DOM（文档对象模型）与布局成本，再选择处理方式。
-
-### 十万条报表先决定哪些数据需要传输
-
-把历史增长到 100,000 条后，至少有三种不同成本：从服务端拿来多少字节；客户端为筛选、排序和转换跑多少 JavaScript 并保留多少数据对象；React 与浏览器同时要处理多少组件、DOM 节点、样式和布局。100,000 条不是通用阈值：是否能承受全量处理还取决于设备、行复杂度、数据形状和交互，应分别测量请求、脚本、渲染与内存。用户只看总数或月度趋势时，服务端聚合可直接返回结果；用户要搜索、排序、分页浏览时，接口可以按条件处理后只发送当前页；若用户确实需要连续浏览已加载数据，虚拟滚动才处理挂载窗口。客户端过滤十万条仍要检查十万条：若 `n` 是记录数且每条记录的判定成本近似固定，扫描一次的过滤成本随 `n` 线性增长，常记作 `O(n)`；把剩余行从 DOM 移走，不会减少这次扫描、已下载数据或其 JavaScript 内存。
-
-| 经同一任务录制确认的主要成本 | 优先处理方向 | 要计入的代价或边界 |
-| --- | --- | --- |
-| 网络传输包含用户尚不需要的记录 | 服务端过滤、排序、分页或按需请求；只需统计时返回聚合 | 加载、错误、重试、结束状态和排序一致性 |
-| 客户端全量变换或查询占主线程 | 改算法、缩小输入、分块，或把可移出的纯计算交给 Web Worker（网页工作线程） | Worker 不减少算法工作量；对象消息通常要结构化复制，数据传递也要计时 |
-| React 组件函数反复执行 | 按[React 渲染优化](#14.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)检查状态范围、稳定的 `props`（属性）和已测量的 `memo`（记忆化）边界；若成本主要随同时挂载的行数增加，也可评估虚拟化 | 缓存跳过重复计算，虚拟化减少参与工作的行，两者作用不同 |
-| 大量已挂载节点让样式、布局或呈现变慢 | 虚拟化当前可视窗口 | 测量、滚动、焦点、键盘、读屏、打印和查找行为更复杂 |
-
-若从开场的 `sort=oldest` 切到跨请求分页，下面明确改用 `sort=recent`：按 `periodStart` 降序，再以唯一 `report.id` 升序打破同日并列。唯一 ID 让固定数据集的顺序确定；keyset pagination（键集分页）的游标记录页尾的完整排序键值，服务端按同一排序定义和方向继续，排序方向若已由查询配置固定，不必重复编码在游标里。只带可能重复的日期不足以区分并列报表。
-
-偏移边界如何移动，可以用页大小为 2 的小例子单独看：原顺序为 `A, B, C, D`，第一页是 `A, B`。若下一次请求前在头部插入 `X`，新顺序是 `X, A, B, C, D`；`OFFSET 2` 会返回 `B, C`，重复了 `B`。若另一种变化是第一页之后删除头部的 `A`，剩余顺序 `B, C, D` 的 `OFFSET 2` 只返回 `D`，跳过了 `C`。稳定的次级 ID 不会冻结两次请求间变化的数据集；需要一致的历史浏览时，还要由服务端定义快照或版本边界。分页减少单次传输；在客户端收到全量数据后再虚拟化，不会追溯减少之前的网络流量。
-
-### 固定行高怎样算出挂载窗口
-
-先用一个固定行高的小模型，明确索引约定：以下行号从 `0` 开始，区间右端不包含在内；每行的重复高度步长为 `40px`（若有行间距，也计入此步长），滚动窗口高 `480px`，上下各多渲染 4 行的 overscan（预渲染缓冲区）。在 `scrollTop = 4000px` 时，视口恰好从第 100 行开始，到第 112 行之前结束，因此可见区间是 `[100, 112)`，共 12 行。加上前后缓冲，挂载区间成为 `[96, 116)`，共 20 行。窗口顶端偏移为 `96 × 40 = 3840px`；整条列表仍要用 `100,000 × 40 = 4,000,000px` 的占位高度保留滚动范围。
-
-下面函数只演算固定高度窗口。示例中的 `items` 是浏览器已持有的 100,000 条合成报表；`totalRows` 是非负整数；`rowHeight` 是有限正数；视口高度是有限正数，`scrollTop` 是有限数；`overscan` 是非负整数。尚未测到正高的滚动容器先不计算窗口。滚动位置会限制在整条列表可滚动范围内。实际容器的尺寸和位置应从浏览器测量，不能一直把示例常数写死。
-
-~~~javascript
-const items = Array.from({ length: 100_000 }, (_, id) => ({ id }));
-
-function getWindow(
-  totalRows,
-  scrollTop,
-  viewportHeight,
-  rowHeight,
-  overscan = 4
-) {
-  const totalHeight = totalRows * rowHeight;
-  const maxScrollTop = Math.max(0, totalHeight - viewportHeight);
-  const offset = Math.min(Math.max(scrollTop, 0), maxScrollTop);
-  const firstVisible = Math.floor(offset / rowHeight);
-  const start = Math.max(0, firstVisible - overscan);
-  const end = Math.min(
-    totalRows,
-    Math.ceil((offset + viewportHeight) / rowHeight) + overscan
-  );
-
-  return {
-    start,
-    end,
-    offsetY: start * rowHeight,
-    totalHeight
-  };
-}
-
-const range = getWindow(items.length, 4_000, 480, 40);
-// { start: 96, end: 116, offsetY: 3840, totalHeight: 4000000 }
-const mountedItems = items.slice(range.start, range.end);
-~~~
-
-下图对应 `scrollTop=4000px`，局部窗口把视口中实际可见的 12 行与上下缓冲的 8 行分开；左侧只标出它在完整列表中的位置，不按 4,000,000px 高度比例绘制：
-
-![固定行高时完整占位区与局部挂载窗口的关系](../../frontend/performance/resources/rendering-window-ranges.svg)
-
-在真实组件中，滚动容器的 `scroll` 更新 `scrollTop` 后会重新计算窗口；下面列出前后两次状态。`getWindow` 本身只算范围，真正挂载和卸载由组件按新范围重绘时发生。
-
-| `scrollTop` | 可见半开区间 | 挂载半开区间 | 窗口容器 `offsetY` | 与上次相比 |
-| ---: | --- | --- | ---: | --- |
-| `4000px` | `[100, 112)` | `[96, 116)` | `3840px` | 初始窗口，挂载 20 行 |
-| `4040px` | `[101, 113)` | `[97, 117)` | `3880px` | 卸载第 96 行，挂载第 116 行；第 97–115 行继续挂载 |
-
-实现会把 `mountedItems` 放进一个从 `range.offsetY` 开始的定位容器；外层占位区高度为 `range.totalHeight`，让滚动条仍代表完整列表，内层只创建窗口中的报表行。代码逐项满足边界处理：靠近开头时 `start` 不会小于 0；靠近结尾时 `end` 不会超过 `totalRows`；列表短于视口时最大滚动位置为 0。窗口滚动只是选择当前要挂载的下标，不会改变 `items` 本身。
-
-`report.id` 应是跨排序和翻页稳定的唯一 key（键），不用当前窗口内的索引。React `key`（列表键）帮助 React 在同一棵已挂载列表中识别行；当某行滚出窗口并从树中卸载，它的局部 state 也会结束。若“已选中”或编辑草稿要在离开窗口后保留，把状态放在列表外并按报表 ID 关联。若离开页面后还要回到原阅读位置，可保存可见行 ID 与该行内的滚动偏移，再恢复到对应位置。窗口索引不是报表身份，排序后以 index 当 key 可能把旧行状态交给另一份报表。
-
-虚拟化只让当前窗口的行进入 DOM。用户必须看到所有数据时，它仍可与分页或增量请求组合；但请求下一页、保持 API 游标和处理失败，是独立的数据加载流程。若首要目标是让查询少扫描记录，应减少查询输入或改变算法；若主要成本是全量数据对象占用内存，减少挂载节点也不会清除那批对象。
-
-### 固定高度不适用时怎样跟上实际尺寸
-
-报表标题可能换行，说明行可能展开，字体或图片也可能在挂载后改变高度。此时初始只能按每行估算高度累加出后续位置；真实行挂载后，虚拟器测得实际高度，并更新它之后行的起点和总高度。沿用 `scrollTop=4000px` 的算例：视口上方的第 96 行原估 `40px`、实测 `52px`，相差 `12px`；第 100 行的内容坐标便从 `4000px` 移到 `4012px`。若滚动位置仍是 `4000px`，第 100 行会比原来低 `12px`；若它是锚点且实现把 `scrollTop` 补偿到 `4012px`，它仍在视口原位置。使用动态尺寸的虚拟器应有估算、实际测量及滚动锚定策略，并应在目标浏览器中检查展开行、异步内容和视口尺寸变化。TanStack Virtual 当前文档以 `estimateSize` 提供初始估计、`measureElement` 取得实际尺寸，并用 `shouldAdjustScrollPositionOnItemSizeChange` 控制视口上方行尺寸变化时是否校正滚动位置；具体配置按项目安装版本核对。
-
-### 让被卸载的行仍能被键盘和辅助技术使用
-
-虚拟窗口之外的行不存在于当前 DOM。若键盘焦点落在某行按钮上，而下一次滚动将该行卸载，焦点可能丢失；交互列表应按报表 ID 跟踪活动项，保证它仍被挂载，或在卸载前按其控件模式移动并恢复焦点。对使用方向键的虚拟 `grid`（网格），若目标单元格在窗口外，先算出目标报表 ID/索引并滚动到包含该行的窗口，待目标行挂载后再把焦点移到单元格。不要因为数据看起来像列表就随手加 `role="listbox"`：列表框是选择选项的复合控件，不适合把按钮或复选框等独立交互控件塞进每个选项；列表框、grid（网格）等复合控件也要求各自的方向键和焦点行为。只需展示和浏览报表时，带正确表头的原生 `<table>` 配合服务端分页通常更容易使用；单页表格呈现的仍只是当前页，要搜索或打印全量结果时还需相应的应用级搜索或导出能力。当测量确认同时挂载的行数带来主要成本——可能在 React 计算，也可能在 DOM、样式与布局——且用户需求能接受部分节点时，再承担虚拟表格的复杂性。
-
-当部分集合被渲染时，无障碍富互联网应用规范（WAI-ARIA）对适用的 `listitem` / `treeitem` 提供 `aria-posinset` 与 `aria-setsize`；位置从 1 开始，若总数未知，`aria-setsize="-1"` 表示未知。`table`、`grid`、`treegrid` 使用 `aria-rowindex` 与 `aria-rowcount`；行位置相对完整表格从 1 开始，总行数未知时 `aria-rowcount="-1"`。例如 100,000 条数据再加一行表头，完整表格应报告 `aria-rowcount="100001"`；表头行为 `aria-rowindex="1"`，挂载窗口首条数据（数组下标 96）为 `aria-rowindex="98"`。每一条当前挂载的表格行都要标出它在完整表格中的索引。ARIA 属性只描述集合中当前行的位置和总数，不会把未挂载行放回 DOM，也不能补上错误角色、缺失表头或不完整键盘模型。最终应在目标浏览器与屏幕阅读器中验证读序、焦点、滚动、加载、空结果和总数未知时的表达。
-
-决定虚拟化后，在[如何测量并诊断网页性能问题？](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)用同一 URL、设备、数据和滚动交互比较挂载节点、布局与呈现成本；分别记录 React 计算与浏览器呈现的成本，再比较端到端交互。即使布局耗时不变，减少原先占主导的 React 工作仍可能有收益；若 React 计算仍是主要瓶颈，再沿[如何测量并减少不必要的React工作？](#14.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)继续定位。
-
-> [!info]- 来源与核验（核验日期 2026-11-12）
-> - 本章的成本区分、固定高度公式和是否虚拟化的选择来自本例的状态与计算推演；`100,000` 行不是库或浏览器规定的阈值。React render 与 commit 的边界见 React 19.3 官方[Render and Commit](https://react.dev/learn/render-and-commit)。
-> - TanStack Virtual 当前官方 v3 [Virtualizer API](https://tanstack.com/virtual/latest/docs/api/virtualizer) 的 `count`、`estimateSize`、`overscan`、`getItemKey`、`measureElement`、`getTotalSize`；`shouldAdjustScrollPositionOnItemSizeChange` 说明它处理视口上方测量值与估算值不同时的滚动位置校正，默认在未反向滚动时才应用，并且是实例属性。核验日期 2026-11-12；文中未把 `/latest` 当作具体安装版本。
-> - 分页的排序要求：[PostgreSQL 18，Sorting Rows (`ORDER BY`)](https://www.postgresql.org/docs/18/queries-order.html) 说明后续排序项在前项相等时继续决定顺序；[`LIMIT` and `OFFSET`](https://www.postgresql.org/docs/18/queries-limit.html) 要求分页查询使用能约束到唯一顺序的 `ORDER BY`，并说明 offset 会先跳过前序行。新数据插在两次请求间导致页边界移动是基于该规则的跨请求推演，不是 PostgreSQL 特有承诺。
-> - Web Worker 的 `postMessage()` 可发送结构化数据，`ArrayBuffer` 可放入 transfer list 转移；跨 realm 的序列化/反序列化称为 structured cloning：[WHATWG HTML Living Standard，Web Workers](https://html.spec.whatwg.org/multipage/workers.html)、[Safe passing of structured data](https://html.spec.whatwg.org/multipage/structured-data.html#structured-cloning)，核验日期 2026-11-12。
-> - 虚拟窗口只呈现集合子集时，`aria-rowcount` 包含表头行，且每个挂载行（包括表头）都用 `aria-rowindex` 标出其在完整表格中的 1 基位置：[WAI-ARIA 1.2，`aria-rowindex` / `aria-rowcount`](https://www.w3.org/TR/wai-aria-1.2/#aria-rowindex)，W3C Recommendation，2023-06-06；[WAI-ARIA APG Grid and Table Properties](https://www.w3.org/WAI/ARIA/apg/practices/grid-and-table-properties/#using-aria-rowcount-and-aria-rowindex)，核验日期 2026-11-12。
-> - `grid` 是需要作者管理内部焦点移动的复合控件，而表格中的可聚焦元素仍在页面 Tab 顺序中：[WAI-ARIA APG Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/)，核验日期 2026-11-12。listbox 用于选择选项，其交互模型不支持在选项内操作链接、按钮或复选框：[WAI-ARIA APG Listbox Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/listbox/)，核验日期 2026-11-12。
-> - 对适用的 `listitem` / `treeitem` 使用 `aria-posinset` 与 `aria-setsize` 时，位置从 1 开始，未知总数为 `-1`：[WAI-ARIA 1.2，`aria-setsize`](https://www.w3.org/TR/wai-aria-1.2/#aria-setsize) 与 [`aria-posinset`](https://www.w3.org/TR/wai-aria-1.2/#aria-posinset)，W3C Recommendation，2023-06-06。
 ## 16. 语义化 HTML 表单如何支持键盘与辅助技术用户？
 
 本章以一张合成的 2026 年 10 月订单月报为例：用户只用键盘选择月份、地区和订单状态，提交筛选后查看订单号、地区与状态。整个过程分三步：HTML（超文本标记语言）标记决定每个控件的名称、角色和值；浏览器把当前选择序列化为 GET 请求；报表应用校验这些查询值、按约定筛选订单，再返回带行列标题的数据表。CSS（层叠样式表）只负责视觉布局，控件的语义与原生键盘操作都由 HTML 提供。
@@ -3953,7 +3966,7 @@ tbody > tr:nth-child(even of .data-row) { font-weight: 600; }
 
 属性选择器（如 `[data-state="warning"]`）可以把显式状态映射到样式。扁平的类选择器比层层叠加的长选择器更容易被覆盖和维护。CSS-in-JS（在 JavaScript 中生成或组织 CSS）生成的类名同样参与浏览器层叠，不会绕过上面的规则。
 
-把首屏需要的关键 CSS 内联进 HTML，有时能省去等待样式表请求的时间，代价是首次 HTML 响应变大；如果外部样式表里仍有同样的规则，这部分内容会下载两次，且内联部分无法被单独缓存。是否划算要结合缓存、加载路径和实测判断，它与选择器匹配速度无关，参见[网页性能测量与诊断](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
+把首屏需要的关键 CSS 内联进 HTML，有时能省去等待样式表请求的时间，代价是首次 HTML 响应变大；如果外部样式表里仍有同样的规则，这部分内容会下载两次，且内联部分无法被单独缓存。是否划算要结合缓存、加载路径和实测判断，它与选择器匹配速度无关，参见[网页性能测量与诊断](#8.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
 > [!info]- 来源
 > - 标题、段落、换行、主题分隔、强调与修订文本的 HTML 语义：WHATWG HTML Living Standard，[Sections](https://html.spec.whatwg.org/multipage/sections.html)、[Grouping content](https://html.spec.whatwg.org/multipage/grouping-content.html)、[Text-level semantics](https://html.spec.whatwg.org/multipage/text-level-semantics.html)，更新时间 2026-11-11，检查于 2026-11-11。
@@ -4780,7 +4793,7 @@ Flex 和 Grid 的对齐属性也是居中未知尺寸内容最简单的办法。
 > - `transform` 建立后代定位包含块和堆叠上下文：W3C CSS Transforms Module Level 1，Candidate Recommendation，2019-02-14，§3，[规范](https://www.w3.org/TR/css-transforms-1/)；`perspective` 非 `none` 的包含块和堆叠效果：W3C CSS Transforms Module Level 2，Working Draft，2021-11-09，§8，[规范](https://www.w3.org/TR/css-transforms-2/)；`contain: layout` 与 `contain: paint` 的包含块、堆叠及裁切：W3C CSS Containment Module Level 2，Working Draft，2022-09-17，§§3.2、3.4，[规范](https://www.w3.org/TR/css-contain-2/)。
 > - `filter` 的包含块与堆叠效果：W3C Filter Effects Module Level 1，Working Draft，2018-12-18，§5，[规范](https://www.w3.org/TR/filter-effects-1/)；`will-change` 的提前效果：W3C CSS Will Change Module Level 1，Candidate Recommendation Draft，2022-05-05，§2，[规范](https://www.w3.org/TR/css-will-change-1/)；整体透明度：W3C CSS Color Module Level 4，Candidate Recommendation Draft，2026-11-03，§3.3，[规范](https://www.w3.org/TR/css-color-4/)；`isolation`：W3C Compositing and Blending Level 1，Candidate Recommendation Draft，2024-03-21，§3.4.2，[规范](https://www.w3.org/TR/compositing-1/)。
 > - 原生模态对话框进入 top layer：WHATWG HTML Living Standard，更新于 2026-11-11，§4.11.4，[`showModal()` 与模态显示算法](https://html.spec.whatwg.org/multipage/interactive-elements.html#dom-dialog-showmodal)；popover 显示时同样加入 top layer：[The popover attribute](https://html.spec.whatwg.org/multipage/popover.html#the-popover-attribute)。
-> - 相关布局边界另见 [BFC 与流式布局边界](#19.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F)；隐藏状态见[隐藏与可访问性](#23.%20%E9%9A%90%E8%97%8F%E7%8A%B6%E6%80%81%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E7%84%A6%E7%82%B9%E4%B8%8E%E5%8F%AF%E8%AE%BF%E9%97%AE%E6%80%A7%EF%BC%9F)，运动见[CSS 过渡与动画](#24.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%BF%87%E6%B8%A1%EF%BC%8C%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%EF%BC%9F)，布局绘制路径见[渲染流水线与强制布局](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+> - 相关布局边界另见 [BFC 与流式布局边界](#19.%20%E5%9D%97%E6%A0%BC%E5%BC%8F%E5%8C%96%E4%B8%8A%E4%B8%8B%E6%96%87%E5%A6%82%E4%BD%95%E7%BA%A6%E6%9D%9F%E6%B5%AE%E5%8A%A8%E5%92%8C%E5%A4%96%E8%BE%B9%E8%B7%9D%EF%BC%9F)；隐藏状态见[隐藏与可访问性](#23.%20%E9%9A%90%E8%97%8F%E7%8A%B6%E6%80%81%E4%BC%9A%E6%80%8E%E6%A0%B7%E5%BD%B1%E5%93%8D%E7%84%A6%E7%82%B9%E4%B8%8E%E5%8F%AF%E8%AE%BF%E9%97%AE%E6%80%A7%EF%BC%9F)，运动见[CSS 过渡与动画](#24.%20%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E8%BF%87%E6%B8%A1%EF%BC%8C%E4%BD%95%E6%97%B6%E4%BD%BF%E7%94%A8%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%EF%BC%9F)，布局绘制路径见[渲染流水线与强制布局](#7.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 ## 23. 隐藏状态会怎样影响焦点与可访问性？
 
 案例背景：报表页面有一个“查看详情”按钮，展开后在原位置显示详情和“关闭详情”按钮。这是普通的 disclosure（展开/折叠控件），页面其余部分仍可操作。用户在面板内点击关闭时，希望内容淡出、焦点回到“查看详情”，随后按 Tab 不再进入已关闭的面板。
@@ -5087,7 +5100,7 @@ closeButton.addEventListener("click", () => {
 
 ### 动画性能与减少动态效果
 
-动画每一帧都可能触发样式计算、布局、绘制、栅格化或合成，具体做哪些工作取决于动画的属性、元素内容和浏览器实现。`transform` 与 `opacity` 通常不影响周围布局，满足浏览器的合成条件时可以跳过逐帧的布局和绘制；但仅凭属性名不能断定动画一定在合成线程或 GPU 上执行。Chrome DevTools 的 Performance 面板中，Animations 轨道会标记未合成的动画，选中后可查看原因。应在目标页面上实际测量，不要假定所有浏览器和元素都走同一条路径。[渲染流水线与强制布局](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)说明写入和几何读取如何影响布局工作。
+动画每一帧都可能触发样式计算、布局、绘制、栅格化或合成，具体做哪些工作取决于动画的属性、元素内容和浏览器实现。`transform` 与 `opacity` 通常不影响周围布局，满足浏览器的合成条件时可以跳过逐帧的布局和绘制；但仅凭属性名不能断定动画一定在合成线程或 GPU 上执行。Chrome DevTools 的 Performance 面板中，Animations 轨道会标记未合成的动画，选中后可查看原因。应在目标页面上实际测量，不要假定所有浏览器和元素都走同一条路径。[渲染流水线与强制布局](#7.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)说明写入和几何读取如何影响布局工作。
 
 `will-change`（变化提示）只是预告某个属性将要变化，不是强制创建 GPU 图层的开关。浏览器可以据此提前优化，但做法各不相同；如果被提示的属性本身会创建堆叠上下文或包含块，提示也会提前产生这些效果，并可能占用额外内存。只在测量确认有收益时对少量元素短时间使用，变化结束后移除。同理，`translateZ(0)` 也不是通用的加速开关。
 
@@ -5242,7 +5255,7 @@ function overlapsLayoutViewport(element) {
 
 ### 把写入和读取分批
 
-以上 API 的读取都依赖最新的布局结果，这带来性能问题。如果此前的 DOM 或样式修改让布局信息失效，紧接着读取几何值会迫使浏览器先同步完成样式计算和布局；布局仍有效时，读取可直接使用现有结果。循环中交替写入和读取，且每次写入都影响下一次读取时，就会反复付出这个代价。关于失效怎样沿渲染工作传播，以及如何批量读、再批量写，见[为什么一次 DOM 改动会增加布局或绘制工作？](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+以上 API 的读取都依赖最新的布局结果，这带来性能问题。如果此前的 DOM 或样式修改让布局信息失效，紧接着读取几何值会迫使浏览器先同步完成样式计算和布局；布局仍有效时，读取可直接使用现有结果。循环中交替写入和读取，且每次写入都影响下一次读取时，就会反复付出这个代价。关于失效怎样沿渲染工作传播，以及如何批量读、再批量写，见[为什么一次 DOM 改动会增加布局或绘制工作？](#7.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 > [!info]- 来源
 > - `offsetWidth` / `offsetHeight` 忽略变换并量边框盒片段：[W3C CSSOM View §7，HTMLElement 扩展](https://www.w3.org/TR/cssom-view-1/#extensions-to-the-htmlelement-interface)；`clientWidth` / `clientHeight` 对普通 inline 或无盒元素返回 `0`，并按 §6 定义边框、滚动区域和根元素例外：[Element 扩展](https://www.w3.org/TR/cssom-view-1/#extensions-to-the-element-interface)。几何坐标和尺寸以 CSS px 表示：[§2.1 CSS pixels](https://www.w3.org/TR/cssom-view-1/#css-pixels)。CSSOM View，W3C Working Draft，2025-09-16；核对于 2026-11-12。
@@ -5254,7 +5267,7 @@ function overlapsLayoutViewport(element) {
 > - `getBoundingClientRect()` 对空片段、每个片段都至少有一边为零、其余片段的联合分别执行的返回规则，以及视口矩形；标准模式根元素的视口尺寸、布局视口与视觉视口的嵌套关系、视觉视口偏移和尺寸：[W3C CSSOM View §2、§6、§12](https://www.w3.org/TR/cssom-view-1/)，W3C Working Draft，2025-09-16；核对于 2026-11-12。
 > - `transform` 函数从左到右合成变换矩阵；把局部点映射到父坐标系时，右侧的函数先作用：[CSS Transforms Module Level 1 §2，Transform Rendering Model](https://drafts.csswg.org/css-transforms/#transform-rendering)，Editor’s Draft，2025-11-30。
 > - IntersectionObserver 的结果异步送达，面向相对根或视口的位置查询；规范明确不以像素级实际显示结果为目标：[W3C Intersection Observer §1](https://www.w3.org/TR/intersection-observer/#introduction)，Working Draft，2023-10-18；核对于 2026-11-12。
-> - 几何读取可能同步触发布局的条件是此前样式或 DOM 已使布局失效；Chrome 的实现说明及读写批处理建议：[Chrome for Developers，Forced reflow](https://developer.chrome.com/docs/performance/insights/forced-reflow)，更新于 2025-10-08。本仓库的机制展开见[渲染流水线与强制布局](#12.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+> - 几何读取可能同步触发布局的条件是此前样式或 DOM 已使布局失效；Chrome 的实现说明及读写批处理建议：[Chrome for Developers，Forced reflow](https://developer.chrome.com/docs/performance/insights/forced-reflow)，更新于 2025-10-08。本仓库的机制展开见[渲染流水线与强制布局](#7.%20%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%80%E6%AC%A1%20DOM%20%E6%94%B9%E5%8A%A8%E4%BC%9A%E5%A2%9E%E5%8A%A0%E5%B8%83%E5%B1%80%E6%88%96%E7%BB%98%E5%88%B6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 ## 26. 图片与媒体资源怎样加载并保持页面稳定？
 
 案例背景：一份公开的合成报表要展示四月至六月的趋势图。这张图要有合适的替代文本，要按屏幕尺寸选择合适的文件；如果它在首屏之外，可以晚些再请求，但图片到达前后页面布局不应跳动。本文按这个顺序展开：先确定元素语义和资源地址，再选择候选文件和请求时机，最后检查资源到达前后页面几何是否变化。
@@ -5385,7 +5398,7 @@ for (const image of imageBatch.querySelectorAll("img[data-src]")) {
 
 注意 `isIntersecting` 只表示目标与（扩展后的）根矩形相交：边缘刚好接触时它也可能为 true，此时交集面积为零。所以它不等于“至少有一像素可见”，也不能证明图片没被其他元素遮挡。IntersectionObserver 异步发送通知，但回调仍在页面的事件循环中运行，回调里做重活依然会占用主线程。图片加载失败时，应用要另外监听 `load` / `error` 并做有次数上限的重试。
 
-加载成功后，`width` 和 `height` 仍在帮助保持布局稳定；组件卸载时，由拥有观察器的组件调用 `disconnect()` 停止观察全部目标。只有必须兼容不支持 IntersectionObserver 的浏览器时，才考虑用 scroll/resize 事件加几何检查作为回退：挂载时先检查一次，之后的检查要合并或节流；卸载时移除监听器并取消尚未执行的定时检查，避免回调继续引用 DOM 节点。矩形测量的接口和边界见[哪些网页几何接口能测量哪一种盒子？](#25.%20%E5%93%AA%E4%BA%9B%E7%BD%91%E9%A1%B5%E5%87%A0%E4%BD%95%E6%8E%A5%E5%8F%A3%E8%83%BD%E6%B5%8B%E9%87%8F%E5%93%AA%E4%B8%80%E7%A7%8D%E7%9B%92%E5%AD%90%EF%BC%9F)。实际效果要用真实页面和设备数据验证，方法见[如何测量并诊断网页性能问题？](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)；页面从请求到首帧的过程见[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)。
+加载成功后，`width` 和 `height` 仍在帮助保持布局稳定；组件卸载时，由拥有观察器的组件调用 `disconnect()` 停止观察全部目标。只有必须兼容不支持 IntersectionObserver 的浏览器时，才考虑用 scroll/resize 事件加几何检查作为回退：挂载时先检查一次，之后的检查要合并或节流；卸载时移除监听器并取消尚未执行的定时检查，避免回调继续引用 DOM 节点。矩形测量的接口和边界见[哪些网页几何接口能测量哪一种盒子？](#25.%20%E5%93%AA%E4%BA%9B%E7%BD%91%E9%A1%B5%E5%87%A0%E4%BD%95%E6%8E%A5%E5%8F%A3%E8%83%BD%E6%B5%8B%E9%87%8F%E5%93%AA%E4%B8%80%E7%A7%8D%E7%9B%92%E5%AD%90%EF%BC%9F)。实际效果要用真实页面和设备数据验证，方法见[如何测量并诊断网页性能问题？](#8.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)；页面从请求到首帧的过程见[浏览器如何把 URL 变成第一帧？](#1.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E5%A6%82%E4%BD%95%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E7%AC%AC%E4%B8%80%E5%B8%A7%EF%BC%9F)。
 
 ### 音频和视频还要保留什么语义？
 
@@ -13124,7 +13137,7 @@ data: {"report_id":42,"version":11,"status":"ready","progress":100}
 
 **案例背景。** 开发者在 AI 聊天界面里提出：“解释 build 42 的失败并准备缺陷单；提交前让我审核。”后端的运行服务完成鉴权后，为这次请求创建一个持久运行 `run-r42-7`。模型先调用只读工具 `read_build_log`，这次工具调用的标识是 `c1`；工具查到 `unit-tests` 中的测试 `reject_empty_name` 预期返回 HTTP `400`，实际返回 `200`，测试进程以退出码 `1` 结束。证据到达之前，界面只能显示“正在检查”，不能先把根因写成结论。随后运行生成解释和一份保存在服务端的缺陷单草稿，状态变为 `awaiting_approval`（等待审核）；审核人批准这份未改动的草稿后，同一运行才会调用创建工单的工具。文中的运行 ID、事件序号和工具调用 ID 都是教学用的合成值。
 
-本篇接在[流式报表断线重连后，界面怎样保留正确状态？](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)之后：那一章解决了怎样从连接中可靠地取出一条条完整的应用事件；本篇从“客户端已收到一条完整事件”开始，回答三件事：怎样确认它属于哪次运行、按顺序只应用一次；怎样把逐段到达的 Markdown 和工具结果安全地显示出来；停止、继续和重试各自改变什么。这里的 projection（投影）指客户端根据事件拼出的界面状态，它只是服务端运行记录的一份视图；审批、取消和副作用是否发生，以运行服务保存的记录为准，见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复？](../../ai-engineering/systems/ai-application-architecture.md)。连接断开、文本流结束或浏览器关闭，都不能代替这份运行记录。
+[运行服务保存审批决定、工单号和最终答复](../../ai-engineering/systems/ai-application-architecture.md#%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%96%AD%E7%BA%BF%E5%90%8E%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E5%90%8C%E4%B8%80%E6%AC%A1%E8%BF%90%E8%A1%8C%EF%BC%9F)。本章接过同一运行交付给浏览器的事件，看它们怎样更新助手气泡和工具卡。客户端根据事件还原出的界面状态叫作投影（projection）。沿着它可以解释断线后怎样接着显示、逐段到达的 Markdown 怎样安全呈现，以及用户点停止、继续或重试时应发出什么请求。如果想知道网络数据如何拼成一条完整的应用事件，可另读[流式报表的传输与续读](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)。
 
 下表是本例客户端依次收到的事件，后文各节都引用这些序号：
 
@@ -13146,11 +13159,13 @@ data: {"report_id":42,"version":11,"status":"ready","progress":100}
 
 ### 怎样应用重放事件而不重复消息或工具卡？
 
-用户重新打开对话时，客户端先向服务端取一份快照：它包含当前可见的全部内容（文本、工具卡、运行状态）以及对应的 `lastSeq`，即这份内容已经包含到第几号事件；然后从 `lastSeq` 之后继续读事件。快照内容和 `lastSeq` 必须来自服务端同一时刻的读取。
+浏览器断线前已处理到 `seq=10`，工具卡 `c2` 显示「提交结果待对账」。只要这个界面还在、服务端仍保留后续事件，重连时就能用原运行 ID 请求 `events?after=10`。第 11 条把查证过的工单号 `ISSUE-842` 填进原来的 `c2` 卡，第 12 条补上答复，第 13 条把界面更新为已完成。如果服务端重发了更早的事件，客户端用最后已处理的序号（`lastSeq`）认出它们，略过即可。
 
-本例中，`lastSeq=3` 的快照已经包含 `seq=2` 写入的文本“正在读取 build 42 日志”，以及 `seq=3` 建立的、仍在等待的 `c1` 卡片；所以接下来的 `seq=4` 完成事件能找到这张卡并更新它。如果快照声称 `lastSeq=3` 却缺了 `c1` 卡，后面的完成事件就无处配对；客户端应拒绝这份不一致的快照、重新获取，而不是只把游标改成最新值。
+如果换了新窗口，或者服务端提示原游标已经过期，可以取一份完整的界面快照。快照要带上当前文本、工具卡、运行状态和对应的 `lastSeq`，仍待审批时还要带上待审草稿的完整预览与版本摘要。内容和序号须来自同一次一致读取，客户端才能整体替换界面，再从这个序号往后读。服务端也可以在同一响应里返回当前用户有权查看的运行记录，以确认审批、取消和建单结果。
 
-如果服务端只能返回运行状态和最新游标、给不出完整内容，客户端只有两条路：从本地已有的投影及其对应游标继续读，或者从仍保留的历史起点重放、重建完整投影。不能拿一个空白气泡配上服务端的最新序号。历史已被清理、服务端又不提供完整快照时，就不能声称能恢复全部内容。
+本例中，`lastSeq=3` 的快照已经包含 `seq=2` 写入的文本“正在读取 build 42 日志”，以及 `seq=3` 建立的、仍在等待的 `c1` 卡片，所以接下来的 `seq=4` 完成事件能找到这张卡并更新它。如果快照声称 `lastSeq=3` 却缺少 `c1` 卡，这份快照与对应事件前缀不一致。客户端应拒绝并重新获取内容与游标匹配的快照。
+
+服务端保留整段事件历史时，也可以从起点重建一个空白窗口。若本地没有可续读的界面、服务端又给不出完整快照或历史，则只能展示已查证的运行状态。即使查到最新序号，也补不回中间的文本和工具卡。
 
 ![同一运行的快照与事件怎样更新既有投影，重复序号和序号缺口分别怎样处理](../../frontend/browser-apis/resources/streaming-ai-chat-projection.svg)
 
@@ -13298,7 +13313,7 @@ data: {"report_id":42,"version":11,"status":"ready","progress":100}
 
 界面元素的 key 也要稳定。如果每个 run 只有一个助手气泡，可以用 `runId` 作气泡的 key；如果一个 run 可能产生多条消息，事件和快照里还需要稳定的 `messageId`，气泡 key 改为 `(runId, messageId)`。工具卡的 key 始终用 `(runId, toolCallId)`，不要用数组下标或随机值。
 
-这套规则成立的前提是：同一个 `lastSeq` 总代表同一段已应用的事件前缀。例如当前投影已到 `seq=11`，重连后服务端重发的 `seq=8` 至 `seq=11` 都只会落入重复分支，`seq=12` 才继续追加。如果服务端返回 `reset`，或事件保留期已过，客户端要先用新快照和新游标整体替换旧投影，再继续订阅，不能把新快照接在旧消息末尾。`seq` 只是本应用的事件游标，不是模型的工具调用 ID、MCP 请求 ID 或传输层的帧编号。
+这套规则成立的前提是，同一个 `lastSeq` 总代表同一段已应用的事件前缀。例如当前投影已到 `seq=11`，重连后服务端重发的 `seq=8` 至 `seq=11` 都只会落入重复分支，`seq=12` 才继续追加。服务端返回 `reset` 或事件保留期已过时，客户端应获取新的完整界面投影快照与游标，并整体替换旧投影后继续订阅。恢复响应可同时包含该 `runId` 的权威运行记录，客户端据此呈现审批、取消和副作用状态。应用事件序号 `seq` 用于该运行的投影续读。工具调用使用 `toolCallId`，MCP 请求使用 JSON-RPC ID，传输帧由各自协议标识。
 
 ### 不完整 Markdown 和工具结果怎样安全显示？
 
@@ -13381,7 +13396,9 @@ for (const chunk of chunks) {
 
 ![审核精确草稿后，同一持久运行怎样开始写入](../../frontend/browser-apis/resources/streaming-ai-chat-approval-effect.svg)
 
-先看“继续”。事件 `seq=6` 带来服务端已保存的完整待审草稿：仓库、标题、正文、证据摘要和 `payloadHash`（草稿内容的哈希，用来指明批准的是哪个版本）。`seq=7` 之后投影里仍可保留这份历史草稿，但界面只在三个条件同时满足时显示可操作的审批入口：最新投影仍是 `awaiting_approval`、草稿是该投影的当前版本、用户有审批权限。草稿字段存在本身不代表可以批准。
+先看“继续”。事件 `seq=6` 带来服务端已保存的完整待审草稿，含目标仓库、标题、正文、证据摘要和 `payloadHash`。客户端事件示例用 `payloadHash` 标记当前动作版本，AI 运行账本将相应动作载荷摘要记录为 `payload_digest`。服务端按目标和全部获批字段计算它，本例包括仓库、标题、完整正文和证据。它与识别原始用户请求的 `request_digest` 不同。代码中的摘要字符串只是教学占位值，不是实际计算的摘要。审核预览必须展示将提交的全部目标和参数，因为摘要不能还原正文或证明审核人看过了哪些内容。
+
+`seq=7` 之后投影里仍可保留这份历史草稿。界面可以按当前投影状态、草稿版本和已知权限显示审批入口，但这些显示字段不授予批准权。服务端受理审批时仍须依据权威运行记录核对当前状态、摘要版本和审核人权限。
 
 用户批准的是这个确切版本，批准流程如下：
 
@@ -13404,9 +13421,9 @@ for (const chunk of chunks) {
 最后是“停止”。`AbortController.abort()` 按 Fetch 的 abort 算法结束这次 fetch 调用或响应体的读取；关闭 `EventSource` 或 Fetch 的 reader，结束的也只是当前的事件投递通道。这些客户端操作不会替应用写入持久的取消状态，也证明不了服务端任务已停止或工具副作用已回滚。发出取消请求后仍可能收到事件；界面保留已应用的内容，继续按服务端状态更新。如果用户要求停止时运行已经记录了“即将发送”的写操作，那么在外部结果确认之前，不能显示“取消成功”。没有审批和外部写操作的普通问答，同样适用本文的快照、序号和重连规则。
 
 > [!info]- 来源
-> - **同一快照与事件游标、重连后恢复完整事件：** [流式报表断线重连后，界面怎样保留正确状态？](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F)；本文消费其完整应用事件，不把传输 ID 当业务身份。
+> - [流式报表断线重连后，界面怎样保留正确状态？](#54.%20%E6%B5%81%E5%BC%8F%E6%8A%A5%E8%A1%A8%E6%96%AD%E7%BA%BF%E9%87%8D%E8%BF%9E%E5%90%8E%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E4%BF%9D%E7%95%99%E6%AD%A3%E7%A1%AE%E7%8A%B6%E6%80%81%EF%BC%9F) 说明投影快照与事件游标的一致性和断线恢复规则。本文沿用这些应用层约定，并使用独立的 AI 运行 ID 与事件游标。
 > - **MCP 请求 ID 与应用事件序号的区别：** [MCP 2026-07-28 规范](https://modelcontextprotocol.io/specification/2026-07-28) 的 Overview/Base Protocol 说明 MCP 使用 JSON-RPC 2.0；[JSON-RPC 2.0 Request Object 第 4 节](https://www.jsonrpc.org/specification#request_object) 说明请求 ID 与响应 ID 用于关联请求和响应。它们不定义本文应用层的 run 序号。
-> - **客户端所见的持久 run、审批、取消和效果未知状态：** [AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](../../ai-engineering/systems/ai-application-architecture.md)；本文沿用 `run-r42-7`、`c1/c2`、`run-r42-7:create-issue:v1` 与 `ISSUE-842` 的合成案例。
+> - 权威运行记录、审批与副作用状态，以及完整动作载荷摘要，见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](../../ai-engineering/systems/ai-application-architecture.md)。账本以 `payload_digest` 绑定目标与全部获批字段，原始请求摘要另记为 `request_digest`。客户端示例中的 `payloadHash` 指向同一动作版本，并沿用 `run-r42-7`、`c1/c2`、`run-r42-7:create-issue:v1` 与 `ISSUE-842`。
 > - **Marked 解析结果未净化：** [Marked 18.2.0 npm README](https://www.npmjs.com/package/marked/v/18.2.0) 的 README “Warning” 与 Browser/Node 使用段；版本页显示本次核对时的发布版本。核对日 2026-11-12。
 > - **DOMPurify 的 sanitize、可配置标签/属性 allowlist 和旧浏览器不支持时不执行净化：** [DOMPurify 3.4.17 README](https://github.com/cure53/DOMPurify/blob/3.4.17/README.md) 的 Basic Usage、HTML-only profile、configuration 和 legacy browser sections；版本 [3.4.17 release](https://github.com/cure53/DOMPurify/releases/tag/3.4.17)，核对日 2026-11-12。
 > - **动态 HTML 呈现边界：** [React DOM 常见组件文档](https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html) 的 “Dangerously setting the inner HTML”；不可信数据直接进入 raw HTML sink 会带来 XSS 风险。核对日 2026-11-12。
@@ -14331,7 +14348,7 @@ export const useAppSelector = useSelector.withTypes<RootState>();
 
 store 通知订阅者后，React-Redux 先检查根 state 快照：如果 `Object.is` 判断快照没变，就复用已有的 selector 结果，不必重新运行 selector；快照变了，才重新计算，并默认用严格相等 `===` 比较新旧结果。行组件的 selector 返回布尔值：与这一行无关的 action 不会改变它，于是订阅不会触发该行重新渲染；只有这一行的选择变化时，布尔值才会变。工具栏直接读取 store 中的数组引用，预览区读取当前的预览对象。
 
-不要每次 selector 都临时拼一个对象，例如 `state => ({ selected: state.reportSelection.selectedIds.includes(id), status: state.reportSelection.preview.status })`；即使字段值没变，这个对象每次都是新引用，只要 Redux state 有任何更新，默认比较就会认为结果不同。需要合并多个值时，可以分别调用 Hook、使用记忆化 selector，或在确认浅比较语义合适后传入 `shallowEqual`。selector 应是纯函数。以上只描述 store 通知引发的检查；组件仍可能因父组件更新而 render（渲染），selector 也可能在渲染时或开发期检查中运行。是否继续优化应通过[React 工作测量](#14.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)判断。
+不要每次 selector 都临时拼一个对象，例如 `state => ({ selected: state.reportSelection.selectedIds.includes(id), status: state.reportSelection.preview.status })`；即使字段值没变，这个对象每次都是新引用，只要 Redux state 有任何更新，默认比较就会认为结果不同。需要合并多个值时，可以分别调用 Hook、使用记忆化 selector，或在确认浅比较语义合适后传入 `shallowEqual`。selector 应是纯函数。以上只描述 store 通知引发的检查；组件仍可能因父组件更新而 render（渲染），selector 也可能在渲染时或开发期检查中运行。是否继续优化应通过[React 工作测量](#9.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)判断。
 
 > [!info]- 来源
 > 版本按公开包登记与官方文档核对，日期：2026-11-12。
@@ -14471,7 +14488,7 @@ Svelte 编译器把模板和对状态的引用转换成 JavaScript 更新代码�
 
 因此，在这组假设下会选 B 交付，并淘汰 A 这种纯客户端渲染配置；这个结论并不证明 React 比 Vue 或 Svelte 快。若后续录制显示耗时主要在服务端请求，换渲染器也不会缩短等待；若在 DOM 布局，就针对节点数和样式验证优化。只有实测暴露了当前路径不能满足的约束，才有迁移理由。
 
-老系统可能要保留已有组件、插件或服务端集成；新系统则应把路由、服务端数据、渲染模型和交付链路放在一起验证。若某个候选只在微基准测试中胜出，却没有改善这条真实路径，它的性能优势就还不成立。测量 React 组件工作可继续看[如何测量并减少不必要的 React 工作？](#14.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)；当成本来自本地计算或长列表时，比较[如何为报表选择计算方式与列表渲染策略？](#15.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。
+老系统可能要保留已有组件、插件或服务端集成；新系统则应把路由、服务端数据、渲染模型和交付链路放在一起验证。若某个候选只在微基准测试中胜出，却没有改善这条真实路径，它的性能优势就还不成立。测量 React 组件工作可继续看[如何测量并减少不必要的 React 工作？](#9.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E5%87%8F%E5%B0%91%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84React%E5%B7%A5%E4%BD%9C%EF%BC%9F)；当成本来自本地计算或长列表时，比较[如何为报表选择计算方式与列表渲染策略？](#11.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（截至 2026-11-13）
 > - **React 元素不是 DOM 节点；组件渲染、必要 DOM 提交与浏览器绘制是不同阶段。** React 当前文档：[`createElement`](https://react.dev/reference/react/createElement)（元素对象说明）、[Render and Commit](https://react.dev/learn/render-and-commit)（触发、render、commit、paint）；React 当前主版本文档为 19.3，版本页列出 19.3.0（2026-09-09）：[Versions](https://react.dev/versions)。核验日期：2026-11-13。
@@ -14719,7 +14736,7 @@ React Router 有三种使用模式。Declarative Mode（声明式模式）负责
 
 上面的流程假设每次导航都正常完成。若用户在 oldest loader 尚未完成时又发起另一次导航，React Router 会中断前一次导航，转而处理新目标。传给 `fetch` 的 `request.signal` 会在导航被打断时发出 abort（中止）信号，原生 `fetch` 据此停止这次客户端请求；路由器也会丢弃过期导航的结果，避免它覆盖较新的界面。该信号能否停止更深层的工作，取决于对应 API 是否遵守取消约定；请求已抵达服务器后，服务器仍可能继续处理。取消客户端读取不能替代服务端写操作的幂等、权限或事务约束。
 
-loader 抛出的状态数据或运行时异常，交给最近匹配路由的 `ErrorBoundary`。它也能处理匹配路由组件树中的渲染错误，以及子组件 Effect setup 中同步抛出的异常；按钮事件处理器或 timer（定时器）里随后产生的 Promise 拒绝，仍须在触发处处理，详见[React 错误边界能恢复哪些失败？](#11.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)。本例的 `ReportsErrorBoundary` 据此区分三种情况：loader 对 `sort=other` 自己抛出带 `unsupported-sort` 标记的 400，显示参数错误；API 返回的非成功状态（包括 API 自己的 400）或网络失败，显示列表错误；其中只有 5xx 与非路由异常（如网络失败）提供重试按钮。`useRevalidator()` 本来用于页面之外的原因触发重读，例如窗口重新聚焦或轮询；这里借它实现明确的“重新加载”按钮。表单 action、`Form`、`useFetcher` 和 `useSubmit` 的正常写入会自动触发页面数据重验证，普通增删改不必再手动刷新。组件事件处理器、timer 与 Promise 拒绝分别在哪一层恢复，见[JavaScript 错误应在哪一层恢复、传播或上报？](#44.%20JavaScript%20%E9%94%99%E8%AF%AF%E5%BA%94%E5%9C%A8%E5%93%AA%E4%B8%80%E5%B1%82%E6%81%A2%E5%A4%8D%E3%80%81%E4%BC%A0%E6%92%AD%E6%88%96%E4%B8%8A%E6%8A%A5%EF%BC%9F)。
+loader 抛出的状态数据或运行时异常，交给最近匹配路由的 `ErrorBoundary`。它也能处理匹配路由组件树中的渲染错误，以及子组件 Effect setup 中同步抛出的异常；按钮事件处理器或 timer（定时器）里随后产生的 Promise 拒绝，仍须在触发处处理，详见[React 错误边界能恢复哪些失败？](#15.%20React%E9%94%99%E8%AF%AF%E8%BE%B9%E7%95%8C%E8%83%BD%E6%81%A2%E5%A4%8D%E5%93%AA%E4%BA%9B%E5%A4%B1%E8%B4%A5%EF%BC%9F)。本例的 `ReportsErrorBoundary` 据此区分三种情况：loader 对 `sort=other` 自己抛出带 `unsupported-sort` 标记的 400，显示参数错误；API 返回的非成功状态（包括 API 自己的 400）或网络失败，显示列表错误；其中只有 5xx 与非路由异常（如网络失败）提供重试按钮。`useRevalidator()` 本来用于页面之外的原因触发重读，例如窗口重新聚焦或轮询；这里借它实现明确的“重新加载”按钮。表单 action、`Form`、`useFetcher` 和 `useSubmit` 的正常写入会自动触发页面数据重验证，普通增删改不必再手动刷新。组件事件处理器、timer 与 Promise 拒绝分别在哪一层恢复，见[JavaScript 错误应在哪一层恢复、传播或上报？](#44.%20JavaScript%20%E9%94%99%E8%AF%AF%E5%BA%94%E5%9C%A8%E5%93%AA%E4%B8%80%E5%B1%82%E6%81%A2%E5%A4%8D%E3%80%81%E4%BC%A0%E6%92%AD%E6%88%96%E4%B8%8A%E6%8A%A5%EF%BC%9F)。
 
 传给 loader 的 `request.url` 不含 fragment，但仍是包含源（origin）、路径和查询的完整 URL；片段只留在客户端的 location 中。按前面 v8.5.1 的规则，添加或替换非空片段通常不会重读同一报表，移除片段则回到默认的重验证判定。排序不同：它改变了 loader 的输入，所以必须按目标查询重新读取。若把 loader 改为多个嵌套路由，还要检查每个匹配路由的默认重验证条件，不能从“只改排序”推断所有其他 loader 都不会运行。
 
@@ -14751,7 +14768,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 旧 React Router v5 代码中的 `component={Post}`、`withRouter` 与 `match.params` 属于旧路由上下文；旧版 `StaticRouter` 的固定 location 服务端匹配也不能直接当作当前 Framework Mode 的服务端入口。维护旧项目时先查看它实际安装的主版本，按对应版本文档处理，不要把 v5 API 混入这里的 v8 route object。
 
-React 本身的状态提交与一次用户操作如何变成画面，见[React 如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；若同一报表还需要查询缓存、乐观更新和账户隔离，见[React 界面如何维护服务端数据与乐观更新的正确性？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
+React 本身的状态提交与一次用户操作如何变成画面，见[React 如何把一次用户操作变成界面更新？](#6.%20React%E5%A6%82%E4%BD%95%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)；若同一报表还需要查询缓存、乐观更新和账户隔离，见[React 界面如何维护服务端数据与乐观更新的正确性？](#13.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（截至 2026-11-13）
 > - 旧课程锁定版本的包名、声明式路由、Outlet、参数和导航接口：[React Router v6.3.0 API](https://raw.githubusercontent.com/remix-run/react-router/v6.3.0/docs/api.md)。
@@ -15051,7 +15068,7 @@ Cache Components 允许静态外壳先返回，把本次请求才能知道的数
 
 此页的 `<Link>` 使用客户端过渡。Partial Prefetching 可以预取可复用的外壳与等待状态；需要当前请求数据的部分仍由导航时的新载荷补全。点 Oldest first 后，服务器按 `oldest` 获取 April、May，浏览器将新载荷合入现有组件树。可用预取内容和完成时序决定期间看到旧内容还是等待界面，不能从一次点击推出固定的 URL 更新时点。若搜索组件仍处于相同树位置，它保留本地 query，并对新列表继续过滤。
 
-Back 把地址恢复到 `sort=recent`，但可能恢复客户端已有路由状态，也可能再取服务器载荷；不能断言一定发生上游网络读取，也不保证恢复某个旧数据快照。若数据没变，顺序仍是 May、April；若数据变了，URL 只固定排序值。页面 Server Component 没有 React Router Data Mode loader 所提供的 `request.signal`；切换路由不等于 Next 已取消服务器端 fetch 或数据库操作。只有客户端自己创建的 fetch 可由客户端 `AbortController` 在组件清理时取消等待；服务端工作要靠请求超时、幂等性和一致性约束。浏览器 History API 与片段定位见[浏览器导航与历史如何恢复筛选状态？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)，服务端状态缓存与 mutation 见[React界面如何维护服务端数据与乐观更新的正确性？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
+Back 把地址恢复到 `sort=recent`，但可能恢复客户端已有路由状态，也可能再取服务器载荷；不能断言一定发生上游网络读取，也不保证恢复某个旧数据快照。若数据没变，顺序仍是 May、April；若数据变了，URL 只固定排序值。页面 Server Component 没有 React Router Data Mode loader 所提供的 `request.signal`；切换路由不等于 Next 已取消服务器端 fetch 或数据库操作。只有客户端自己创建的 fetch 可由客户端 `AbortController` 在组件清理时取消等待；服务端工作要靠请求超时、幂等性和一致性约束。浏览器 History API 与片段定位见[浏览器导航与历史如何恢复筛选状态？](#2.%20%E6%AF%8F%E6%AC%A1%20URL%20%E5%8F%98%E5%8C%96%E9%83%BD%E4%BC%9A%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%E5%90%97%EF%BC%9F)，服务端状态缓存与 mutation 见[React界面如何维护服务端数据与乐观更新的正确性？](#13.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
 
 `app/reports/error.tsx` 的 `retry()` 会重新读取并渲染边界内的页面内容。例如 URL 仍是 `sort=oldest` 时，重试会沿同一个查询值重新渲染当前边界；成功后列表随页面段一起恢复为 April、May，不会悄悄改回 recent。服务端组件错误传给客户端时不应把原始私密错误消息展示给用户；生产环境可用 `error.digest` 关联服务端日志，用户看到通用提示。
 
@@ -15336,7 +15353,7 @@ Lodash 的 throttle（节流）方法 `_.throttle` 则限制调用频率，适�
 
 路径明确时，原生的可选链、`Array.prototype.flat`（数组扁平化）、Set 或对象展开往往更易读。需要 Lodash 的边界行为时，先核对版本和输入形状，再决定是否使用。按方法导入可以帮助构建器裁剪依赖，但最终包体还受模块格式和构建配置影响；要用生产产物测量，不能只凭写法推断体积。
 
-相关内容见[现代 JavaScript 特性](#50.%20%E6%80%8E%E6%A0%B7%E5%88%A4%E6%96%AD%E7%9B%AE%E6%A0%87%E6%B5%8F%E8%A7%88%E5%99%A8%E6%88%96%20Node.js%20%E6%98%AF%E5%90%A6%E6%94%AF%E6%8C%81%E4%B8%80%E9%A1%B9%20JavaScript%20%E7%89%B9%E6%80%A7%EF%BC%9F)与[前端性能测量](#13.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
+相关内容见[现代 JavaScript 特性](#50.%20%E6%80%8E%E6%A0%B7%E5%88%A4%E6%96%AD%E7%9B%AE%E6%A0%87%E6%B5%8F%E8%A7%88%E5%99%A8%E6%88%96%20Node.js%20%E6%98%AF%E5%90%A6%E6%94%AF%E6%8C%81%E4%B8%80%E9%A1%B9%20JavaScript%20%E7%89%B9%E6%80%A7%EF%BC%9F)与[前端性能测量](#8.%20%E5%A6%82%E4%BD%95%E6%B5%8B%E9%87%8F%E5%B9%B6%E8%AF%8A%E6%96%AD%E7%BD%91%E9%A1%B5%E6%80%A7%E8%83%BD%E9%97%AE%E9%A2%98%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（Lodash 4.18.1、React Router 8.5.1；当前稳定版于 2026-11-12 核验）
 > - 当前稳定版本及 4.18.1 发布记录：[Lodash 4.18.1 release](https://github.com/lodash/lodash/releases/latest)，发布于 2026-04-01；latest 在 2026-11-12 仍指向 4.18.1。
@@ -15602,7 +15619,7 @@ function EditableReportList({ reports }: { reports: Report[] }) {
 
 ahooks 自带的 `useDynamicList` 也管理可编辑列表，v3.11.0 文档把它的 `getKey(index)` 描述为可保持列表项身份的 key；但在 React 19.3.1 开发 StrictMode 下实测，初始化和 `insert(0, draft)` 都触发其内部 key ref 的重复递增：插入前是 `[May:2, April:3]`，插入后是 `[Draft:5, May:4, April:2]`，和常见使用者预期不符。这是该版本与开发 StrictMode 的实测问题，不应泛化为 React 的 key 契约；主例因此用业务 `report.id` 和每次新增只生成一次的草稿 ID。若维护依赖 `getKey` 的代码，应在实际 React、ahooks 版本和 StrictMode 配置下覆盖插入、移动、重置行为。`useDynamicList` v3.11.0 还提供 `move`、`batchRemove`、`replace`、`push` / `pop`、`unshift` / `shift` 和 `resetList`；`merge(index, items)` 是把多项插入列表的位置操作，不是 Lodash 的对象深合并。`sortList` 会保留 `0`、`false` 和空字符串，只剔除 `null` 与 `undefined`。
 
-列表很长时，还可以只渲染可见的几行。`useVirtualList` 在 v3.11.0 返回 `[visibleRows, scrollTo]`，每项带 `data` 和源 `index`，通过 `containerTarget` / `wrapperTarget` 配置滚动容器；`itemHeight` 可为固定数值或按行计算的函数，行高要与实际布局相符。源数组每次渲染都换引用时，计算可见范围的 Effect 会再次运行并写入新的可见列表 state，带来额外渲染；内容未变时保持引用稳定，或用 `useMemo` 记住。归档 ahooks v2.6 使用对象返回值 `{ list, containerProps, wrapperProps, scrollTo }`；其 `itemHeight` 函数按源索引给出高度，没有独立的 `estimateSize` 参数，不要混用版本。虚拟化只减少挂载的 Document Object Model（文档对象模型，DOM）行数，不会减少网络分页或完整源数组的内存；变高行、可访问边界与滚动成本见[大列表如何在网络、DOM 和可访问性之间取舍？](#15.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。
+列表很长时，还可以只渲染可见的几行。`useVirtualList` 在 v3.11.0 返回 `[visibleRows, scrollTo]`，每项带 `data` 和源 `index`，通过 `containerTarget` / `wrapperTarget` 配置滚动容器；`itemHeight` 可为固定数值或按行计算的函数，行高要与实际布局相符。源数组每次渲染都换引用时，计算可见范围的 Effect 会再次运行并写入新的可见列表 state，带来额外渲染；内容未变时保持引用稳定，或用 `useMemo` 记住。归档 ahooks v2.6 使用对象返回值 `{ list, containerProps, wrapperProps, scrollTo }`；其 `itemHeight` 函数按源索引给出高度，没有独立的 `estimateSize` 参数，不要混用版本。虚拟化只减少挂载的 Document Object Model（文档对象模型，DOM）行数，不会减少网络分页或完整源数组的内存；变高行、可访问边界与滚动成本见[大列表如何在网络、DOM 和可访问性之间取舍？](#11.%20%E9%95%BF%E6%8A%A5%E8%A1%A8%E5%88%97%E8%A1%A8%E4%BD%95%E6%97%B6%E9%80%82%E5%90%88%E8%99%9A%E6%8B%9F%E6%BB%9A%E5%8A%A8%EF%BC%9F)。
 
 ### 轻量状态和时序工具也有边界
 
@@ -15625,7 +15642,7 @@ ahooks 自带的 `useDynamicList` 也管理可编辑列表，v3.11.0 文档把�
 | `useDebounceFn(fn)` | `{ run, cancel, flush }`；默认 `wait` 1000 ms、leading false、trailing true。 |
 | `useThrottleFn(fn)` | `{ run, cancel, flush }`；默认 `wait` 1000 ms、leading / trailing true。 |
 
-回到报表页：debounce 的 `cancel` 只取消尚未执行的函数调用，请求一旦发出，网络取消要另行管理。排序点击应立即发起导航，地址和列表何时提交由路由决定；只有搜索输入适合等用户停顿后再查。更多 React Hook 生命周期见[React 组件如何组合状态与行为？](#7.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)，服务端查询与乐观更新见[React界面如何维护服务端数据与乐观更新的正确性？](#9.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
+回到报表页：debounce 的 `cancel` 只取消尚未执行的函数调用，请求一旦发出，网络取消要另行管理。排序点击应立即发起导航，地址和列表何时提交由路由决定；只有搜索输入适合等用户停顿后再查。更多 React Hook 生命周期见[React 组件如何组合状态与行为？](#12.%20%E5%A6%82%E4%BD%95%E5%9C%A8%20React%20%E4%B8%AD%E7%BB%84%E5%90%88%E7%BB%84%E4%BB%B6%E4%B8%8E%E5%A4%8D%E7%94%A8%E8%A1%8C%E4%B8%BA%EF%BC%9F)，服务端查询与乐观更新见[React界面如何维护服务端数据与乐观更新的正确性？](#13.%20React%E7%95%8C%E9%9D%A2%E5%A6%82%E4%BD%95%E7%BB%B4%E6%8A%A4%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%95%B0%E6%8D%AE%E4%B8%8E%E4%B9%90%E8%A7%82%E6%9B%B4%E6%96%B0%E7%9A%84%E6%AD%A3%E7%A1%AE%E6%80%A7%EF%BC%9F)。
 
 > [!info]- 来源与版本核验（ahooks v3.11.0；当前稳定版于 2026-11-12 核验）
 > - 当前稳定版本和 v3.11.0 的分页、取消、空页、动态列表假值修复：[ahooks v3.11.0 release](https://github.com/alibaba/hooks/releases/tag/v3.11.0)，发布于 2026-10-27；GitHub 的 latest release 在 2026-11-12 仍指向 v3.11.0。

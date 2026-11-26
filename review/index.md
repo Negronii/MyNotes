@@ -1,6 +1,6 @@
 # 知识导航
 
-建议先选一个完整的问题进入，读完主线后再展开感兴趣的机制。下面每条路线把同一个过程涉及的不同章节串起来；各领域地图给出完整的阅读顺序，连续阅读稿则把整个领域合成一篇，适合一口气读下去。
+可以从眼前的问题开始读。比如，报表上的按钮已经出现，点了却没反应，先走「一次操作怎样变成界面更新」；聊天助手提交工单后断了线，走「怎样确认一次跨系统操作的结果」。想系统读完一个领域时，地图列出章节顺序，连续阅读稿可从各分部的首章进入。
 
 ## 从领域开始
 
@@ -12,33 +12,39 @@
 
 ## 一次操作怎样变成界面更新？
 
-这条路线从[报表页首次显示](../frontend/browser/browser-basics.md)之后开始：用户点击“最早优先”排序按钮（按钮上的取值为 `oldest`）。先跟着原生 JavaScript 实现理解事件与调度，再用 React 实现同一个筛选，比较两种方式产生的 DOM 改动怎样变成下一帧画面。
+报表先显示 May、April 两行。用户点「最早优先」却看不到变化，先确认处理点击的代码装好了没有。按钮可以先画出来，等脚本运行后才有人处理点击，[首帧与交互就绪](../frontend/browser/browser-basics.md#从首帧交接到筛选更新)就能解释这种现象。若处理器已经注册，再查主线程忙时[点击任务什么时候能执行](../frontend/runtime/event-loop.md)。
 
-1. [点击先交给谁，事件怎样传播？](../frontend/browser-apis/dom-manipulation-and-events.md)点击进入事件分发路径，轮到该任务执行时才调用处理器。
-2. [JavaScript 什么时候处理事件？](../frontend/runtime/event-loop.md)回调、microtask 和浏览器渲染机会相互交错。
-3. [React 怎样把状态变成界面更新？](../frontend/frameworks/react-basics.md)这里切换到 React 实现：事件处理器把同一个 `oldest` 筛选写入 state，React 据此计算新视图，只提交必要的 DOM 改动。原生实现与 React 实现是二选一的两条路径，不是先后两步。计算结果很贵时，再看[怎样让输入保持响应](../frontend/frameworks/advanced-react.md)。
-4. [DOM 改动怎样变成像素？](../frontend/html-css/rendering-pipeline-and-forced-layout.md)浏览器按改动的依赖关系完成样式、布局、绘制和合成。
-5. [如果这一帧迟到了，怎样定位原因？](../frontend/performance/performance-metrics-and-analysis.md)用同一次交互的时间线区分输入等待、执行和呈现成本。
+处理器开始执行后，可以对照同一个按钮的两种实现。
+
+- **原生 JavaScript** 从按钮读出 `oldest`，把已有的行节点移成 April、May，并把「最早优先」的 `aria-pressed` 改为 `true`。沿[点击事件和节点更新](../frontend/browser-apis/dom-manipulation-and-events.md)可以看到每处改动由谁执行。
+- **React** 的处理器提交排序状态更新。组件下次渲染时用手头两行算出 April、May，React 在提交阶段更新行顺序和按钮状态，随后才请求服务端确认。示例聚焦组件，地址栏与浏览历史的同步见前面的首帧案例。[跟着两行报表走一遍 React 更新](../frontend/frameworks/react-basics.md)
+
+两种实现都交给浏览器一份顺序已更新的 DOM。接着看[浏览器怎样把改动显示在下一帧](../frontend/html-css/rendering-pipeline-and-forced-layout.md)。如果点击很慢，先[按症状查输入等待、处理和呈现三个阶段](../frontend/performance/performance-metrics-and-analysis.md#沿同一动作从症状走到证据)。[排序性能实验](../frontend/performance/performance-metrics-and-analysis.md#复现报表排序后，修掉重复日期解析)另用原生 JavaScript 给 50,000 条合成记录排序，再重建前 50 行，演示怎样验证慢在排序。若慢在 React 的组件计算，再读[怎样让输入保持响应](../frontend/frameworks/advanced-react.md)。
 
 ## 怎样确认一次跨系统操作的结果？
 
-1. [请求超时后，怎样确认结果并重试？](../engineering-foundations/reliability/api-reliability-and-async-delivery.md)先明确调用者看到了什么，以及服务端可能已经完成了什么。
-2. [账户报表怎样成为可恢复的任务？](../engineering-foundations/architecture/system-design-fundamentals.md)沿着“受理请求、持久化任务、worker 写出最终结果”的过程，确定调用方事后凭什么查询结果，再看[队列确认到底证明了什么](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
-3. [AI 运行怎样在断线后继续或恢复？](../ai-engineering/systems/ai-application-architecture.md)将模型调用、工具动作连接到服务保存的运行状态。
-4. [流式界面怎样准确展示任务状态？](../frontend/browser-apis/streaming-ux.md)界面收到部分内容或本地取消后，仍需区分连接状态与服务端任务终态。
+开发者批准助手为构建 42 创建缺陷单。工单系统已经建单，执行程序却没来得及保存回执，聊天窗口随后也断了线。用户回来时，怎样在原来的卡片上看到结果？
 
-短请求可以从 [API 的承诺](../engineering-foundations/backend/http-api-contracts.md)进入，继续看[数据访问](../engineering-foundations/backend/data-access-and-connection-pools.md)或[缓存新鲜度](../engineering-foundations/backend/caching-and-redis.md)。单次交换由 [HTTP](../engineering-foundations/networking/http-protocols-and-websockets.md)承载；持续更新再比较[轮询、SSE 与 WebSocket](../engineering-foundations/networking/real-time-web-updates.md)。
+1. **先查外部动作。** 运行 `run-r42-7` 把这次创建记为「结果待确认」。新的执行程序按原操作键查询工单系统，找到 `ISSUE-842`，把工单号和最终答复一起保存。查证这一步只读，无须再次建单。[回执丢失后怎样对账](../ai-engineering/systems/ai-application-architecture.md#远端提交后丢失回执，谁能恢复结果？)
+2. **再恢复同一张卡。** 用户重连时，用原运行 ID [查询已保存的结果](../ai-engineering/systems/ai-application-architecture.md#客户端断线后怎样查询同一次运行？)，服务会检查用户现在是否仍有权查看。假设浏览器保留了第 10 条事件处理完后的界面，从第 11 条起补读，就能把 `ISSUE-842` 填回已有的「创建缺陷单」卡片，再用第 12、13 条补齐答复并显示完成。全新窗口则需要一份包含文本、卡片和匹配事件序号的快照，或从仍保留的历史起点重建。[聊天界面怎样应用重放事件](../frontend/browser-apis/streaming-ai-chat.md#怎样应用重放事件而不重复消息或工具卡？)
+
+遇到别的断线场景，先看自己要确认的结果由谁保存。
+
+- **库存到底扣了吗？** 客户端用原键 `reserve-demo-208` 重发相同预留，服务找到已经提交的那笔预留，返回它的当前状态。[库存事务与安全重试](../engineering-foundations/reliability/api-reliability-and-async-delivery.md)
+- **导出的 CSV 能下载了吗？** 受理回执丢失时，用原键 `report-demo-208` 重发相同导出请求，取回任务 `job-demo-731` 和查询地址。沿[账户报表的任务与结果](../engineering-foundations/architecture/system-design-fundamentals.md)读到成功提交和授权下载。[队列确认](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)只说明消息交付到了哪一步。
+- **进度页面该显示哪一版？** 在报表的实时视图里，[服务端从快照游标 103 续发事件](../engineering-foundations/networking/real-time-web-updates.md#SSE%20如何从快照游标续读事件？)。[页面](../frontend/browser-apis/streaming-ux.md)应用 104 后在断线期间保留第 10 版，重连收到 105 才把报表更新为第 11 版的「就绪」。
+
+只需理解一次普通读取时，可以沿 [HTTP 请求和响应](../engineering-foundations/networking/http-protocols-and-websockets.md)、[API 对调用方的承诺](../engineering-foundations/backend/http-api-contracts.md)、[获取数据连接](../engineering-foundations/backend/data-access-and-connection-pools.md)或[缓存何时需要更新](../engineering-foundations/backend/caching-and-redis.md)进入对应章节。
 
 ## 怎样证明一次改动可以上线？
 
-1. [怎样找到暴露问题的最小反例？](../engineering-foundations/architecture/reading-debugging-and-reviewing-code.md)从跨租户查询的失败例子确定应该成立的行为。
-2. [在哪一层测试才能证明这个行为？](../engineering-foundations/testing/software-testing-strategy.md)按真实风险选择证据；[前端测试](../frontend/testing/frontend-testing.md)还要覆盖用户行为和构建产物。
-3. [怎样把验证过的产物发布到生产？](../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)跟随同一产物的晋级、兼容性检查和发布决策。
-4. [生产中的哪些信号能发现退化？](../engineering-foundations/reliability/observability-slos-and-incident-response.md)用面向用户的目标连接监测、定位和恢复。
+报表 42 属于租户 A，已登录的租户 B 猜到编号竟也能读到。旧版已有越权问题，先隔离受影响的入口。要恢复访问，沿着修复从源码走到实际接收流量的版本。
 
-模型、提示词或 Agent 的改动还需要[独立的任务评估](../ai-engineering/evaluation/llm-evaluation-methods.md)：训练奖励或一次成功演示不能代替发布证据。
+1. **把漏洞变成能重复验证的条件。** 从[漏掉租户条件的查询](../engineering-foundations/architecture/reading-debugging-and-reviewing-code.md)入手。[测试](../engineering-foundations/testing/software-testing-strategy.md)用两个身份读同一份报表，要求 A 得到 `200` 和自己的内容，B 得到与资源不存在时一致的 `404`。
+2. **固定测试过的内容。** [用 Git 核对暂存的源码和测试](../engineering-foundations/version-control/git-essentials.md)，在发布案例中将这份快照记作 `c4f2a91`。[从该提交构建一次镜像](../engineering-foundations/infrastructure/docker-operations.md)，推送后在镜像仓库核对其内容摘要。后面每个环境都用这份摘要取镜像。
+3. **用同一镜像接流量。** 预发布用真实认证流程建立两个身份，重验上述响应，并跑通异步任务。进生产后，先让 A、B 经正常鉴权访问新版本，核对两份响应和两条请求追踪，确认命中的都是目标摘要，再开放小流量。若验证失败，维持隔离或转到已证安全且兼容的版本。[发布与回退](../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)
 
-若评估发现了稳定的模型行为差距，先看[训练怎样把 loss 变成每个权重的更新](../ai-engineering/foundations/training-gradients-and-optimizers.md)，再判断[是否应该微调、更新哪些参数](../ai-engineering/fine-tuning/fine-tuning-strategies.md)。
+怎样看出新版本在变慢？[生产事故演练](../engineering-foundations/reliability/observability-slos-and-incident-response.md)另给一个发布窗口，演示怎样单看新版本的请求，避免旧版本的大量成功请求掩盖退化。改动落在界面时，读[前端行为与构建产物的测试](../frontend/testing/frontend-testing.md)；改在提示词、模型或 Agent 时，读[独立任务评估](../ai-engineering/evaluation/llm-evaluation-methods.md)。若差距确实来自模型行为，再看[训练怎样更新权重](../ai-engineering/foundations/training-gradients-and-optimizers.md)和[什么时候值得微调](../ai-engineering/fine-tuning/fine-tuning-strategies.md)。
 
 ## AI 应用怎样凭证据回答？
 
@@ -56,10 +62,14 @@
 
 ## 访问数据的成本从哪来？
 
-1. [算法复杂度能预测什么？](../engineering-foundations/algorithms/algorithms-and-complexity.md)先固定输入大小、允许操作和访问模式。
-2. [数组与链表的实际耗时为什么不同？](../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)把操作量连接到内存表示、局部性和等待。
-3. [怎样按工作负载选择数据结构？](../engineering-foundations/algorithms/core-data-structures.md)比较需要支持的操作及其成本条件。
-4. [索引怎样改变数据库的访问路径？](../engineering-foundations/databases/database-constraints-and-indexes.md)从查询条件追到数据库页。需要演算连接代价、隔离或恢复时，进入[数据库课程地图](../archive/uni-subjects/COMP90050ADBS/readme.md)；[事务与恢复](../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)连接这些机制和持久提交。
+报表程序已经取回 1,024 条事件，先按发生时间排序，时间相同再比事件 ID。要在页内定位一个游标，[算法章](../engineering-foundations/algorithms/algorithms-and-complexity.md)解释为什么按同一规则比较就可以每次排除一半候选。[数据结构章](../engineering-foundations/algorithms/core-data-structures.md)接着问，若只知道事件 ID，或手上已经有了下标，应怎样找到那条记录？
+
+换一个观察尺度，成本的单位也会变。可以按要回答的问题选读。
+
+- **都访问四项，为什么内存开销会不同？** 数组和链表累加同一组时长 `[4, 7, 1, 3]` 都得到 15。沿[两个布局的地址](../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)逐项读，可以看到缓存行是否被复用、下一次读取要等哪个指针。
+- **还没取回数据，数据库怎样找到最近的任务？** 另一个查询要取某账户最近的 20 个导出任务。用账户、创建时间和任务 ID 建立符合排序的复合索引，数据库就多了一条按账户定位、取够 20 条便可停止的路径。可以从执行计划看它是否选了这条路。[复合索引怎样配合任务列表](../engineering-foundations/databases/database-constraints-and-indexes.md#复合索引怎样配合任务列表？)
+
+要继续推导连接代价或理解提交后的数据怎样恢复，可转到[数据库课程地图](../archive/uni-subjects/COMP90050ADBS/readme.md)和[事务与恢复](../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)。
 
 ## 按机制查找
 

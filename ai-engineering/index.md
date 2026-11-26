@@ -4,9 +4,9 @@
 
 ## 从问题开始
 
-- [AI 服务如何将一条消息变成完整回答？](systems/from-message-to-answer.md)——跟随一个“构建为什么失败”的问题，走完模型推理、日志查询和返回解释的全过程。
-- [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)——接着上一条路线里的同一次构建：从已获授权读取的日志 `c1` 出发，检索现行 HTTP 契约与 CI 规则，判断预期状态码是否正确、失败是否该重跑。
-- [如何判断 AI 系统是否满足任务契约？](evaluation/llm-evaluation-methods.md)——用代表性任务对照基线和候选版本，再看生产结果。
+- [AI 服务如何将一条消息变成完整回答？](systems/from-message-to-answer.md)——跟随 build 42 的“构建为什么失败”，走完模型推理、日志查询和返回解释的全过程。接着从同一次构建的授权日志出发，在[检索与核验证据](rag/rag-architecture-and-implementation.md)里确认 HTTP 契约和 CI 规则。
+- **月报助手能试点了吗？** 先[定义怎样才算一份成功的月报，筛出候选模型](foundations/model-selection-and-ecosystem.md)。带着同一个候选，看[每份成功报告要花多少钱、月末峰值还要测什么](systems/ai-latency-and-cost-optimization.md)。案例的数字来自合成演算，现有证据只够在本地用模拟响应测试应用。[部署章](systems/ai-deployment-patterns.md)再解释调用真实端点、最终验收和接入生产流量各需要什么。
+- **构建 73 的日志写着服务未就绪，助手为什么说是业务断言失败？** 先[把原日志、模型实际收到的证据和它给的答案放在一起看](systems/ai-production-observability-and-feedback.md#一条请求需要留下哪些可连起来的信号？)。证据已送到，解释却错了，于是[保留当前版本 A，只改系统提示词得到候选 B](agents/agent-improvement-and-version-acceptance.md#先说清楚哪个对象会改变)。这次误诊用来改提示词。要判断 B 能否上线，冻结候选和验收条件，用[独立的 200 道合成题比较两版](evaluation/llm-evaluation-methods.md#用独立验收集比较基线和候选)，再带着同一份结果看[发布时为何先试用 B、何时才扩大流量](systems/ai-production-observability-and-feedback.md#把线上信号变成独立验证，而不是直接喂训练)。
 
 ## 论文与文章
 
@@ -18,18 +18,27 @@
 
 - [AI 服务如何将一条消息变成完整回答？](systems/from-message-to-answer.md)
 
-### 模型怎样计算，服务怎样承接请求
+### 从注意力的 KV 缓存到推理服务容量
 
 - [语言模型如何把提示词变成文本？](foundations/how-llms-work.md)
+- [KV 缓存与调度怎样决定大语言模型的服务容量？](systems/llm-serving-and-kv-cache.md)
+
+### DeepSeek 与 Kimi 怎样保存历史信息？
+
 - [DeepSeek 的长上下文 Attention 怎样节省存储与读取？](foundations/long-context-attention.md)
 - [Kimi Delta Attention（KDA）怎样用固定状态读写历史？](foundations/recurrent-attention-state.md)
-- [KV 缓存与调度怎样决定大语言模型的服务容量？](systems/llm-serving-and-kv-cache.md)
-- [如何测量并降低 AI 应用的时延与成本，同时守住任务质量？](systems/ai-latency-and-cost-optimization.md)
-- [怎样让模型 API 调用在限额、失败和截止时间内有界？](systems/bounded-model-api-calls.md)
+
+### 月报助手怎样从选型走到部署决策？
+
 - [如何为具体任务选择模型，并让部署约束进入决策？](foundations/model-selection-and-ecosystem.md)
+- [如何测量并降低 AI 应用的时延与成本，同时守住任务质量？](systems/ai-latency-and-cost-optimization.md)
 - [AI 应用怎样选择部署方式，并逐步上线或回滚？](systems/ai-deployment-patterns.md)
 
-### 输入、外部证据与行动
+### 模型 API 调用遇到限额或超时怎么办？
+
+- [怎样让模型 API 调用在限额、失败和截止时间内有界？](systems/bounded-model-api-calls.md)
+
+### 回答问题要给模型哪些信息？
 
 - [怎样写出清楚且可验收的提示词？](prompting/prompt-engineering-fundamentals.md)
 - [简单提示失败后，怎样选择并评估提示技巧？](prompting/advanced-prompting-techniques.md)
@@ -37,23 +46,32 @@
 - [怎样从授权文档中检索并核验回答依据？](rag/rag-architecture-and-implementation.md)
 - [HNSW 怎样逐层找近邻，怎样知道搜索得够不够？](rag/hnsw-vector-index-search.md)
 - [什么时候值得把历史加工成 Agent 记忆？](context/agent-memory-design-and-evaluation.md)
+
+### 怎样让 Agent 在授权范围内完成任务？
+
+- [什么时候应该让模型决定下一步？](agents/agent-fundamentals.md)
 - [应用怎样设计并执行模型提出的工具请求？](agents/tool-design-and-function-calling.md)
 - [主机怎样把 MCP 工具从发现接到有权限的执行？](agents/mcp-tool-connections.md)
 - [无人值守 Agent（智能体）怎样在用户授权内继续第三方操作？](agents/delegated-oauth-for-agent-tools.md)
-- [什么时候应该让模型决定下一步？](agents/agent-fundamentals.md)
 - [模型选到 shell 或文件工具后，由谁决定能否执行？](agents/coding-agent-harness.md)
 - [怎样按依赖、并行性和控制权组织多阶段 AI 任务？](agents/orchestration-patterns.md)
 - [生产 AI 如何阻止不可信内容诱导模型越权？](safety/ai-safety-in-production.md)
 - [AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复？](systems/ai-application-architecture.md)
 
-### 从发现差距到验证改进
+### 从构建 73 的误诊走到新版本验收
 
+- [如何监控生产中的 AI 功能并安全地改进？](systems/ai-production-observability-and-feedback.md)
 - [如何判断 AI 系统是否满足任务契约？](evaluation/llm-evaluation-methods.md)
+- [如何验证并保留对 Agent 的改进？](agents/agent-improvement-and-version-acceptance.md)
+
+### 需要改变模型权重时，怎样训练和微调？
+
 - [模型怎样从训练损失得到每个权重的更新？](foundations/training-gradients-and-optimizers.md)
 - [何时应微调来弥补稳定的行为差距？](fine-tuning/fine-tuning-strategies.md)
 - [可验证奖励如何训练推理能力？](fine-tuning/reward-based-reasoning-training.md)
-- [如何验证并保留对 Agent 的改进？](agents/agent-improvement-and-version-acceptance.md)
-- [如何监控生产中的 AI 功能并安全地改进？](systems/ai-production-observability-and-feedback.md)
+
+### 系统设计综合
+
 - [如何把 AI 系统设计题转化为有依据的架构？](systems/ai-system-design-interview-questions.md)
 
 ## 跨域脉络

@@ -2,6 +2,8 @@
 
 以合成的报表 42 为例：请求已从数据库得到 acct-17 的事件页，共 1,024 条，按 (occurred_at, event_id) 升序排列。接口要定位游标、显示分类树、缓存最近查看的页面，还要处理事件描述中的 Unicode（统一码）文本。本篇只完整展开游标定位；分类树、缓存和文本处理只作为背景，具体做法见后续链接。选算法之前，先写明输入有什么保证、要执行什么操作、结果要满足什么约束；只有这样，才能论证候选范围可以缩小，并估算成本。
 
+这里的 1,024 条数据已在内存中按复合键排好序，主要比较每次查找能排除多少候选。需要追踪 PostgreSQL 如何读取账户最近 20 个任务时，见[复合索引怎样配合任务列表？](../databases/database-constraints-and-indexes.md#复合索引怎样配合任务列表？)。需要比较四个时长的连续数组与链表布局时，见[为什么连续扫描往往比链表遍历快？](../operating-systems/memory-hierarchy-and-data-locality.md)。三处分别处理比较次数、数据库索引访问路径和内存访问依赖。
+
 本篇给出选型与复杂度模型。后续章节分别回答[数据结构怎样匹配访问方式](core-data-structures.md)、[队列和栈怎样表示待处理工作](queue-and-stack-representations.md)、[LRU 如何维护按键查找与新近顺序](practical-data-structure-implementations.md)、[有序数据怎样缩小候选范围](ordered-array-search.md)、[动态规划怎样定义状态和更新顺序](dynamic-programming-state-and-order.md)、[分区如何改变排序成本](partitioning-and-sorting-costs.md)和[文本算法应选哪种字符单位](text-units-and-algorithms.md)。
 
 ## 先写明不变量，再选方法
