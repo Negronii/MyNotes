@@ -72,9 +72,3 @@ python3 maintenance/sync-reading-progress.py --status
 - [文档冷读](https://github.com/Negronii/MyNotes/blob/main/.agents/skills/document-cold-read/SKILL.md)
 
 向 `main` 推送提交或向其发起 PR 时，GitHub Actions 会运行上文的阅读稿和进度检查，并执行维护脚本的单元测试（`python3 -m unittest discover -s maintenance/tests`）。直接推送前先在本地检查，推送后可在 GitHub 的 Actions 页面看到该提交的结果。
-
-## 历史记录
-
-- [知识正文重写记录](maintenance/rewrite-plan.md) — 正文重写范围、知识去向与验收证据。
-- [2026-10-27 全库知识审查记录](maintenance/knowledge-review-2026-10-27.md) — 当时 140 篇原始文章的审查范围、证据与修正。
-- [迁移说明](maintenance/migration-notes.md) — 早期目录迁移的路径和结构记录。
