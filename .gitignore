@@ -5,6 +5,9 @@
 Thumbs.db
 Desktop.ini
 
+# Local browser automation artifacts
+/.playwright-cli/
+
 # JetBrains IDEs
 .idea/
 
@@ -32,7 +35,6 @@ Desktop.ini
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/
 DerivedData/
-build/
 *.pbxuser
 !default.pbxuser
 *.mode1v3
@@ -51,7 +53,7 @@ build/
 
 # Backup files (e.g., from editors or version control systems)
 *~
-*\#*
+\#?*\#
 
 # Python bytecode cache
 __pycache__/

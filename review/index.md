@@ -42,10 +42,15 @@
 
 ## AI 应用怎样凭证据回答？
 
-从[一条消息到完整回答](../ai-engineering/systems/from-message-to-answer.md)开始。该章以用户提问“构建 42 为什么失败”为例，依次走完输入组装、模型推理、在授权范围内查询日志，以及解释结果。
+开发者问“构建 42 为什么失败”。沿着这个问题读两章，可以看清日志、接口契约和重试规则分别能回答什么。
+
+1. [日志里发生了什么？](../ai-engineering/systems/from-message-to-answer.md) 助手在获得授权后读取构建日志。空名称测试预期返回 HTTP 状态码 `400`，实际返回 `200`。这个差异解释了测试为什么失败。
+2. [测试的预期正确吗，这次应该自动重跑吗？](../ai-engineering/rag/rag-architecture-and-implementation.md) 带着同一条日志去查现行文档。本例的接口契约要求空名称返回 `400`，构建手册规定断言失败不能自动重跑。如果手册更新，要重新核对自动重跑的条件，原日志仍是这次测试结果的依据。
+
+想深入其中一个环节时，可以沿下面的支线读。
 
 - 想知道模型怎样利用前文，先看[提示词怎样变成文本](../ai-engineering/foundations/how-llms-work.md)里的逐位置 KV，再看[Kimi KDA 怎样用一张固定矩阵读写历史](../ai-engineering/foundations/recurrent-attention-state.md)。两种状态的存储方式会影响[服务能同时承接多少请求](../ai-engineering/systems/llm-serving-and-kv-cache.md)。
-- 问题需要先找到某份资料时，进入[文档更新、检索与证据核对](../ai-engineering/rag/rag-architecture-and-implementation.md)。[上下文组织](../ai-engineering/context/context-engineering-principles.md)解释每次推理该看到什么。
+- 日志和文档都找到了，[应用怎样选择本次推理该看到的信息](../ai-engineering/context/context-engineering-principles.md)解释哪些内容进入模型、哪些留在应用记录里。
 - 再次遇到相关问题时，看[什么时候值得把历史加工成记忆](../ai-engineering/context/agent-memory-design-and-evaluation.md)：先与原文检索比较，再检查加工后的信息损失、使用成本和独立任务结果。
 - 一次工具调用不足以完成目标时，看[如何组织多阶段任务](../ai-engineering/agents/orchestration-patterns.md)和[如何验证并保留改进](../ai-engineering/agents/agent-improvement-and-version-acceptance.md)。
 

@@ -1,0 +1,33 @@
+name: Maintenance checks
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  maintenance-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        id: checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check generated reading documents
+        run: python3 maintenance/build-reading-docs.py --check
+
+      - name: Check reading progress
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' }}
+        run: python3 maintenance/sync-reading-progress.py --check
+
+      - name: Run maintenance unit tests
+        if: ${{ !cancelled() && steps.checkout.outcome == 'success' }}
+        run: python3 -m unittest discover -s maintenance/tests

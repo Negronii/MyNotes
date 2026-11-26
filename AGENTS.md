@@ -1,8 +1,6 @@
 # MyNotes instructions
 
-Use [`.agents/skills/mynotes-maintainer/SKILL.md`](.agents/skills/mynotes-maintainer/SKILL.md) for repository-specific maintenance work. [The writing guide](maintenance/writing-guide.md) is the single source of content rules; this file is the operating entry point and should not restate that guide.
-
-The repository has six top-level domains: `ai-engineering`, `frontend`, `engineering-foundations`, `archive`, `review`, and `maintenance`. Engineering foundations covers shared networking, operating systems, databases, API reliability, security, testing, deployment, backend, and system design. Create topic folders when substantive notes need them; authorized, source-backed additions may fill knowledge gaps. Treat archive as low-frequency or paused maintenance, not as a claim that its content is wrong or deprecated.
+Use the [MyNotes maintenance skill](.agents/skills/mynotes-maintainer/SKILL.md) for repository work. The [writing guide](maintenance/writing-guide.md) owns domain boundaries, chapter design and content standards.
 
 Prefer the smallest sufficient change that fixes the root cause. Keep documents information-dense. Do not use or install RTK.
 
