@@ -213,7 +213,7 @@ console.log(JSON.stringify({
 
 订阅应随视图的生命周期结束：视图卸载时调用 `subscribe()` 返回的取消函数。`Set` 按插入顺序保存不同的监听器。为什么要先复制再遍历？因为直接迭代 `Set` 是“实时”的：遍历中删除尚未访问的项，它就会被跳过；遍历中新增的项，也会在本轮被访问到。快照避免了这两种意外，具体规则见来源条目中的 ECMAScript §§24.2.4.4、24.2.4.17–18 和 24.2.6.1。
 
-浏览器的 `EventTarget` 也让对象直接管理自己的监听器，支持注册与移除，可以看作内置的观察者式 API；不过它还有事件捕获、冒泡和取消等额外语义。页面级事件分发细节见[浏览器怎样查询、更新 DOM 并响应用户输入？](../../frontend/browser-apis/dom-manipulation-and-events.md)；应用层消息总线与监听器重入见[JavaScript 事件总线在监听器中重入时怎样保持顺序？](../../frontend/browser-apis/event-bus-and-observer-patterns.md)。
+浏览器的 `EventTarget` 也让对象直接管理自己的监听器，支持注册与移除，可以看作内置的观察者式 API；不过它还有事件捕获、冒泡和取消等额外语义。页面级事件分发细节见[浏览器怎样查询、更新 DOM 并响应用户输入？](../../frontend/browser/dom-events.md)；应用层消息总线与监听器重入见[JavaScript 事件总线在监听器中重入时怎样保持顺序？](../../frontend/javascript/event-bus-and-observer-patterns.md)。
 
 与观察者容易混淆的是 **publish-subscribe（发布订阅）**：它把消息按主题交给一个中介路由，发布者只知道主题，不必知道具体接收者。例如中介可持有 `Map<topic, Set<listener>>`，订阅者收到返回的取消函数后从相同主题集合中移除自己。若多个独立插件要监听 `document:saved`，这种路由可能减少直接引用；但主题字符串和跨模块调用也会让消息来源更难追踪。画布和检查器天然属于这份文档，直接订阅文档通知器更容易沿着对象找到依赖；父子组件只有一个回调时，普通回调就够了。有多个接收者也不意味着必须创建全局事件总线。
 

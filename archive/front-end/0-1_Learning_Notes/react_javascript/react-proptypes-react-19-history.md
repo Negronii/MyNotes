@@ -1,6 +1,6 @@
 # React 19 移除 PropTypes 后，旧组件怎样维护？
 
-**案例背景。** 一个旧 React 项目从 18 升级到 19 后，组件上仍挂着 `propTypes`（属性类型声明），但传入错误类型的属性时，原来的警告不再出现。原因是 React 19 移除了 React 对组件 `propTypes` 的自动检查。独立的 prop-types 包仍可以安装和引用，但无论安装它还是保留声明，都不会让 React 19 重新自动校验。如今组件的调用约定可以用 TypeScript 在编译期检查；来自接口、存储或用户输入的数据，则仍需在边界做运行时解析，见[TypeScript 如何处理不可信 JSON？](../../../../frontend/typescript/advanced-typescript.md)。
+**案例背景。** 一个旧 React 项目从 18 升级到 19 后，组件上仍挂着 `propTypes`（属性类型声明），但传入错误类型的属性时，原来的警告不再出现。原因是 React 19 移除了 React 对组件 `propTypes` 的自动检查。独立的 prop-types 包仍可以安装和引用，但无论安装它还是保留声明，都不会让 React 19 重新自动校验。如今组件的调用约定可以用 TypeScript 在编译期检查；来自接口、存储或用户输入的数据，则仍需在边界做运行时解析，见[TypeScript 如何处理不可信 JSON？](../../../../frontend/javascript/typescript-guarantees-and-runtime-validation.md)。
 
 ## 旧组件里还会遇到的写法
 
@@ -51,4 +51,4 @@ React 19 移除了函数组件的 `defaultProps`，改用参数默认值；类�
 > - 旧版本 propTypes 只在开发模式检查：[React 18.2 Typechecking With PropTypes](https://legacy.reactjs.org/docs/typechecking-with-proptypes.html)，React 18.2 文档，核验日期：2026-11-12。
 > - React 19 移除 React 的 propType 检查并移除函数组件 defaultProps；类组件仍支持 defaultProps：[React 19 Upgrade Guide](https://react.dev/blog/2024/04/25/react-19-upgrade-guide)，React 官方文档，核验日期：2026-11-12。
 > - 函数参数默认值；默认值不处理 null：[Passing Props to a Component](https://react.dev/learn/passing-props-to-a-component#specifying-a-default-value-for-a-prop)、[React Component](https://react.dev/reference/react/Component#static-defaultprops)，React 19.3 文档，核验日期：2026-11-12。
-> - 外部数据需运行时解析而非只依赖被擦除的 TypeScript 类型：[TypeScript 如何处理不可信 JSON？](../../../../frontend/typescript/advanced-typescript.md)。
+> - 外部数据需运行时解析而非只依赖被擦除的 TypeScript 类型：[TypeScript 如何处理不可信 JSON？](../../../../frontend/javascript/typescript-guarantees-and-runtime-validation.md)。

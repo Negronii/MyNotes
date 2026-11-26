@@ -1,6 +1,6 @@
 # Map 怎样维护键身份、存在性和插入顺序？
 
-**案例背景：** 用用户编号保存角色，并依次更新、删除和重新添加。需要区分“键不在表里”和“键存在但值为 undefined”，也需要知道更新是否改变顺序。Map 的键值契约适合这个问题；更完整的容器选择见[Map 与 Set 怎样维护身份与集合关系？](../../../../frontend/javascript/map-and-set.md)。
+**案例背景：** 用用户编号保存角色，并依次更新、删除和重新添加。需要区分“键不在表里”和“键存在但值为 undefined”，也需要知道更新是否改变顺序。Map 的键值契约适合这个问题；更完整的容器选择见[Map 与 Set 怎样维护身份与集合关系？](../../../../frontend/javascript/arrays-maps-and-sets.md)。
 
 ```typescript
 const roles = new Map<number, string>();

@@ -2,9 +2,9 @@
 
 React 与 TypeScript 的核心语义见当前主题笔记。以下课程示例适合查阅旧应用中的类型写法、库集成与特定 API。
 
-- [React如何把一次用户操作变成界面更新？](../../../../frontend/frameworks/react-basics.md)
-- [如何让报表筛选在昂贵更新时保持响应？](../../../../frontend/frameworks/advanced-react.md)
-- [收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](../../../../frontend/typescript/advanced-typescript.md)
+- [React如何把一次用户操作变成界面更新？](../../../../frontend/ui-state/react-update-model.md)
+- [如何让报表筛选在昂贵更新时保持响应？](../../../../frontend/ui-state/urgent-and-deferred-updates.md)
+- [收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](../../../../frontend/javascript/typescript-guarantees-and-runtime-validation.md)
 
 ## 课程参考
 

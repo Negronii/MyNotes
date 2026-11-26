@@ -41,13 +41,13 @@
 
 | 原页面 | 主讲去向 |
 | --- | --- |
-| `css-interview-questions.md` | [Flex/Grid 中的居中](../frontend/html-css/flex-and-grid-layout.md#居中未知尺寸的内容)与[定位机制](../frontend/html-css/css-position-display-and-animations.md) |
-| `es6-new-methods.md` | [值、比较与属性枚举](../frontend/javascript/javascript-types.md)及[数组遍历与变换](../frontend/javascript/arrays.md) |
-| `optional-chaining-and-destructuring.md` | [缺失属性、默认值与解构](../frontend/javascript/javascript-types.md) |
-| `javascript-basics.md` | [作用域、绑定与闭包](../frontend/javascript/scope-and-closure.md) |
-| `other-javascript-topics.md` | [调用形式与严格模式](../frontend/javascript/this-and-function-binding.md)，值比较复用类型章节 |
+| `css-interview-questions.md` | [Flex/Grid 中的居中](../frontend/html-css/flex-and-grid-layout.md#居中未知尺寸的内容)与[定位机制](../frontend/html-css/positioning-and-stacking.md) |
+| `es6-new-methods.md` | [值、比较与属性枚举](../frontend/javascript/values-types-and-equality.md)及[数组遍历与变换](../frontend/javascript/arrays-maps-and-sets.md) |
+| `optional-chaining-and-destructuring.md` | [缺失属性、默认值与解构](../frontend/javascript/values-types-and-equality.md) |
+| `javascript-basics.md` | [作用域、绑定与闭包](../frontend/javascript/scope-closures-and-this.md) |
+| `other-javascript-topics.md` | [调用形式与严格模式](../frontend/javascript/scope-closures-and-this.md)，值比较复用类型章节 |
 
-新增的独立机制页是长上下文注意力、奖励推理训练，以及[Redux 共享状态与异步工作](../frontend/frameworks/redux-state-and-async-workflows.md)。Redux 放在工具选择的深入阅读区；首次沿 URL 到下一帧的路线保持连续。三个活动领域的索引负责完整顺序，连续阅读稿由其生成。已有阅读勾选及清单外备注保留，新章节不自动标成已读。
+新增的独立机制页是长上下文注意力、奖励推理训练，以及[Redux 共享状态与异步工作](../frontend/ui-state/redux-state-and-async-workflows.md)。Redux 放在工具选择的深入阅读区；首次沿 URL 到下一帧的路线保持连续。三个活动领域的索引负责完整顺序，连续阅读稿由其生成。已有阅读勾选及清单外备注保留，新章节不自动标成已读。
 
 ## 验证范围
 

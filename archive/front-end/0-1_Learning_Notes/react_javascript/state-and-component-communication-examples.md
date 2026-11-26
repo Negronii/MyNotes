@@ -1,6 +1,6 @@
 # React 本地状态的对象和数组怎样按身份更新？
 
-**案例背景。** 一个方块列表要能添加方块、切换每个方块的开关。`BoxList` 持有整组状态，`BoxItem` 收到当前方块并把点击意图回传给父组件：数据向下传，操作回调向上交。setter 使用前一份状态计算下一份；每次更新创建新数组，复用未改动的对象，只为被切换的目标对象或新添加的方块创建新对象，不在旧 state（状态）上原地修改。一次事件中的状态快照见[React 如何把一次用户操作变成界面更新？](../../../../frontend/frameworks/react-basics.md#处理器读到的是本次界面的状态快照)。
+**案例背景。** 一个方块列表要能添加方块、切换每个方块的开关。`BoxList` 持有整组状态，`BoxItem` 收到当前方块并把点击意图回传给父组件：数据向下传，操作回调向上交。setter 使用前一份状态计算下一份；每次更新创建新数组，复用未改动的对象，只为被切换的目标对象或新添加的方块创建新对象，不在旧 state（状态）上原地修改。一次事件中的状态快照见[React 如何把一次用户操作变成界面更新？](../../../../frontend/ui-state/react-update-model.md)。
 
 ~~~tsx
 import { useState } from "react";
@@ -70,7 +70,7 @@ function BoxList() {
 
 `id` 是数据里的身份字段，父组件用它定位要改的对象。`key` 是 React 用来匹配同级列表项、在重排时保留对应组件实例的提示；React 不会把 `key` 作为 `BoxItem` 的普通 prop 传入，所以子组件仍通过 `box.id` 报告点击对象。本例恰好用同一个 `box.id` 同时充当数据身份和 React `key`，但二者用途不同。若把数组下标当 key，插入或重排后，带有本地输入等组件状态的行可能会跟着位置错配。
 
-把共享的 `boxes` 放在最近共同父组件，让每个 `BoxItem` 只展示自己的 `box` 并上报操作；不需要在子组件内复制一份 `on`，也不需要改全局状态。这个所有权与向下传值、向上回调的模式见[如何在 React 中组合组件与复用行为？](../../../../frontend/frameworks/react-component-composition.md#把状态放在共同使用者之上的最近一层)。
+把共享的 `boxes` 放在最近共同父组件，让每个 `BoxItem` 只展示自己的 `box` 并上报操作；不需要在子组件内复制一份 `on`，也不需要改全局状态。这个所有权与向下传值、向上回调的模式见[如何在 React 中组合组件与复用行为？](../../../../frontend/ui-state/state-ownership-and-composition.md)。
 
 > [!info]- 来源与版本核验（React 19.3；2026-11-12）
 > - 数组和数组内对象按不可变方式更新：[Updating Arrays in State](https://react.dev/learn/updating-arrays-in-state)，React 官方文档。

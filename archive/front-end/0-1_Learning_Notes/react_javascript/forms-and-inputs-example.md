@@ -1,6 +1,6 @@
 # React 受控表单怎样把输入写回组件状态？
 
-**案例背景。** 用户填写姓名和备注，选择是否允许联系、工作状态与颜色，然后提交这份本地表单。表单里的控件都是受控输入：它们显示的值由 React state（状态）提供。文本框、文本区域和选择框用 `value`，复选框用布尔值 `checked`；单选项的 `value` 是选项值，`checked` 表示该项当前是否选中。每次 `onChange`（变化处理器）触发时，处理器调用 setter（状态设置函数）安排更新，但不会原地改写本次 render（渲染）中的 `values` 快照。此练习只演示界面状态和提交时的快照，不实现服务端保存或字段校验。React 的状态快照与父组件状态归属见[更新轮次](../../../../frontend/frameworks/react-basics.md#处理器读到的是本次界面的状态快照)和[组件状态归属](../../../../frontend/frameworks/react-component-composition.md#把状态放在共同使用者之上的最近一层)。
+**案例背景。** 用户填写姓名和备注，选择是否允许联系、工作状态与颜色，然后提交这份本地表单。表单里的控件都是受控输入：它们显示的值由 React state（状态）提供。文本框、文本区域和选择框用 `value`，复选框用布尔值 `checked`；单选项的 `value` 是选项值，`checked` 表示该项当前是否选中。每次 `onChange`（变化处理器）触发时，处理器调用 setter（状态设置函数）安排更新，但不会原地改写本次 render（渲染）中的 `values` 快照。此练习只演示界面状态和提交时的快照，不实现服务端保存或字段校验。React 的状态快照与父组件状态归属见[更新轮次](../../../../frontend/ui-state/react-update-model.md)和[组件状态归属](../../../../frontend/ui-state/state-ownership-and-composition.md)。
 
 ~~~tsx
 import { useState, type ChangeEvent, type FormEvent } from "react";
@@ -132,7 +132,7 @@ export function ExampleForm() {
 }
 ~~~
 
-`preventDefault()` 阻止这个教学表单按浏览器默认动作导航或刷新；`console.log` 只展示提交时的 state 快照。真实应用还要决定如何做输入校验、显示错误并保存数据。控件的可见标签、单选组名称和错误反馈语义见[语义化 HTML 表单如何支持键盘与辅助技术用户？](../../../../frontend/html-css/accessible-html-forms.md#%E8%AE%A9%E6%8E%A7%E4%BB%B6%E5%90%8D%E7%A7%B0%E3%80%81%E6%8F%90%E4%BA%A4%E5%80%BC%E5%92%8C%E5%8A%A8%E4%BD%9C%E6%98%8E%E7%A1%AE)。
+`preventDefault()` 阻止这个教学表单按浏览器默认动作导航或刷新；`console.log` 只展示提交时的 state 快照。真实应用还要决定如何做输入校验、显示错误并保存数据。控件的可见标签、单选组名称和错误反馈语义见[语义化 HTML 表单如何支持键盘与辅助技术用户？](../../../../frontend/html-css/accessible-forms-and-submission.md)。
 
 > [!info]- 来源
 > - 状态 setter 请求下一次 render，当前处理器读取本轮状态快照：[React — State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)，React 19.3 文档，核验日期：2026-11-12。

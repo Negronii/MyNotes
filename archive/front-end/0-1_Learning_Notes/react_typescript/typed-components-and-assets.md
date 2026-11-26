@@ -58,7 +58,7 @@ declare module "*.module.css" {
 }
 ~~~
 
-这个声明只描述映射类型，不生成 CSS、不决定样式怎样注入页面或怎样打包。`Record<string, string>` 让 TypeScript 接受任意字符串类名键；开启 `noUncheckedIndexedAccess` 时，读取值的类型会是 `string | undefined`，但这种宽泛声明仍不能验证类名是否真的存在。拼错成 `styles.robotCar` 时，运行时映射中没有该键，读到的是 `undefined`。要让编译器核对每个类名，需要更精确的生成声明或其他项目类型方案。完整资源路径与构建产物见[构建工具怎样把源码变成可发布产物？](../../../../frontend/tooling/build-tools.md)。
+这个声明只描述映射类型，不生成 CSS、不决定样式怎样注入页面或怎样打包。`Record<string, string>` 让 TypeScript 接受任意字符串类名键；开启 `noUncheckedIndexedAccess` 时，读取值的类型会是 `string | undefined`，但这种宽泛声明仍不能验证类名是否真的存在。拼错成 `styles.robotCar` 时，运行时映射中没有该键，读到的是 `undefined`。要让编译器核对每个类名，需要更精确的生成声明或其他项目类型方案。完整资源路径与构建产物见[构建工具怎样把源码变成可发布产物？](../../../../frontend/delivery/build-pipeline-and-bundling.md)。
 
 Vite 默认静态资源导入返回构建后的 URL；要把资源源码当字符串读入，可用它内置的 `?raw` 查询，无需另外安装转换插件：
 
@@ -70,7 +70,7 @@ import svgSource from "./icon.svg?raw";
 
 ## props 类型不能验证外部数据
 
-`noImplicitAny`（禁止隐式 `any`）会在 TypeScript 无法推断类型而要默认成 `any` 时报告错误；显式写出的 `any` 仍然允许，并绕过后续类型检查。TypeScript 在检查 JSX 调用时对照 props 类型，这些类型不会留在浏览器替外部数据做验证。例如 `{"id":"7","name":"Ada"}` 是合法 JSON（JavaScript 对象表示法），`JSON.parse` 能成功，但解析出的 `id` 是字符串，不能直接作为 `RobotProps` 中的数字。先把解析结果按不可信输入做运行时字段校验；只有校验得到数字 id 和字符串 name 后，才交给 `Robot`。具体如何解析见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](../../../../frontend/typescript/advanced-typescript.md)。
+`noImplicitAny`（禁止隐式 `any`）会在 TypeScript 无法推断类型而要默认成 `any` 时报告错误；显式写出的 `any` 仍然允许，并绕过后续类型检查。TypeScript 在检查 JSX 调用时对照 props 类型，这些类型不会留在浏览器替外部数据做验证。例如 `{"id":"7","name":"Ada"}` 是合法 JSON（JavaScript 对象表示法），`JSON.parse` 能成功，但解析出的 `id` 是字符串，不能直接作为 `RobotProps` 中的数字。先把解析结果按不可信输入做运行时字段校验；只有校验得到数字 id 和字符串 name 后，才交给 `Robot`。具体如何解析见[收到不可信 JSON 后，TypeScript 怎样建立可信的类型？](../../../../frontend/javascript/typescript-guarantees-and-runtime-validation.md)。
 
 > [!info]- 来源
 > - 自动 JSX 转换让 JSX 无需单独导入 React 命名空间；React 19 要求使用该转换：[React 19 Upgrade Guide — New JSX Transform](https://react.dev/blog/2024/04/25/react-19-upgrade-guide#new-jsx-transform-is-now-required)，React 官方文档，核验日期：2026-11-12。
@@ -80,4 +80,4 @@ import svgSource from "./icon.svg?raw";
 > - 通配符环境模块声明及脚本环境中的声明语义：[TypeScript Modules Reference — Ambient modules](https://www.typescriptlang.org/docs/handbook/modules/reference#ambient-modules)，TypeScript 官方文档，核验日期：2026-11-12。
 > - Vite CSS Module 和客户端类型：[Features — CSS Modules and Client Types](https://vite.dev/guide/features#client-types)、[Vite `client.d.ts`](https://github.com/vitejs/vite/blob/main/packages/vite/client.d.ts)，Vite 官方资料，核验日期：2026-11-12。
 > - Vite 静态资源默认 URL 与 `?raw` 导入：[Static Asset Handling — Importing Asset as URL / Importing Asset as String](https://vite.dev/guide/assets#importing-asset-as-string)，Vite 官方文档，核验日期：2026-11-12。
-> - TypeScript 类型只检查代码，不代替 JSON 运行时解析：[TypeScript 如何处理不可信 JSON？](../../../../frontend/typescript/advanced-typescript.md)。
+> - TypeScript 类型只检查代码，不代替 JSON 运行时解析：[TypeScript 如何处理不可信 JSON？](../../../../frontend/javascript/typescript-guarantees-and-runtime-validation.md)。

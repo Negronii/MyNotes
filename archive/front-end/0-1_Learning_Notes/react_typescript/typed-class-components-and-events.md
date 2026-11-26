@@ -46,7 +46,7 @@ export class Counter extends Component<Props, State> {
 
 类组件的 `setState` 会把传入对象（包括 updater 返回的对象）浅合并到现有 state；只返回 `{ count: ... }` 时，其他顶层字段会保留。函数组件的 `useState` setter 则替换那一个 state 值；若它存的是对象，例如 `const [counter, setCounter] = useState({ count: 0, label: "counter" })`，setter 会替换整个对象；更新时要显式保留其他字段，并用 updater 从待处理的旧值计算：`setCounter(previous => ({ ...previous, count: previous.count + 1 }))`。同一处理器连续排两次更新时，这种写法会依次读取队列中的新旧值。维护旧类代码时，不能把这两种更新模型当成同一套规则。
 
-类生命周期与函数组件 Effect（副作用同步）的关系见[React 更新轮次](../../../../frontend/frameworks/react-basics.md)。
+类生命周期与函数组件 Effect（副作用同步）的关系见[React 更新轮次](../../../../frontend/ui-state/react-update-model.md)。
 
 > [!info]- 来源
 > - 自动 JSX 转换让 JSX 无需单独导入 React 命名空间；React 19 要求使用该转换：[React 19 Upgrade Guide — New JSX Transform](https://react.dev/blog/2024/04/25/react-19-upgrade-guide#new-jsx-transform-is-now-required)，React 官方文档，核验日期：2026-11-12。

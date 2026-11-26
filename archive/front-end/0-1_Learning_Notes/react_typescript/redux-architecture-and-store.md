@@ -10,7 +10,7 @@
 
 图中的两块 middleware 和“异步”标注表示一种可扩展 dispatch 的做法，不表示每个 Redux 请求都要手写异步 middleware。thunk middleware 收到函数时会截获它，并用 `dispatch` 和 `getState` 调用这个函数；函数本身不交给 reducer。手写 thunk 可以同步或异步，自行决定派发哪些普通 action、何时派发。这些新 action 再进入 middleware 链；被转发到核心 dispatch 的 action 才由 reducer 同步计算下一状态。
 
-Redux Toolkit 的 `configureStore` 接受 slice reducer 映射并组合根 reducer，默认加入 thunk；`createSlice` 用于组织功能域的 action 与 reducer。由 `createAsyncThunk` 创建的 thunk 在正常启动路径先派发 `pending`，再调用 payload creator 执行请求，之后按结果派发 `fulfilled` 或 `rejected`；应用可在 slice 的 `extraReducers` 中为这些 action 编写处理器，更新业务 state。普通手写 thunk 不会自动获得这套生命周期；若 `condition` 返回 `false`，默认也不派发生命周期 action（除非开启 `dispatchConditionRejection`）。完整的当前请求示例及过期响应、取消和错误分支见[Redux 如何组织共享界面状态与异步工作？](../../../../frontend/frameworks/redux-state-and-async-workflows.md)。
+Redux Toolkit 的 `configureStore` 接受 slice reducer 映射并组合根 reducer，默认加入 thunk；`createSlice` 用于组织功能域的 action 与 reducer。由 `createAsyncThunk` 创建的 thunk 在正常启动路径先派发 `pending`，再调用 payload creator 执行请求，之后按结果派发 `fulfilled` 或 `rejected`；应用可在 slice 的 `extraReducers` 中为这些 action 编写处理器，更新业务 state。普通手写 thunk 不会自动获得这套生命周期；若 `condition` 返回 `false`，默认也不派发生命周期 action（除非开启 `dispatchConditionRejection`）。完整的当前请求示例及过期响应、取消和错误分支见[Redux 如何组织共享界面状态与异步工作？](../../../../frontend/ui-state/redux-state-and-async-workflows.md)。
 
 例如，主篇报表页面的 `selectedIds` 初始为 `[]`。点选 April 行，组件派发 `{ type: "reportSelection/reportToggled", payload: "april" }`；reducer 得到 `["april"]`，行的 selector 随之选出 `true`，工具栏 selector 读到新的 ID 数组。即使另一个 action 通知了 store 订阅者，若当前 state 快照未变，React-Redux 可复用上次的选取结果；若快照变化但某组件选出的值相同，默认比较也不会因这次通知触发它重渲染。
 

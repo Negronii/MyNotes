@@ -1,6 +1,6 @@
 # 旧式 Redux store 怎样手动接入 thunk 与 middleware？
 
-新建应用应使用[Redux Toolkit 当前异步工作流](../../../../frontend/frameworks/redux-state-and-async-workflows.md)：`configureStore` 默认已配置 thunk。本页保留维护旧式裸 Redux store 时需要识别的两点：middleware 位于 `dispatch` 与 reducer 之间；thunk 让一次用户动作可以在 I/O 前后派发普通 action。
+新建应用应使用[Redux Toolkit 当前异步工作流](../../../../frontend/ui-state/redux-state-and-async-workflows.md)：`configureStore` 默认已配置 thunk。本页保留维护旧式裸 Redux store 时需要识别的两点：middleware 位于 `dispatch` 与 reducer 之间；thunk 让一次用户动作可以在 I/O 前后派发普通 action。
 
 假设 `./reducers` 是现有根 reducer：它把 `report/loadStarted` 记为该 ID 的 `pending`，收到 `report/loadSucceeded` 后保存报表并记为 `succeeded`，收到 `report/loadFailed` 后记为 `failed` 并保存错误。下面先把 thunk 和记录普通 action 的 middleware 安装到旧 store：
 

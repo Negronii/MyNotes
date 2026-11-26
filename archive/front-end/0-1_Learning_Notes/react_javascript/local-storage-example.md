@@ -1,6 +1,6 @@
 # React 组件怎样读写少量浏览器偏好？
 
-**案例背景。** 报表页面让用户切换“紧凑列”显示，并在刷新后保留这个小型偏好。下面用 localStorage（本地存储）的字符串接口保存 JSON 文本，并在读回时检查数据形状。它适合这类非敏感、可重建的界面偏好；存储作用域、跨标签页事件和安全边界见[报表页面里的状态应该放在哪里？](../../../../frontend/browser-apis/browser-storage-and-communication.md)，Effect（副作用）的提交时序见[更新轮次](../../../../frontend/frameworks/react-basics.md#Effect%E5%9C%A8%E6%8F%90%E4%BA%A4%E5%90%8E%E5%90%8C%E6%AD%A5%E5%A4%96%E9%83%A8%E7%B3%BB%E7%BB%9F)。
+**案例背景。** 报表页面让用户切换“紧凑列”显示，并在刷新后保留这个小型偏好。下面用 localStorage（本地存储）的字符串接口保存 JSON 文本，并在读回时检查数据形状。它适合这类非敏感、可重建的界面偏好；存储作用域、跨标签页事件和安全边界见[报表页面里的状态应该放在哪里？](../../../../frontend/ui-state/browser-storage-and-cross-context-messaging.md)，Effect（副作用）的提交时序见[更新轮次](../../../../frontend/ui-state/react-update-model.md)。
 
 ~~~tsx
 import { useEffect, useState } from "react";
@@ -81,7 +81,7 @@ export function ReportPreferences() {
 | 浏览器首次提交后的 Effect | 仍是 `false`、`false` | 读取安排两项状态更新；写入仍看到 `loaded=false`，跳过保存。 |
 | 更新后的下一次提交 | `compactColumns=true`，`loaded=true` | 界面已采用存储值，写入 Effect 才保存这份偏好；空依赖的读取 Effect 无需因本次状态更新重跑。 |
 
-setter 不会改写当前提交已经捕获的值，因而不能仅靠“读取 Effect 排在写入 Effect 前面”防止覆盖。若只在用户修改时保存，也可把写入留在事件处理器中。这两种 SSR 方案都可能先显示默认值，读取后再切换为已保存值。Next.js 中标记了 `"use client"` 的组件，首次加载时仍会在服务端预渲染 HTML；框架说明见[服务端与客户端组件在哪条线交接](../../../../frontend/frameworks/next-js.md#服务端与客户端组件在哪条线交接)。
+setter 不会改写当前提交已经捕获的值，因而不能仅靠“读取 Effect 排在写入 Effect 前面”防止覆盖。若只在用户修改时保存，也可把写入留在事件处理器中。这两种 SSR 方案都可能先显示默认值，读取后再切换为已保存值。Next.js 中标记了 `"use client"` 的组件，首次加载时仍会在服务端预渲染 HTML；框架说明见[服务端与客户端组件在哪条线交接](../../../../frontend/ui-state/next-js-app-router.md)。
 
 React 要求 state 初始化函数保持纯净。第一段代码的初始化函数读取会变化的浏览器存储，严格说不是纯计算；本例只在纯浏览器渲染的前提下，为了让首屏直接显示已保存的偏好，才在首次 render 时同步读取。开发 StrictMode（严格模式）可能重复调用它，组件不能依赖“只读取一次”；初始化函数只读不写。需要保持纯初始化或支持 SSR 时，使用前一节的固定默认值和客户端读取流程。Effect 在服务端不运行；根节点开启开发 StrictMode 时，首次 Effect 还会额外经历一次建立和清理，再正式建立。如果两次写入同一字符串，且期间存储值未变，HTML 存储规范规定 `setItem` 不会再次修改值或广播 `storage` 事件。
 

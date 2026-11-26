@@ -21,7 +21,7 @@ MVC（Model-View-Controller，模型-视图-控制器）描述一组组织职责
 | 典型边界 | 应用或界面的职责划分 | 一个需要多个功能共同读取或更新的状态容器 |
 | 是否互斥 | 可与 Redux 并存 | 不是 MVC 的替代命名 |
 
-更完整的状态归属与 Redux 更新流程见[Redux 如何组织共享界面状态与异步工作？](../../../../frontend/frameworks/redux-state-and-async-workflows.md)。
+更完整的状态归属与 Redux 更新流程见[Redux 如何组织共享界面状态与异步工作？](../../../../frontend/ui-state/redux-state-and-async-workflows.md)。
 
 > [!info]- 来源
 > - MVC 的 Controller、Model 与 View 职责；本例将范围限定为服务端 Web MVC：[Microsoft — Overview of ASP.NET Core MVC](https://learn.microsoft.com/en-us/aspnet/core/mvc/overview?view=aspnetcore-10.0#mvc-pattern)、[MDN — MVC](https://developer.mozilla.org/en-US/docs/Glossary/MVC)，官方文档，核对日期：2026-11-13。

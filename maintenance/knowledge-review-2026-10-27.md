@@ -96,43 +96,43 @@ Each listed note was read in full. File-specific checkpoints, evidence URLs, lim
 
 ### Current / Frontend (37 substantive notes)
 
-- [`frontend/browser-apis/browser-storage-and-communication.md`](../frontend/browser-apis/browser-storage-and-communication.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/browser-apis/dom-manipulation-and-events.md`](../frontend/browser-apis/dom-manipulation-and-events.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/browser-apis/image-lazy-loading.md`](../frontend/browser-apis/image-lazy-loading.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/browser-apis/streaming-ux.md`](../frontend/browser-apis/streaming-ux.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/browser/browser-basics.md`](../frontend/browser/browser-basics.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/frameworks/advanced-react.md`](../frontend/frameworks/advanced-react.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/frameworks/next-js.md`](../frontend/frameworks/next-js.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/frameworks/react-basics.md`](../frontend/frameworks/react-basics.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/frameworks/virtual-dom-and-framework-selection.md`](../frontend/frameworks/virtual-dom-and-framework-selection.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/html-css/box-model-and-bfc.md`](../frontend/html-css/box-model-and-bfc.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/html-css/browser-html-and-css.md`](../frontend/html-css/browser-html-and-css.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/browser-apis/browser-storage-and-communication.md`](../frontend/ui-state/browser-storage-and-cross-context-messaging.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/browser-apis/dom-manipulation-and-events.md`](../frontend/browser/dom-events.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/browser-apis/image-lazy-loading.md`](../frontend/browser/images-and-media-loading.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/browser-apis/streaming-ux.md`](../frontend/ui-state/streaming-updates-and-resume.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/browser/browser-basics.md`](../frontend/browser/from-url-to-interactive-page.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/frameworks/advanced-react.md`](../frontend/ui-state/urgent-and-deferred-updates.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/frameworks/next-js.md`](../frontend/ui-state/next-js-app-router.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/frameworks/react-basics.md`](../frontend/ui-state/react-update-model.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/frameworks/virtual-dom-and-framework-selection.md`](../frontend/ui-state/virtual-dom-and-framework-selection.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/html-css/box-model-and-bfc.md`](../frontend/html-css/box-model-and-normal-flow.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/html-css/browser-html-and-css.md`](../frontend/browser/from-url-to-interactive-page.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/html-css/css-interview-questions.md`](../frontend/html-css/flex-and-grid-layout.md#居中未知尺寸的内容) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/html-css/css-position-display-and-animations.md`](../frontend/html-css/css-position-display-and-animations.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/html-css/dom-properties.md`](../frontend/html-css/dom-properties.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/html-css/css-position-display-and-animations.md`](../frontend/html-css/positioning-and-stacking.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/html-css/dom-properties.md`](../frontend/browser/rendering-pipeline-and-forced-layout.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/html-css/flex-and-grid-layout.md`](../frontend/html-css/flex-and-grid-layout.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/html-css/html-and-css-basics.md`](../frontend/html-css/html-and-css-basics.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/arrays.md`](../frontend/javascript/arrays.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/asynchronous-javascript.md`](../frontend/javascript/asynchronous-javascript.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/error-handling.md`](../frontend/javascript/error-handling.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- 原 `frontend/javascript/es6-new-methods.md`（现并入[值与属性](../frontend/javascript/javascript-types.md)及[数组](../frontend/javascript/arrays.md)） — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/html-css/html-and-css-basics.md`](../frontend/html-css/css-cascade-and-inheritance.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/arrays.md`](../frontend/javascript/arrays-maps-and-sets.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/asynchronous-javascript.md`](../frontend/javascript/promises-and-async-functions.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/error-handling.md`](../frontend/javascript/error-handling-across-layers.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- 原 `frontend/javascript/es6-new-methods.md`（现并入[值与属性](../frontend/javascript/values-types-and-equality.md)及[数组](../frontend/javascript/arrays-maps-and-sets.md)） — **no-new-issue in targeted checks**; full-text read recorded: true.
 - [`frontend/javascript/iterators-and-generators.md`](../frontend/javascript/iterators-and-generators.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/javascript-basics.md`](../frontend/javascript/scope-and-closure.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/javascript-memory-weakmap-and-weakset.md`](../frontend/javascript/javascript-memory-weakmap-and-weakset.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/javascript-types.md`](../frontend/javascript/javascript-types.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/map-and-set.md`](../frontend/javascript/map-and-set.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/modern-javascript-features.md`](../frontend/javascript/modern-javascript-features.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/objects-functions-and-prototypes.md`](../frontend/javascript/objects-functions-and-prototypes.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/other-javascript-topics.md`](../frontend/javascript/this-and-function-binding.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/javascript/scope-and-closure.md`](../frontend/javascript/scope-and-closure.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/libraries/ahooks.md`](../frontend/libraries/ahooks.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/libraries/lodash.md`](../frontend/libraries/lodash.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/performance/performance-metrics-and-analysis.md`](../frontend/performance/performance-metrics-and-analysis.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/performance/rendering-and-computation-optimization.md`](../frontend/performance/rendering-and-computation-optimization.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/runtime/event-loop.md`](../frontend/runtime/event-loop.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/testing/frontend-testing.md`](../frontend/testing/frontend-testing.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/tooling/build-tools.md`](../frontend/tooling/build-tools.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`frontend/typescript/advanced-typescript.md`](../frontend/typescript/advanced-typescript.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/javascript-basics.md`](../frontend/javascript/scope-closures-and-this.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/javascript-memory-weakmap-and-weakset.md`](../frontend/javascript/memory-reachability-and-weak-references.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/javascript-types.md`](../frontend/javascript/values-types-and-equality.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/map-and-set.md`](../frontend/javascript/arrays-maps-and-sets.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/modern-javascript-features.md`](../frontend/javascript/feature-availability.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/objects-functions-and-prototypes.md`](../frontend/javascript/objects-properties-and-prototypes.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/other-javascript-topics.md`](../frontend/javascript/scope-closures-and-this.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/javascript/scope-and-closure.md`](../frontend/javascript/scope-closures-and-this.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/libraries/ahooks.md`](../frontend/ui-state/server-state-and-optimistic-updates.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/libraries/lodash.md`](../frontend/javascript/wrapping-functions.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/performance/performance-metrics-and-analysis.md`](../frontend/delivery/performance-metrics-and-diagnosis.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/performance/rendering-and-computation-optimization.md`](../frontend/delivery/long-lists-pagination-and-virtualization.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/runtime/event-loop.md`](../frontend/browser/event-loop-tasks-and-rendering.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/testing/frontend-testing.md`](../frontend/delivery/frontend-testing-strategy.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/tooling/build-tools.md`](../frontend/delivery/build-pipeline-and-bundling.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`frontend/typescript/advanced-typescript.md`](../frontend/javascript/typescript-guarantees-and-runtime-validation.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 
 ### Current / Engineering foundations (26 substantive notes)
 

@@ -32,7 +32,7 @@
 | 自然对数 | `Math.log(Math.E)` 约为 1 | log(0) 为 −Infinity，负数为 NaN |
 | 三角函数 | `Math.sin` / `Math.cos` / `Math.tan` | 参数用弧度，180° 对应 π；浮点近似不保证理想恒等式逐位相等 |
 
-例如角度 30° 先换成弧度，再计算 `Math.sin(30 * Math.PI / 180)`，结果约为 0.5。对数是在问“e 的几次幂得到这个值”；它不是默认的十进制对数，后者用 `Math.log10`。浮点误差与精确整数范围见[JavaScript 值怎样转换、比较与表示数字？](../../../../frontend/javascript/javascript-types.md)。
+例如角度 30° 先换成弧度，再计算 `Math.sin(30 * Math.PI / 180)`，结果约为 0.5。对数是在问“e 的几次幂得到这个值”；它不是默认的十进制对数，后者用 `Math.log10`。浮点误差与精确整数范围见[JavaScript 值怎样转换、比较与表示数字？](../../../../frontend/javascript/values-types-and-equality.md)。
 
 > [!info]- 来源
 > - `ceil`、`floor`、`round`、`trunc` 的方向与负零：[ECMAScript 2026 §21.3.2.10](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-math.ceil)、[§21.3.2.16](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-math.floor)、[§21.3.2.29](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-math.round)、[§21.3.2.37](https://tc39.es/ecma262/2026/multipage/numbers-and-dates.html#sec-math.trunc)。

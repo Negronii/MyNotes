@@ -2,13 +2,13 @@
 
 CSS Sprite（雪碧图）把许多小图排进同一张图集，用作元素的背景图，再移动背景位置，让小盒子里只露出目标那一格。以一张按 `64 × 32 CSS px` 显示、每格 `16 × 16` 的图集为例：第二行第三列的左上角是 `(32, 16)`。在没有 padding 或 border 的 `16 × 16` 盒子中，设 `background-repeat: no-repeat`，并把背景定位为 `-32px -16px`，就会露出这一格。负值移动的是整张背景图，不是让元素本身向左上移动。缩放图集时，格子大小和偏移也要按同一比例调整。
 
-图集坐标图与完整 CSS 见[CSS Sprite 怎样裁出图集中的一格](../../../../frontend/performance/css-sprites-and-image-caching.md#CSS%20Sprite%20%E6%80%8E%E6%A0%B7%E8%A3%81%E5%87%BA%E5%9B%BE%E9%9B%86%E4%B8%AD%E7%9A%84%E4%B8%80%E6%A0%BC%EF%BC%9F)。选择图集、独立图片还是 SVG，要同时比较资源复用、传输与更新成本；图集并不自动更快。
+图集坐标图与完整 CSS 见[CSS Sprite 怎样裁出图集中的一格](../../../../frontend/delivery/icon-delivery.md)。选择图集、独立图片还是 SVG，要同时比较资源复用、传输与更新成本；图集并不自动更快。
 
 下方是旧横幅页面的静态截图：左侧有一项青绿色高亮的分类导航，右侧是中秋主题横幅和左右箭头。它不是上述图集；截图只能展示布局，不能说明箭头实际可操作。
 
 ![旧横幅页面截图：分类导航和中秋主题横幅，仅作静态布局参考](banner.png)
 
-另一个独立的[报表横幅显示例子](../../../../frontend/performance/css-sprites-and-image-caching.md#怎样只显示当前横幅？)用 CSS 隐藏其余横幅，只显示带 `.current` 类的一张；它不是这张旧截图的源码，也不控制截图左侧的分类高亮。`.current` 只是示例约定的类名，浏览器不会赋予它任何行为，切换横幅时要由脚本更新它。那个例子只有显示规则，没有实现轮播的切换和键盘操作；如果再加入自动轮播，还要提供暂停和恢复的控制。图片的实际尺寸与加载时机可接着看[图片与媒体资源加载](../../../../frontend/browser-apis/image-lazy-loading.md)。
+另一个独立的[报表横幅显示例子](../../../../frontend/delivery/icon-delivery.md)用 CSS 隐藏其余横幅，只显示带 `.current` 类的一张；它不是这张旧截图的源码，也不控制截图左侧的分类高亮。`.current` 只是示例约定的类名，浏览器不会赋予它任何行为，切换横幅时要由脚本更新它。那个例子只有显示规则，没有实现轮播的切换和键盘操作；如果再加入自动轮播，还要提供暂停和恢复的控制。图片的实际尺寸与加载时机可接着看[图片与媒体资源加载](../../../../frontend/browser/images-and-media-loading.md)。
 
 > [!info]- 来源
 > - 背景定位、重复与缩放：[CSS Backgrounds and Borders Level 3 §2.4、§2.6、§2.9](https://www.w3.org/TR/css-backgrounds-3/#the-background-position)，Candidate Recommendation Draft，2024-03-11；核对于 2026-11-12。

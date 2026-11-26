@@ -189,7 +189,7 @@ emitter.on('ready', () => console.log('ready'));
 | 读取成功 | 回调收到字节或驱动结果 | 处理当前 callback；控制权交还 Node 后处理 nextTick / 微任务，再继续调度；下一项不一定属于新阶段 |
 | 读取失败 | callback 收到错误 | 请求代码进入错误处理并结束该分支；是否重试或取消由应用与驱动契约决定 |
 
-本地回放只读取自己的脚本，成功分支可实际运行；数据库错误和请求取消的语义必须按具体驱动实现确认。浏览器有自己的事件循环、task 和渲染规则，不能把 Node 的 libuv 阶段图套过去，见[浏览器事件循环](../../frontend/runtime/event-loop.md)。Node 主线程、worker_threads、libuv threadpool 与进程的工作边界见[Node.js 如何在事件循环、工作线程与进程之间调度工作？](node-js-fundamentals.md)。
+本地回放只读取自己的脚本，成功分支可实际运行；数据库错误和请求取消的语义必须按具体驱动实现确认。浏览器有自己的事件循环、task 和渲染规则，不能把 Node 的 libuv 阶段图套过去，见[浏览器事件循环](../../frontend/browser/event-loop-tasks-and-rendering.md)。Node 主线程、worker_threads、libuv threadpool 与进程的工作边界见[Node.js 如何在事件循环、工作线程与进程之间调度工作？](node-js-fundamentals.md)。
 
 > [!info]- 来源
 > - Node.js v26.13.0 的 nextTick Legacy 状态、额外参数与递归行为：[process.nextTick()](https://nodejs.org/download/release/v26.13.0/docs/api/process.html#processnexttickcallback-args)；CommonJS/ES module 队列排序：[When to use queueMicrotask vs process.nextTick](https://nodejs.org/download/release/v26.13.0/docs/api/process.html#when-to-use-queuemicrotask-vs-processnexttick)；CJS 主模块同步加载 ESM 的边界：[modules — Loading ECMAScript modules using require()](https://nodejs.org/download/release/v26.13.0/docs/api/modules.html#loading-ecmascript-modules-using-require)；核对日期：2026-11-12。文中的 CJS、ESM、同步 require(esm) 和嵌套队列代码已在该版本重放。

@@ -2,8 +2,8 @@
 
 当前 React 笔记说明组件、渲染和状态语义；以下课程示例保留根节点挂载、状态传递、受控表单、Effect 与本地存储的具体写法。
 
-- [React如何把一次用户操作变成界面更新？](../../../../frontend/frameworks/react-basics.md)
-- [如何在 React 中组合组件与复用行为？](../../../../frontend/frameworks/react-component-composition.md)
+- [React如何把一次用户操作变成界面更新？](../../../../frontend/ui-state/react-update-model.md)
+- [如何在 React 中组合组件与复用行为？](../../../../frontend/ui-state/state-ownership-and-composition.md)
 - [现有 Create React App 项目怎样挂载 React 根节点？](react-root-in-a-cra-project.md)
 - [React 19 移除 PropTypes 后，旧组件怎样维护？](react-proptypes-react-19-history.md)
 - [React 本地状态的对象和数组怎样按身份更新？](state-and-component-communication-examples.md)

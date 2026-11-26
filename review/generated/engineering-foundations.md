@@ -3761,7 +3761,7 @@ source.addEventListener('error', () => {
 
 首次连接的响应流按序发送 104、105。假定浏览器已收到事件 104 末尾的空行并完整解析 104；连接随后断开时，事件 105 尚未被浏览器解析，但仍留在服务器日志。浏览器通常用同一 URL 重连，并将已解析的最后事件 ID 放进 `Last-Event-ID` 请求字段。对“只要最新报表状态”的路径，本例规定该字段优先于原 URL 的 `after=103`，服务端就从 104 之后重放 105，再沿同一日志续读更新。第一次订阅用 URL 游标，因为原生 `EventSource` 只接受 URL 和 `withCredentials` 选项，页面不能设定初始 `Last-Event-ID`。重连间隔可由 `retry` 字段建议；浏览器的退避策略和网络条件意味着客户端不应假设一个固定重连时刻。
 
-页面怎样保留已应用的版本 10，并在续读事件 105 后更新到版本 11，见[流式报表断线重连后，界面怎样保留正确状态？](../../frontend/browser-apis/streaming-ux.md)。
+页面怎样保留已应用的版本 10，并在续读事件 105 后更新到版本 11，见[流式报表断线重连后，界面怎样保留正确状态？](../../frontend/ui-state/streaming-updates-and-resume.md)。
 
 但 `Last-Event-ID` 只是浏览器的解析位置，不是业务确认。浏览器在把事件交给 JavaScript 处理器之前就更新了它；若事件 104 已被解析、处理器却在持久化副作用前失败，自动重连仍可能从 104 之后开始，应用没法靠该请求头发现这次处理缺失。反过来，如果客户端在处理完成后才把确认写入数据库，处理已提交、确认却没写成功时，事件又会重复收到。
 
@@ -3948,7 +3948,7 @@ data: {}
 
 解析器中的上限是示例值，按 UTF-16 代码单元计数；生产接口应按负载大小、并发和内存预算选定。`appendSearchResult(result)` 是页面提供的结果展示函数；即使匹配项是完整报表状态，合并时也要按版本处理，不能把搜索输出当成实时事件确认。已经显示的匹配项只能标为部分结果；只有完整的终止事件和 EOF 都通过检查后，才能把整次查询标为完成。若流随后被截断，已保留的部分结果不能冒充完整答案。
 
-错误处理分两段：读取前先检查状态码和媒体类型，出错时取消尚未读取的响应体再抛出错误；调用 `getReader()` 之后的读取或解析失败，则取消 reader 并释放锁。暂停读流能限制本地缓冲，却不能让服务端停止生成。如果接口契约允许调用方在收到完整终止事件后提前结束，不再检查 EOF 和终态之后有无多余事件，就应调用 `reader.cancel()` 释放未读的响应体，并把这条路径记为“主动停止”，而不是“读到 EOF”。若请求跨源，浏览器仍执行 Cross-Origin Resource Sharing (CORS，跨源资源共享) 检查；`Authorization` 和 `application/json` 通常还会触发预检，服务端必须按凭据模式、来源和请求字段配置允许策略。[页面如何表示部分、重连、取消和终态？](../../frontend/browser-apis/streaming-ux.md)讨论界面状态。
+错误处理分两段：读取前先检查状态码和媒体类型，出错时取消尚未读取的响应体再抛出错误；调用 `getReader()` 之后的读取或解析失败，则取消 reader 并释放锁。暂停读流能限制本地缓冲，却不能让服务端停止生成。如果接口契约允许调用方在收到完整终止事件后提前结束，不再检查 EOF 和终态之后有无多余事件，就应调用 `reader.cancel()` 释放未读的响应体，并把这条路径记为“主动停止”，而不是“读到 EOF”。若请求跨源，浏览器仍执行 Cross-Origin Resource Sharing (CORS，跨源资源共享) 检查；`Authorization` 和 `application/json` 通常还会触发预检，服务端必须按凭据模式、来源和请求字段配置允许策略。[页面如何表示部分、重连、取消和终态？](../../frontend/ui-state/streaming-updates-and-resume.md)讨论界面状态。
 
 ### WebSocket 怎样维持双向消息并限制慢客户端？
 
@@ -4621,7 +4621,7 @@ emitter.on('ready', () => console.log('ready'));
 | 读取成功 | 回调收到字节或驱动结果 | 处理当前 callback；控制权交还 Node 后处理 nextTick / 微任务，再继续调度；下一项不一定属于新阶段 |
 | 读取失败 | callback 收到错误 | 请求代码进入错误处理并结束该分支；是否重试或取消由应用与驱动契约决定 |
 
-本地回放只读取自己的脚本，成功分支可实际运行；数据库错误和请求取消的语义必须按具体驱动实现确认。浏览器有自己的事件循环、task 和渲染规则，不能把 Node 的 libuv 阶段图套过去，见[浏览器事件循环](../../frontend/runtime/event-loop.md)。Node 主线程、worker_threads、libuv threadpool 与进程的工作边界见[Node.js 如何在事件循环、工作线程与进程之间调度工作？](#21.%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
+本地回放只读取自己的脚本，成功分支可实际运行；数据库错误和请求取消的语义必须按具体驱动实现确认。浏览器有自己的事件循环、task 和渲染规则，不能把 Node 的 libuv 阶段图套过去，见[浏览器事件循环](../../frontend/browser/event-loop-tasks-and-rendering.md)。Node 主线程、worker_threads、libuv threadpool 与进程的工作边界见[Node.js 如何在事件循环、工作线程与进程之间调度工作？](#21.%20Node.js%20%E5%A6%82%E4%BD%95%E5%9C%A8%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E3%80%81%E5%B7%A5%E4%BD%9C%E7%BA%BF%E7%A8%8B%E4%B8%8E%E8%BF%9B%E7%A8%8B%E4%B9%8B%E9%97%B4%E8%B0%83%E5%BA%A6%E5%B7%A5%E4%BD%9C%EF%BC%9F)。
 
 > [!info]- 来源
 > - Node.js v26.13.0 的 nextTick Legacy 状态、额外参数与递归行为：[process.nextTick()](https://nodejs.org/download/release/v26.13.0/docs/api/process.html#processnexttickcallback-args)；CommonJS/ES module 队列排序：[When to use queueMicrotask vs process.nextTick](https://nodejs.org/download/release/v26.13.0/docs/api/process.html#when-to-use-queuemicrotask-vs-processnexttick)；CJS 主模块同步加载 ESM 的边界：[modules — Loading ECMAScript modules using require()](https://nodejs.org/download/release/v26.13.0/docs/api/modules.html#loading-ecmascript-modules-using-require)；核对日期：2026-11-12。文中的 CJS、ESM、同步 require(esm) 和嵌套队列代码已在该版本重放。
@@ -6073,7 +6073,7 @@ report = session.scalar(
 | 消息发布、重复投递或 acknowledgement（ACK，消费者确认）路径丢失或重复执行 | 消息代理集成 | 选定消息代理及其路由、持久性和确认设置下的实际交接 | 在本地把 worker（工作进程）函数调用两次就等于代理完成了重投 |
 | 只有服务装配后出现的故障 | 近生产端到端 | 受控的身份、API、数据库、队列和工作进程旅程 | 一个健康探针就证明用户旅程正确 |
 
-前端组件和浏览器侧的边界见[前端测试怎样证明报表排序、历史恢复和发布产物正确？](../../frontend/testing/frontend-testing.md)。本章只讨论服务端路由、持久化和消息交付，先从表中第二行的 API 集成测试开始。
+前端组件和浏览器侧的边界见[前端测试怎样证明报表排序、历史恢复和发布产物正确？](../../frontend/delivery/frontend-testing-strategy.md)。本章只讨论服务端路由、持久化和消息交付，先从表中第二行的 API 集成测试开始。
 
 ### 用实际路由重放跨租户反例
 
@@ -6889,7 +6889,7 @@ docker buildx imagetools inspect \
 - 同仓的 reusable workflow (可复用工作流) 写成 `uses: ./.github/workflows/deploy.yml` 时，版本由调用方的同一个 commit 决定，不需要 `@ref`。跨仓引用 `owner/repo/.github/workflows/deploy.yml@ref` 则应固定完整 SHA；它内部的 Action 依赖只能由定义它的仓库把它纳入自己的锁文件来锁定，调用方的锁文件替代不了。
 - Action 锁文件不锁定 job 级可复用 workflow 调用、构建参数、secret 或 runner (工作流执行器) 镜像。
 
-除了镜像，配置也要随部署版本一起记录，但密钥值始终留在 secret store (密钥存储服务)：数据库地址、启用的功能开关和配置版本可以放进受控配置；部署记录只保存 secret 的名称或版本引用及其适用范围，不保存值。静态前端若要在各环境间晋级同一个 bundle (打包文件)，而各环境的非秘密配置不同，可让 bundle 在运行时读取各环境自己的配置端点或配置文件；部署记录保存 bundle ID、配置版本和校验和，密钥仍只由服务端或密钥服务提供。编译期写进浏览器 bundle 的值可被用户读取，不能放秘密。静态资源的缓存与构建细节见[前端构建产物如何部署与缓存？](../../frontend/tooling/build-tools.md)。
+除了镜像，配置也要随部署版本一起记录，但密钥值始终留在 secret store (密钥存储服务)：数据库地址、启用的功能开关和配置版本可以放进受控配置；部署记录只保存 secret 的名称或版本引用及其适用范围，不保存值。静态前端若要在各环境间晋级同一个 bundle (打包文件)，而各环境的非秘密配置不同，可让 bundle 在运行时读取各环境自己的配置端点或配置文件；部署记录保存 bundle ID、配置版本和校验和，密钥仍只由服务端或密钥服务提供。编译期写进浏览器 bundle 的值可被用户读取，不能放秘密。静态资源的缓存与构建细节见[前端构建产物如何部署与缓存？](../../frontend/delivery/build-pipeline-and-bundling.md)。
 
 ### 将环境门禁、启动检查和渐进放量接起来
 
@@ -9779,7 +9779,7 @@ V1 和 V2 在迁移初期读写同一版本的文档格式。若 V2 将来要写
 
 上线时按路由逐步更换处理者：先验证 shell 可加载两版并保持同一输入契约；再把新地址的一小组 cohort 交给 V2；检查直接深链与刷新时 hash 保留和画布定位、query、Back / Forward、未授权请求、V2 代码块加载失败、V1/V2 文档兼容与草稿保留，再扩大分流。若 V2 的错误率越过预设门槛，将新地址重新交给 V1。有效回退还要求 V1 代码仍可加载，且 V1 兼容当前数据格式。只有把流量开关拨回去、却没有旧代码或兼容格式，并不能恢复服务。
 
-路由格式是跨应用通信的契约，改路径或参数时要更新所有链接来源和消费者。页面构建资源的版本并存与回滚见[构建工具怎样把源码变成可发布产物？](../../frontend/tooling/build-tools.md)；服务端读写仍遵循[如何设计可预期的 HTTP API 契约？](#4.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F)。
+路由格式是跨应用通信的契约，改路径或参数时要更新所有链接来源和消费者。页面构建资源的版本并存与回滚见[构建工具怎样把源码变成可发布产物？](../../frontend/delivery/build-pipeline-and-bundling.md)；服务端读写仍遵循[如何设计可预期的 HTTP API 契约？](#4.%20%E5%A6%82%E4%BD%95%E8%AE%BE%E8%AE%A1%E5%8F%AF%E9%A2%84%E6%9C%9F%E7%9A%84%20HTTP%20API%20%E5%A5%91%E7%BA%A6%EF%BC%9F)。
 
 **延伸阅读：** [如何让设计原则减少真实的修改成本？](#50.%20%E5%A6%82%E4%BD%95%E8%AE%A9%E8%AE%BE%E8%AE%A1%E5%8E%9F%E5%88%99%E5%87%8F%E5%B0%91%E7%9C%9F%E5%AE%9E%E7%9A%84%E4%BF%AE%E6%94%B9%E6%88%90%E6%9C%AC%EF%BC%9F)、[页面编辑器何时需要设计模式？](#52.%20%E9%A1%B5%E9%9D%A2%E7%BC%96%E8%BE%91%E5%99%A8%E4%BD%95%E6%97%B6%E9%9C%80%E8%A6%81%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%EF%BC%9F)、[怎样建模页面文档、编辑会话和发布快照？](#53.%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E6%A8%A1%E9%A1%B5%E9%9D%A2%E6%96%87%E6%A1%A3%E3%80%81%E7%BC%96%E8%BE%91%E4%BC%9A%E8%AF%9D%E5%92%8C%E5%8F%91%E5%B8%83%E5%BF%AB%E7%85%A7%EF%BC%9F)。
 
@@ -10008,7 +10008,7 @@ console.log(JSON.stringify({
 
 订阅应随视图的生命周期结束：视图卸载时调用 `subscribe()` 返回的取消函数。`Set` 按插入顺序保存不同的监听器。为什么要先复制再遍历？因为直接迭代 `Set` 是“实时”的：遍历中删除尚未访问的项，它就会被跳过；遍历中新增的项，也会在本轮被访问到。快照避免了这两种意外，具体规则见来源条目中的 ECMAScript §§24.2.4.4、24.2.4.17–18 和 24.2.6.1。
 
-浏览器的 `EventTarget` 也让对象直接管理自己的监听器，支持注册与移除，可以看作内置的观察者式 API；不过它还有事件捕获、冒泡和取消等额外语义。页面级事件分发细节见[浏览器怎样查询、更新 DOM 并响应用户输入？](../../frontend/browser-apis/dom-manipulation-and-events.md)；应用层消息总线与监听器重入见[JavaScript 事件总线在监听器中重入时怎样保持顺序？](../../frontend/browser-apis/event-bus-and-observer-patterns.md)。
+浏览器的 `EventTarget` 也让对象直接管理自己的监听器，支持注册与移除，可以看作内置的观察者式 API；不过它还有事件捕获、冒泡和取消等额外语义。页面级事件分发细节见[浏览器怎样查询、更新 DOM 并响应用户输入？](../../frontend/browser/dom-events.md)；应用层消息总线与监听器重入见[JavaScript 事件总线在监听器中重入时怎样保持顺序？](../../frontend/javascript/event-bus-and-observer-patterns.md)。
 
 与观察者容易混淆的是 **publish-subscribe（发布订阅）**：它把消息按主题交给一个中介路由，发布者只知道主题，不必知道具体接收者。例如中介可持有 `Map<topic, Set<listener>>`，订阅者收到返回的取消函数后从相同主题集合中移除自己。若多个独立插件要监听 `document:saved`，这种路由可能减少直接引用；但主题字符串和跨模块调用也会让消息来源更难追踪。画布和检查器天然属于这份文档，直接订阅文档通知器更容易沿着对象找到依赖；父子组件只有一个回调时，普通回调就够了。有多个接收者也不意味着必须创建全局事件总线。
 

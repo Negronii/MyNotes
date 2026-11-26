@@ -55,7 +55,7 @@ docker buildx imagetools inspect \
 - 同仓的 reusable workflow (可复用工作流) 写成 `uses: ./.github/workflows/deploy.yml` 时，版本由调用方的同一个 commit 决定，不需要 `@ref`。跨仓引用 `owner/repo/.github/workflows/deploy.yml@ref` 则应固定完整 SHA；它内部的 Action 依赖只能由定义它的仓库把它纳入自己的锁文件来锁定，调用方的锁文件替代不了。
 - Action 锁文件不锁定 job 级可复用 workflow 调用、构建参数、secret 或 runner (工作流执行器) 镜像。
 
-除了镜像，配置也要随部署版本一起记录，但密钥值始终留在 secret store (密钥存储服务)：数据库地址、启用的功能开关和配置版本可以放进受控配置；部署记录只保存 secret 的名称或版本引用及其适用范围，不保存值。静态前端若要在各环境间晋级同一个 bundle (打包文件)，而各环境的非秘密配置不同，可让 bundle 在运行时读取各环境自己的配置端点或配置文件；部署记录保存 bundle ID、配置版本和校验和，密钥仍只由服务端或密钥服务提供。编译期写进浏览器 bundle 的值可被用户读取，不能放秘密。静态资源的缓存与构建细节见[前端构建产物如何部署与缓存？](../../frontend/tooling/build-tools.md)。
+除了镜像，配置也要随部署版本一起记录，但密钥值始终留在 secret store (密钥存储服务)：数据库地址、启用的功能开关和配置版本可以放进受控配置；部署记录只保存 secret 的名称或版本引用及其适用范围，不保存值。静态前端若要在各环境间晋级同一个 bundle (打包文件)，而各环境的非秘密配置不同，可让 bundle 在运行时读取各环境自己的配置端点或配置文件；部署记录保存 bundle ID、配置版本和校验和，密钥仍只由服务端或密钥服务提供。编译期写进浏览器 bundle 的值可被用户读取，不能放秘密。静态资源的缓存与构建细节见[前端构建产物如何部署与缓存？](../../frontend/delivery/build-pipeline-and-bundling.md)。
 
 ## 将环境门禁、启动检查和渐进放量接起来
 

@@ -97,7 +97,7 @@ V1 和 V2 在迁移初期读写同一版本的文档格式。若 V2 将来要写
 
 上线时按路由逐步更换处理者：先验证 shell 可加载两版并保持同一输入契约；再把新地址的一小组 cohort 交给 V2；检查直接深链与刷新时 hash 保留和画布定位、query、Back / Forward、未授权请求、V2 代码块加载失败、V1/V2 文档兼容与草稿保留，再扩大分流。若 V2 的错误率越过预设门槛，将新地址重新交给 V1。有效回退还要求 V1 代码仍可加载，且 V1 兼容当前数据格式。只有把流量开关拨回去、却没有旧代码或兼容格式，并不能恢复服务。
 
-路由格式是跨应用通信的契约，改路径或参数时要更新所有链接来源和消费者。页面构建资源的版本并存与回滚见[构建工具怎样把源码变成可发布产物？](../../frontend/tooling/build-tools.md)；服务端读写仍遵循[如何设计可预期的 HTTP API 契约？](../backend/http-api-contracts.md)。
+路由格式是跨应用通信的契约，改路径或参数时要更新所有链接来源和消费者。页面构建资源的版本并存与回滚见[构建工具怎样把源码变成可发布产物？](../../frontend/delivery/build-pipeline-and-bundling.md)；服务端读写仍遵循[如何设计可预期的 HTTP API 契约？](../backend/http-api-contracts.md)。
 
 **延伸阅读：** [如何让设计原则减少真实的修改成本？](software-design-principles.md)、[页面编辑器何时需要设计模式？](design-patterns-in-practice.md)、[怎样建模页面文档、编辑会话和发布快照？](low-code-editor-data-model.md)。
 

@@ -118,7 +118,7 @@ export function CartExample() {
 
 Context 对象只标识可提供、可读取的值，不自己保存变化中的状态。这里的共享状态来自同一个 `CartProvider` 中的 `useReducer`；消费者各自向上寻找最近 Provider，最近 Provider 相同时才读取同一份 state（状态）。`CartContext` 不是 Redux store（Redux 状态仓库），它只让组件树按最近 Provider 读取所提供的值。若自定义 Hook 自己调用 `useState`，不同组件分别调用该 Hook 会有独立 state。自定义 Hook 复用有状态逻辑，不自动共享 Hook 内部状态。
 
-类组件也可通过 `Context.Consumer` 读取值；这只改变读取方式，不会让 Context 成为状态容器。这页聚焦客户端树中的购物车类型与状态边界。若状态由服务端拥有，放进 Context 不会自动提供查询缓存、刷新或请求协调；状态所有权与服务端数据的区别见[如何在 React 中组合组件与复用行为？](../../../../frontend/frameworks/react-component-composition.md)。
+类组件也可通过 `Context.Consumer` 读取值；这只改变读取方式，不会让 Context 成为状态容器。这页聚焦客户端树中的购物车类型与状态边界。若状态由服务端拥有，放进 Context 不会自动提供查询缓存、刷新或请求协调；状态所有权与服务端数据的区别见[如何在 React 中组合组件与复用行为？](../../../../frontend/ui-state/state-ownership-and-composition.md)。
 
 > [!info]- 来源
 > - 自动 JSX 转换让 JSX 无需单独导入 React 命名空间；React 19 要求使用该转换：[React 19 Upgrade Guide — New JSX Transform](https://react.dev/blog/2024/04/25/react-19-upgrade-guide#new-jsx-transform-is-now-required)，React 官方文档，核验日期：2026-11-12。

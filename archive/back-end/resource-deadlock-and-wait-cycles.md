@@ -38,7 +38,7 @@
 
 这是任务完成条件之间的死锁，没有任何一把锁参与。两个任务挂起时，事件循环仍能执行无关的定时器；“主线程还能运行”和“这两个任务能否完成”是两个不同的问题。在 Node.js v26.13.0 中复现这个依赖时，无关定时器照常执行，两个任务始终没有完成。判断死锁的依据是上述封闭的相互依赖，而不是等待超过了多少毫秒。修复时让其中一方依赖一个能独立产生的结果，或由共同协调者安排真正单向的依赖，不能只把同步等待改写成 `await`。
 
-排查时先问：等待的是资源释放，还是另一个任务的完成？谁能让它发生，这个参与者又在等谁？在没有任何外部解除路径的前提下，若这些完成条件互相依赖且无人能先推进，才有死锁依据。Promise 的状态与回调调度见[事件循环正文](../../frontend/runtime/event-loop.md)。
+排查时先问：等待的是资源释放，还是另一个任务的完成？谁能让它发生，这个参与者又在等谁？在没有任何外部解除路径的前提下，若这些完成条件互相依赖且无人能先推进，才有死锁依据。Promise 的状态与回调调度见[事件循环正文](../../frontend/browser/event-loop-tasks-and-rendering.md)。
 
 > [!info]- 来源
 > - 资源条件、锁顺序与退让重试的活锁风险：Arpaci-Dusseau，[Operating Systems: Three Easy Pieces，Common Concurrency Problems](https://pages.cs.wisc.edu/~remzi/OSTEP/threads-bugs.pdf)，版本 1.20，§32.3“Conditions for Deadlock”“Prevention”，核对 2026-11-12。经典条件原始出处为 Coffman, Elphick, Shoshani (1971), [System Deadlocks](https://doi.org/10.1145/356586.356588)；本轮按教材核对机制。

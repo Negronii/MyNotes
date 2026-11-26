@@ -1,6 +1,6 @@
 # Redux Toolkit 的 prepare 回调怎样构造 action payload？
 
-共享状态、store、typed hooks 和异步请求的主线见[Redux 如何组织共享界面状态与异步工作？](../../../../frontend/frameworks/redux-state-and-async-workflows.md)。本页只保留 createSlice 的 prepare 配置：它让生成的 action creator 接受调用参数，并集中整理成 reducer 收到的 payload；它不替 payload 做服务端授权或运行时输入校验。
+共享状态、store、typed hooks 和异步请求的主线见[Redux 如何组织共享界面状态与异步工作？](../../../../frontend/ui-state/redux-state-and-async-workflows.md)。本页只保留 createSlice 的 prepare 配置：它让生成的 action creator 接受调用参数，并集中整理成 reducer 收到的 payload；它不替 payload 做服务端授权或运行时输入校验。
 
 ~~~typescript
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";

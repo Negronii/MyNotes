@@ -24,7 +24,7 @@
 
 例如，同一视口下设计稿要求报表卡片的边框盒宽 320 CSS 像素，而页面实际只有 300 CSS 像素。假设父容器边框盒宽 340 像素、左右内边距各 20 像素且没有边框，因此内容宽是 300 像素；卡片规则为 `width: 320px; max-width: 100%; box-sizing: border-box`。在 **Styles** 中仍会看到 `width: 320px`，但 **Computed** 的宽度和盒模型显示卡片受父容器限制为 300 像素。临时把卡片宽度改成 300 像素仍不会变宽；若设计要求它在这里达到 320 像素，可把父容器边框盒调到 360 像素，使其内容宽达到 320 像素，再检查断点、长标题和侧栏状态。确认合适的父布局规则后，把改动写回源码并在真实页面复查。
 
-**另见：**[盒尺寸与格式化上下文怎样改变布局计算？](../../../../frontend/html-css/box-model-and-bfc.md)、[构建工具怎样验证生产产物？](../../../../frontend/tooling/build-tools.md)。
+**另见：**[盒尺寸与格式化上下文怎样改变布局计算？](../../../../frontend/html-css/box-model-and-normal-flow.md)、[构建工具怎样验证生产产物？](../../../../frontend/delivery/build-pipeline-and-bundling.md)。
 
 > [!info]- 来源
 > - **Chrome 面板与样式排查：**[Elements 面板](https://developer.chrome.com/docs/devtools/elements/)、[Styles 与 Computed 参考](https://developer.chrome.com/docs/devtools/css/reference)、[CSS 问题标识](https://developer.chrome.com/docs/devtools/css/issues/)、[Performance 面板](https://developer.chrome.com/docs/devtools/performance/)、[Network 面板](https://developer.chrome.com/docs/devtools/network/)。

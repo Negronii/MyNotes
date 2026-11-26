@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="571" viewBox="0 0 760 620" role="img" aria-labelledby="title desc">
+  <title id="title">一次 DOM 更新怎样进入屏幕画面</title>
+  <desc id="desc">用户点击后，JavaScript 同步改变 DOM；浏览器按需更新样式和布局，再更新绘制输出、像素与合成画面；呈现仍要等待渲染机会。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+    <style>
+      .title{font:700 22px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .step{font:700 18px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .body{font:16px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#334155}
+      .note{font:14px -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#475569}
+      .arrow{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="760" height="620" rx="12" fill="#ffffff"/>
+  <rect x="90" y="54" width="580" height="76" rx="12" fill="#e8f1ff" stroke="#6d91c7" stroke-width="1.5"/>
+  <text class="step" x="380" y="83" text-anchor="middle">1　同步处理器写入 DOM</text>
+  <text class="body" x="380" y="109" text-anchor="middle">报表行序改成 April → May</text>
+
+  <path class="arrow" d="M380 130 V174"/>
+  <rect x="90" y="182" width="580" height="78" rx="12" fill="#edf4f7" stroke="#7b9aa6" stroke-width="1.5"/>
+  <text class="step" x="380" y="212" text-anchor="middle">2　样式与几何按依赖更新</text>
+  <text class="body" x="380" y="238" text-anchor="middle">需要时重算样式；几何失效时重新布局</text>
+
+  <path class="arrow" d="M380 260 V304"/>
+  <rect x="90" y="312" width="580" height="78" rx="12" fill="#f4efff" stroke="#9575c6" stroke-width="1.5"/>
+  <text class="step" x="380" y="342" text-anchor="middle">3　绘制输出按需更新</text>
+  <text class="body" x="380" y="368" text-anchor="middle">绘制记录失效时重建；需要生成新像素时再栅格化</text>
+
+  <path class="arrow" d="M380 390 V434"/>
+  <rect x="90" y="442" width="580" height="82" rx="12" fill="#eef5e9" stroke="#8ca66b" stroke-width="1.5"/>
+  <text class="step" x="380" y="472" text-anchor="middle">4　合成并绘制当前画面</text>
+  <text class="body" x="380" y="499" text-anchor="middle">后续实际呈现时，April 显示在 May 上方</text>
+
+  <text class="note" x="380" y="578" text-anchor="middle">概念依赖图，不是每次更新都必须执行的固定阶段；可复用或跳过仍有效的结果。</text>
+</svg>

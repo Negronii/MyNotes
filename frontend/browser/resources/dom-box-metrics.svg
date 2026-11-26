@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="390" viewBox="0 0 700 390" role="img" aria-labelledby="title desc">
+  <title id="title">盒模型的层次与 clientWidth、offsetWidth 的计算</title>
+  <desc id="desc">左侧用非比例套叠盒表示 content、padding、border 和 margin。右侧按左右 padding 各 16 像素、border 各 1 像素、无占空间滚动条，计算 content-box 的 offsetWidth 354 和 clientWidth 352，以及 border-box 的内容宽 286、clientWidth 318 和 offsetWidth 320。</desc>
+  <defs>
+    <style>
+      text { font-family: Arial, "PingFang SC", sans-serif; fill: #24344d; }
+      .heading { font-size: 18px; font-weight: 700; }
+      .body { font-size: 18px; }
+      .small { font-size: 16px; fill: #536783; }
+      .panel { fill: #ffffff; stroke: #d6dfeb; stroke-width: 2; }
+      .margin { fill: #f1f3f6; stroke: #c7d0dc; stroke-width: 2; }
+      .border { fill: #dce5f0; stroke: #536783; stroke-width: 3; }
+      .padding { fill: #e5f0fb; stroke: #88a6ca; stroke-width: 2; }
+      .content { fill: #b6d3ef; stroke: #6e9bc9; stroke-width: 2; }
+      .left { text-anchor: start; }
+    </style>
+  </defs>
+  <rect width="700" height="390" fill="#f7f9fc"/>
+  <text class="heading left" x="28" y="34">盒子由内容区向外依次包住内边距、边框和外边距</text>
+
+  <rect class="panel" x="24" y="52" width="284" height="294" rx="14"/>
+  <text class="small left" x="42" y="80">层次示意，非比例尺寸</text>
+  <rect class="margin" x="49" y="96" width="234" height="150" rx="6"/>
+  <rect class="border" x="70" y="117" width="192" height="108" rx="4"/>
+  <rect class="padding" x="91" y="138" width="150" height="66" rx="4"/>
+  <rect class="content" x="126" y="153" width="80" height="36" rx="4"/>
+  <rect x="44" y="264" width="14" height="14" rx="2" fill="#f1f3f6" stroke="#c7d0dc"/>
+  <text class="small left" x="64" y="277">margin</text>
+  <rect x="158" y="264" width="14" height="14" rx="2" fill="#dce5f0" stroke="#536783"/>
+  <text class="small left" x="178" y="277">border</text>
+  <rect x="44" y="290" width="14" height="14" rx="2" fill="#e5f0fb" stroke="#88a6ca"/>
+  <text class="small left" x="64" y="303">padding</text>
+  <rect x="158" y="290" width="14" height="14" rx="2" fill="#b6d3ef" stroke="#6e9bc9"/>
+  <text class="small left" x="178" y="303">content</text>
+  <text class="small left" x="44" y="329">offsetWidth 不含 margin。</text>
+
+  <rect class="panel" x="324" y="52" width="352" height="294" rx="14"/>
+  <rect x="344" y="70" width="312" height="117" rx="10" fill="#eef4fb" stroke="#c8d9ed" stroke-width="2"/>
+  <text class="heading left" x="360" y="97">content-box：声明宽 320px</text>
+  <text class="body left" x="360" y="125">content 320 + padding 32</text>
+  <text class="body left" x="360" y="151">+ border 2 = offsetWidth 354px</text>
+  <text class="body left" x="360" y="176">clientWidth = 352px</text>
+
+  <rect x="344" y="201" width="312" height="125" rx="10" fill="#f3effa" stroke="#d1c2e9" stroke-width="2"/>
+  <text class="heading left" x="360" y="228">border-box：声明宽 320px</text>
+  <text class="body left" x="360" y="256">320 − padding 32 − border 2</text>
+  <text class="body left" x="360" y="282">= content 286px；clientWidth 318px</text>
+  <text class="body left" x="360" y="308">offsetWidth = 320px</text>
+
+  <text class="small" text-anchor="middle" x="350" y="369">教学条件：左右 padding 各 16px、border 各 1px；无占空间滚动条。</text>
+</svg>
