@@ -79,20 +79,20 @@ Each listed note was read in full. File-specific checkpoints, evidence URLs, lim
 
 ### Current / AI engineering (14 substantive notes)
 
-- [`ai-engineering/agents/agent-fundamentals.md`](../ai-engineering/agents/agent-fundamentals.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/agents/orchestration-patterns.md`](../ai-engineering/agents/orchestration-patterns.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/agents/tool-design-and-function-calling.md`](../ai-engineering/agents/tool-design-and-function-calling.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/context/context-engineering-principles.md`](../ai-engineering/context/context-engineering-principles.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/evaluation/llm-evaluation-methods.md`](../ai-engineering/evaluation/llm-evaluation-methods.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/fine-tuning/fine-tuning-strategies.md`](../ai-engineering/fine-tuning/fine-tuning-strategies.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/foundations/how-llms-work.md`](../ai-engineering/foundations/how-llms-work.md) — **unverified-claim-present: exact cl100k_base example not rerun**; full-text read recorded: true.
-- [`ai-engineering/foundations/model-selection-and-ecosystem.md`](../ai-engineering/foundations/model-selection-and-ecosystem.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/prompting/advanced-prompting-techniques.md`](../ai-engineering/prompting/advanced-prompting-techniques.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/prompting/prompt-engineering-fundamentals.md`](../ai-engineering/prompting/prompt-engineering-fundamentals.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/rag/rag-architecture-and-implementation.md`](../ai-engineering/rag/rag-architecture-and-implementation.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/safety/ai-safety-in-production.md`](../ai-engineering/safety/ai-safety-in-production.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/systems/ai-application-architecture.md`](../ai-engineering/systems/ai-application-architecture.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
-- [`ai-engineering/systems/ai-system-design-interview-questions.md`](../ai-engineering/systems/ai-system-design-interview-questions.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/agents/agent-fundamentals.md`](../ai-engineering/actions/when-the-model-decides.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/agents/orchestration-patterns.md`](../ai-engineering/actions/multi-stage-orchestration.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/agents/tool-design-and-function-calling.md`](../ai-engineering/actions/tool-calls-are-requests.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/context/context-engineering-principles.md`](../ai-engineering/context/context-budget-and-state-layers.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/evaluation/llm-evaluation-methods.md`](../ai-engineering/evaluation-and-release/holdout-acceptance-and-paired-statistics.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/fine-tuning/fine-tuning-strategies.md`](../ai-engineering/evaluation-and-release/fine-tuning-lora-sft-dpo.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/foundations/how-llms-work.md`](../ai-engineering/model/next-token-computation.md) — **unverified-claim-present: exact cl100k_base example not rerun**; full-text read recorded: true.
+- [`ai-engineering/foundations/model-selection-and-ecosystem.md`](../ai-engineering/evaluation-and-release/model-selection-and-unit-cost.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/prompting/advanced-prompting-techniques.md`](../ai-engineering/context/prompting-techniques-after-failure.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/prompting/prompt-engineering-fundamentals.md`](../ai-engineering/context/model-input-and-prompt-contract.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/rag/rag-architecture-and-implementation.md`](../ai-engineering/context/rag-indexing-and-retrieval.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/safety/ai-safety-in-production.md`](../ai-engineering/actions/prompt-injection-as-permission-confusion.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/systems/ai-application-architecture.md`](../ai-engineering/runs/run-identity-and-authoritative-state.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
+- [`ai-engineering/systems/ai-system-design-interview-questions.md`](../ai-engineering/design-cases/ai-system-design-cases.md) — **no-new-issue in targeted checks**; full-text read recorded: true.
 
 ### Current / Frontend (37 substantive notes)
 

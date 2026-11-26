@@ -6,10 +6,10 @@
 
 | 旧路径（HEAD） | 当前正文 |
 |---|---|
-| `AI_Engineering_Notes/5.1 Agent Fundamentals.md` | [`ai-engineering/agents/agent-fundamentals.md`](../ai-engineering/agents/agent-fundamentals.md) |
-| `AI_Engineering_Notes/5.2 Orchestration Patterns.md` | [`ai-engineering/agents/orchestration-patterns.md`](../ai-engineering/agents/orchestration-patterns.md) |
-| `AI_Engineering_Notes/5.3 Tool Design and Function Calling.md` | [`ai-engineering/agents/tool-design-and-function-calling.md`](../ai-engineering/agents/tool-design-and-function-calling.md) |
-| `AI_Engineering_Notes/3.1 Context Engineering Principles.md` | [`ai-engineering/context/context-engineering-principles.md`](../ai-engineering/context/context-engineering-principles.md) |
+| `AI_Engineering_Notes/5.1 Agent Fundamentals.md` | [`ai-engineering/agents/agent-fundamentals.md`](../ai-engineering/actions/when-the-model-decides.md) |
+| `AI_Engineering_Notes/5.2 Orchestration Patterns.md` | [`ai-engineering/agents/orchestration-patterns.md`](../ai-engineering/actions/multi-stage-orchestration.md) |
+| `AI_Engineering_Notes/5.3 Tool Design and Function Calling.md` | [`ai-engineering/agents/tool-design-and-function-calling.md`](../ai-engineering/actions/tool-calls-are-requests.md) |
+| `AI_Engineering_Notes/3.1 Context Engineering Principles.md` | [`ai-engineering/context/context-engineering-principles.md`](../ai-engineering/context/context-budget-and-state-layers.md) |
 
 四篇旧稿由 `git show HEAD:<旧路径>` 完整读取；重写前核对迁移后正文、`ai-engineering/index.md`、`maintenance/knowledge-inventory.tsv`、仓库 `AGENTS.md` 与 `maintenance/writing-guide.md`。内容重写按 MyNotes Maintainer skill 执行。
 

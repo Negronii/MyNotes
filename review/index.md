@@ -25,8 +25,8 @@
 
 开发者批准助手为构建 42 创建缺陷单。工单系统已经建单，执行程序却没来得及保存回执，聊天窗口随后也断了线。用户回来时，怎样在原来的卡片上看到结果？
 
-1. **先查外部动作。** 运行 `run-r42-7` 把这次创建记为「结果待确认」。新的执行程序按原操作键查询工单系统，找到 `ISSUE-842`，把工单号和最终答复一起保存。查证这一步只读，无须再次建单。[回执丢失后怎样对账](../ai-engineering/systems/ai-application-architecture.md#远端提交后丢失回执，谁能恢复结果？)
-2. **再恢复同一张卡。** 用户重连时，用原运行 ID [查询已保存的结果](../ai-engineering/systems/ai-application-architecture.md#客户端断线后怎样查询同一次运行？)，服务会检查用户现在是否仍有权查看。假设浏览器保留了第 10 条事件处理完后的界面，从第 11 条起补读，就能把 `ISSUE-842` 填回已有的「创建缺陷单」卡片，再用第 12、13 条补齐答复并显示完成。全新窗口则需要一份包含文本、卡片和匹配事件序号的快照，或从仍保留的历史起点重建。[聊天界面怎样应用重放事件](../frontend/browser-apis/streaming-ai-chat.md#怎样应用重放事件而不重复消息或工具卡？)
+1. **先查外部动作。** 运行 `run-r42-7` 把这次创建记为「结果待确认」。新的执行程序按原操作键查询工单系统，找到 `ISSUE-842`，把工单号和最终答复一起保存。查证这一步只读，无须再次建单。[回执丢失后怎样对账](../ai-engineering/runs/external-writes-and-reconciliation.md)
+2. **再恢复同一张卡。** 用户重连时，用原运行 ID [查询已保存的结果](../ai-engineering/runs/disconnect-cancel-and-user-input.md)，服务会检查用户现在是否仍有权查看。假设浏览器保留了第 10 条事件处理完后的界面，从第 11 条起补读，就能把 `ISSUE-842` 填回已有的「创建缺陷单」卡片，再用第 12、13 条补齐答复并显示完成。全新窗口则需要一份包含文本、卡片和匹配事件序号的快照，或从仍保留的历史起点重建。[聊天界面怎样应用重放事件](../frontend/browser-apis/streaming-ai-chat.md#怎样应用重放事件而不重复消息或工具卡？)
 
 遇到别的断线场景，先看自己要确认的结果由谁保存。
 
@@ -44,21 +44,21 @@
 2. **固定测试过的内容。** [用 Git 核对暂存的源码和测试](../engineering-foundations/version-control/git-essentials.md)，在发布案例中将这份快照记作 `c4f2a91`。[从该提交构建一次镜像](../engineering-foundations/infrastructure/docker-operations.md)，推送后在镜像仓库核对其内容摘要。后面每个环境都用这份摘要取镜像。
 3. **用同一镜像接流量。** 预发布用真实认证流程建立两个身份，重验上述响应，并跑通异步任务。进生产后，先让 A、B 经正常鉴权访问新版本，核对两份响应和两条请求追踪，确认命中的都是目标摘要，再开放小流量。若验证失败，维持隔离或转到已证安全且兼容的版本。[发布与回退](../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)
 
-怎样看出新版本在变慢？[生产事故演练](../engineering-foundations/reliability/observability-slos-and-incident-response.md)另给一个发布窗口，演示怎样单看新版本的请求，避免旧版本的大量成功请求掩盖退化。改动落在界面时，读[前端行为与构建产物的测试](../frontend/testing/frontend-testing.md)；改在提示词、模型或 Agent 时，读[独立任务评估](../ai-engineering/evaluation/llm-evaluation-methods.md)。若差距确实来自模型行为，再看[训练怎样更新权重](../ai-engineering/foundations/training-gradients-and-optimizers.md)和[什么时候值得微调](../ai-engineering/fine-tuning/fine-tuning-strategies.md)。
+怎样看出新版本在变慢？[生产事故演练](../engineering-foundations/reliability/observability-slos-and-incident-response.md)另给一个发布窗口，演示怎样单看新版本的请求，避免旧版本的大量成功请求掩盖退化。改动落在界面时，读[前端行为与构建产物的测试](../frontend/testing/frontend-testing.md)；改在提示词、模型或 Agent 时，读[独立任务评估](../ai-engineering/evaluation-and-release/holdout-acceptance-and-paired-statistics.md)。若差距确实来自模型行为，再看[训练怎样更新权重](../ai-engineering/evaluation-and-release/training-gradients-and-optimizers.md)和[什么时候值得微调](../ai-engineering/evaluation-and-release/fine-tuning-lora-sft-dpo.md)。
 
 ## AI 应用怎样凭证据回答？
 
 开发者问“构建 42 为什么失败”。沿着这个问题读两章，可以看清日志、接口契约和重试规则分别能回答什么。
 
-1. [日志里发生了什么？](../ai-engineering/systems/from-message-to-answer.md) 助手在获得授权后读取构建日志。空名称测试预期返回 HTTP 状态码 `400`，实际返回 `200`。这个差异解释了测试为什么失败。
-2. [测试的预期正确吗，这次应该自动重跑吗？](../ai-engineering/rag/rag-architecture-and-implementation.md) 带着同一条日志去查现行文档。本例的接口契约要求空名称返回 `400`，构建手册规定断言失败不能自动重跑。如果手册更新，要重新核对自动重跑的条件，原日志仍是这次测试结果的依据。
+1. [日志里发生了什么？](../ai-engineering/overview/how-an-ai-answer-is-produced.md) 助手在获得授权后读取构建日志。空名称测试预期返回 HTTP 状态码 `400`，实际返回 `200`。这个差异解释了测试为什么失败。
+2. [测试的预期正确吗，这次应该自动重跑吗？](../ai-engineering/context/rag-indexing-and-retrieval.md) 带着同一条日志去查现行文档。本例的接口契约要求空名称返回 `400`，构建手册规定断言失败不能自动重跑。如果手册更新，要重新核对自动重跑的条件，原日志仍是这次测试结果的依据。
 
 想深入其中一个环节时，可以沿下面的支线读。
 
-- 想知道模型怎样利用前文，先看[提示词怎样变成文本](../ai-engineering/foundations/how-llms-work.md)里的逐位置 KV，再看[Kimi KDA 怎样用一张固定矩阵读写历史](../ai-engineering/foundations/recurrent-attention-state.md)。两种状态的存储方式会影响[服务能同时承接多少请求](../ai-engineering/systems/llm-serving-and-kv-cache.md)。
-- 日志和文档都找到了，[应用怎样选择本次推理该看到的信息](../ai-engineering/context/context-engineering-principles.md)解释哪些内容进入模型、哪些留在应用记录里。
+- 想知道模型怎样利用前文，先看[提示词怎样变成文本](../ai-engineering/model/next-token-computation.md)里的逐位置 KV，再看[Kimi KDA 怎样用一张固定矩阵读写历史](../ai-engineering/model/kimi-delta-attention-state.md)。两种状态的存储方式会影响[服务能同时承接多少请求](../ai-engineering/model/kv-cache-and-serving-capacity.md)。
+- 日志和文档都找到了，[应用怎样选择本次推理该看到的信息](../ai-engineering/context/context-budget-and-state-layers.md)解释哪些内容进入模型、哪些留在应用记录里。
 - 再次遇到相关问题时，看[什么时候值得把历史加工成记忆](../ai-engineering/context/agent-memory-design-and-evaluation.md)：先与原文检索比较，再检查加工后的信息损失、使用成本和独立任务结果。
-- 一次工具调用不足以完成目标时，看[如何组织多阶段任务](../ai-engineering/agents/orchestration-patterns.md)和[如何验证并保留改进](../ai-engineering/agents/agent-improvement-and-version-acceptance.md)。
+- 一次工具调用不足以完成目标时，看[如何组织多阶段任务](../ai-engineering/actions/multi-stage-orchestration.md)和[如何验证并保留改进](../ai-engineering/evaluation-and-release/choosing-what-to-change.md)。
 
 ## 访问数据的成本从哪来？
 
@@ -77,9 +77,9 @@
 
 | 想查的机制 | 正文入口 |
 |---|---|
-| MCP、用户委托与本地工具执行 | [MCP 连接与鉴权](../ai-engineering/agents/mcp-tool-connections.md)、[OAuth 委托执行](../ai-engineering/agents/delegated-oauth-for-agent-tools.md)、[coding harness](../ai-engineering/agents/coding-agent-harness.md) |
-| LangGraph、重规划与记忆 | [运行恢复](../ai-engineering/systems/ai-application-architecture.md)、[编排与循环诊断](../ai-engineering/agents/orchestration-patterns.md)、[上下文与跨运行记忆](../ai-engineering/context/context-engineering-principles.md)、[记忆加工的净收益](../ai-engineering/context/agent-memory-design-and-evaluation.md) |
-| 模型配额、缓存与向量索引 | [有界模型调用](../ai-engineering/systems/bounded-model-api-calls.md)、[缓存命中与成本](../ai-engineering/systems/ai-latency-and-cost-optimization.md)、[HNSW](../ai-engineering/rag/hnsw-vector-index-search.md) |
+| MCP、用户委托与本地工具执行 | [MCP 连接与鉴权](../ai-engineering/actions/mcp-protocol.md)、[OAuth 委托执行](../ai-engineering/actions/authorization-gates-for-actions.md)、[coding harness](../ai-engineering/actions/coding-agent-harness.md) |
+| LangGraph、重规划与记忆 | [运行恢复](../ai-engineering/runs/run-identity-and-authoritative-state.md)、[编排与循环诊断](../ai-engineering/actions/multi-stage-orchestration.md)、[上下文与跨运行记忆](../ai-engineering/context/context-budget-and-state-layers.md)、[记忆加工的净收益](../ai-engineering/context/agent-memory-design-and-evaluation.md) |
+| 模型配额、缓存与向量索引 | [有界模型调用](../ai-engineering/runs/bounded-model-api-calls.md)、[缓存命中与成本](../ai-engineering/evaluation-and-release/model-selection-and-unit-cost.md)、[HNSW](../ai-engineering/context/hnsw-vector-index-search.md) |
 | debounce、throttle、Promise 与结构相等 | [闭包调度](../frontend/javascript/scope-and-closure.md#定时回调怎样用闭包保留调度状态)、[Promise 组合](../frontend/javascript/asynchronous-javascript.md)、[并发池](../frontend/javascript/bounded-async-concurrency.md)、[值与结构比较](../frontend/javascript/javascript-types.md) |
 | Context、编辑草稿与聊天状态 | [组件中的状态所有者](../frontend/frameworks/react-component-composition.md)、[表格与表单](../frontend/frameworks/management-table-and-form-workflows.md)、[流式聊天](../frontend/browser-apis/streaming-ai-chat.md) |
 | 条件写、回调与持久队列 | [HTTP 更新契约](../engineering-foundations/backend/http-api-contracts.md)、[Webhook](../engineering-foundations/reliability/webhook-delivery-and-verification.md)、[任务领取与确认](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)、[Kafka offset](../engineering-foundations/reliability/kafka-partitions-and-offsets.md) |

@@ -37,8 +37,8 @@
 
 一批 MTP 材料可以按所回答的问题分别进入已有章节：
 
-- DeepSeek-V3 报告 §2.2 的[训练机制](https://arxiv.org/html/2412.19437v2#S2.SS2)进入[语言模型训练章节的 MTP 小节](../../../../ai-engineering/foundations/how-llms-work.md#%E8%AE%AD%E7%BB%83%E6%97%B6%E5%A6%82%E4%BD%95%E9%A2%84%E6%B5%8B%E5%A4%9A%E4%B8%AA%E6%9C%AA%E6%9D%A5%E8%AF%8D%E5%85%83%EF%BC%9F)，回答模型怎样训练额外预测目标。
-- DeepSeek-V3 报告 §2.2 的 [MTP 推理说明](https://arxiv.org/html/2412.19437v2#S2.SS2)支持 MTP 模块可用于生成推理时的候选草稿；Leviathan 等人的[推测解码论文](https://proceedings.mlr.press/v202/leviathan23a.html)支持目标模型验收候选并校正到目标分布。两项材料都进入[服务章节的候选验证小节](../../../../ai-engineering/systems/llm-serving-and-kv-cache.md#%E6%8E%A8%E6%B5%8B%E8%A7%A3%E7%A0%81%E5%A6%82%E4%BD%95%E9%AA%8C%E8%AF%81%E5%80%99%E9%80%89%E5%B9%B6%E5%A4%84%E7%90%86%E4%B8%B4%E6%97%B6%E7%BC%93%E5%AD%98%EF%BC%9F)，报告说明候选从何而来，论文说明验收如何保持目标分布。
+- DeepSeek-V3 报告 §2.2 的[训练机制](https://arxiv.org/html/2412.19437v2#S2.SS2)进入[语言模型训练章节的 MTP 小节](../../../../ai-engineering/model/next-token-computation.md)，回答模型怎样训练额外预测目标。
+- DeepSeek-V3 报告 §2.2 的 [MTP 推理说明](https://arxiv.org/html/2412.19437v2#S2.SS2)支持 MTP 模块可用于生成推理时的候选草稿；Leviathan 等人的[推测解码论文](https://proceedings.mlr.press/v202/leviathan23a.html)支持目标模型验收候选并校正到目标分布。两项材料都进入[服务章节的候选验证小节](../../../../ai-engineering/model/kv-cache-and-serving-capacity.md)，报告说明候选从何而来，论文说明验收如何保持目标分布。
 - 关于当前推理引擎是否支持某个 MTP 模块，核对对应版本的官方文档与实现，并在服务章节标明适用的模型家族、版本和配置。该证据只说明已核实的兼容路径，不推出所有引擎都支持 MTP，也不单独支持性能建议。
 
 现有[AI 文献索引](../../../../review/ai-literature-index.md)为 DeepSeek-V3 报告和 Leviathan 论文分别保留了主题条目，前者关联训练章和服务章，后者关联服务章。同一来源可以支撑不同的问题，章节仍按读者要回答的问题划分。

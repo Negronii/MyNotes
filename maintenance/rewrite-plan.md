@@ -2,7 +2,7 @@
 
 ## 当前阶段：正文交付与原生阅读验收完成
 
-[写作规范](writing-guide.md)和[从一条消息到完整回答](../ai-engineering/systems/from-message-to-answer.md) → [模型如何生成文本](../ai-engineering/foundations/how-llms-work.md)样板经过独立冷读、算例核对及 Obsidian 渲染和链接验证，并由读者确认阅读体验。本轮按这套标准重写全仓知识正文，经过主代理通读、原提案者技术复核和空白上下文 Sol 冷读，按批提交到 `main`。
+[写作规范](writing-guide.md)和[从一条消息到完整回答](../ai-engineering/overview/how-an-ai-answer-is-produced.md) → [模型如何生成文本](../ai-engineering/model/next-token-computation.md)样板经过独立冷读、算例核对及 Obsidian 渲染和链接验证，并由读者确认阅读体验。本轮按这套标准重写全仓知识正文，经过主代理通读、原提案者技术复核和空白上下文 Sol 冷读，按批提交到 `main`。
 
 本轮重写面向全仓知识正文，包括归档中作者撰写的知识正文与课程讲解。先归纳已有知识和前置关系，再按完整机制、运行过程或工程决策编排主问题。优先完善读者的进入顺序；能够复用的深层机制再独立成章。逐批保留有价值的解释、独特例子、来源和阅读进度，并在验收后交付。原始附件、源码快照和提示词包保持原貌，不套用正文模板。
 
@@ -31,7 +31,7 @@
 | [DeepSeek-V4: Towards Highly Efficient Million-Token Context Intelligence](https://arxiv.org/abs/2606.19348) | 怎样减少长历史的存储与读取，同时保留局部细节和全局信息？ | 长上下文机制与服务：CSA/HCA、选择与压缩的损失、局部窗口、按层状态管理。按相关问题纳入 mHC、Muon、训练稳定性和 on-policy distillation；核对 1M 窗口与有效利用能力、单 token 成本与端到端时延的区别。 |
 | [DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning](https://arxiv.org/abs/2501.12948) | 谁判断答案对错，奖励怎样更新参数，为什么不等于验证了每个推理步骤？ | 后训练与评估：程序验证器、GRPO 组内相对优势和更新约束、R1-Zero 与完整 R1 的训练流程、SFT/RL/蒸馏分工。核对后续算法对零方差组、长度和截断偏差的处理，以及奖励作弊、独立验收与跨任务泛化边界。 |
 
-对应正文为[模型计算](../ai-engineering/foundations/how-llms-work.md)、[DeepSeek 长上下文 Attention](../ai-engineering/foundations/long-context-attention.md)、[推理服务与缓存](../ai-engineering/systems/llm-serving-and-kv-cache.md)、[奖励推理训练](../ai-engineering/fine-tuning/reward-based-reasoning-training.md)和[微调选择](../ai-engineering/fine-tuning/fine-tuning-strategies.md)。阅读过来源不等于读过整篇重写后的知识正文，不自动修改正文的阅读勾选。
+对应正文为[模型计算](../ai-engineering/model/next-token-computation.md)、[DeepSeek 长上下文 Attention](../ai-engineering/model/deepseek-compressed-attention.md)、[推理服务与缓存](../ai-engineering/model/kv-cache-and-serving-capacity.md)、[奖励推理训练](../ai-engineering/evaluation-and-release/reward-based-reasoning-training.md)和[微调选择](../ai-engineering/evaluation-and-release/fine-tuning-lora-sft-dpo.md)。阅读过来源不等于读过整篇重写后的知识正文，不自动修改正文的阅读勾选。
 
 ## 交付范围与合并去向
 

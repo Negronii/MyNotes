@@ -150,7 +150,7 @@ relay 重发时重用数据库中同一条持久 outbox 意图和稳定操作键
 
 发布新版本时，API、relay、worker 对 schema (数据库结构与消息字段) 的兼容期必须覆盖所有已经接受的任务；升级不能假定队列里只剩新版本消息。运行中应监控 API 受理时延、最老 pending outbox 与 queued job 年龄、broker 最老消息年龄和深度、活跃物理槽、成功完成分位数、重试/取消/容量失败、数据库连接池等待与 SQL 时长、对象存储用量。指标各自只覆盖一段路径；broker 没有积压，仍可能有旧 outbox 或数据库 queued 任务。容量估算与池上限见[如何估算并限制异步工作管线？](../reliability/api-capacity-and-backpressure.md)，各阶段的信号和响应见[怎样从报表服务信号定位发布后的故障？](../reliability/observability-slos-and-incident-response.md)。
 
-**继续阅读：** [数据库约束与索引](../databases/database-constraints-and-indexes.md) 解释幂等唯一键；[事务隔离与预写日志](../databases/database-transactions-isolation-and-recovery.md) 解释数据库内的提交边界；[数据访问与连接池](../backend/data-access-and-connection-pools.md) 解释每个请求和 attempt 的 ORM 连接生命周期；[HTTP 协议与 WebSocket](../networking/http-protocols-and-websockets.md) 解释状态查询的传输边界；[发布确认与消费者确认](../reliability/queue-delivery-and-acknowledgement.md) 解释所选 broker 的具体行为。更长的通用系统设计问答见[AI 系统设计案例](../../ai-engineering/systems/ai-system-design-interview-questions.md)。
+**继续阅读：** [数据库约束与索引](../databases/database-constraints-and-indexes.md) 解释幂等唯一键；[事务隔离与预写日志](../databases/database-transactions-isolation-and-recovery.md) 解释数据库内的提交边界；[数据访问与连接池](../backend/data-access-and-connection-pools.md) 解释每个请求和 attempt 的 ORM 连接生命周期；[HTTP 协议与 WebSocket](../networking/http-protocols-and-websockets.md) 解释状态查询的传输边界；[发布确认与消费者确认](../reliability/queue-delivery-and-acknowledgement.md) 解释所选 broker 的具体行为。更长的通用系统设计问答见[AI 系统设计案例](../../ai-engineering/design-cases/ai-system-design-cases.md)。
 
 > [!info]- 来源
 > - `202 Accepted`：请求已接受但处理未完成，协议不承诺操作最终会成功；[IETF RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html)，§15.3.3，核对于 2026-11-12。文中要求先持久提交再返回是本例服务比通用 HTTP 语义更强的应用合同。

@@ -2,7 +2,7 @@
 
 **案例背景。** 开发者在 AI 聊天界面里提出：“解释 build 42 的失败并准备缺陷单；提交前让我审核。”后端的运行服务完成鉴权后，为这次请求创建一个持久运行 `run-r42-7`。模型先调用只读工具 `read_build_log`，这次工具调用的标识是 `c1`；工具查到 `unit-tests` 中的测试 `reject_empty_name` 预期返回 HTTP `400`，实际返回 `200`，测试进程以退出码 `1` 结束。证据到达之前，界面只能显示“正在检查”，不能先把根因写成结论。随后运行生成解释和一份保存在服务端的缺陷单草稿，状态变为 `awaiting_approval`（等待审核）；审核人批准这份未改动的草稿后，同一运行才会调用创建工单的工具。文中的运行 ID、事件序号和工具调用 ID 都是教学用的合成值。
 
-[运行服务保存审批决定、工单号和最终答复](../../ai-engineering/systems/ai-application-architecture.md#客户端断线后怎样查询同一次运行？)。本章接过同一运行交付给浏览器的事件，看它们怎样更新助手气泡和工具卡。客户端根据事件还原出的界面状态叫作投影（projection）。沿着它可以解释断线后怎样接着显示、逐段到达的 Markdown 怎样安全呈现，以及用户点停止、继续或重试时应发出什么请求。如果想知道网络数据如何拼成一条完整的应用事件，可另读[流式报表的传输与续读](streaming-ux.md)。
+[运行服务保存审批决定、工单号和最终答复](../../ai-engineering/runs/disconnect-cancel-and-user-input.md)。本章接过同一运行交付给浏览器的事件，看它们怎样更新助手气泡和工具卡。客户端根据事件还原出的界面状态叫作投影（projection）。沿着它可以解释断线后怎样接着显示、逐段到达的 Markdown 怎样安全呈现，以及用户点停止、继续或重试时应发出什么请求。如果想知道网络数据如何拼成一条完整的应用事件，可另读[流式报表的传输与续读](streaming-ux.md)。
 
 下表是本例客户端依次收到的事件，后文各节都引用这些序号：
 
@@ -253,7 +253,7 @@ for (const chunk of chunks) {
 
 在 React 中，`dangerouslySetInnerHTML` 会把给定字符串直接交给 DOM 的 `innerHTML`。所以组件要先检查 `DOMPurify.isSupported`：为真时才调用 `safeMarkdown`，把结果交给这条受限的 HTML 路径；为假时用 `textContent` 或 React 的普通文本子节点显示原始 Markdown。不能先调用净化函数，再把不受支持环境原样返回的字符串当作安全 HTML。如果净化后的 HTML 还要交给语法高亮器、插件或其他会改写 DOM 的库，最终结果必须再按同一策略净化一次。分工上，Marked 只负责解析 Markdown，不做净化；DOMPurify 负责净化，并允许替换标签和属性的允许列表。本例的测试还覆盖了外链、普通站内路径、代码围栏，以及 Markdown 图片和原始 HTML 中的图片、图片按钮：这些元素都进不了文档，所以也不会发出远程图片请求。
 
-工具返回的内容同样不可信。`c1` 的只读摘要中，经过校验的 `step`、`failed_test`、`expected`、`actual`、`exit_status` 等字段都写成文本节点，例如 `summary.textContent = tool.summary`。卡片显示的状态来自运行事件，而不是工具返回正文里的 HTML 或 “success” 字样。渲染不执行模型工具请求；[应用如何校验并执行工具调用](../../ai-engineering/agents/tool-design-and-function-calling.md)是运行服务的责任。显示成功图标也不等同于服务端已确认操作。
+工具返回的内容同样不可信。`c1` 的只读摘要中，经过校验的 `step`、`failed_test`、`expected`、`actual`、`exit_status` 等字段都写成文本节点，例如 `summary.textContent = tool.summary`。卡片显示的状态来自运行事件，而不是工具返回正文里的 HTML 或 “success” 字样。渲染不执行模型工具请求；[应用如何校验并执行工具调用](../../ai-engineering/actions/tool-calls-are-requests.md)是运行服务的责任。显示成功图标也不等同于服务端已确认操作。
 
 ## 停止、继续和重试分别改变什么？
 
@@ -288,7 +288,7 @@ for (const chunk of chunks) {
 > [!info]- 来源
 > - [流式报表断线重连后，界面怎样保留正确状态？](streaming-ux.md) 说明投影快照与事件游标的一致性和断线恢复规则。本文沿用这些应用层约定，并使用独立的 AI 运行 ID 与事件游标。
 > - **MCP 请求 ID 与应用事件序号的区别：** [MCP 2026-07-28 规范](https://modelcontextprotocol.io/specification/2026-07-28) 的 Overview/Base Protocol 说明 MCP 使用 JSON-RPC 2.0；[JSON-RPC 2.0 Request Object 第 4 节](https://www.jsonrpc.org/specification#request_object) 说明请求 ID 与响应 ID 用于关联请求和响应。它们不定义本文应用层的 run 序号。
-> - 权威运行记录、审批与副作用状态，以及完整动作载荷摘要，见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](../../ai-engineering/systems/ai-application-architecture.md)。账本以 `payload_digest` 绑定目标与全部获批字段，原始请求摘要另记为 `request_digest`。客户端示例中的 `payloadHash` 指向同一动作版本，并沿用 `run-r42-7`、`c1/c2`、`run-r42-7:create-issue:v1` 与 `ISSUE-842`。
+> - 权威运行记录、审批与副作用状态，以及完整动作载荷摘要，见[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复](../../ai-engineering/runs/run-identity-and-authoritative-state.md)。账本以 `payload_digest` 绑定目标与全部获批字段，原始请求摘要另记为 `request_digest`。客户端示例中的 `payloadHash` 指向同一动作版本，并沿用 `run-r42-7`、`c1/c2`、`run-r42-7:create-issue:v1` 与 `ISSUE-842`。
 > - **Marked 解析结果未净化：** [Marked 18.2.0 npm README](https://www.npmjs.com/package/marked/v/18.2.0) 的 README “Warning” 与 Browser/Node 使用段；版本页显示本次核对时的发布版本。核对日 2026-11-12。
 > - **DOMPurify 的 sanitize、可配置标签/属性 allowlist 和旧浏览器不支持时不执行净化：** [DOMPurify 3.4.17 README](https://github.com/cure53/DOMPurify/blob/3.4.17/README.md) 的 Basic Usage、HTML-only profile、configuration 和 legacy browser sections；版本 [3.4.17 release](https://github.com/cure53/DOMPurify/releases/tag/3.4.17)，核对日 2026-11-12。
 > - **动态 HTML 呈现边界：** [React DOM 常见组件文档](https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html) 的 “Dangerously setting the inner HTML”；不可信数据直接进入 raw HTML sink 会带来 XSS 风险。核对日 2026-11-12。

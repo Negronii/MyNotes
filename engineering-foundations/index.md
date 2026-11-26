@@ -94,4 +94,4 @@
 
 ## 相关领域
 
-这些基础主题也支撑 [AI 应用架构](../ai-engineering/systems/ai-application-architecture.md) 和 [浏览器基础](../frontend/browser/browser-basics.md) 中的系统与客户端实践。
+这些基础主题也支撑 [AI 应用架构](../ai-engineering/runs/run-identity-and-authoritative-state.md) 和 [浏览器基础](../frontend/browser/browser-basics.md) 中的系统与客户端实践。

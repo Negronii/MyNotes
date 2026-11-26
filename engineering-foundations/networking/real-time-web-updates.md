@@ -480,7 +480,7 @@ WebSocket 在线上可将一条消息拆成多个帧，协议会按发送顺序�
 
 重新连上 SSE、重新发 Fetch，或重建 WebSocket，都只恢复传输。报表任务的权威状态仍由状态接口或持久化任务记录负责；若最终结果未知，客户端应重新查询报表/作业资源。只有状态本身满足重建条件时才丢弃中间通知；若每条变化都重要，要让服务端日志保留期覆盖断线窗口，并为每次订阅确定授权范围、游标格式、顺序、确认和过期后的重置流程。不要把客户端提供的游标当成授权信息。
 
-本例 SSE 的 `reset` 处理是“取新快照并从其游标继续”；有限 Fetch 则以 `result.complete` 加完整 EOF 确认单次搜索结束；WebSocket 遇到可恢复的普通关闭时，在持久游标仍可回放的前提下退避重连并重订阅，已知 `cursor.expired` 则停止重连、进入对账，不能用快照跳过缺口。若客户端需要接回已受理的异步任务而不是只更新页面状态，先查稳定状态资源，见[请求超时后如何确认结果并安全重试？](../reliability/api-reliability-and-async-delivery.md)；长期任务状态持久化也见[怎样设计一个可持久查询的账户报表？](../architecture/system-design-fundamentals.md)和[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复？](../../ai-engineering/systems/ai-application-architecture.md)。
+本例 SSE 的 `reset` 处理是“取新快照并从其游标继续”；有限 Fetch 则以 `result.complete` 加完整 EOF 确认单次搜索结束；WebSocket 遇到可恢复的普通关闭时，在持久游标仍可回放的前提下退避重连并重订阅，已知 `cursor.expired` 则停止重连、进入对账，不能用快照跳过缺口。若客户端需要接回已受理的异步任务而不是只更新页面状态，先查稳定状态资源，见[请求超时后如何确认结果并安全重试？](../reliability/api-reliability-and-async-delivery.md)；长期任务状态持久化也见[怎样设计一个可持久查询的账户报表？](../architecture/system-design-fundamentals.md)和[AI 运行怎样在断线或工作进程崩溃后恢复，并避免副作用重复？](../../ai-engineering/runs/run-identity-and-authoritative-state.md)。
 
 > [!info]- 来源
 > - SSE 字段语法、多行与空负载 `data`、单个前置 BOM、空行分发、EOF 丢弃、EventSource 认证选项、`Last-Event-ID`、`retry`、`204` 停止重连和非 `200` /错误媒体类型处理：[WHATWG HTML Living Standard, Server-sent events](https://html.spec.whatwg.org/multipage/server-sent-events.html)，§9.2，最后更新 2026-11-11，核对于 2026-11-12。
