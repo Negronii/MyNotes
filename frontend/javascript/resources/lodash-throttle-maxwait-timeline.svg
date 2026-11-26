@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="600" viewBox="0 0 760 600" role="img" aria-labelledby="title desc">
+  <title id="title">lodash 4.18.1：默认 _.throttle 与 maxWait 怎样决定执行时刻</title>
+  <desc id="desc">上半部分：同一条 0、40、110ms 输入交给默认 _.throttle(search, 100)。A 在 0ms 首沿执行；B 不被丢弃，在 100ms 尾沿执行；C 到达时已在新窗口，210ms 尾沿执行。下半部分：_.debounce(search, 300, trailing true, maxWait 1000)，每隔 120ms 输入一次。输入 9 次（最后一次 960ms）时，1000ms maxWait 到期执行 Ops 8 并清掉计时器，之后没有待执行输入，不再调用。输入 12 次（最后一次 1320ms）时，1000ms 执行 Ops 8，1620ms 尾沿执行 Ops 11。</desc>
+  <defs>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .h{font-size:18px;font-weight:700}
+      .ln{font-size:15px;font-weight:700}
+      .lc{font-family:Menlo,Consolas,monospace;font-size:13px;fill:#475569}
+      .b{font-size:14px;fill:#334155}
+      .s{font-size:13px;fill:#475569}
+      .t{font-size:13px;fill:#64748b}
+      .ok{font-size:13.5px;font-weight:700;fill:#15803d}
+      .no{font-size:13.5px;font-weight:700;fill:#b91c1c}
+      .timer{fill:#dbeafe;stroke:#1769aa;stroke-width:1.2}
+      .ghost{fill:none;stroke:#1769aa;stroke-width:1.2;stroke-dasharray:4 3}
+      .win{fill:#fef3c7;stroke:#d97706;stroke-width:1}
+      .guide{stroke:#94a3b8;stroke-width:1;stroke-dasharray:3 4}
+    </style>
+  </defs>
+  <rect width="760" height="600" rx="12" fill="#ffffff"/>
+  <text class="h" x="20" y="30" style="font-size:17px">① 默认 _.throttle(search, 100)：leading 与 trailing 都开（同一串输入）</text>
+  <rect x="12" y="42" width="736" height="76" rx="8" fill="#f8fafc"/>
+  <line class="guide" x1="40.0" y1="154" x2="40.0" y2="230"/>
+  <line class="guide" x1="148.8" y1="154" x2="148.8" y2="230"/>
+  <line class="guide" x1="312.0" y1="154" x2="312.0" y2="230"/>
+  <line class="guide" x1="339.2" y1="154" x2="339.2" y2="230"/>
+  <line class="guide" x1="611.2" y1="154" x2="611.2" y2="230"/>
+  <text class="ln" x="24" y="62">输入</text>
+  <path d="M40.0 72L48.0 86L32.0 86z" fill="#334155"/>
+  <text x="32.0" y="106"><tspan class="b">0ms</tspan><tspan class="lc" dx="6">"A"</tspan></text>
+  <path d="M148.8 72L156.8 86L140.8 86z" fill="#334155"/>
+  <text x="140.8" y="106"><tspan class="b">40ms</tspan><tspan class="lc" dx="6">"B"</tspan></text>
+  <path d="M339.2 72L347.2 86L331.2 86z" fill="#334155"/>
+  <text x="331.2" y="106"><tspan class="b">110ms</tspan><tspan class="lc" dx="6">"C"</tspan></text>
+  <text x="24" y="146"><tspan class="ln">_.throttle 执行</tspan><tspan class="s" dx="8">需 { trailing: false } 才只要首沿</tspan></text>
+  <rect class="win" x="40.0" y="198" width="270.0" height="12" rx="3"/>
+  <rect class="win" x="339.2" y="198" width="272.0" height="12" rx="3"/>
+  <circle cx="40.0" cy="184" r="8" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+  <text class="ok" x="30.0" y="168" text-anchor="start">A 首沿</text>
+  <circle cx="312.0" cy="184" r="8" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+  <text class="ok" x="312.0" y="168" text-anchor="middle">B 尾沿</text>
+  <circle cx="611.2" cy="184" r="8" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+  <text class="ok" x="611.2" y="168" text-anchor="middle">C 尾沿</text>
+  <line x1="40.0" y1="236" x2="720.0" y2="236" stroke="#334155" stroke-width="1.5"/>
+  <line x1="40.0" y1="232" x2="40.0" y2="240" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="40.0" y="256" text-anchor="middle">0</text>
+  <line x1="148.8" y1="232" x2="148.8" y2="240" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="148.8" y="256" text-anchor="middle">40</text>
+  <line x1="312.0" y1="232" x2="312.0" y2="240" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="311.0" y="256" text-anchor="end">100</text>
+  <line x1="339.2" y1="232" x2="339.2" y2="240" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="340.2" y="256" text-anchor="start">110</text>
+  <line x1="611.2" y1="232" x2="611.2" y2="240" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="611.2" y="256" text-anchor="middle">210</text>
+  <line x1="720.0" y1="232" x2="720.0" y2="240" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="720.0" y="256" text-anchor="middle">250</text>
+  <text class="t" x="734.0" y="256">ms</text>
+  <text class="h" x="20" y="296" style="font-size:16px">② _.debounce(search, 300, { trailing: true, maxWait: 1000 })，每隔 120ms 输入一次</text>
+  <rect x="12" y="308" width="736" height="94" rx="8" fill="#f8fafc"/>
+  <rect x="12" y="412" width="736" height="94" rx="8" fill="#f8fafc"/>
+  <line x1="440.0" y1="308" x2="440.0" y2="526" stroke="#d97706" stroke-width="1.8" stroke-dasharray="6 4"/>
+  <text x="24" y="328"><tspan class="ln">共 9 次</tspan><tspan class="s" dx="8">最后一次 960ms</tspan></text>
+  <line x1="40.0" y1="362" x2="40.0" y2="378" stroke="#334155" stroke-width="2"/>
+  <line x1="88.0" y1="362" x2="88.0" y2="378" stroke="#334155" stroke-width="2"/>
+  <line x1="136.0" y1="362" x2="136.0" y2="378" stroke="#334155" stroke-width="2"/>
+  <line x1="184.0" y1="362" x2="184.0" y2="378" stroke="#334155" stroke-width="2"/>
+  <line x1="232.0" y1="362" x2="232.0" y2="378" stroke="#334155" stroke-width="2"/>
+  <line x1="280.0" y1="362" x2="280.0" y2="378" stroke="#334155" stroke-width="2"/>
+  <line x1="328.0" y1="362" x2="328.0" y2="378" stroke="#334155" stroke-width="2"/>
+  <line x1="376.0" y1="362" x2="376.0" y2="378" stroke="#334155" stroke-width="2"/>
+  <line x1="424.0" y1="362" x2="424.0" y2="378" stroke="#334155" stroke-width="2"/>
+  <rect class="timer" x="424.0" y="363" width="16.0" height="14" rx="3"/>
+  <rect class="ghost" x="440.0" y="363" width="104.0" height="14" rx="3"/>
+  <text class="t" x="40.0" y="394" text-anchor="middle">Ops 0</text>
+  <text class="t" x="424.0" y="394" text-anchor="end">Ops 8</text>
+  <circle cx="440.0" cy="346" r="8" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+  <text class="ok" x="426.0" y="351" text-anchor="end">执行 Ops 8</text>
+  <text class="s" x="558.0" y="342">执行时清掉计时器，</text>
+  <text class="s" x="558.0" y="360">1260ms 不再检查，不再调用</text>
+  <text x="24" y="432"><tspan class="ln">共 12 次</tspan><tspan class="s" dx="8">最后一次 1320ms</tspan></text>
+  <line x1="40.0" y1="466" x2="40.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <line x1="88.0" y1="466" x2="88.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <line x1="136.0" y1="466" x2="136.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <line x1="184.0" y1="466" x2="184.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <line x1="232.0" y1="466" x2="232.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <line x1="280.0" y1="466" x2="280.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <line x1="328.0" y1="466" x2="328.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <line x1="376.0" y1="466" x2="376.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <line x1="424.0" y1="466" x2="424.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <line x1="472.0" y1="466" x2="472.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <line x1="520.0" y1="466" x2="520.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <line x1="568.0" y1="466" x2="568.0" y2="482" stroke="#334155" stroke-width="2"/>
+  <rect class="timer" x="568.0" y="467" width="120.0" height="14" rx="3"/>
+  <text class="t" x="40.0" y="498" text-anchor="middle">Ops 0</text>
+  <text class="t" x="424.0" y="498" text-anchor="end">Ops 8</text>
+  <circle cx="440.0" cy="450" r="8" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+  <text class="ok" x="426.0" y="455" text-anchor="end">执行 Ops 8</text>
+  <text class="t" x="568.0" y="498" text-anchor="middle">Ops 11</text>
+  <circle cx="688.0" cy="450" r="8" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+  <text class="ok" x="674.0" y="455" text-anchor="end">1620ms 尾沿执行 Ops 11</text>
+  <line x1="40.0" y1="526" x2="720.0" y2="526" stroke="#334155" stroke-width="1.5"/>
+  <line x1="40.0" y1="522" x2="40.0" y2="530" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="40.0" y="546" text-anchor="middle">0</text>
+  <line x1="240.0" y1="522" x2="240.0" y2="530" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="240.0" y="546" text-anchor="middle">500</text>
+  <line x1="440.0" y1="522" x2="440.0" y2="530" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="440.0" y="546" text-anchor="middle">1000</text>
+  <line x1="640.0" y1="522" x2="640.0" y2="530" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="640.0" y="546" text-anchor="middle">1500</text>
+  <line x1="720.0" y1="522" x2="720.0" y2="530" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="720.0" y="546" text-anchor="middle">1700</text>
+  <text class="t" x="736.0" y="546">ms</text>
+  <text class="s" x="440.0" y="564" text-anchor="middle" style="fill:#b45309;font-weight:700">1000ms：maxWait 到期</text>
+  <text class="s" x="20" y="588">蓝条是最后一次输入后的 300ms 静默等待（虚线段：被 maxWait 截断、不再等待）；尾沿只执行仍待执行的输入。</text>
+</svg>

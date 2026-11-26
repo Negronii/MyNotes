@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="330" viewBox="0 0 760 330" role="img" aria-labelledby="title desc">
+  <title id="title">fetch 之后两边各有独有提交</title>
+  <desc id="desc">共同祖先之后分成两支：origin/main 上多了同事的 perf(reports): defer report body，在三点比较 HEAD...origin/main 的 --left-right 输出里标为 &gt;；本地分支 fix/report-account-scope 上是修复提交 6ab06f8，标为 &lt;。两边都改了 src/reports.py 的同一行。</desc>
+  <style>
+    text { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #172033; }
+    .body { font-size: 17px; }
+    .cmd { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 15px; }
+    .id { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 16px; font-weight: 700; }
+    .edge { stroke: #475569; stroke-width: 3; fill: none; }
+    .base { fill: #e2e8f0; stroke: #475569; stroke-width: 2.5; }
+    .up { fill: #dbeafe; stroke: #2563eb; stroke-width: 2.5; }
+    .loc { fill: #dcfce7; stroke: #15803d; stroke-width: 2.5; }
+    .tag { fill: #fff7ed; stroke: #c2410c; stroke-width: 1.5; }
+    .tagt { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 15px; fill: #9a3412; }
+    .mark { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 22px; font-weight: 700; fill: #b45309; }
+  </style>
+  <rect width="760" height="330" fill="#fff"/>
+
+  <path d="M96 160 C 170 160, 190 82, 264 82" class="edge"/>
+  <path d="M96 160 C 170 160, 190 228, 264 228" class="edge"/>
+  <circle cx="80" cy="160" r="16" class="base"/>
+  <text x="80" y="202" text-anchor="middle" class="body">共同祖先</text>
+
+  <text x="232" y="89" text-anchor="middle" class="mark">&gt;</text>
+  <circle cx="280" cy="82" r="16" class="up"/>
+  <text x="310" y="88" class="cmd">perf(reports): defer report body</text>
+  <rect x="306" y="34" width="118" height="26" rx="6" class="tag"/>
+  <text x="365" y="52" text-anchor="middle" class="tagt">origin/main</text>
+  <path d="M306 47 H280 V66" fill="none" stroke="#c2410c" stroke-width="2"/>
+
+  <text x="232" y="235" text-anchor="middle" class="mark">&lt;</text>
+  <circle cx="280" cy="228" r="16" class="loc"/>
+  <text x="310" y="224" class="id">6ab06f8</text>
+  <text x="310" y="246" class="cmd">fix(reports): scope report reads by account</text>
+  <rect x="306" y="260" width="320" height="26" rx="6" class="tag"/>
+  <text x="466" y="278" text-anchor="middle" class="tagt">fix/report-account-scope ← HEAD</text>
+  <path d="M306 273 H280 V244" fill="none" stroke="#c2410c" stroke-width="2"/>
+
+  <text x="20" y="318" class="body"><tspan class="cmd">--left-right HEAD...origin/main</tspan>：&lt; 只能从 HEAD 到达，&gt; 只能从 origin/main 到达</text>
+</svg>

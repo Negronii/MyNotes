@@ -53,18 +53,48 @@
 
 设 attempt 1 读完订单后发现 `O-73` 里有两件商品，客户只说“坏了的那件”。助手需要问清是哪一件，才能确定退款金额。它可以先发出一个异步问题，继续做不依赖答案的只读检查（例如读取退货政策），做完之后再挂起等待。挂起沿用 `awaiting_approval` 的模式：等待期间运行不占执行 lease，只能由针对这条待答记录的事务唤醒。
 
-1. **发出问题。** attempt 1 在一笔条件事务里保存待答记录（下表第一行），运行仍是 `running`。
-2. **挂起。** 不依赖答案的步骤做完后，attempt 1 在一笔条件事务里核验 `running`、当前代次和有效 lease，并确认待答记录仍是待答，然后保存检查点、把运行改为 `awaiting_input`、结束自己的 lease。若答复或超时已经先提交，就不挂起，直接按已保存的结果继续。
-3. **唤醒。** 答复或超时事务提交时，若运行处在 `awaiting_input`，同一事务把它改回 `queued` 并写 outbox 唤醒，下一 attempt 领取后从检查点继续；若运行仍是 `running`，事务只更新待答记录，由当前 attempt 在下一笔条件事务里读到它。
+下图按时间顺序画出提问、挂起和唤醒，以及答复或超时抢在挂起之前提交时的分支：
+
+```mermaid
+%%{init: {"sequence": {"actorMargin": 30, "width": 100, "noteMargin": 6}}}%%
+sequenceDiagram
+    participant W as attempt 1
+    participant R as 运行记录
+    participant Q as 待答记录
+    participant C as 答复处理器
+    participant T as 超时 worker
+    W->>Q: 发出问题：保存待答记录<br/>tool_call_id、<br/>deadline_at、等待版本
+    Note over R: 仍为 running
+    W->>W: 继续不依赖<br/>答案的只读检查<br/>（如读退货政策）
+    alt 答复或超时<br/>抢在挂起之前提交
+        C->>Q: 答复事务写 answered<br/>（或超时事务<br/>写 no_answer）
+        Note over R: 运行仍为 running<br/>只改待答记录<br/>不唤醒
+        W->>Q: 挂起事务读到<br/>待答记录已有结果
+        Note over W: 不挂起<br/>按已保存的结果继续
+    else 待答记录仍是待答
+        W->>R: 挂起事务：<br/>核验 running、<br/>当前代次、有效 lease；<br/>保存检查点，<br/>改为 awaiting_input，<br/>结束 lease
+        Note over R,T: 答复与超时竞争同一条待答记录，只有一笔条件事务能提交（见下一小节）
+        alt 受理时刻<br/>received_at ≤ deadline_at
+            C->>Q: 答复事务：保存答复，<br/>写 answered
+            C->>R: 同一事务：<br/>awaiting_input → queued，<br/>写续跑 outbox
+        else 当前时刻已过 deadline_at<br/>且没有及时答复
+            T->>Q: 超时事务：<br/>写 no_answer
+            T->>R: 同一事务：<br/>awaiting_input → queued，<br/>写续跑 outbox
+        end
+        Note over R: 下一 attempt 领取<br/>从检查点继续
+    end
+    C->>Q: 截止后才受理的答复
+    Note over Q: 不回填已关闭的等待点<br/>不唤醒：记作迟到事件<br/>或新的用户输入
+```
 
 扫描器不处理 `awaiting_input`，因为它本来就没有 lease；到期由按 `deadline_at` 调度的超时 worker 推进。待答记录保存这些内容：
 
-| 状态或事件 | 应用持久化的内容 | 运行怎样处理 |
+| 状态或事件 | 应用持久化的内容 | 运行怎样继续 |
 |---|---|---|
-| 发出问题 | `runId`、这次提问的 `tool_call_id`、发送时间、绝对截止时刻 `deadline_at`、待答状态、等待版本 | 仍为 `running`，只继续不依赖答案的步骤，做完后转入 `awaiting_input`；提问不等于批准 |
-| 截止前收到答复 | 原 `runId`、匹配的 `tool_call_id`、答复内容、受理时刻 `received_at`、去重标记 | 作为同一运行的新观察；运行回到 `queued`，下一 attempt 用它拟方案 |
-| 到期仍无答复 | 原 `runId`、`tool_call_id`、截止时刻、终态 `no_answer` | 运行同样回到 `queued`，由下一 attempt 走预先定义的安全分支：结束，或继续不依赖答案的步骤；沉默不是同意 |
-| 截止后才收到答复 | 原 `tool_call_id`、受理时刻、已过期状态 | 不回填已关闭的等待点，也不唤醒运行；记作迟到事件，或转成一条新的用户输入 |
+| 发出问题 | `runId`、这次提问的 `tool_call_id`、发送时间、绝对截止时刻 `deadline_at`、待答状态、等待版本 | 仍为 `running`，挂起前只做不依赖答案的步骤；提问不等于批准 |
+| 截止前收到答复 | 原 `runId`、匹配的 `tool_call_id`、答复内容、受理时刻 `received_at`、去重标记 | 下一 attempt 把答复当作同一运行的新观察，用它拟方案 |
+| 到期仍无答复 | 原 `runId`、`tool_call_id`、截止时刻、终态 `no_answer` | 下一 attempt 走预先定义的安全分支：结束，或继续不依赖答案的步骤；沉默不是同意 |
+| 截止后才收到答复 | 原 `tool_call_id`、受理时刻、已过期状态 | 不唤醒运行；记作迟到事件，或转成一条新的用户输入 |
 
 待答记录有自己的状态：待答、`answered`（及时答复）、`no_answer`（到期无答复）。它们与运行记录的 `status` 分开保存：运行的 `awaiting_input` 只说明运行在等某条待答记录，待答记录的状态说明那个问题本身有没有答复。
 
@@ -72,8 +102,7 @@
 
 时间由应用裁定。客户说的“今晚 8 点前回复”要先解析成带时区的绝对时刻并持久化。答复处理器和超时 worker 竞争同一条待答记录，两者都先取得运行记录和这条待答记录的更新权（按同一顺序加锁），再读取同一个时钟，本例用数据库的实际时间；为什么必须在取锁之后读、为什么不能用各进程的本地时间，与 lease 判断同理，见[怎样保证一个任务同一时刻只由一个 worker 推进？](../../engineering-foundations/services/job-claims-leases-and-fencing.md#租约要用数据库的时钟判断)。
 
-- 答复事务用读到的时刻作为 `received_at`，核对原 `runId`、`tool_call_id`、等待版本、待答状态以及 `received_at ≤ deadline_at`，然后在一笔事务里保存答复和 `answered` 状态；运行若处在 `awaiting_input`，同时改回 `queued` 并写续跑 outbox。
-- 超时事务核对同一等待版本与状态、没有已保存的及时答复、当前时刻晚于 `deadline_at`，然后写入 `no_answer`；运行若处在 `awaiting_input`，同样改回 `queued` 并写续跑 outbox。
+两笔事务都核对原 `runId`、`tool_call_id`、等待版本和待答状态。答复事务把读到的时刻记作 `received_at`，要求 `received_at ≤ deadline_at`，保存答复和 `answered`；超时事务要求当前时刻晚于 `deadline_at` 且没有已保存的及时答复，写入 `no_answer`。运行是否在同一事务里改回 `queued` 并写续跑 outbox，取决于它是否已经挂起在 `awaiting_input`，见上图。
 
 同一条记录上的两笔条件事务只有一笔能提交。本例以应用受理时间为准：即使网络包先到，截止后才被受理的答复仍算迟到。答复以事务提交为“已受理”的边界；失败就按同一个答复事件标识重试，已提交的重复答复返回原结果。恢复后的 worker 按运行、调用和等待版本核验重复的唤醒。
 

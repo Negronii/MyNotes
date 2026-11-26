@@ -91,16 +91,42 @@ trace.join(" → ");
 // "summary v10 → summary v11 → once v11 → summary v12 → recovery v12 → recovery v11 → legacy v10"
 ~~~
 
-> [!example] 每层快照怎样变化、怎样返回
->
-> | 当前分发 | 本层开始时的快照 | 本层发生的事 |
-> | --- | --- | --- |
-> | `v10` | `[summary, once, legacy]` | `summary v10` 从 Set 删掉 `legacy`、加入 `recovery`，然后进入 `v11`。`v10` 的快照不变。 |
-> | `v11` | `[summary, once, recovery]` | `summary v11` 之后轮到 `once`：包装器先设 `fired = true` 并注销自己，再调用用户回调，进入 `v12`。 |
-> | `v12` | `[summary, recovery]` | Set 里已没有 `once`。依次记录 `summary v12`、`recovery v12`，返回 `v11`。 |
-> | 回到 `v11`、`v10` | 各层继续原快照 | `v11` 接着记录 `recovery v11`。回到 `v10`，旧快照还会碰到 `once` 包装器，`fired` 让它直接返回；旧快照里的 `legacy` 仍记录 `legacy v10`。 |
->
-> 按嵌套深度缩进的日志：
+下图把这次运行按时间展开：左列是总线此刻保存的 Set，右边三列是三层 `emit`，每层开始时复制的快照写在该层顶部，激活条的嵌套就是调用栈深度。
+
+~~~mermaid
+sequenceDiagram
+  participant Set as 总线 Set
+  participant E10 as emit v10
+  participant E11 as emit v11
+  participant E12 as emit v12
+  Note over Set: {summary, once, legacy}
+  activate E10
+  Note over E10: 快照 [summary, once, legacy]
+  Note over E10: 记录 summary v10
+  E10->>Set: summary：off(legacy)，on(recovery)
+  Note over Set: {summary, once, recovery}
+  E10->>E11: summary 同步调用 emit v11
+  activate E11
+  Note over E11: 快照 [summary, once, recovery]
+  Note over E11: 记录 summary v11
+  E11->>Set: once 包装器：fired = true，off(包装器)
+  Note over Set: {summary, recovery}
+  Note over E11: 记录 once v11（用户回调）
+  E11->>E12: 用户回调同步调用 emit v12
+  activate E12
+  Note over E12: 快照 [summary, recovery]
+  Note over E12: 记录 summary v12、recovery v12
+  E12-->>E11: v12 分发结束，返回
+  deactivate E12
+  Note over E11: 记录 recovery v11
+  E11-->>E10: v11 分发结束，返回
+  deactivate E11
+  Note over E10: once 包装器：fired 已为 true，直接返回
+  Note over E10: 记录 legacy v10（仍在 v10 的快照里）
+  deactivate E10
+~~~
+
+> [!example] 按嵌套深度缩进的日志
 >
 > ```text
 > summary v10
@@ -112,7 +138,7 @@ trace.join(" → ");
 > legacy v10
 > ```
 
-注意 `legacy` 在 `v10` 里就被删了，却仍记录了 `legacy v10`：删除发生时它已在 `v10` 的快照里。`recovery` 在 `v10` 中途才加入，所以不在 `v10` 里出现，却出现在之后的每一层。
+`legacy` 在 `v10` 中途就被删了，却仍记录了 `legacy v10`，因为删除时它已在 `v10` 的快照里；`recovery` 在 `v10` 中途才加入，只出现在之后建立的快照里。
 
 `once` 靠两道保护才真正只运行一次，各管一处：
 

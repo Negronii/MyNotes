@@ -1,44 +1,46 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="564" viewBox="0 0 720 564">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="540" viewBox="0 0 720 540">
 <defs>
-  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#7187a8"/></marker>
+  <marker id="arrow" viewBox="0 0 10 10" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#7187a8"/></marker>
   <style>
     text { font-family: "Noto Sans CJK SC", "Noto Sans", sans-serif; fill: #24344d; }
     .head { font-size: 16px; font-weight: 700; }
     .label { font-size: 14px; }
-    .small { font-size: 12px; fill: #526681; }
+    .small { font-size: 13px; fill: #526681; }
+    .state { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 13px; fill: #526681; text-anchor: end; }
     .mono { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 15px; }
     .panel { fill: #fff; stroke: #d5dfeb; stroke-width: 2; }
     .node { fill: #edf4fb; stroke: #91a8c4; stroke-width: 1.5; }
-    .line { stroke: #7187a8; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
-    .plain { stroke: #7187a8; stroke-width: 2; fill: none; }
+    .line { stroke: #7187a8; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
   </style>
 </defs>
-<rect width="720" height="564" fill="#fbfcfe"/>
-<g transform="translate(0,-66)">
-<rect class="panel" x="24" y="82" width="672" height="120" rx="12"/>
-<text class="head" x="42" y="108">1. enqueue(e07)</text>
-<text class="small" x="42" y="132">空队列先让 head 指向新节点，tail 随后也指向它。</text>
-<text class="label" x="62" y="172">head</text><path class="line" d="M104 167 L202 167"/>
-<rect class="node" x="207" y="143" width="170" height="46" rx="8"/><text class="mono" x="220" y="172">e07 | next=null</text>
-<text class="label" x="405" y="148">tail</text><path class="line" d="M470 167 L384 167"/>
-<rect class="panel" x="24" y="216" width="672" height="134" rx="12"/>
-<text class="head" x="42" y="242">2. enqueue(e03)</text>
-<text class="small" x="42" y="266">旧 tail 的 next 接上新节点，再把 tail 移到 e03。</text>
-<text class="label" x="42" y="311">head</text><path class="line" d="M84 306 L117 306"/>
-<rect class="node" x="122" y="282" width="150" height="46" rx="8"/><text class="mono" x="139" y="311">e07</text>
-<path class="line" d="M272 305 L310 305"/><text class="small" x="278" y="289">next</text>
-<rect class="node" x="315" y="282" width="170" height="46" rx="8"/><text class="mono" x="332" y="311">e03 | next=null</text>
-<text class="label" x="535" y="286">tail</text><path class="line" d="M600 306 L493 306"/>
-<rect class="panel" x="24" y="364" width="672" height="116" rx="12"/>
-<text class="head" x="42" y="390">3. dequeue() returns e07</text>
-<text class="small" x="42" y="414">head 跳到 e07.next；队列仍非空，所以 tail 保持在 e03。</text>
-<text class="label" x="42" y="456">head</text><path class="line" d="M84 451 L270 451"/>
-<rect class="node" x="275" y="427" width="170" height="46" rx="8"/><text class="mono" x="292" y="456">e03 | next=null</text>
-<text class="label" x="520" y="432">tail</text><path class="line" d="M610 451 L453 451"/>
-<rect class="panel" x="24" y="494" width="672" height="116" rx="12"/>
-<text class="head" x="42" y="520">4. dequeue() returns e03</text>
-<text class="small" x="42" y="544">head 变成 null；这是最后一项，必须同步把 tail 清成 null。</text>
-<text class="label" x="42" y="579">head = null</text><text class="label" x="220" y="579">tail = null</text>
-<text class="small" x="414" y="579">length = 0，因此 isEmpty 为真</text>
-</g>
+<rect width="720" height="540" fill="#fbfcfe"/>
+
+<rect class="panel" x="24" y="16" width="672" height="118" rx="12"/>
+<text class="head" x="42" y="42">1. enqueue(e07)</text><text class="state" x="678" y="42">length = 1</text>
+<text class="small" x="42" y="66">空队列先让 head 指向新节点，tail 随后也指向它。</text>
+<text class="label" x="42" y="107">head</text><path class="line" d="M86 102 L130 102"/>
+<rect class="node" x="132" y="79" width="170" height="46" rx="8"/><text class="mono" x="146" y="108">e07 | next=null</text>
+<path class="line" d="M370 102 L304 102"/><text class="label" x="378" y="107">tail</text>
+
+<rect class="panel" x="24" y="146" width="672" height="118" rx="12"/>
+<text class="head" x="42" y="172">2. enqueue(e03)</text><text class="state" x="678" y="172">length = 2</text>
+<text class="small" x="42" y="196">旧 tail 的 next 接上新节点，再把 tail 移到 e03。</text>
+<text class="label" x="42" y="237">head</text><path class="line" d="M86 232 L130 232"/>
+<rect class="node" x="132" y="209" width="130" height="46" rx="8"/><text class="mono" x="146" y="238">e07</text>
+<path class="line" d="M262 232 L320 232"/><text class="small" x="276" y="223">next</text>
+<rect class="node" x="322" y="209" width="170" height="46" rx="8"/><text class="mono" x="336" y="238">e03 | next=null</text>
+<path class="line" d="M560 232 L494 232"/><text class="label" x="568" y="237">tail</text>
+
+<rect class="panel" x="24" y="276" width="672" height="118" rx="12"/>
+<text class="head" x="42" y="302">3. dequeue() returns e07</text><text class="state" x="678" y="302">length = 1</text>
+<text class="small" x="42" y="326">head 跳到 e07.next；队列仍非空，所以 tail 保持在 e03。</text>
+<text class="label" x="42" y="367">head</text><path class="line" d="M86 362 L130 362"/>
+<rect class="node" x="132" y="339" width="170" height="46" rx="8"/><text class="mono" x="146" y="368">e03 | next=null</text>
+<path class="line" d="M370 362 L304 362"/><text class="label" x="378" y="367">tail</text>
+
+<rect class="panel" x="24" y="406" width="672" height="118" rx="12"/>
+<text class="head" x="42" y="432">4. dequeue() returns e03</text><text class="state" x="678" y="432">length = 0</text>
+<text class="small" x="42" y="456">head 变成 null；这是最后一项，必须同步把 tail 清成 null。</text>
+<text class="mono" x="42" y="497">head = null</text><text class="mono" x="200" y="497">tail = null</text>
+<text class="small" x="360" y="496">空状态：isEmpty 为真</text>
 </svg>

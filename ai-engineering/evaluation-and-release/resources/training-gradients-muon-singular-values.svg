@@ -30,7 +30,7 @@
 <line x1="72" y1="337" x2="670" y2="337" stroke="#233553" stroke-width="2" stroke-linecap="round"/>
 <line x1="72" y1="34" x2="72" y2="337" stroke="#233553" stroke-width="2" stroke-linecap="round"/>
 <line x1="72" y1="94.6" x2="670" y2="94.6" stroke="#A88BD1" stroke-width="2" stroke-linecap="round" stroke-dasharray="8 6"/>
-<text x="42" y="29" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#63748F" >σ</text>
+<text x="72" y="22" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#63748F" >σ</text>
 <text x="370" y="378" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#63748F" >Newton–Schulz 步</text>
 <path d="M 72.0 96.1 L 131.8 166.0 L 191.6 68.4 L 251.4 163.9 L 311.2 62.1 L 371.0 154.5 L 430.8 67.7 L 490.6 163.2 L 550.4 62.1 L 610.2 90.2 L 670.0 94.6" fill="none" stroke="#79A7D5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 <circle cx="72.0" cy="96.08258271511482" r="3.5" fill="#79A7D5" stroke="#FFFFFF" stroke-width="1"/>
@@ -56,8 +56,8 @@
 <circle cx="550.4000000000001" cy="71.71956472571293" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
 <circle cx="610.2" cy="92.75762680690633" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
 <circle cx="670.0" cy="94.59262394226596" r="3.5" fill="#E2AD68" stroke="#FFFFFF" stroke-width="1"/>
-<text x="82" y="57.082582715114825" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#79A7D5"><tspan>σ</tspan><tspan baseline-shift="sub" font-size="14.4px">1</tspan><tspan>,0: 0.993884</tspan></text>
-<text x="82" y="334.2313980794572" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#E2AD68"><tspan>σ</tspan><tspan baseline-shift="sub" font-size="14.4px">2</tspan><tspan>,0: 0.110432</tspan></text>
+<text x="82" y="57.082582715114825" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#79A7D5"><tspan>σ</tspan><tspan baseline-shift="sub" font-size="14.4px">1</tspan><tspan> 初值 0.993884</tspan></text>
+<text x="86" y="328" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#E2AD68"><tspan>σ</tspan><tspan baseline-shift="sub" font-size="14.4px">2</tspan><tspan> 初值 0.110432</tspan></text>
 <line x1="180" y1="407" x2="214" y2="407" stroke="#79A7D5" stroke-width="4" stroke-linecap="round"/>
 <text x="222" y="414" text-anchor="start" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="400" fill="#233553"><tspan>较大奇异值 σ</tspan><tspan baseline-shift="sub" font-size="16.0px">1</tspan></text>
 <line x1="420" y1="407" x2="454" y2="407" stroke="#E2AD68" stroke-width="4" stroke-linecap="round"/>

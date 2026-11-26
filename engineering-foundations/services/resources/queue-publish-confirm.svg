@@ -80,8 +80,8 @@
   <text x="182" y="1069" text-anchor="middle" class="sub">未知后重发可能产生重复消息</text>
 
   <rect x="365" y="970" width="305" height="128" class="node ok" />
-  <text x="517" y="1007" text-anchor="middle" class="main">只标记对应 intent</text>
-  <text x="517" y="1039" text-anchor="middle" class="sub">为 published</text>
+  <text x="517" y="1007" text-anchor="middle" class="main">本次 intent 标为 published</text>
+  <text x="517" y="1039" text-anchor="middle" class="sub">只改这一条意图</text>
   <text x="517" y="1069" text-anchor="middle" class="sub">不代表 worker 已处理</text>
 
   <rect x="40" y="1120" width="620" height="48" fill="#F7F8FA" stroke="#AAB6C4" stroke-width="1.5" rx="10" />

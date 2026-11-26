@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1170" viewBox="0 0 900 1170" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1125" viewBox="0 0 900 1125" role="img" aria-labelledby="title desc">
 <title id="title">拒绝服务防护的流量观察点与控制边界</title>
 <desc id="desc">请求依次经过 ISP 接入、边缘代理、API 和数据库队列。每层只处理已到达该层的流量，并根据该层信号执行控制。</desc>
 <defs>
@@ -28,7 +28,7 @@
 <text x="100" y="680" text-anchor="start" font-family="Arial, Noto Sans CJK SC, sans-serif" font-size="27px" font-weight="700" fill="#24415f"><tspan x="100" dy="0">3 · API 与报表业务</tspan></text>
 <rect x="100" y="700" width="315" height="105" rx="12" fill="#f5f8fb" stroke="#aebbc7" stroke-width="2"/>
 <rect x="445" y="700" width="355" height="105" rx="12" fill="#edf7f1" stroke="#2f6b53" stroke-width="2"/>
-<text x="257" y="726" text-anchor="middle" font-family="Arial, Noto Sans CJK SC, sans-serif" font-size="21px" font-weight="600" fill="#263746"><tspan x="257" dy="0">观察信号</tspan><tspan x="257" dy="28">主体、租户、路由</tspan><tspan x="257" dy="28">估算成本、延迟</tspan></text>
+<text x="257" y="726" text-anchor="middle" font-family="Arial, Noto Sans CJK SC, sans-serif" font-size="21px" font-weight="600" fill="#263746"><tspan x="257" dy="0">观察信号</tspan><tspan x="257" dy="28">主体、账户、路由</tspan><tspan x="257" dy="28">估算成本、延迟</tspan></text>
 <text x="622" y="726" text-anchor="middle" font-family="Arial, Noto Sans CJK SC, sans-serif" font-size="21px" font-weight="600" fill="#24415f"><tspan x="622" dy="0">可执行控制</tspan><tspan x="622" dy="28">先授权，再限工作</tspan><tspan x="622" dy="28">速率/并发/有界队列</tspan></text>
 <line x1="450" y1="832" x2="450" y2="897" stroke="#2b668f" stroke-width="3" marker-end="url(#arrow)"/>
 <text x="510" y="872" text-anchor="start" font-family="Arial, Noto Sans CJK SC, sans-serif" font-size="19px" font-weight="500" fill="#526276"><tspan x="510" dy="0">进入依赖的工作</tspan></text>

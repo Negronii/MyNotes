@@ -53,7 +53,7 @@ build 73 的误诊已经[从线上定位到解释层](production-traces-and-metr
 flowchart TD
     Signal[核对线上失败<br/>确认可见证据与版本] --> Scope[固定任务契约、改动对象与预算]
     Scope --> Propose[产生候选<br/>记录版本与搜索依据]
-    Propose --> Screen{低成本契约筛查通过？}
+    Propose --> Screen{{"低成本契约筛查通过？"}}
     Screen -->|否| Drop[记录失败理由<br/>淘汰该候选]
     Drop -->|预算内继续| Propose
     Drop -->|预算耗尽或全局停止| Keep[保留 A，不放量]
@@ -62,7 +62,7 @@ flowchart TD
     Develop -->|预算耗尽或全局停止| Keep
     Develop -->|冻结候选、协议与门槛| Holdout[A/B 在同一批独立新题上<br/>按冻结协议运行]
     Holdout --> Review[独立人工核验标签<br/>复核关键输出]
-    Review --> Gate{预设门槛全部达标？}
+    Review --> Gate{{"预设门槛全部达标？"}}
     Gate -->|是| Retain[接受候选，小流量发布<br/>登记 A 为回滚目标]
     Gate -->|否| Reject[保留 A<br/>已用验收题转入开发集]
     Reject -->|预算内继续且未触发全局停止| Propose

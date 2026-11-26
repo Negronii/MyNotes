@@ -51,7 +51,7 @@
   <text class="head" x="44" y="893">等待回调推进到终态</text>
   <text class="body" x="44" y="933">回调打印 wake up after 10ms，再调用 this.next() 执行 eat bread。</text>
   <text class="body" x="44" y="969">bread 闭包再次调用 next()；它看到空队列，于是返回。</text>
-  <rect class="output" x="40" y="989" width="620" height="68" rx="8"/>
-  <text class="body" x="60" y="1020">输出：eat fruit → wake up after 10ms → eat bread</text>
-  <text class="note muted" x="60" y="1047">终态：tasks[] 为空；没有下一项，也没有新的启动回调。</text>
+  <rect class="output" x="40" y="985" width="620" height="80" rx="8"/>
+  <text class="body" x="60" y="1018">输出：eat fruit → wake up after 10ms → eat bread</text>
+  <text class="note muted" x="60" y="1050">终态：tasks[] 为空；没有下一项，也没有新的启动回调。</text>
 </svg>

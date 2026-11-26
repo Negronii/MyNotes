@@ -98,24 +98,49 @@ outbox 只保证本地意图不丢。它不替远端系统去重：如果 worker
 
 ## job 状态机与 outbox 各有自己的生命周期
 
-job 有五个持久状态；`cancel_requested` 是一个独立的标志，不是状态：
+job 有五个持久状态。下图回答“谁在什么条件下把 job 从一个状态推到另一个状态，同一事务里还改了什么”；三个终态（`succeeded`、`failed`、`cancelled`）一旦提交，不再回到 `queued` 或 `running`。
 
-| 状态 | 含义与下一步 |
+~~~mermaid
+stateDiagram-v2
+    [*] --> queued : API 受理事务提交<br/>占等待槽，插入 pending 意图
+    queued --> running : worker 条件领取<br/>attempt + 1，写租约，归还等待槽
+    running --> queued : worker 重试或恢复器重排<br/>预留等待槽，新 available_at，新 outbox 意图
+    queued --> cancelled : API 取消<br/>归还等待槽（只还一次）
+    running --> cancelled : 已有 cancel_requested<br/>由当前 attempt 或恢复器提交
+    running --> failed : 不可重试错误、attempt 用尽或重排无槽<br/>authorization_revoked / attempts_exhausted / capacity_exhausted
+    running --> succeeded : 当前 attempt 条件提交<br/>结果引用 + report.ready 意图同事务
+    note right of running
+        cancel_requested 是 running 上的标志，不是状态
+    end note
+~~~
+
+每条边都是一次条件写入：条件里带着写入者看到的状态，离开 `running` 的边还带 attempt，后到者更新零行。领取的条件与栅栏见[下一章](job-claims-leases-and-fencing.md)，重排、取消与恢复器的判断顺序见[收尾一章](job-retries-cancellation-and-cleanup.md)。各状态在行上留下的事实：
+
+| 状态 | 持久字段与对外表现 |
 | --- | --- |
-| `queued` | 已受理、尚未被领取的一轮排队；持有一个等待槽；`available_at` 到了才能领取。消息此刻可能还在 outbox 里，也可能已进入 broker |
-| `running` | 某个 worker 已通过条件更新领取；等待槽已归还；当前 attempt (执行尝试) 编号和 lease (租约) 到期时间已写入 |
-| `succeeded` | 当前 attempt 的私有结果对象引用与成功状态一起提交；同一事务写了 `report.ready` outbox |
-| `failed` | 不可重试的错误、attempt 用尽，或重排时拿不到等待槽；用有限的错误码表达，如 `authorization_revoked`、`attempts_exhausted`、`capacity_exhausted` |
-| `cancelled` | 取消赢得状态竞争后的终态；不暴露结果对象 |
+| `queued` | 持有一个等待槽；`available_at` 到了才能领取。唤醒消息此刻可能还在 outbox 里，也可能已进入 broker |
+| `running` | 等待槽已归还；当前 attempt (执行尝试) 编号和 lease (租约) 到期时间已写入 |
+| `succeeded` | 当前 attempt 的私有结果对象引用 |
+| `failed` | 有限错误码，如 `authorization_revoked`、`attempts_exhausted`、`capacity_exhausted` |
+| `cancelled` | 不暴露结果对象 |
 
-几条不变的规则：
+另外几条不变的规则：
 
-- 终态（后三个）一旦提交，不再回到 `queued` 或 `running`。
 - 每个 job 最多 3 次 attempt，包含首次领取，即最多两次重试。这个上限在受理时写进 job 行（`max_attempts = 3`），之后改部署配置不能悄悄改变已有 job 的上限。
 - job 行至少保存：job ID、账户与原请求主体、`report_id`、规范化参数、请求指纹与幂等键、创建时间、`max_attempts`、当前 attempt、租约到期时间、`available_at`、是否持有等待槽、`cancel_requested`、终态与成功时间、结果到期时间、私有结果引用、有限错误码。
 - 所有时间判断用数据库时钟。首次受理时 `available_at` 取数据库当前时间；延迟重试时保存退避到期的时刻。relay 和 worker 用同一个时间基准，不各自看本地时钟。
 
-outbox 意图有自己的状态 `pending → published`，不能拿它代替 job 状态。每一轮排队（首次受理、每次重排）都插入一条**新的**意图，各有唯一的 `intent_id`。relay 回写时以 `intent_id` 为条件：
+outbox 意图有自己的生命周期，不能拿它代替 job 状态。每一轮排队（首次受理、每次重排）都插入一条**新的**意图，各有唯一的 `intent_id`：
+
+~~~mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> pending : 首次受理或每次重排<br/>插入新的 intent_id
+    pending --> published : relay 核实发布结果后<br/>以 intent_id 和 pending 为条件回写
+    published --> [*] : 过了审计与排障保留期<br/>按策略删除
+~~~
+
+relay 的回写语句：
 
 ~~~sql
 UPDATE report_outbox
@@ -125,7 +150,7 @@ WHERE intent_id = :intent_id AND state = 'pending';
 
 这样，上一轮意图迟到的发布回执只会改它自己那一行，不会把新一轮的意图误标为已发布。这种“按身份条件回写”是栅栏原理的一个实例，原理本身在[怎样保证一个任务同一时刻只由一个 worker 推进](job-claims-leases-and-fencing.md)讲。
 
-清理也按各自的生命周期：已发布的意图在满足审计与排障保留期后按策略删除；未发布的意图必须保留，不能和结果对象用同一个删除条件。
+清理也按各自的生命周期：未发布的意图必须保留，不能和结果对象用同一个删除条件。
 
 ## 状态、取消、结果与保留期怎样约定？
 

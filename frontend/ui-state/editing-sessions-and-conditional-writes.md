@@ -118,12 +118,40 @@ URL 不编码选择，所以 Back/Forward 恢复的是地址和查询键，不�
 
 ## 一次只能有一个尝试所有者
 
-“继续”要校验第 1 步，“保存”要校验整份草稿，两者都会为同一收件人行发票据。如果允许它们并行，同一行会同时有两张票据，保存也可能抢在步骤校验之前推进。所以会话里有一个闩锁（下文代码中的 `formAttemptGate`），任一时刻只有一个尝试所有者：
+“继续”要校验第 1 步，“保存”要校验整份草稿，两者都会为同一收件人行发票据。如果允许它们并行，同一行会同时有两张票据，保存也可能抢在步骤校验之前推进。所以会话里有一个闩锁（下文代码中的 `formAttemptGate`），任一时刻只有一个尝试所有者。下图是一个会话里所有者从取得到释放的全部路径，save 的两个阶段在下一节展开：
 
-- 点“继续”时，**同步**取得 `kind="step"`；点“保存”时，同步取得 `kind="save"`。已有所有者时，后来者立即得到 busy，不运行校验也不发请求。同步取得是为了在 React 重渲染之前挡住双击。
+~~~mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
+flowchart TD
+    E["editing<br/>无所有者，两步都可编辑"]
+    subgraph HELD["持有尝试所有者：后来的“继续”或“保存”立即 busy"]
+        direction TB
+        STEP["step 校验<br/>kind=step，只校验第 1 步"]
+        VAL["save · validating<br/>kind=save，只读冻结的快照"]
+        SAVE["save · saving<br/>同一快照、基线和 ETag 发 PATCH"]
+    end
+    BACK["释放所有者<br/>回到 editing"]
+    OK["成功回执<br/>释放所有者，先核对详情缓存"]
+    C412["冲突<br/>释放所有者，重读当前表示、三方比较"]
+    UNK["结果不明<br/>释放所有者，写入结果未确认"]
+
+    E -->|"点“继续”<br/>同步取得 step"| STEP
+    E -->|"点“保存”<br/>同步取得 save"| VAL
+    VAL -->|"全部 valid<br/>所有者与会话仍匹配"| SAVE
+    STEP -->|"valid：进入第 2 步<br/>invalid / unavailable：<br/>留在第 1 步"| BACK
+    VAL -->|"取消本次保存<br/>invalid：跳到出错步骤<br/>unavailable：<br/>不发 PATCH"| BACK
+    SAVE -->|"422<br/>字段错误放回控件"| BACK
+    SAVE -->|200| OK
+    SAVE -->|412| C412
+    SAVE -->|"网络中断<br/>5xx<br/>正文无法验证"| UNK
+~~~
+
+闩锁还要守住四条规则；关闭抽屉的收尾不在图中，见其后一段：
+
+- 所有者在点击处理器里**同步**取得，后来者立即得到 busy，不运行校验也不发请求。同步取得是为了在 React 重渲染之前挡住双击。
 - 持有期间，界面禁用两步内的输入、继续/返回、保存、校验重试、切换记录和关闭；同时，这些入口的事件处理器自己也要检查闩锁，不能只依赖按钮的 `disabled`。
 - 所有者一直持有到结果已提交到界面状态（步骤已推进或错误已显示）才释放。`await` 之后再次核对所有者、会话和快照，只有仍归属的结果能推进步骤或显示错误。
-- 步骤校验出错时留在第 1 步，把错误关联到字段并聚焦第一个错误控件（错误提示的写法见[可访问的表单](../html-css/accessible-forms-and-submission.md)）。
+- 步骤校验出错时，把错误关联到字段并聚焦第一个错误控件（错误提示的写法见[可访问的表单](../html-css/accessible-forms-and-submission.md)）。
 
 关闭抽屉不一定经过关闭按钮：浏览器历史变化、切换账户、父组件卸载都可能直接拆掉它。关闭处理器因此必须按所有者类型收尾：取消 step 尝试，或在 save 仍处于 validating 时取消它并作废它的票据；然后作废打开意图和当前 `sessionId`。处于 saving 时不能释放写入所有者去启动别的尝试，只能断开旧会话的界面归属，这不是回滚。
 
@@ -131,8 +159,8 @@ URL 不编码选择，所以 Back/Forward 恢复的是地址和查询键，不�
 
 保存分两个阶段，共用同一个所有者：
 
-1. **validating。** 取得 save 所有者后，立即冻结一份不可变快照：`sessionId`、`submitId`、`accountId`、`reportId`、基线、ETag、`organizationId` 和草稿。此时还没有 mutation，TanStack 的 `isPending` 仍为 false，由表单自己的 validating 状态负责显示和锁定。异步校验只读这份快照，不再读可编辑的表单。用户可以点“取消本次保存”：它同步清除所有者、作废票据、恢复编辑，之后返回的校验只能是 stale，不会触发 PATCH；它不承诺取消网络请求。
-2. **saving。** 全部校验通过后，再核对一次所有者、`sessionId`、`submitId`。仍属于当前会话，才从**同一份快照、同一份基线**生成补丁，以同一个 ETag 发 PATCH。之后 mutation 的 pending 状态驱动“正在保存…”。invalid 时跳到第一个错误所在的步骤；unavailable 时不发 PATCH，保留输入并提示重试。
+1. **validating。** 取得 save 所有者后，立即冻结一份不可变快照：`sessionId`、`submitId`、`accountId`、`reportId`、基线、ETag、`organizationId` 和草稿。此时还没有 mutation，TanStack 的 `isPending` 仍为 false，由表单自己的 validating 状态负责显示和锁定。异步校验只读这份快照，不再读可编辑的表单；校验 unavailable 时不发 PATCH，保留输入并提示重试。用户可以点“取消本次保存”：它同步清除所有者、作废票据、恢复编辑，之后返回的校验只能是 stale，不会触发 PATCH；它不承诺取消网络请求。
+2. **saving。** 全部校验通过后，再核对一次所有者、`sessionId`、`submitId`。仍属于当前会话，才从**同一份快照、同一份基线**生成补丁，以同一个 ETag 发 PATCH。之后 mutation 的 pending 状态驱动“正在保存…”。
 
 ### 补丁只写改过的字段
 
@@ -191,19 +219,36 @@ ETag 是不透明的标签，只比较相等，不按字符串推断新旧；图
 
 ## 412：三份值比较后由用户确认
 
-这是与上一节并列的另一条分支。编辑器读的是 v7，用户新增收件人 A、把备注改成 “Send after review”。与此同时，另一位管理员先把 title 改成 “Monthly summary — May”、note 改成 “Reviewed”，服务器版本变成 v8。我们的 PATCH 带 `If-Match: "report-42-v7"`，收到 412，服务器没有应用这次补丁。
+这是与上一节并列的另一条分支。编辑器读的是 v7，收件人只有 R（reader@example.test）；用户新增收件人 A（analyst@example.test）、把备注改成 “Send after review”。与此同时，另一位管理员先把 title 改成 “Monthly summary — May”、note 改成 “Reviewed”，服务器版本变成 v8。我们的 PATCH 带 `If-Match: "report-42-v7"`，收到 412，服务器没有应用这次补丁。从 412 到下一次成功写入的往返如下：
 
-客户端等 mutation 结算后，取消并等待同一详情键的旧 GET，再以 `cache: "no-cache"` 发新 GET，读到 v8 的表示和 ETag。它不把缓存里的 v7、也不把更早开始的读取当成冲突基线。下表用 R 表示 reader@example.test，A 表示 analyst@example.test：
+~~~mermaid
+%%{init: {"sequence": {"mirrorActors": false}}}%%
+sequenceDiagram
+    participant E as 我的编辑器
+    participant S as 服务器
+    participant O as 另一位管理员
+    E->>S: GET 报表 42
+    S-->>E: 基线 v7，ETag "report-42-v7"
+    O->>S: 改 title 与 note
+    Note over S: 当前版本 v8
+    E->>S: PATCH，If-Match "report-42-v7"<br/>（新增收件人 A、改 note）
+    S-->>E: 412，补丁未应用
+    Note over E: 等 mutation 结算，取消同键旧 GET
+    E->>S: GET，cache: "no-cache"
+    S-->>E: v8 表示，ETag "report-42-v8"
+    Note over E: 三方比较，用户逐组确认，以 v8 为新基线
+    E->>S: PATCH，If-Match "report-42-v8"<br/>（只有 recipients）
+    S-->>E: 200，ETag "report-42-v9"
+    Note over E: 按成功回执的三种情况核对缓存
+~~~
 
-| 字段 | v7 基线 / 本地草稿 / v8 当前值 | 用户确认 |
-|---|---|---|
-| title | Monthly summary / 未改 / Monthly summary — May | 采用服务端标题 |
-| delivery 组 | email + [R] / email + [R, A] / email + [R] | 保留 email 模式和本地新增的 A；该组重新校验收件人 |
-| note | Draft / Send after review / Reviewed | 用户选择服务端的 Reviewed |
+先等旧 GET 结束再发要求重新验证的新 GET，是为了让冲突基线只能是这次读到的 v8，不能是缓存里的 v7，也不能是更早开始的读取。读到 v8 后，编辑器按字段并排三份值，让用户逐组确认：
+
+![按字段比较 v7 基线、本地草稿与 v8 当前值，用户确认后以 v8 为新基线，新补丁只含收件人数组](resources/conflict-three-way-rebase.svg)
 
 `delivery.channel` 和 `recipients` 是联动字段组，不能无条件逐字段拼接。若 v8 已改成 download 并移除了 recipients，而本地新增了 A，逐字段套用会把地址隐藏或丢掉。这时把整个 delivery 组标为冲突，同时展示服务端的下载模式和本地的邮件草稿，让用户明确选择：保留 download 并丢弃收件人，或切回 email 并保留收件人。确认后按最终模式重新跑同步和异步校验，再生成条件补丁。
 
-按上表的选择，以 v8 为新基线构造新草稿：title 和 note 用服务端值，delivery 保留 email 与 [R, A]。与 v8 比较后，唯一的差异是收件人数组，所以补丁里没有 title 和 note：
+图中的选择让新草稿与 v8 只差收件人数组，所以新补丁里没有 title 和 note：
 
 ~~~http
 PATCH /api/accounts/acct-a/reports/42 HTTP/1.1
@@ -213,7 +258,7 @@ If-Match: "report-42-v8"
 {"delivery":{"recipients":["reader@example.test","analyst@example.test"]}}
 ~~~
 
-若 v8 期间没有再变化，服务器返回 v9：
+v8 期间没有再变化时，服务器返回 v9：
 
 ~~~http
 HTTP/1.1 200 OK

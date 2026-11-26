@@ -32,18 +32,41 @@ account_ownership(account_id, owner_shard, epoch, candidate_id, state)
 - **目录 CAS**：compare-and-swap (比较并交换)。只有目录当前值仍等于预期旧值（如 `B/7`）时才写入新值，否则失败；并发的几次切换因此只有一个成功。
 - **`decision_id`**：CAS 成功时一并写入目录的决策标识，例如 `K8`。目标分片只有拿到与之匹配的决策才能开门。
 
-本地状态只有三种：`open` 接受业务写，`closed` 是已准备、未开放的候选，`frozen` 是这一代的终态。允许的转换只有下表四种：
+本地状态只有三种：`open` 接受业务写，`closed` 是已准备、未开放的候选，`frozen` 是这一代的终态。下图回答一行所有权记录能怎样变化；图中没有的转换都不允许，例如 `frozen` 回到 `open`，或 `open` 退回 `closed`。
 
-| 转换 | 必须满足的条件 |
-| --- | --- |
-| 首次初始化 → `open` | 该账户在此分片从未有过所有权行，且权威目录已唯一指定初始 owner。后续迁移不能伪装成首次初始化 |
-| 较低代次 `frozen`（或此分片尚无该账户的行）→ 更高代次 `closed`（prepare） | 新代次高于已持久记录的下限；此分片第一次建行时，须由当前权威代次授权；完全相同的 prepare 重试只能读回仍为 `closed` 的同一候选 |
-| `closed` → `open`（开门） | 目录 CAS 已成功并持久记录了确切的 `decision_id`；命令必须同时匹配账户、owner、epoch、`candidate_id` 和该决策。只看到 owner/epoch 相同不构成授权 |
-| `closed` 或 `open` → `frozen` | 同一行上的条件更新；原为 `open` 时，要等已持锁的业务事务结束才完成 |
+```mermaid
+stateDiagram-v2
+    direction TB
+    state "进入本代之前" as Before {
+        state "此分片无该账户的行" as None
+        state "较低代次 frozen" as LowFrozen
+    }
+    state "closed：已准备的候选<br/>(owner, epoch, candidate_id)" as Closed
+    state "open：接受业务写" as Open
+    state "frozen：本代终态" as Frozen
 
-三条不变量让旧代次永远无法复活：
+    None --> Open: 首次初始化<br/>权威目录唯一指定初始 owner
+    None --> Closed: prepare<br/>由当前权威代次授权
+    LowFrozen --> Closed: prepare<br/>新 epoch 高于持久下限
+    Closed --> Closed: 相同 prepare 重试<br/>读回同一候选
+    Closed --> Open: 开门<br/>匹配目录 CAS 写入的 decision_id
+    Closed --> Frozen: 同行条件更新<br/>（如已确认 CAS 落败）
+    Open --> Frozen: 同行条件更新<br/>等持锁业务事务结束
+    note right of Frozen
+        不再回到 closed 或 open；
+        下一次 prepare 写入更高 epoch，
+        这一行就成为上方的“较低代次 frozen”
+    end note
+```
 
-- **同代 `frozen` 是终态**，不能改回 `closed` 或 `open`。
+图上的边还有几条容易漏掉的条件：
+
+- 首次初始化只适用于此分片从未有过该账户的行；后续迁移不能伪装成首次初始化。
+- 开门命令必须同时匹配账户、owner、epoch、`candidate_id` 和目录里的 `decision_id`。只看到 owner/epoch 相同不构成授权。
+- 冻结与业务写作用在同一行上，所以原为 `open` 时，冻结要等已持锁的业务事务结束才完成（见下一节）。
+
+除了“同代 `frozen` 不回退”，还有两条不变量让旧代次无法复活：
+
 - **行不可删，epoch 不复用。** 曾经建过的行（或等价的代次下限）要保留；任何可能被提升为写主的副本都必须带着它，或在提升后、对外开放前重新从权威端核对。
 - **未发布的 `closed` 候选不能被新 prepare 随意覆盖。** 先从权威目录确认它已在 CAS 竞争中不可逆地落败，再把该行冻结，才能准备更高代次。目录离开任何已发布的 owner/epoch 之前，该 owner 必须已在本地冻结且冻结已持久。
 
@@ -90,7 +113,7 @@ consistent snapshot (一致快照) S 包含源端截至 S 的一致数据；从�
 追平的日志位置里可能夹着别的账户的事件，但这次只应用 `acct-17` 的数据。这要求应用的事务以账户为边界：若一笔源事务原子地改了多个账户，协议把它拆开应用后，那笔事务的原子性就丢了，需要重新设计事务边界或改用能保留原子性的协调方案。
 
 > [!info] 实例：PostgreSQL 18 的逻辑解码（核对于 2026-11-13）
-> logical decoding (逻辑解码) 的复制槽可以导出一个与变更流衔接的一致快照；日志位置用 LSN (log sequence number，日志序列号) 表示，是 WAL 中的位置。槽会保留后续所需的 WAL，但崩溃重启后可能重发变更，消费者要自己去重。UPDATE 与 DELETE 能否带出旧行的列，取决于表的 replica identity (复制标识) 设置。这些只是快照与日志衔接的一种实现；账户目录、租户过滤和代次栅栏不是 PostgreSQL 自带的迁移功能。
+> logical decoding (逻辑解码) 的复制槽可以导出一个与变更流衔接的一致快照；日志位置用 LSN (log sequence number，日志序列号) 表示，是 WAL 中的位置。槽会保留后续所需的 WAL，但崩溃重启后可能重发变更，消费者要自己去重。UPDATE 与 DELETE 能否带出旧行的列，取决于表的 replica identity (复制标识) 设置。这些只是快照与日志衔接的一种实现；账户目录、账户过滤和代次栅栏不是 PostgreSQL 自带的迁移功能。
 
 ## 冻结源端：同一行上的兼容锁与冲突锁
 

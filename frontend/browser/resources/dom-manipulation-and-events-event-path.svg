@@ -28,7 +28,7 @@
 
   <rect x="45" y="398" width="610" height="132" rx="14" fill="#fff5e8" stroke="#eed2a8" stroke-width="2"/>
   <text x="350" y="425" text-anchor="middle" font-family="system-ui, sans-serif" font-size="19" font-weight="600" fill="#263955">冒泡阶段 · #sort-controls 委托监听器</text>
-  <text x="350" y="450" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#465a78">currentTarget = controls · event.target = span</text>
+  <text x="350" y="450" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#465a78">currentTarget = #sort-controls · target 仍为 span</text>
   <text x="350" y="475" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#465a78">event.target.closest("button[data-sort]") → button</text>
   <text x="350" y="500" text-anchor="middle" font-family="system-ui, sans-serif" font-size="16" fill="#465a78">button.dataset.sort → “oldest”</text>
 

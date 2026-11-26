@@ -7,12 +7,12 @@
 <text class="small" x="350.0" y="54.44">图 2a/2b 终态：MCP 响应或 host 失败</text>
 </g>
 <g id="CORRELATE" data-old-node="CORRELATE"><rect class="box" x="20" y="135" width="310" height="80" fill="#eef5ff" stroke="#c7daf5"/>
-<text class="small" x="175.0" y="170.44">响应 id 与原请求匹配</text>
-<text class="small" x="175.0" y="190.44">按 response id 找回 c1</text>
+<text class="small" x="175.0" y="170.44">响应带匹配的 id（本例 17）</text>
+<text class="small" x="175.0" y="190.44">按 id 找回原请求，再找回 c1</text>
 </g>
 <g id="ERROR" data-old-node="ERROR"><rect class="box" x="370" y="135" width="310" height="80" fill="#eef5ff" stroke="#c7daf5"/>
-<text class="small" x="525.0" y="170.44">host 终态失败</text>
-<text class="small" x="525.0" y="190.44">关联当前待完成的 c1</text>
+<text class="small" x="525.0" y="170.44">响应无 id、id 不匹配或 host 失败</text>
+<text class="small" x="525.0" y="190.44">按本条请求上下文关联待完成的 c1</text>
 </g>
 <g id="RESULT" data-old-node="RESULT"><rect class="box" x="105" y="275" width="490" height="72" fill="#edf7f3" stroke="#b9d9cc"/>
 <text class="small" x="350.0" y="316.44">构造匹配 c1 的工具结果或失败条目</text>
@@ -20,10 +20,8 @@
 <g id="NEXT" data-old-node="NEXT"><rect class="box" x="105" y="385" width="490" height="72" fill="#edf7f3" stroke="#b9d9cc"/>
 <text class="small" x="350.0" y="426.44">下一次模型输入包含 tool_result(call_id=c1, …)</text>
 </g>
-<path id="edge-in-response-left" class="flow" d="M250 78V105H315V135"/>
-<text class="edge-label" x="160" y="111">有匹配 id 的响应</text>
-<path id="edge-in-response-right" class="flow" d="M450 78V105H385V135"/>
-<text class="edge-label" x="560" y="111">host 终态失败</text>
+<path id="edge-in-response-left" class="flow" d="M350 78V105H175V135"/>
+<path id="edge-in-response-right" class="flow" d="M350 105H525V135"/>
 <path id="edge-response-result" class="flow" d="M175 215V245H350V275"/>
 <path id="edge-failure-result" class="flow" d="M525 215V245H350V275"/>
 <path id="edge-result-next" class="flow" d="M350 347V385"/>

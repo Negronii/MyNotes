@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="1234" viewBox="0 0 1040 1234" role="img" aria-labelledby="title desc">
+  <title id="title">一次报表读取从页面 fetch() 到 API 的去程</title>
+  <desc id="desc">请求依次经过 Service Worker、浏览器 HTTP 缓存、连接池和 DNS 四层快路径，各层独立判断；Service Worker 合成或缓存可复用时直接交回页面，有可用连接时跳过 DNS 与建连。新连接经 TCP 加 TLS 或 QUIC 建立，TLS 证明连到预期主机，不知道请求代表 user-17。BFF 查会话并附上访问令牌，经第二段 TLS 转给 API，API 验证令牌并逐次授权。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#60738e"/></marker>
+    <style>
+      text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#243247;dominant-baseline:middle}
+      .h{font-size:26px;font-weight:600}
+      .m{font-size:23px;font-weight:600}
+      .s{font-size:20px}
+      .n{font-size:19px}
+      .g{font-size:21px;font-weight:600;fill:#6b5a1e}
+      .box{fill:#f8fafc;stroke:#94a3b8;stroke-width:2}
+      .page{fill:#eef5fe;stroke:#8fb0d9}
+      .tls{fill:#f3eefb;stroke:#b9a5dc}
+      .group{fill:#fffbeb;stroke:#d6b85a;stroke-width:2;stroke-dasharray:10 7}
+      .note{fill:#ffffff;stroke:#cbd5e1;stroke-width:2}
+      .hit{fill:#eef8f1;stroke:#a7d3b5}
+      .proof{fill:#faf7ff;stroke:#b9a5dc}
+      .edge{fill:none;stroke:#60738e;stroke-width:3;marker-end:url(#arrow)}
+      .bypass{stroke:#3c9a5f;stroke-dasharray:9 6}
+    </style>
+  </defs>
+  <rect width="1040" height="1234" fill="#ffffff"/>
+  <text x="60" y="38" class="h">去程：每一层回答一个独立的问题</text>
+  <rect x="90" y="70" width="500" height="84" rx="12" class="box page"/>
+  <text x="340.0" y="96" class="m" text-anchor="middle">页面调用 fetch()</text>
+  <text x="340.0" y="128" class="s" text-anchor="middle">GET /v1/accounts/acct-17/reports/42</text>
+  <rect x="60" y="198" width="560" height="470" rx="16" class="group"/>
+  <text x="358.0" y="226" class="g">四层快路径：各层独立判断</text>
+  <path d="M340.0 154 V248" class="edge"/>
+  <rect x="90" y="254" width="500" height="80" rx="12" class="box"/>
+  <text x="340.0" y="278" class="m" text-anchor="middle">Service Worker</text>
+  <text x="340.0" y="310" class="s" text-anchor="middle">可拦截请求</text>
+  <path d="M340.0 334 V356" class="edge"/>
+  <rect x="90" y="358" width="500" height="80" rx="12" class="box"/>
+  <text x="340.0" y="382" class="m" text-anchor="middle">浏览器 HTTP 缓存</text>
+  <text x="340.0" y="414" class="s" text-anchor="middle">决定复用、回源验证或走网络</text>
+  <path d="M340.0 438 V460" class="edge"/>
+  <rect x="90" y="462" width="500" height="80" rx="12" class="box"/>
+  <text x="340.0" y="486" class="m" text-anchor="middle">连接池</text>
+  <text x="340.0" y="518" class="s" text-anchor="middle">该来源有仍可用的连接吗？</text>
+  <path d="M340.0 542 V564" class="edge"/>
+  <rect x="90" y="566" width="500" height="80" rx="12" class="box"/>
+  <text x="340.0" y="590" class="m" text-anchor="middle">DNS 地址缓存 / 递归解析器</text>
+  <text x="340.0" y="622" class="s" text-anchor="middle">得到 reports.example.test 的地址</text>
+  <rect x="630" y="254" width="390" height="80" rx="10" class="note hit"/>
+  <text x="646" y="280" class="n">合成响应：直接交回页面，须自己防止</text>
+  <text x="646" y="308" class="n">交出已撤权用户的旧数据；本例原样转发</text>
+  <path d="M590 294 H628" class="edge"/>
+  <rect x="630" y="358" width="390" height="80" rx="10" class="note hit"/>
+  <text x="646" y="384" class="n">可直接复用：交回页面</text>
+  <text x="646" y="412" class="n">需验证：带验证器继续（见下一章）</text>
+  <path d="M590 398 H628" class="edge"/>
+  <rect x="630" y="462" width="390" height="80" rx="10" class="note hit"/>
+  <text x="646" y="488" class="n">有：复用它，跳过 DNS 与建连</text>
+  <text x="646" y="516" class="n">（左侧旁路）</text>
+  <path d="M590 502 H628" class="edge"/>
+  <rect x="630" y="566" width="390" height="80" rx="10" class="note"/>
+  <text x="646" y="592" class="n">记录按 TTL 缓存；“名称不存在”</text>
+  <text x="646" y="620" class="n">也会被负缓存；与连接生命周期无关</text>
+  <path d="M590 606 H628" class="edge"/>
+  <path d="M340.0 646 V706" class="edge"/>
+  <rect x="90" y="708" width="500" height="96" rx="12" class="box tls"/>
+  <text x="340.0" y="724" class="m" text-anchor="middle">建立连接</text>
+  <text x="340.0" y="756" class="s" text-anchor="middle">TCP 三次握手 + TLS，或 QUIC（内含 TLS 1.3）</text>
+  <text x="340.0" y="788" class="s" text-anchor="middle">ALPN / Alt-Svc 确定 HTTP 版本</text>
+  <rect x="630" y="686" width="390" height="148" rx="10" class="note proof"/>
+  <text x="646" y="702" class="n">证明：连到 reports.example.test，</text>
+  <text x="646" y="731" class="n">后续数据机密、完整</text>
+  <text x="646" y="760" class="n">不知道：请求代表 user-17，</text>
+  <text x="646" y="789" class="n">报表 42 属于哪个账户</text>
+  <text x="646" y="818" class="n">失败：网络错误，没有 HTTP 响应</text>
+  <path d="M590 756 H628" class="edge"/>
+  <path d="M340.0 804 V852" class="edge"/>
+  <rect x="90" y="854" width="500" height="90" rx="12" class="box"/>
+  <text x="340.0" y="883" class="m" text-anchor="middle">BFF（reports.example.test）</text>
+  <text x="340.0" y="915" class="s" text-anchor="middle">查 __Host-session 会话，附上访问令牌</text>
+  <rect x="630" y="854" width="390" height="90" rx="10" class="note"/>
+  <text x="646" y="884" class="n">认证：确认请求代表 user-17</text>
+  <text x="646" y="914" class="n">最终授权仍在 API</text>
+  <path d="M590 899 H628" class="edge"/>
+  <path d="M340.0 944 V982" class="edge"/>
+  <rect x="90" y="984" width="500" height="80" rx="12" class="box tls"/>
+  <text x="340.0" y="1008" class="m" text-anchor="middle">第二段 TLS</text>
+  <text x="340.0" y="1040" class="s" text-anchor="middle">BFF → api.reports.example.test</text>
+  <rect x="630" y="978" width="390" height="92" rx="10" class="note proof"/>
+  <text x="646" y="995" class="n">证明：BFF 连到预期的 API 主机</text>
+  <text x="646" y="1024" class="n">不知道：请求代表谁，</text>
+  <text x="646" y="1053" class="n">这要靠访问令牌</text>
+  <path d="M590 1024 H628" class="edge"/>
+  <path d="M340.0 1064 V1102" class="edge"/>
+  <rect x="90" y="1104" width="500" height="90" rx="12" class="box page"/>
+  <text x="340.0" y="1133" class="m" text-anchor="middle">API</text>
+  <text x="340.0" y="1165" class="s" text-anchor="middle">验证访问令牌，按主体、账户、资源逐次授权</text>
+  <rect x="630" y="1104" width="390" height="90" rx="10" class="note"/>
+  <text x="646" y="1134" class="n">路径里的 acct-17 和 42 由调用方</text>
+  <text x="646" y="1164" class="n">选定，不是权限证明</text>
+  <path d="M590 1149 H628" class="edge"/>
+  <path d="M90 502 H30 V899 H88" class="edge bypass"/>
+  <text x="48" y="771" class="n" transform="rotate(-90 48 771)" text-anchor="middle">复用连接：直接发出请求</text>
+</svg>

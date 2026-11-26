@@ -1,44 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="400" viewBox="0 0 720 400">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="482" viewBox="0 0 720 482">
 <defs>
-  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#7187a8"/></marker>
+  <marker id="arrow" viewBox="0 0 10 10" markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#c07a2c"/></marker>
   <style>
     text { font-family: "Noto Sans CJK SC", "Noto Sans", sans-serif; fill: #24344d; }
     .head { font-size: 16px; font-weight: 700; }
-    .label { font-size: 14px; }
-    .small { font-size: 12px; fill: #526681; }
-    .mono { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 15px; }
+    .small { font-size: 13px; fill: #526681; }
+    .idx { font-size: 13px; fill: #526681; text-anchor: middle; }
+    .ptr { font-size: 14px; font-weight: 700; fill: #b06a1f; }
+    .mono { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 15px; text-anchor: middle; }
+    .out { font-size: 13px; fill: #7a8798; text-anchor: middle; }
     .panel { fill: #fff; stroke: #d5dfeb; stroke-width: 2; }
-    .value { fill: #edf4fb; stroke: #91a8c4; stroke-width: 1.5; }
     .empty { fill: #f1f3f6; stroke: #aeb9c7; stroke-width: 1.5; stroke-dasharray: 5 4; }
     .active { fill: #e7f5ef; stroke: #58a88a; stroke-width: 2; }
-    .line { stroke: #7187a8; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+    .ptrline { stroke: #c07a2c; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+    .bound { stroke: #9aa8ba; stroke-width: 1.5; stroke-dasharray: 4 3; }
   </style>
 </defs>
-<rect width="720" height="400" fill="#fbfcfe"/>
-<g transform="translate(0,-66)">
-<g transform="translate(0,0)">
-<rect class="panel" x="24" y="82" width="672" height="115" rx="12"/>
-<text class="head" x="42" y="108">开始：items = [null, undefined]，head = 0</text>
-<text class="small" x="42" y="130">有效区间 [0, 2)，有 2 项；即使第二项是 undefined，也仍是队列值。</text>
-<text class="small" x="192" y="157">index 0</text><text class="small" x="352" y="157">index 1</text>
-<rect class="active" x="152" y="160" width="140" height="25" rx="4"/><text class="mono" x="194" y="178">null</text>
-<rect class="active" x="312" y="160" width="140" height="25" rx="4"/><text class="mono" x="344" y="178">undefined</text>
-</g>
-<g transform="translate(0,12)">
-<rect class="panel" x="24" y="198" width="672" height="115" rx="12"/>
-<text class="head" x="42" y="224">dequeue() returns null；槽 0 改为 undefined，head 前进到 1</text>
-<text class="small" x="42" y="246">有效区间 [1, 2)，还有一项；已消费的数组位置仍存在，但已不属于队列。</text>
-<text class="small" x="192" y="273">index 0</text><text class="small" x="352" y="273">index 1</text>
-<rect class="empty" x="152" y="276" width="140" height="25" rx="4"/><text class="small" x="188" y="294">队列区间外</text>
-<rect class="active" x="312" y="276" width="140" height="25" rx="4"/><text class="mono" x="344" y="294">undefined</text>
-</g>
-<g transform="translate(0,24)">
-<rect class="panel" x="24" y="314" width="672" height="115" rx="12"/>
-<text class="head" x="42" y="340">dequeue() returns 已存的 undefined；head 前进到 2</text>
-<text class="small" x="42" y="362">有效区间 [2, 2) 为空；head 到达长度，两个数组位置仍存在但已不属于队列。</text>
-<text class="small" x="192" y="389">index 0</text><text class="small" x="352" y="389">index 1</text>
-<rect class="empty" x="152" y="392" width="140" height="25" rx="4"/><text class="small" x="188" y="410">队列区间外</text>
-<rect class="empty" x="312" y="392" width="140" height="25" rx="4"/><text class="small" x="348" y="410">队列区间外</text>
-</g>
-</g>
+<rect width="720" height="482" fill="#fbfcfe"/>
+<rect class="panel" x="24" y="16" width="672" height="142" rx="12"/>
+<text class="head" x="42" y="42">开始：items = [null, undefined]，head = 0</text>
+<text class="small" x="42" y="64">有效区间 [0, 2)，有 2 项；即使第二项是 undefined，也仍是队列值。</text>
+<text class="idx" x="222" y="88">index 0</text>
+<rect class="active" x="152" y="94" width="140" height="30" rx="4"/><text class="mono" x="222" y="114">null</text>
+<text class="idx" x="382" y="88">index 1</text>
+<rect class="active" x="312" y="94" width="140" height="30" rx="4"/><text class="mono" x="382" y="114">undefined</text>
+<line class="bound" x1="462" y1="90" x2="462" y2="128"/><text class="small" x="470" y="114">length = 2</text>
+<path class="ptrline" d="M222 150 L222 128"/><text class="ptr" x="230" y="148">head = 0</text>
+<rect class="panel" x="24" y="170" width="672" height="142" rx="12"/>
+<text class="head" x="42" y="196">dequeue() returns null；槽 0 改为 undefined，head 前进到 1</text>
+<text class="small" x="42" y="218">有效区间 [1, 2)，还有一项；已消费的数组位置仍存在，但已不属于队列。</text>
+<text class="idx" x="222" y="242">index 0</text>
+<rect class="empty" x="152" y="248" width="140" height="30" rx="4"/><text class="out" x="222" y="268">队列区间外</text>
+<text class="idx" x="382" y="242">index 1</text>
+<rect class="active" x="312" y="248" width="140" height="30" rx="4"/><text class="mono" x="382" y="268">undefined</text>
+<line class="bound" x1="462" y1="244" x2="462" y2="282"/><text class="small" x="470" y="268">length = 2</text>
+<path class="ptrline" d="M382 304 L382 282"/><text class="ptr" x="390" y="302">head = 1</text>
+<rect class="panel" x="24" y="324" width="672" height="142" rx="12"/>
+<text class="head" x="42" y="350">dequeue() returns 已存的 undefined；head 前进到 2</text>
+<text class="small" x="42" y="372">有效区间 [2, 2) 为空；head 到达长度，两个数组位置仍存在但已不属于队列。</text>
+<text class="idx" x="222" y="396">index 0</text>
+<rect class="empty" x="152" y="402" width="140" height="30" rx="4"/><text class="out" x="222" y="422">队列区间外</text>
+<text class="idx" x="382" y="396">index 1</text>
+<rect class="empty" x="312" y="402" width="140" height="30" rx="4"/><text class="out" x="382" y="422">队列区间外</text>
+<line class="bound" x1="462" y1="398" x2="462" y2="436"/><text class="small" x="470" y="422">length = 2</text>
+<path class="ptrline" d="M462 458 L462 436"/><text class="ptr" x="470" y="456">head = 2</text>
 </svg>

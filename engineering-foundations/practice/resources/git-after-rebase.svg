@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="420" viewBox="0 0 760 420" role="img" aria-labelledby="title desc">
+  <title id="title">rebase 把修复重放到上游之后，得到新提交</title>
+  <desc id="desc">git rebase origin/main 把本地修复 6ab06f8 重放到 perf 提交之后，生成新提交 c4f2a91，分支 fix/report-account-scope 移到它上面；6ab06f8 仍存在，但分支不再指向它。重放时 src/reports.py 冲突：ours 也就是 HEAD 是上游 perf 那一侧，theirs 是正在重放的本地修复。旧 ID 上的检查结果不适用于 c4f2a91，CI 要在新 ID 上重跑。</desc>
+  <defs>
+    <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#64748b"/></marker>
+  </defs>
+  <style>
+    text { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #172033; }
+    .body { font-size: 17px; }
+    .cmd { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 15px; }
+    .id { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 16px; font-weight: 700; }
+    .edge { stroke: #475569; stroke-width: 3; fill: none; }
+    .old { stroke: #94a3b8; stroke-width: 2.5; fill: none; stroke-dasharray: 7 5; }
+    .replay { stroke: #64748b; stroke-width: 2; fill: none; stroke-dasharray: 4 4; marker-end: url(#arrow); }
+    .base { fill: #e2e8f0; stroke: #475569; stroke-width: 2.5; }
+    .up { fill: #dbeafe; stroke: #2563eb; stroke-width: 2.5; }
+    .loc { fill: #dcfce7; stroke: #15803d; stroke-width: 2.5; }
+    .gone { fill: #f8fafc; stroke: #94a3b8; stroke-width: 2.5; stroke-dasharray: 5 4; }
+    .tag { fill: #fff7ed; stroke: #c2410c; stroke-width: 1.5; }
+    .tagt { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 15px; fill: #9a3412; }
+    .note { fill: #fefce8; stroke: #ca8a04; stroke-width: 1.5; }
+    .grey { fill: #64748b; }
+  </style>
+  <rect width="760" height="420" fill="#fff"/>
+
+  <path d="M96 110 H264" class="edge"/>
+  <path d="M296 110 H464" class="edge"/>
+  <circle cx="80" cy="110" r="16" class="base"/>
+  <text x="80" y="152" text-anchor="middle" class="body">共同祖先</text>
+
+  <circle cx="280" cy="110" r="16" class="up"/>
+  <text x="280" y="80" text-anchor="middle" class="cmd">perf(reports)…</text>
+  <rect x="221" y="26" width="118" height="26" rx="6" class="tag"/>
+  <text x="280" y="44" text-anchor="middle" class="tagt">origin/main</text>
+  <path d="M280 52 V62" stroke="#c2410c" stroke-width="2"/>
+
+  <circle cx="480" cy="110" r="16" class="loc"/>
+  <text x="508" y="104" class="id">c4f2a91</text>
+  <text x="508" y="126" class="body">重放后的修复，新 ID</text>
+  <rect x="440" y="26" width="300" height="26" rx="6" class="tag"/>
+  <text x="590" y="44" text-anchor="middle" class="tagt">fix/report-account-scope ← HEAD</text>
+  <path d="M480 54 V90" class="edge" stroke="#c2410c" stroke-width="2"/>
+
+  <path d="M96 116 C 170 140, 190 200, 264 200" class="old"/>
+  <circle cx="280" cy="200" r="16" class="gone"/>
+  <text x="308" y="196" class="id grey">6ab06f8</text>
+  <text x="308" y="218" class="body grey">旧提交仍在，分支不再指向它</text>
+  <path d="M292 188 C 330 150, 410 140, 462 120" class="replay"/>
+  <text x="384" y="172" class="body grey">重放</text>
+
+  <rect x="20" y="250" width="720" height="150" rx="10" class="note"/>
+  <text x="40" y="282" class="body">重放 6ab06f8 时 <tspan class="cmd">src/reports.py</tspan> 冲突：</text>
+  <text x="40" y="312" class="body">· ours（冲突里的 HEAD）＝ 上游 perf 一侧的 <tspan class="cmd">session.get(… defer …)</tspan></text>
+  <text x="40" y="342" class="body">· theirs ＝ 正在重放的本地修复（按账户与报表过滤）</text>
+  <text x="40" y="378" class="body">6ab06f8 上的检查结果不适用于 c4f2a91，CI 要在新 ID 上重跑</text>
+</svg>

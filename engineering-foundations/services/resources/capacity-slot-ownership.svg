@@ -17,7 +17,7 @@
 
   <text x="52" y="68" class="main">共享等待槽：最多 240 个未领取的逻辑排队轮次</text>
   <rect x="35" y="112" width="240" height="142" rx="15" fill="#f5f0fb" stroke="#dcd0ec" stroke-width="2"/>
-  <text x="155" y="155" text-anchor="middle" class="main">接受事务提交</text>
+  <text x="155" y="155" text-anchor="middle" class="main">受理事务提交</text>
   <text x="155" y="196" text-anchor="middle" class="detail">job + outbox</text>
   <text x="155" y="232" text-anchor="middle" class="detail">等待槽 +1</text>
   <path class="edge" d="M275 183 L325 183"/>
@@ -64,6 +64,7 @@
 
   <path d="M549 660 L549 702" stroke="#b45c49" stroke-width="3"/>
   <path d="M536 690 L562 690 M536 681 L562 699" stroke="#b45c49" stroke-width="3"/>
+  <text x="572" y="688" class="small" fill="#9c4544" style="fill:#9c4544">不归还物理槽</text>
   <rect x="478" y="714" width="402" height="92" rx="14" fill="#fff1ef" stroke="#ecc9c2" stroke-width="2"/>
   <text x="679" y="754" text-anchor="middle" class="detail">租约到期 / 取消 / 数据库 fence</text>
   <text x="679" y="790" text-anchor="middle" class="small">都不代表旧 attempt 已停止</text>

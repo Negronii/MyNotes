@@ -4,17 +4,13 @@
 
 ## 三个事实，由三个不同的组件观察
 
-一次导出要经过三道交接，每道交接产生一个独立的事实：
+一次导出从 API 到 ACK 要经过六段交接。下图是整条链路的总览：每段只有自己的证据（绿字），其中三段各产生一个独立的事实——API 看到数据库持久受理了 job，relay 看到 broker 按约定接收了一次发布，worker 看到业务结果已完成；右栏是观测这一段的信号，红圈 ①–④ 是后文要分析的崩溃点。后文的发布确认图展开第 2 段，成功分支图展开第 4–6 段。
 
-| 事实 | 谁观察到 | 证据 |
-| --- | --- | --- |
-| 数据库持久受理了 job | API | 受理事务提交成功（job、等待槽、outbox (事务发件箱) 意图） |
-| broker 按约定接收了一次发布 | relay | 本次发布的 publisher confirm，且路由与持久性条件满足 |
-| 业务结果已完成 | worker | `succeeded` 与私有对象引用、`report.ready` 意图同一事务提交 |
+![交接链从 API 受理、relay 发布、broker 队列、worker 领取、成功提交到 ACK；每段标出证据与观测信号，四个红圈标出崩溃点](resources/queue-handoff-chain.svg)
 
 这三件事不能互相推导。publisher confirm 只说明 broker 收下了消息，不知道 worker 是否收到、处理或完成；consumer ACK 只是结束 broker 对**这一次投递**的待确认状态，它本身不说明报表成功了。按上一章的规则，worker 在 ACK 之前必须已经提交某个终态，或已经持久安排好重试或接管，所以 ACK 可能对应成功、失败、取消或“已交给下一轮”，任何一种都有可能。
 
-数据库和 broker 之间也没有共享的原子事务。outbox 消除的只是“数据库已提交、进程却在发布前崩溃”这一个缺口（见[耗时任务怎样被持久受理](durable-job-acceptance-and-outbox.md)），relay 和 worker 仍然必须容忍重复。因此本领域不把“最终业务效果只发生一次”简称为 exactly-once (恰好一次)：它靠的是数据库里的状态条件、幂等键、远端的去重约定和恢复路径，而不是哪一层的某一次确认。
+数据库和 broker 之间也没有共享的原子事务。outbox (事务发件箱) 消除的只是“数据库已提交、进程却在发布前崩溃”这一个缺口（见[耗时任务怎样被持久受理](durable-job-acceptance-and-outbox.md)），relay 和 worker 仍然必须容忍重复。因此本领域不把“最终业务效果只发生一次”简称为 exactly-once (恰好一次)：它靠的是数据库里的状态条件、幂等键、远端的去重约定和恢复路径，而不是哪一层的某一次确认。
 
 还要分清三种身份：幂等键 `export-demo-415` 识别客户端的一次意图，报表 ID 42 识别业务对象，job ID `job-demo-731` 识别一次持久受理的作业。消息里只带最后一个。
 
@@ -44,7 +40,7 @@ relay 要把一个异步回执对应到唯一一次发布。本例的做法是�
 
 这样仍消除不了“broker 已接受、数据库还没回写”造成的重复：broker 不会按业务 job ID 替应用去重。worker 一侧依靠上一章的条件领取处理重复。
 
-![outbox 意图经 relay 发布到 RabbitMQ；每条 channel 只保留一条在途发布，以本次 return 与 confirm 决定意图能否标为 published](resources/queue-publish-confirm.svg)
+![交接链第 2 段的展开：outbox 意图经 relay 发布到 RabbitMQ；每条 channel 只保留一条在途发布，以本次 return 与 confirm 决定意图能否标为 published](resources/queue-publish-confirm.svg)
 
 ## consumer ACK 的规则
 
@@ -56,7 +52,7 @@ broker 把消息投递给 worker 之后，这次 delivery (投递) 处于“待�
 
 可靠的任务处理要用手动确认。自动确认模式下，broker 在发出消息时就视为已交付；worker 若在持久化结果之前崩溃，broker 不会重投这条消息。
 
-![成功分支：worker 条件领取，写私有对象，同一事务提交成功状态、对象键与 ready 意图，最后单条 ACK](resources/queue-consumer-ack.svg)
+![交接链第 4–6 段的展开，成功分支：worker 条件领取，写私有对象，同一事务提交成功状态、对象键与 ready 意图，最后单条 ACK](resources/queue-consumer-ack.svg)
 
 > [!info] 实例：RabbitMQ 4.4 的消费者确认（核对于 2026-11-12）
 > - 用接收该消息的 channel 上的 delivery tag 确认；并行处理时 `multiple=false`。`multiple=true` 会连带确认该 channel 上更早的所有未确认投递。
@@ -84,16 +80,9 @@ broker 把消息投递给 worker 之后，这次 delivery (投递) 处于“待�
 
 ## 在不同时刻崩溃，系统会落在哪里？
 
-故障发生的位置，决定消息、job 和对象之间是什么关系：
+故障发生的位置，决定消息、job 和对象之间是什么关系。四个崩溃点及其落点已画在本章开头的交接链图里：① 让同一 job ID 出现多条消息，② 和 ③ 让同一条消息被再次投递，三者都靠数据库里的条件领取、终态和恢复器收敛。
 
-| 失败时点 | broker 可能的动作 | 应用要保住的事实 |
-| --- | --- | --- |
-| broker 已接受发布，relay 没收到 confirm | relay 按 outbox 重发，同一 job ID 出现多条消息 | 每条意图按自己的 `intent_id` 回写；worker 靠条件领取和终态更新去重 |
-| worker 在持久化结果前崩溃，尚未 ACK | 连接或 channel 关闭后重新投递 | 重投只触发读取 job；有效 attempt 不并行，租约过期也要等恢复器接管 |
-| 数据库已提交 `succeeded`，ACK 是否到达未知 | 消息可能再次投递 | 后来的 worker 读到终态，直接 ACK，不重复生成、不覆盖结果 |
-| 先 ACK，再在提交结果前崩溃 | broker 已删除消息，不会因它重投 | job 能否恢复只取决于独立、持久的租约扫描与重排；没有它，job 永远停在 `running` |
-
-最后一行说明了为什么“先 ACK 再处理”是错的：它把唯一的恢复信号交了出去。
+④ 不同：它是把 ACK 挪到成功提交之前的错误顺序，broker 不会再投递，恢复只剩独立的租约扫描。这说明了为什么“先 ACK 再处理”是错的：它把唯一的恢复信号交了出去。
 
 ## prefetch 限制的是什么？
 
@@ -113,17 +102,7 @@ FIFO (先进先出) 队列只描述消息的排队和投递次序。多个 consu
 
 ## 怎样分段观测这条链路？
 
-每个确认只证明一段交接，所以观测也必须分段。只看一个数字（例如 ACK 数）会把不同位置的积压混在一起。
-
-| 交接段 | 观测信号 | 它能说明什么 |
-| --- | --- | --- |
-| API 受理 | 受理时延；429/503 拒绝数 | 准入是否在拒绝；拒绝不产生 job |
-| 数据库 → relay | 最老 `pending` outbox 意图的年龄；发布尝试次数 | relay 是否停摆或反复失败 |
-| relay → broker | confirm / NACK / return 计数 | 发布是否被接收、是否路由正确 |
-| broker 内 | queue depth (队列深度)、最老消息年龄、未确认数、重投数、DLQ 数量 | 消息是否积压、是否被反复退回 |
-| 等待领取 | 最老 `queued` job 的年龄；等待槽占用 | 已受理的工作等了多久 |
-| 执行 | 活跃物理执行槽；被栅栏但仍在运行的 attempt；连接池等待与 SQL 时长 | worker 是否有能力、资源是否被旧 attempt 占着 |
-| 完成 | `succeeded`/`failed`/`cancelled` 计数与错误码；对象引用提交；完成时延分位数 | 业务结果是否在产生 |
+每个确认只证明一段交接，所以观测也必须分段：本章开头交接链图的右栏，就是每一段各自的信号。只看一个数字（例如 ACK 数）会把不同位置的积压混在一起；被栅栏但仍在运行的 attempt 和连接池等待，说明执行资源可能被旧 attempt 占着，而不是 worker 不够。
 
 读这些信号的几条要点：
 

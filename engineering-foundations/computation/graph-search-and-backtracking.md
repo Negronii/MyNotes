@@ -8,12 +8,12 @@
 
 ~~~mermaid
 flowchart LR
-    S --> A
-    S --> B
-    A --> T
+    S((S)) --> A((A))
+    S --> B((B))
+    A --> T((T))
     B --> T
-    T --> S
-    T --> Z
+    T -.->|回边| S
+    T --> Z((Z))
 ~~~
 
 同一张图依次回答：

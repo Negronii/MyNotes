@@ -26,7 +26,7 @@
   <text x="169" y="50" text-anchor="middle" class="label">标签页 B 读取 window.localStorage</text>
   <text x="169" y="70" text-anchor="middle" class="small">访问 getter 取得 Storage 对象</text>
   <path d="M312 54 H361" class="arrow"/>
-  <polygon points="411,20 462,54 411,88 360,54" fill="#f4efff" stroke="#cdbdeb" stroke-width="1.4"/>
+  <polygon points="411,20 462,54 411,88 360,54" fill="#fff7e8" stroke="#e7c988" stroke-width="1.4"/>
   <text x="411" y="59" text-anchor="middle" class="small">成功？</text>
   <text x="426" y="111" class="small">是</text>
   <text x="479" y="45" class="small">否</text>
@@ -69,12 +69,12 @@
   <text x="411" y="564" text-anchor="middle" class="label">排入共享同一存储区的其他文档的事件任务</text>
   <text x="411" y="584" text-anchor="middle" class="small">这一步先于 setItem 返回</text>
 
-  <path d="M411 596 V635" class="success"/>
-  <rect x="242" y="638" width="205" height="53" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
-  <text x="344" y="661" text-anchor="middle" class="label">setItem 返回到 B</text>
-  <text x="344" y="680" text-anchor="middle" class="small">当前 JavaScript 继续执行</text>
-  <path d="M621 568 H645 V633" class="arrow"/>
-  <rect x="459" y="638" width="205" height="53" class="box" fill="#f1edff" stroke="#cdbdeb"/>
-  <text x="561" y="661" text-anchor="middle" class="label">之后在 A 派发事件</text>
-  <text x="561" y="680" text-anchor="middle" class="small">B 不收到自己的事件</text>
+  <path d="M298 596 V635" class="success"/>
+  <rect x="196" y="638" width="205" height="53" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
+  <text x="298" y="661" text-anchor="middle" class="label">setItem 返回到 B</text>
+  <text x="298" y="680" text-anchor="middle" class="small">当前 JavaScript 继续执行</text>
+  <path d="M524 596 V635" class="arrow" stroke-dasharray="5 4"/>
+  <rect x="421" y="638" width="205" height="53" class="box" fill="#f1edff" stroke="#cdbdeb"/>
+  <text x="524" y="661" text-anchor="middle" class="label">之后在 A 派发事件</text>
+  <text x="524" y="680" text-anchor="middle" class="small">B 不收到自己的事件</text>
 </svg>

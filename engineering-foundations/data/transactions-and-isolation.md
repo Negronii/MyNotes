@@ -63,15 +63,30 @@ SQL 标准规定每个级别**至少**要防住什么，实现可以更强。Pos
 
 库存规则只涉及一行，条件 `UPDATE` 就够了。规则跨越多行时，即使每个事务看到的都是稳定快照，也会出错，这叫 write skew (写偏差)。下面换一个独立的小例子，因为库存案例只有一行，演示不出它。
 
-排班表里医生甲、乙各一行，规则是同一班次**至少一人值班**。
+排班表里医生甲、乙各一行，规则是同一班次**至少一人值班**。两笔事务各关闭一人，交错如下：
 
-1. 事务 T1 查到两人都在岗，于是关闭甲的值班。
-2. 事务 T2 从同样的快照查到两人都在岗，于是关闭乙的值班。
-3. 两笔事务改的是不同的行，没有写写冲突。在 PostgreSQL Repeatable Read 下两者都能提交，结果没人值班。
+~~~mermaid
+sequenceDiagram
+    participant T1
+    participant DB as 排班表（甲、乙各一行）
+    participant T2
+    Note over T1,T2: 两笔都是 Repeatable Read，快照里甲、乙都在岗
+    T1->>DB: 查在岗人数
+    DB-->>T1: 2 人
+    T2->>DB: 查在岗人数
+    DB-->>T2: 2 人（同样的快照内容）
+    T1->>DB: 关闭甲的值班（只改甲行）
+    T2->>DB: 关闭乙的值班（只改乙行）
+    T1->>DB: COMMIT
+    DB-->>T1: 成功
+    T2->>DB: COMMIT
+    DB-->>T2: 成功：两笔改的是不同行，没有写写冲突
+    Note over DB: 结果：没人值班
+~~~
 
 `CHECK` 帮不上忙，因为它只看当前这一行。修法取决于规则的形状，这是本领域写偏差修法的权威位置：
 
-**修法一：把规则物化成一行，再用条件写守住。** 给班次加一行值班人数，关闭某人值班时先条件扣减：
+**修法一：把规则物化成一行，再用条件写守住。** 给班次加一行值班人数，关闭某人值班时先条件扣减，计数行和医生行在同一事务里更新：
 
 ~~~sql
 UPDATE shift_coverage
@@ -80,11 +95,65 @@ WHERE shift_id = $1 AND on_call > 1;
 -- $1 = 班次 ID。恰好一行才继续更新医生行；零行说明只剩一人，拒绝关闭。
 ~~~
 
-计数行和医生行在同一事务里更新。跨行规则变成了单行上的条件，两个并发事务在这一行上排队，后来者重检时看到 `on_call = 1`，返回零行。
+跨行规则由此变成单行上的条件，两个并发事务在这一行上排队：
 
-**修法二：Read Committed 下所有写方先锁同一控制行，再用下一条语句检查。** T1 先 `SELECT ... FOR UPDATE` 锁住班次行，再查在岗人数、关闭甲、提交。T2 在锁上等待；拿到锁后，它的**下一条** `SELECT` 取新快照，看到只剩乙在岗，于是拒绝。这个方案依赖“每条语句一个新快照”，Repeatable Read 的快照不随等待刷新，不能照搬。所有改这条规则的写入路径都必须先锁同一行，漏一条就失效。
+~~~mermaid
+sequenceDiagram
+    participant T1
+    participant DB as shift_coverage 计数行
+    participant T2
+    Note over T1,T2: 修法一，Read Committed：先条件扣减计数行
+    T1->>DB: UPDATE ... SET on_call = on_call - 1 WHERE on_call > 1
+    DB-->>T1: 1 行（2 → 1），T1 持有行锁
+    T2->>DB: 同一条 UPDATE
+    Note over DB: T2 在计数行上等待
+    T1->>DB: 关闭甲（更新甲行），COMMIT
+    DB-->>T2: 在新版本 on_call = 1 上重检条件：0 行
+    Note over T2: 拒绝关闭乙
+~~~
 
-**修法三：所有维护这条规则的事务都用 Serializable。** PostgreSQL 会检测到这组事务无法串行解释，让其中一笔以 `40001` 失败。失败方从头重试，看到只剩一人，放弃关闭。保护只在参与的事务都运行 Serializable 时成立；只重试最后一条 `UPDATE` 会沿用旧决策，仍然错。
+**修法二：Read Committed 下所有写方先锁同一控制行，再用下一条语句检查。** 关键在 T2 拿到锁之后的**下一条** `SELECT`：
+
+~~~mermaid
+sequenceDiagram
+    participant T1
+    participant DB as 班次控制行与排班表
+    participant T2
+    Note over T1,T2: 修法二，Read Committed：所有写方先锁同一控制行
+    T1->>DB: SELECT 班次行 FOR UPDATE
+    DB-->>T1: 取得锁
+    T2->>DB: SELECT 班次行 FOR UPDATE
+    Note over DB: T2 在锁上等待
+    T1->>DB: 查在岗人数（2），关闭甲，COMMIT
+    DB-->>T2: 取得锁
+    T2->>DB: 下一条 SELECT 取新快照，查在岗人数
+    DB-->>T2: 只剩乙 1 人
+    Note over T2: 拒绝关闭乙
+~~~
+
+这个方案依赖“每条语句一个新快照”，Repeatable Read 的快照不随等待刷新，不能照搬。所有改这条规则的写入路径都必须先锁同一行，漏一条就失效。
+
+**修法三：所有维护这条规则的事务都用 Serializable。** PostgreSQL 会检测到这组事务无法串行解释，让其中一笔以 `40001` 失败，失败方从头重试：
+
+~~~mermaid
+sequenceDiagram
+    participant T1
+    participant DB as 排班表
+    participant T2
+    Note over T1,T2: 修法三：所有维护这条规则的事务都用 Serializable
+    T1->>DB: 查在岗人数（2），关闭甲
+    T2->>DB: 查在岗人数（2），关闭乙
+    T1->>DB: COMMIT
+    DB-->>T1: 成功
+    T2->>DB: 继续执行或 COMMIT
+    DB-->>T2: 40001：这组事务无法串行解释
+    Note over T2: 回滚，从头重试整笔事务<br/>（哪一笔、在哪条语句失败由数据库决定，这里画成 T2）
+    T2->>DB: 新事务：查在岗人数
+    DB-->>T2: 只剩乙 1 人
+    Note over T2: 放弃关闭
+~~~
+
+保护只在参与的事务都运行 Serializable 时成立；只重试最后一条 `UPDATE` 会沿用旧决策，仍然错。
 
 | 修法 | 适用 | 代价 |
 |---|---|---|

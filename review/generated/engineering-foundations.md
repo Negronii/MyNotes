@@ -878,13 +878,15 @@ JavaScript 里最省事的队列是普通数组，`push` 入队、`shift` 出队
 
 - **出队**：先读 `items[head]`，再把这个槽设为 `undefined` 以释放它对对象的引用，最后 `head++`。一次读、一次写、一次加法，O(1)。
 - **判空看下标，不看槽值。** 把槽设为 `undefined` 不会删除这个下标，只说明它已在有效区间之外；存进去的 `undefined` 仍在区间之内，照样能出队。
-- **长期运行要压缩。** 只增加 `head` 时，底层数组只增不减。下面的实现在已消费的部分达到数组长度一半时，把剩余的 `items[head..)` 复制到新数组并把 `head` 归零。每次压缩复制的项数不超过自上次压缩以来出队的项数，所以压缩成本摊到每次出队上仍是 O(1)。
+- **长期运行要压缩。** 只增加 `head` 时，底层数组只增不减。下面的实现在已消费的部分既达到数组长度一半、又不少于 `COMPACT_MIN = 1024` 项时，把剩余的 `items[head..)` 复制到新数组并把 `head` 归零；下限让小队列不必反复复制，代价是已清空的槽可能保留下来：它们要么少于 `COMPACT_MIN` 个，要么不超过剩余项数。每次压缩复制的项数 `items.length − head` 不超过 `head`，也就是自上次压缩以来出队的项数，所以压缩成本摊到每次出队上仍是 O(1)。
 
 ![head 从 index 0 推到 1、再推到长度 2；第二个存储值即使是 undefined 仍可出队](../../engineering-foundations/computation/resources/queue-and-stack-representations-head-index-queue.svg)
 
-图中边界输入是 `[null, undefined]`：`head` 从 0 推到 1、再到 2，两个值都正常出队，最后 `head` 等于长度，队列为空。
+图中边界输入是 `[null, undefined]`：`head` 远低于压缩下限，所以不会压缩，从 0 推到 1、再到 2，两个值都正常出队，最后 `head` 等于长度，队列为空。
 
 ```javascript
+const COMPACT_MIN = 1024;
+
 class ArrayQueue {
   constructor() {
     this.items = [];
@@ -897,7 +899,7 @@ class ArrayQueue {
     const value = this.items[this.head];
     this.items[this.head] = undefined;
     this.head++;
-    if (this.head * 2 >= this.items.length) {
+    if (this.head >= COMPACT_MIN && this.head * 2 >= this.items.length) {
       this.items = this.items.slice(this.head);
       this.head = 0;
     }
@@ -2119,12 +2121,12 @@ maxConcurrentHalfOpen([
 
 ~~~mermaid
 flowchart LR
-    S --> A
-    S --> B
-    A --> T
+    S((S)) --> A((A))
+    S --> B((B))
+    A --> T((T))
     B --> T
-    T --> S
-    T --> Z
+    T -.->|回边| S
+    T --> Z((Z))
 ~~~
 
 同一张图依次回答：
@@ -2749,10 +2751,10 @@ concurrency (并发) 指多个任务在重叠的时间段内都有进展；只�
 
 ~~~mermaid
 flowchart TD
-    IOWait[I/O 阶段] --> HasAsync{运行时有合适的异步 API？}
-    HasAsync -->|有| AsyncAPI[用异步 API：等待期间<br/>事件循环处理其他工作]
-    HasAsync -->|没有| BlockingPool[放进有界线程池：<br/>每个等待占一个池线程]
-    AsyncAPI --> Limit[限制在途操作、连接、缓冲和队列]
+    IOWait[I/O 阶段] --> HasAsync{运行时有合适的<br/>异步 API？}
+    HasAsync -->|有| AsyncAPI[用异步 API<br/>等待期间事件循环<br/>处理其他工作]
+    HasAsync -->|没有| BlockingPool[放进有界线程池<br/>每个等待<br/>占一个池线程]
+    AsyncAPI --> Limit[限制在途操作<br/>连接、缓冲和队列]
     BlockingPool --> Limit
 ~~~
 
@@ -3608,7 +3610,7 @@ print(len(report.rows))         # 1
 
 `self.rows = rows` 只保存了对列表的引用，所以 `source_rows`、`report.rows`、`rows_alias` 是同一个列表。`copy()` 新建了一个行列表，但 `copied_rows[0]` 和 `report.rows[0]` 仍是同一个事件字典，字典里的 `tags` 也是同一个列表，所以通过副本修改嵌套标签，原报表也能看到。最后把 `rows_alias` 改绑到新列表，`report.rows` 不受影响。这些普通属性保存在实例的 `__dict__` 里。
 
-![Report 实例、行列表、事件字典与标签列表的对象引用关系](../../engineering-foundations/runtime/resources/python-object-aliases.svg)
+![Report 实例、共享的行列表、copy() 新建的外层列表、事件字典与标签列表的对象引用关系](../../engineering-foundations/runtime/resources/python-object-aliases.svg)
 
 可变默认参数的累积：
 
@@ -4239,16 +4241,11 @@ pipeline(
 
 ### 各完成信号分别证明什么？
 
-正常路径上，生成器读到不满 100 行的最后一页后返回，`finally` 关闭游标，然后不再产出。但“最后一行已送进 gzip”并不说明文件完整：Transform 的输出块数不必等于输入块数，gzip 在输入结束后还要产出尾块，写入方收到尾块并写完后，文件流才可能完成。管线里能观察到的每个信号只证明它那一段：
+正常路径上，生成器读到不满 100 行的最后一页后返回，`finally` 关闭游标，然后不再产出。但“最后一行已送进 gzip”并不说明文件完整。下图按时间顺序列出从源结束到任务成功之间能观察到的每个信号，以及它证明和不证明什么：
 
-| 可观察的状态 | 说明了什么 | 没有证明什么 |
-| --- | --- | --- |
-| 源 Readable 的 `end` | 所有源输入都已被消费，没有更多输入 | gzip 已结束、下游已写完、文件已持久化 |
-| Writable 的 `finish` | 调用 `end()` 后，所有写入的数据都已交给底层系统 | 数据在断电后仍可恢复；HTTP 客户端已收到完整正文 |
-| 文件流的 `close` | 流及其文件描述符等底层资源已关闭 | 内容已满足所需的崩溃持久性 |
-| `pipeline()` 的 Promise fulfilled | 整条管线按正常路径完成 | 报表已成功发布；对象存储已持久接受 |
+![源 end、gzip 尾块、finish、可选 sync、close 各只证明一段；pipeline Promise 只证明管线正常完成；rename 后仍要协调者按 attempt 条件提交结果引用才算任务成功](../../engineering-foundations/runtime/resources/node-stream-completion-signals.svg)
 
-本例的文件流默认自动关闭。要让本地文件经得起系统重启，需要按平台和文件系统的契约另外请求 `fsync` 一类的持久化操作（Node 里是 `FileHandle.sync()`），`finish` 和 `close` 都不报告这项保证。目标是 HTTP 响应或对象存储时，用相应协议或 SDK 的确认定义；服务器本地的响应流完成，不等于客户端收到并保存了全部字节。
+本例的文件流默认自动关闭，所以图中的可选 `sync()` 要在关闭前另行安排。目标是 HTTP 响应或对象存储时，用相应协议或 SDK 的确认定义；服务器本地的响应流完成，不等于客户端收到并保存了全部字节。图下半部分的 `rename` 与条件提交，在下面“中途失败”一节展开。
 
 ### 取消一条流会停下什么？
 
@@ -4281,7 +4278,7 @@ stateDiagram-v2
 - **取消先到**（仍在 `running`）：转到 `cancelling`，不再提交 `rename`。停止拉取新页，按游标契约请求取消并丢弃迟到的行，等查询取消或结束；用 worker 方案时，若槽还没归还，就请求 worker 停止，等到 `streamFinished` 或停止确认后归还一次。再等已提交的文件写入结束，关闭并删除临时目录，最后标为 `cancelled`。
 - **发布先到**：文件关闭后，协调者把状态从 `running` 转到 `publishing`，紧接着提交 `rename`，中间不等待任何其他事件。之后到达的取消不能覆盖结果，attempt 保持 `publishing`，直到 `rename` 的 Promise 给出真实的成功或失败。
 
-**本地发布不等于任务成功。** 本地 `rename` 或对象存储上传成功，只说明产物已经就位；任务是否成功，由协调者以当前 attempt 为条件提交结果引用来裁决，迟到的旧 attempt 写不进去。这次条件提交怎样写、为什么能挡住旧 attempt，见[怎样保证一个任务同一时刻只由一个 worker 推进？](#43.%20%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E4%B8%80%E4%B8%AA%E4%BB%BB%E5%8A%A1%E5%90%8C%E4%B8%80%E6%97%B6%E5%88%BB%E5%8F%AA%E7%94%B1%E4%B8%80%E4%B8%AA%20worker%20%E6%8E%A8%E8%BF%9B%EF%BC%9F)。
+**本地发布不等于任务成功。** 本地 `rename` 和对象存储上传一样，只让产物就位；任务是否成功，由完成信号图最后一格的条件提交裁决。这次条件提交怎样写、为什么能挡住旧 attempt，见[怎样保证一个任务同一时刻只由一个 worker 推进？](#43.%20%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E4%B8%80%E4%B8%AA%E4%BB%BB%E5%8A%A1%E5%90%8C%E4%B8%80%E6%97%B6%E5%88%BB%E5%8F%AA%E7%94%B1%E4%B8%80%E4%B8%AA%20worker%20%E6%8E%A8%E8%BF%9B%EF%BC%9F)。
 
 **崩溃留下的残余。** 取消和普通错误路径上的本地清理，覆盖不了进程崩溃或被强杀：临时目录或已上传的私有对象可能遗留下来。它们要由独立的回收方在持久状态确认安全后删除，删除条件见[任务失败、被取消或 worker 失联后，怎样收尾而不重复也不留孤儿？](#46.%20%E4%BB%BB%E5%8A%A1%E5%A4%B1%E8%B4%A5%E3%80%81%E8%A2%AB%E5%8F%96%E6%B6%88%E6%88%96%20worker%20%E5%A4%B1%E8%81%94%E5%90%8E%EF%BC%8C%E6%80%8E%E6%A0%B7%E6%94%B6%E5%B0%BE%E8%80%8C%E4%B8%8D%E9%87%8D%E5%A4%8D%E4%B9%9F%E4%B8%8D%E7%95%99%E5%AD%A4%E5%84%BF%EF%BC%9F)。如果一次远端写入结果未知，不能因为本地 Promise 被取消就假设远端没有生效，要用专属对象键、幂等标识或服务端状态查询来确认。
 
@@ -4737,6 +4734,28 @@ INSERT INTO inventory VALUES ('SKU-7', 1);
 
 ### 一次预留怎样执行？
 
+下图是一次预留从受理到下结论的完整流程：成功路径是条件 `UPDATE` 恰好 1 行、`INSERT` 成功、`COMMIT`；两条失败路径（`UPDATE` 零行、`INSERT` 撞上复合主键）汇到同一个回滚加回查，结论只有底部三种。本节和后两节分别展开预查与事务、并发排队、失败后的回查。
+
+~~~mermaid
+%%{init: {"flowchart": {"wrappingWidth": 360}}}%%
+flowchart TD
+    A["重新授权：user-17 能为 acct-17 预留<br/>规范化参数，计算请求指纹"] --> P
+    P{{"预查作用域键（快路径）"}}
+    P -- 同指纹 --> RS["返回记录当前状态<br/>reserved 或 cancelled"]
+    P -- 异指纹 --> CF["幂等键冲突"]
+    P -- "未命中：只说明快照里<br/>没有已提交记录" --> U
+    U{{"BEGIN READ COMMITTED<br/>条件 UPDATE 库存，返回几行？"}}
+    U -- 多于 1 行 --> BUG["schema 没维持每个 SKU 一行<br/>当缺陷处理，不能当成功"]
+    U -- 恰好 1 行 --> I{{"INSERT 预留记录"}}
+    I -- 成功 --> C["COMMIT<br/>扣减与记录同时可见"]
+    U -- "0 行：SKU 不存在或已售罄" --> RB
+    I -- 撞上复合主键 --> RB
+    RB["整笔 ROLLBACK"] --> Q{{"新事务按作用域键回查"}}
+    Q -- 同指纹 --> RS
+    Q -- 异指纹 --> CF
+    Q -- 没有已提交记录 --> F["本次库存失败（不存在或售罄）<br/>不保证之后没人提交同键记录"]
+~~~
+
 API 先按当前认证结果确认 `user-17` 有权为 `acct-17` 预留，再规范化参数、计算指纹，然后可以先查一次已有记录：
 
 ~~~sql
@@ -4748,7 +4767,7 @@ WHERE account_id = $1 AND principal_id = $2 AND idempotency_key = $3;
 
 `$1`、`$2` 是 PostgreSQL 的位置参数，由驱动**按每条语句分别绑定**，编号不跨语句共享；下文每条 SQL 的注释只写它自己的绑定。
 
-这次预查只是快路径。命中同指纹记录就直接返回当前状态，命中异指纹记录就返回冲突。没命中只说明这条语句的快照里没有**已提交且可见**的记录：原事务可能还在执行，还没提交。所以预查不能代替后面的裁决。
+这次预查只是快路径。没命中只说明这条语句的快照里没有**已提交且可见**的记录，原事务可能还没提交，所以预查不能代替后面的裁决。
 
 预查未命中时，服务在一个事务里条件扣减并写入记录：
 
@@ -4773,13 +4792,7 @@ COMMIT;
 
 ### 条件 UPDATE 怎样让并发请求排队？
 
-条件 `UPDATE` 的返回行数就是业务判断，这是本领域条件写的 SQL 层权威规则：
-
-| 返回行数 | 含义 | 下一步 |
-|---|---|---|
-| 恰好 1 行 | 条件成立，扣减已在本事务内生效 | 继续写预留记录 |
-| 0 行 | SKU 不存在，或库存已为 0 | 整笔回滚，新事务回查（下一节） |
-| 多于 1 行 | 实际 schema 没有维持“每个 SKU 一行” | 当作缺陷处理，不能当成功 |
+条件 `UPDATE` 的返回行数就是业务判断，这是本领域条件写的 SQL 层权威规则：恰好 1 行说明扣减已在本事务内生效，继续写记录；0 行说明 SKU 不存在或库存已为 0，走失败路径；多于 1 行说明实际 schema 没有维持“每个 SKU 一行”，是缺陷而不是成功。
 
 两个请求并发时，排队靠的是行锁。下图是 A 先拿到 `SKU-7` 行锁的情形：
 
@@ -4814,15 +4827,7 @@ WHERE account_id = $1 AND principal_id = $2 AND idempotency_key = $3;
 COMMIT;
 ~~~
 
-API 在已重新授权的作用域内比较指纹：
-
-| 回查结果 | 返回 |
-|---|---|
-| 同键同指纹的记录 | 该记录的当前状态（`reserved` 或 `cancelled`） |
-| 同键异指纹的记录 | 幂等键冲突 |
-| 没有已提交记录 | 本次库存失败（不存在或售罄） |
-
-最后一行只说明“这条回查语句的快照里没有已提交记录”，不保证另一个事务稍后不会提交同键记录。失败不占键，所以同一个 POST 在补货后可以成功。若要区分“SKU 不存在”和“售罄”，可以再读一次库存，但那次读取只反映当时的状态。
+API 在已重新授权的作用域内比较指纹，得到流程图底部三个结局之一。“没有已提交记录”只说明这条回查语句的快照里没有，不保证另一个事务稍后不会提交同键记录。失败不占键，所以同一个 POST 在补货后可以成功。若要区分“SKU 不存在”和“售罄”，可以再读一次库存，但那次读取只反映当时的状态。
 
 > [!warning] `ON CONFLICT DO NOTHING` 插入零行，也要用新快照去读胜者
 > 有些写法用 `INSERT ... ON CONFLICT DO NOTHING RETURNING ...` 代替捕获唯一冲突异常。PostgreSQL 文档明确指出：Read Committed 下，这条语句可能因为另一个事务的结果而放弃插入，而那个结果对本语句的快照并不可见。所以“插入了零行”不等于“本语句已经看见了胜者”，胜者要用后续语句的新快照去读。在本例里，`INSERT` 之前已经扣过库存，插入零行时仍要整笔回滚，再按上面的步骤回查。
@@ -5196,15 +5201,30 @@ SQL 标准规定每个级别**至少**要防住什么，实现可以更强。Pos
 
 库存规则只涉及一行，条件 `UPDATE` 就够了。规则跨越多行时，即使每个事务看到的都是稳定快照，也会出错，这叫 write skew (写偏差)。下面换一个独立的小例子，因为库存案例只有一行，演示不出它。
 
-排班表里医生甲、乙各一行，规则是同一班次**至少一人值班**。
+排班表里医生甲、乙各一行，规则是同一班次**至少一人值班**。两笔事务各关闭一人，交错如下：
 
-1. 事务 T1 查到两人都在岗，于是关闭甲的值班。
-2. 事务 T2 从同样的快照查到两人都在岗，于是关闭乙的值班。
-3. 两笔事务改的是不同的行，没有写写冲突。在 PostgreSQL Repeatable Read 下两者都能提交，结果没人值班。
+~~~mermaid
+sequenceDiagram
+    participant T1
+    participant DB as 排班表（甲、乙各一行）
+    participant T2
+    Note over T1,T2: 两笔都是 Repeatable Read，快照里甲、乙都在岗
+    T1->>DB: 查在岗人数
+    DB-->>T1: 2 人
+    T2->>DB: 查在岗人数
+    DB-->>T2: 2 人（同样的快照内容）
+    T1->>DB: 关闭甲的值班（只改甲行）
+    T2->>DB: 关闭乙的值班（只改乙行）
+    T1->>DB: COMMIT
+    DB-->>T1: 成功
+    T2->>DB: COMMIT
+    DB-->>T2: 成功：两笔改的是不同行，没有写写冲突
+    Note over DB: 结果：没人值班
+~~~
 
 `CHECK` 帮不上忙，因为它只看当前这一行。修法取决于规则的形状，这是本领域写偏差修法的权威位置：
 
-**修法一：把规则物化成一行，再用条件写守住。** 给班次加一行值班人数，关闭某人值班时先条件扣减：
+**修法一：把规则物化成一行，再用条件写守住。** 给班次加一行值班人数，关闭某人值班时先条件扣减，计数行和医生行在同一事务里更新：
 
 ~~~sql
 UPDATE shift_coverage
@@ -5213,11 +5233,65 @@ WHERE shift_id = $1 AND on_call > 1;
 -- $1 = 班次 ID。恰好一行才继续更新医生行；零行说明只剩一人，拒绝关闭。
 ~~~
 
-计数行和医生行在同一事务里更新。跨行规则变成了单行上的条件，两个并发事务在这一行上排队，后来者重检时看到 `on_call = 1`，返回零行。
+跨行规则由此变成单行上的条件，两个并发事务在这一行上排队：
 
-**修法二：Read Committed 下所有写方先锁同一控制行，再用下一条语句检查。** T1 先 `SELECT ... FOR UPDATE` 锁住班次行，再查在岗人数、关闭甲、提交。T2 在锁上等待；拿到锁后，它的**下一条** `SELECT` 取新快照，看到只剩乙在岗，于是拒绝。这个方案依赖“每条语句一个新快照”，Repeatable Read 的快照不随等待刷新，不能照搬。所有改这条规则的写入路径都必须先锁同一行，漏一条就失效。
+~~~mermaid
+sequenceDiagram
+    participant T1
+    participant DB as shift_coverage 计数行
+    participant T2
+    Note over T1,T2: 修法一，Read Committed：先条件扣减计数行
+    T1->>DB: UPDATE ... SET on_call = on_call - 1 WHERE on_call > 1
+    DB-->>T1: 1 行（2 → 1），T1 持有行锁
+    T2->>DB: 同一条 UPDATE
+    Note over DB: T2 在计数行上等待
+    T1->>DB: 关闭甲（更新甲行），COMMIT
+    DB-->>T2: 在新版本 on_call = 1 上重检条件：0 行
+    Note over T2: 拒绝关闭乙
+~~~
 
-**修法三：所有维护这条规则的事务都用 Serializable。** PostgreSQL 会检测到这组事务无法串行解释，让其中一笔以 `40001` 失败。失败方从头重试，看到只剩一人，放弃关闭。保护只在参与的事务都运行 Serializable 时成立；只重试最后一条 `UPDATE` 会沿用旧决策，仍然错。
+**修法二：Read Committed 下所有写方先锁同一控制行，再用下一条语句检查。** 关键在 T2 拿到锁之后的**下一条** `SELECT`：
+
+~~~mermaid
+sequenceDiagram
+    participant T1
+    participant DB as 班次控制行与排班表
+    participant T2
+    Note over T1,T2: 修法二，Read Committed：所有写方先锁同一控制行
+    T1->>DB: SELECT 班次行 FOR UPDATE
+    DB-->>T1: 取得锁
+    T2->>DB: SELECT 班次行 FOR UPDATE
+    Note over DB: T2 在锁上等待
+    T1->>DB: 查在岗人数（2），关闭甲，COMMIT
+    DB-->>T2: 取得锁
+    T2->>DB: 下一条 SELECT 取新快照，查在岗人数
+    DB-->>T2: 只剩乙 1 人
+    Note over T2: 拒绝关闭乙
+~~~
+
+这个方案依赖“每条语句一个新快照”，Repeatable Read 的快照不随等待刷新，不能照搬。所有改这条规则的写入路径都必须先锁同一行，漏一条就失效。
+
+**修法三：所有维护这条规则的事务都用 Serializable。** PostgreSQL 会检测到这组事务无法串行解释，让其中一笔以 `40001` 失败，失败方从头重试：
+
+~~~mermaid
+sequenceDiagram
+    participant T1
+    participant DB as 排班表
+    participant T2
+    Note over T1,T2: 修法三：所有维护这条规则的事务都用 Serializable
+    T1->>DB: 查在岗人数（2），关闭甲
+    T2->>DB: 查在岗人数（2），关闭乙
+    T1->>DB: COMMIT
+    DB-->>T1: 成功
+    T2->>DB: 继续执行或 COMMIT
+    DB-->>T2: 40001：这组事务无法串行解释
+    Note over T2: 回滚，从头重试整笔事务<br/>（哪一笔、在哪条语句失败由数据库决定，这里画成 T2）
+    T2->>DB: 新事务：查在岗人数
+    DB-->>T2: 只剩乙 1 人
+    Note over T2: 放弃关闭
+~~~
+
+保护只在参与的事务都运行 Serializable 时成立；只重试最后一条 `UPDATE` 会沿用旧决策，仍然错。
 
 | 修法 | 适用 | 代价 |
 |---|---|---|
@@ -5861,10 +5935,11 @@ ORM 会话是可变的事务状态，不能被并发的执行者共用：并发�
 `Engine` 在每个进程里创建一次，长期保存方言、建连方式和这个进程的连接池。会话创建时并不占连接；它第一次真正需要和数据库通信时才向池借一条——通常是执行第一条 SELECT，调用 `Session.connection()` 也会在业务 SQL 之前借出。事务结束时连接归还池。
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
     Start[创建局部会话并开始事务] --> Need[第一次需要与数据库通信]
-    Need --> Pool{在 pool_timeout 内借到连接？}
-    Pool -->|是：取空闲连接、按需新建或等到归还| Q[执行 SQL，在事务内取完结果]
+    Need --> Pool{"在 pool_timeout 内<br/>借到连接？"}
+    Pool -->|"是：取空闲连接、<br/>按需新建或等到归还"| Q[执行 SQL，在事务内取完结果]
     Pool -->|否：等待超时| Timeout[本次访问失败<br/>业务 SQL 未发出，没有连接可归还]
     Q -->|成功| C[COMMIT]
     Q -->|异常| R[ROLLBACK]
@@ -6355,15 +6430,9 @@ shard key (分片键) 决定一行数据住在哪个库。它同时决定三件�
 
 九个键里八个换了目标，只有 `acct-49` 的余数不变。取模容易计算，适合分片数长期稳定、或能整体重建数据的系统；代价是分片数一变，大批键重新映射。
 
-**一致性哈希。** consistent hashing (一致性哈希) 把节点和键都放到一个环形哈希空间上，键归顺时针方向遇到的第一个节点。用 0–99 的玩具环，节点 token 为 A=0、B=33、C=66，约定每个节点负责 `(前一个 token, 自己的 token]`。加入 D=20 后，D 只接管 `(0, 20]`：
+**一致性哈希。** consistent hashing (一致性哈希) 把节点和键都放到一个环形哈希空间上，键归顺时针方向遇到的第一个节点，即每个节点负责 `(前一个 token, 自己的 token]`。下图用 0–99 的玩具环（原有 token A=0、B=33、C=66）回答：加入 D=20 后，同一组键里哪些换了节点。
 
-| 键的哈希点 | 原环 A=0、B=33、C=66 | 加入 D=20 后 |
-| ---: | --- | --- |
-| 17 | B | D |
-| 20 | B | D |
-| 21 | B | B |
-| 35、49、52、65 | C | C |
-| 70、82 | A | A |
+![0–99 环上加入 D=20 后，D 只接管 (0, 20]，键 17 与 20 从 B 改归 D，其余键归属不变；取模从 %3 改为 %4 时九个键中八个换目标](resources/sharding-hash-ring-add-node.svg)
 
 只有 17 与 20 搬家，2/9；同一组键在取模下搬 8/9。本例的放置采用这个环，所以 `acct-17` 现在在 B 上，加入 D 后它落进 D 的区间（取模表只用来比较规则）。这个比例只说明映射规则的差别，不是负载实测：实际搬多少数据还取决于键的真实分布和每个键的数据量。
 
@@ -6453,18 +6522,41 @@ account_ownership(account_id, owner_shard, epoch, candidate_id, state)
 - **目录 CAS**：compare-and-swap (比较并交换)。只有目录当前值仍等于预期旧值（如 `B/7`）时才写入新值，否则失败；并发的几次切换因此只有一个成功。
 - **`decision_id`**：CAS 成功时一并写入目录的决策标识，例如 `K8`。目标分片只有拿到与之匹配的决策才能开门。
 
-本地状态只有三种：`open` 接受业务写，`closed` 是已准备、未开放的候选，`frozen` 是这一代的终态。允许的转换只有下表四种：
+本地状态只有三种：`open` 接受业务写，`closed` 是已准备、未开放的候选，`frozen` 是这一代的终态。下图回答一行所有权记录能怎样变化；图中没有的转换都不允许，例如 `frozen` 回到 `open`，或 `open` 退回 `closed`。
 
-| 转换 | 必须满足的条件 |
-| --- | --- |
-| 首次初始化 → `open` | 该账户在此分片从未有过所有权行，且权威目录已唯一指定初始 owner。后续迁移不能伪装成首次初始化 |
-| 较低代次 `frozen`（或此分片尚无该账户的行）→ 更高代次 `closed`（prepare） | 新代次高于已持久记录的下限；此分片第一次建行时，须由当前权威代次授权；完全相同的 prepare 重试只能读回仍为 `closed` 的同一候选 |
-| `closed` → `open`（开门） | 目录 CAS 已成功并持久记录了确切的 `decision_id`；命令必须同时匹配账户、owner、epoch、`candidate_id` 和该决策。只看到 owner/epoch 相同不构成授权 |
-| `closed` 或 `open` → `frozen` | 同一行上的条件更新；原为 `open` 时，要等已持锁的业务事务结束才完成 |
+```mermaid
+stateDiagram-v2
+    direction TB
+    state "进入本代之前" as Before {
+        state "此分片无该账户的行" as None
+        state "较低代次 frozen" as LowFrozen
+    }
+    state "closed：已准备的候选<br/>(owner, epoch, candidate_id)" as Closed
+    state "open：接受业务写" as Open
+    state "frozen：本代终态" as Frozen
 
-三条不变量让旧代次永远无法复活：
+    None --> Open: 首次初始化<br/>权威目录唯一指定初始 owner
+    None --> Closed: prepare<br/>由当前权威代次授权
+    LowFrozen --> Closed: prepare<br/>新 epoch 高于持久下限
+    Closed --> Closed: 相同 prepare 重试<br/>读回同一候选
+    Closed --> Open: 开门<br/>匹配目录 CAS 写入的 decision_id
+    Closed --> Frozen: 同行条件更新<br/>（如已确认 CAS 落败）
+    Open --> Frozen: 同行条件更新<br/>等持锁业务事务结束
+    note right of Frozen
+        不再回到 closed 或 open；
+        下一次 prepare 写入更高 epoch，
+        这一行就成为上方的“较低代次 frozen”
+    end note
+```
 
-- **同代 `frozen` 是终态**，不能改回 `closed` 或 `open`。
+图上的边还有几条容易漏掉的条件：
+
+- 首次初始化只适用于此分片从未有过该账户的行；后续迁移不能伪装成首次初始化。
+- 开门命令必须同时匹配账户、owner、epoch、`candidate_id` 和目录里的 `decision_id`。只看到 owner/epoch 相同不构成授权。
+- 冻结与业务写作用在同一行上，所以原为 `open` 时，冻结要等已持锁的业务事务结束才完成（见下一节）。
+
+除了“同代 `frozen` 不回退”，还有两条不变量让旧代次无法复活：
+
 - **行不可删，epoch 不复用。** 曾经建过的行（或等价的代次下限）要保留；任何可能被提升为写主的副本都必须带着它，或在提升后、对外开放前重新从权威端核对。
 - **未发布的 `closed` 候选不能被新 prepare 随意覆盖。** 先从权威目录确认它已在 CAS 竞争中不可逆地落败，再把该行冻结，才能准备更高代次。目录离开任何已发布的 owner/epoch 之前，该 owner 必须已在本地冻结且冻结已持久。
 
@@ -6511,7 +6603,7 @@ consistent snapshot (一致快照) S 包含源端截至 S 的一致数据；从�
 追平的日志位置里可能夹着别的账户的事件，但这次只应用 `acct-17` 的数据。这要求应用的事务以账户为边界：若一笔源事务原子地改了多个账户，协议把它拆开应用后，那笔事务的原子性就丢了，需要重新设计事务边界或改用能保留原子性的协调方案。
 
 > [!info] 实例：PostgreSQL 18 的逻辑解码（核对于 2026-11-13）
-> logical decoding (逻辑解码) 的复制槽可以导出一个与变更流衔接的一致快照；日志位置用 LSN (log sequence number，日志序列号) 表示，是 WAL 中的位置。槽会保留后续所需的 WAL，但崩溃重启后可能重发变更，消费者要自己去重。UPDATE 与 DELETE 能否带出旧行的列，取决于表的 replica identity (复制标识) 设置。这些只是快照与日志衔接的一种实现；账户目录、租户过滤和代次栅栏不是 PostgreSQL 自带的迁移功能。
+> logical decoding (逻辑解码) 的复制槽可以导出一个与变更流衔接的一致快照；日志位置用 LSN (log sequence number，日志序列号) 表示，是 WAL 中的位置。槽会保留后续所需的 WAL，但崩溃重启后可能重发变更，消费者要自己去重。UPDATE 与 DELETE 能否带出旧行的列，取决于表的 replica identity (复制标识) 设置。这些只是快照与日志衔接的一种实现；账户目录、账户过滤和代次栅栏不是 PostgreSQL 自带的迁移功能。
 
 ### 冻结源端：同一行上的兼容锁与冲突锁
 
@@ -6691,12 +6783,15 @@ Vary: Accept-Language
 
 ### 发到网络之前：四层快路径
 
-页面调用 `fetch()` 之后，请求不一定马上上网，它先穿过几层彼此独立的存储或快路径。命中其中一层，不代表其他几层也命中：
+页面调用 `fetch()` 之后，请求不一定马上上网。下图是这次读取的完整去程：请求先穿过 Service Worker、浏览器 HTTP 缓存、连接池和 DNS 四层彼此独立的快路径，需要时再建连，经 BFF 和第二段 TLS 到达 API。本节和后两节依次展开快路径、建连和 TLS。
 
-1. **Service Worker**：页面注册的脚本可以拦截请求，自己合成响应，或继续转发。它若自行合成响应，就要自己保证不会把已撤权用户的旧私有数据交出去。本例假设它原样转发。
-2. **浏览器 HTTP 缓存**：决定能否直接复用已存响应、是否先回源验证，或者直接走网络。规则见[下一章](#34.%20%E4%B8%80%E4%BB%BD%20HTTP%20%E5%93%8D%E5%BA%94%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%8F%AF%E4%BB%A5%E7%9B%B4%E6%8E%A5%E5%A4%8D%E7%94%A8%EF%BC%8C%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BF%85%E9%A1%BB%E5%9B%9E%E6%BA%90%E7%A1%AE%E8%AE%A4%EF%BC%9F)。
-3. **连接池**：已有一条能服务该来源、仍可用的连接时，直接复用，省掉地址解析和握手。
-4. **DNS 地址缓存**：需要新连接时，浏览器或系统解析器先查缓存，没有仍有效的记录才问递归解析器；递归解析器也可能从缓存回答，或者沿 DNS 委派逐级查询。记录的 TTL（time to live）限定缓存时长；“名称不存在”的结果也会被负缓存一段时间。
+![页面 fetch() 依次经过 Service Worker、HTTP 缓存、连接池和 DNS，再建立连接，经 BFF 与第二段 TLS 到达 API；右侧标出各层命中时的短路和 TLS 证明与不知道的内容](../../engineering-foundations/services/resources/http-request-outbound-path.svg)
+
+命中其中一层，不代表其他几层也命中。几点图上放不下：
+
+- Service Worker 是页面注册的脚本，可以拦截、合成或继续转发请求；本例假设它原样转发。
+- HTTP 缓存怎样决定复用、回源验证或走网络，见[下一章](#34.%20%E4%B8%80%E4%BB%BD%20HTTP%20%E5%93%8D%E5%BA%94%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%8F%AF%E4%BB%A5%E7%9B%B4%E6%8E%A5%E5%A4%8D%E7%94%A8%EF%BC%8C%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%BF%85%E9%A1%BB%E5%9B%9E%E6%BA%90%E7%A1%AE%E8%AE%A4%EF%BC%9F)。
+- 本地没有仍有效的 DNS 记录时才问递归解析器；递归解析器也可能从缓存回答，或者沿 DNS 委派逐级查询。记录的 TTL（time to live）限定缓存时长。
 
 连接和地址记录的生命周期互不约束：连接关闭后地址可能仍在缓存里；DNS 记录过期也不要求关闭现有连接。
 
@@ -6728,10 +6823,8 @@ HTTPS 在 HTTP 之下用 TLS 保护连接。它的证明范围在全领域以这
 
 - **证明了什么。** 浏览器验证服务器证书中的身份与访问的主机名相符，并且握手成功之后，TLS 保护这条连接上后续应用数据的机密性和完整性。证书身份匹配说明客户端连到了预期的服务端。
 - **依赖什么。** 证书撤销状态取决于客户端采用的机制及其数据新鲜度，例如浏览器自己分发的撤销列表；不能假设浏览器在每个请求上都实时查询撤销状态。
-- **不知道什么。** TLS 不知道这次请求代表 `user-17`，也不判断报表 42 属于哪个账户。HTTPS 完全正常时，BFF 仍须验证会话，API 仍须逐次授权。
+- **不知道什么。** TLS 不知道这次请求代表 `user-17`，也不判断报表 42 属于哪个账户。HTTPS 完全正常时，BFF 仍须验证会话，API 仍须逐次授权；本例两段 TLS 各自只证明自己那一跳，API 靠 BFF 附上的访问令牌知道请求代表谁（见上文去程图）。
 - **失败长什么样。** 证书错误、主机名不匹配或握手失败时，根本没有 HTTP 响应：浏览器终止连接或显示证书错误，页面得到的是网络错误，不是 API 返回的 `500`。
-
-本例有两段 TLS：浏览器到 BFF 一段，BFF 到 API 另一段。每段只证明自己那一跳连到了预期主机；API 知道请求代表谁，靠的是 BFF 附上的访问令牌，与 TLS 无关。
 
 #### 0-RTT 早期数据可以被重放
 
@@ -6970,14 +7063,38 @@ BFF 让令牌留在服务端。它用会话 Cookie 找到该用户的令牌集�
 
 OAuth 2.0 是授权框架；只有请求 `openid` scope 并按 OIDC 规则验证 ID Token，客户端才得到身份断言。本例的 BFF 是 confidential client (机密客户端)，API 是资源服务器，IdP 是固定的信任方。
 
-| 步骤 | BFF 做什么 | 防的是什么 |
-| --- | --- | --- |
-| 1. 开始事务 | 从受信配置选定 issuer、各端点、client ID 和精确登记的回调 `https://reports.example.test/oidc/callback`。在服务端建短期事务记录：一次性随机 `state`、`nonce`、PKCE `code_verifier`、预期 `iss`、回调地址、创建时间、未使用标记。用 `__Host-oidc-tx` Cookie（`Path=/; Secure; HttpOnly; SameSite=Lax`）把匿名浏览器上下文与事务关联 | 不让请求参数决定 IdP 或回调地址；把回调绑定到发起登录的那个浏览器 |
-| 2. 发起授权 | 用 32 个新随机字节生成无填充 Base64URL 的 `code_verifier`（43 个字符），计算 `code_challenge = BASE64URL(SHA-256(ASCII(code_verifier)))`，并显式发送 `code_challenge_method=S256`。浏览器被重定向到 IdP，参数含 `response_type=code`、`client_id`、精确 `redirect_uri`、`scope=openid reports.read`、`state`、`nonce` 和 challenge | 省略方法字段时 RFC 7636 的默认值是 `plain`，不会自动用 SHA-256。`reports.read` 只是向 API 请求的权限范围，不证明 `user-17` 属于 `acct-17` |
-| 3. 回调校验 | IdP 认证用户后带 code、`state`、`iss` 回到回调地址。BFF 要求 `iss` 存在且与事务的预期值精确相等（本例 IdP 元数据声明支持 RFC 9207，错误响应也要带 `iss`）；要求 `__Host-oidc-tx` 存在，用它找到事务，再用一条原子条件更新同时核对 `state`、未过期、未消费，并标为已消费 | `iss` 防多授权服务器的 mix-up 攻击；原子消费防并发回调重复兑换。任一项失败就停止，不兑换 code，不建会话 |
-| 4. 兑换 code | 经已验证的 TLS 连接调用 Token Endpoint，发送 `grant_type=authorization_code`、code、相同的 `redirect_uri`、`code_verifier` 和机密客户端认证。IdP 核对 code 未用过、绑定本 client 和回调、PKCE 匹配后，返回 ID Token、Access Token，可能还有 Refresh Token | 截获 code 的人没有 verifier，兑换不了 |
-| 5. 验证身份并绑定账户 | 见下一小节 | ID Token 被替换或重放 |
-| 6. 建立新会话 | 在服务端保存身份、会话 ID、有效期与 API grant 的关联；销毁匿名上下文和任何登录前的会话 ID，签发全新的 `__Host-session` | 会话固定 |
+下图是登录的完整往返，编号与下面的要点对应：
+
+```mermaid
+%%{init: {"sequence": {"width": 170, "actorMargin": 30, "mirrorActors": false}}}%%
+sequenceDiagram
+    participant B as 浏览器
+    participant F as BFF
+    participant A as IdP 授权端点
+    participant T as IdP Token Endpoint
+    B->>F: 访问登录入口
+    Note over F: ① 建事务记录：<br/>state、nonce、<br/>code_verifier、预期 iss、<br/>精确回调地址、未使用标记
+    F-->>B: ② 302 到 IdP<br/>Set-Cookie: __Host-oidc-tx<br/>参数：code_challenge（S256）、<br/>state、nonce、redirect_uri
+    B->>A: 授权请求
+    Note over B,A: 用户在 IdP 完成认证
+    A-->>B: 302 到回调：code、state、iss
+    B->>F: ③ GET /oidc/callback<br/>（code、state、iss）<br/>带 __Host-oidc-tx
+    Note over F: iss 精确等于预期；<br/>凭 Cookie 找到事务；<br/>原子条件更新：state 匹配、<br/>未过期、未消费 → 已消费
+    F->>T: ④ code、code_verifier、<br/>相同 redirect_uri、<br/>客户端认证
+    Note over T: code 未用过，<br/>绑定本 client 与回调，<br/>PKCE 匹配
+    T-->>F: ID Token、Access Token<br/>（可能还有 Refresh Token）
+    Note over F: ⑤ 验证 ID Token（含 nonce），<br/>按 (iss, sub) 绑定 user-17
+    F-->>B: ⑥ Set-Cookie: __Host-session<br/>（全新 ID）<br/>销毁匿名上下文<br/>与登录前的会话 ID
+```
+
+图上没写出的条件，以及每一步防的是什么：
+
+1. **开始事务。** issuer、各端点、client ID 和回调 `https://reports.example.test/oidc/callback` 都取自受信配置并精确登记；事务记录短期有效，`__Host-oidc-tx` 的属性是 `Path=/; Secure; HttpOnly; SameSite=Lax`。防的是让请求参数决定 IdP 或回调地址，并把回调绑定到发起登录的那个浏览器。
+2. **发起授权。** `code_verifier` 由 32 个新随机字节生成，无填充 Base64URL 编码后是 43 个字符；`code_challenge = BASE64URL(SHA-256(ASCII(code_verifier)))`。授权请求还带 `response_type=code`、`client_id` 和 `scope=openid reports.read`。必须显式发送 `code_challenge_method=S256`：省略时 RFC 7636 的默认值是 `plain`，不会自动用 SHA-256。`reports.read` 只是向 API 请求的权限范围，不证明 `user-17` 属于 `acct-17`。
+3. **回调校验。** `iss` 必须存在（本例 IdP 元数据声明支持 RFC 9207，错误响应也要带 `iss`），`__Host-oidc-tx` 必须存在。`iss` 防多授权服务器的 mix-up 攻击；原子消费防并发回调重复兑换。任一项失败就停止，不兑换 code，不建会话。
+4. **兑换 code。** 经已验证的 TLS 连接调用 Token Endpoint，发送 `grant_type=authorization_code`。截获 code 的人没有 verifier，兑换不了。
+5. **验证身份并绑定账户。** 逐项规则见下一小节；防的是 ID Token 被替换或重放。
+6. **建立新会话。** 服务端保存身份、会话 ID、有效期与 API grant 的关联；全新的会话 ID 防会话固定。
 
 三个随机值各管一件事，不能互相代替：PKCE 把 code 的兑换绑定到这次事务；`state` 把浏览器回调绑回发起它的事务；`nonce` 把 ID Token 绑回这次认证。RFC 9700 允许在确认授权服务器支持 PKCE 时只靠 PKCE 防护回调的 CSRF；本例仍显式检查 Cookie、`state` 和 `nonce`。这些协议端点的保护，也不能代替报表业务变更请求的 CSRF 检查。
 
@@ -8771,24 +8888,49 @@ outbox 只保证本地意图不丢。它不替远端系统去重：如果 worker
 
 ### job 状态机与 outbox 各有自己的生命周期
 
-job 有五个持久状态；`cancel_requested` 是一个独立的标志，不是状态：
+job 有五个持久状态。下图回答“谁在什么条件下把 job 从一个状态推到另一个状态，同一事务里还改了什么”；三个终态（`succeeded`、`failed`、`cancelled`）一旦提交，不再回到 `queued` 或 `running`。
 
-| 状态 | 含义与下一步 |
+~~~mermaid
+stateDiagram-v2
+    [*] --> queued : API 受理事务提交<br/>占等待槽，插入 pending 意图
+    queued --> running : worker 条件领取<br/>attempt + 1，写租约，归还等待槽
+    running --> queued : worker 重试或恢复器重排<br/>预留等待槽，新 available_at，新 outbox 意图
+    queued --> cancelled : API 取消<br/>归还等待槽（只还一次）
+    running --> cancelled : 已有 cancel_requested<br/>由当前 attempt 或恢复器提交
+    running --> failed : 不可重试错误、attempt 用尽或重排无槽<br/>authorization_revoked / attempts_exhausted / capacity_exhausted
+    running --> succeeded : 当前 attempt 条件提交<br/>结果引用 + report.ready 意图同事务
+    note right of running
+        cancel_requested 是 running 上的标志，不是状态
+    end note
+~~~
+
+每条边都是一次条件写入：条件里带着写入者看到的状态，离开 `running` 的边还带 attempt，后到者更新零行。领取的条件与栅栏见[下一章](#43.%20%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E4%B8%80%E4%B8%AA%E4%BB%BB%E5%8A%A1%E5%90%8C%E4%B8%80%E6%97%B6%E5%88%BB%E5%8F%AA%E7%94%B1%E4%B8%80%E4%B8%AA%20worker%20%E6%8E%A8%E8%BF%9B%EF%BC%9F)，重排、取消与恢复器的判断顺序见[收尾一章](#46.%20%E4%BB%BB%E5%8A%A1%E5%A4%B1%E8%B4%A5%E3%80%81%E8%A2%AB%E5%8F%96%E6%B6%88%E6%88%96%20worker%20%E5%A4%B1%E8%81%94%E5%90%8E%EF%BC%8C%E6%80%8E%E6%A0%B7%E6%94%B6%E5%B0%BE%E8%80%8C%E4%B8%8D%E9%87%8D%E5%A4%8D%E4%B9%9F%E4%B8%8D%E7%95%99%E5%AD%A4%E5%84%BF%EF%BC%9F)。各状态在行上留下的事实：
+
+| 状态 | 持久字段与对外表现 |
 | --- | --- |
-| `queued` | 已受理、尚未被领取的一轮排队；持有一个等待槽；`available_at` 到了才能领取。消息此刻可能还在 outbox 里，也可能已进入 broker |
-| `running` | 某个 worker 已通过条件更新领取；等待槽已归还；当前 attempt (执行尝试) 编号和 lease (租约) 到期时间已写入 |
-| `succeeded` | 当前 attempt 的私有结果对象引用与成功状态一起提交；同一事务写了 `report.ready` outbox |
-| `failed` | 不可重试的错误、attempt 用尽，或重排时拿不到等待槽；用有限的错误码表达，如 `authorization_revoked`、`attempts_exhausted`、`capacity_exhausted` |
-| `cancelled` | 取消赢得状态竞争后的终态；不暴露结果对象 |
+| `queued` | 持有一个等待槽；`available_at` 到了才能领取。唤醒消息此刻可能还在 outbox 里，也可能已进入 broker |
+| `running` | 等待槽已归还；当前 attempt (执行尝试) 编号和 lease (租约) 到期时间已写入 |
+| `succeeded` | 当前 attempt 的私有结果对象引用 |
+| `failed` | 有限错误码，如 `authorization_revoked`、`attempts_exhausted`、`capacity_exhausted` |
+| `cancelled` | 不暴露结果对象 |
 
-几条不变的规则：
+另外几条不变的规则：
 
-- 终态（后三个）一旦提交，不再回到 `queued` 或 `running`。
 - 每个 job 最多 3 次 attempt，包含首次领取，即最多两次重试。这个上限在受理时写进 job 行（`max_attempts = 3`），之后改部署配置不能悄悄改变已有 job 的上限。
 - job 行至少保存：job ID、账户与原请求主体、`report_id`、规范化参数、请求指纹与幂等键、创建时间、`max_attempts`、当前 attempt、租约到期时间、`available_at`、是否持有等待槽、`cancel_requested`、终态与成功时间、结果到期时间、私有结果引用、有限错误码。
 - 所有时间判断用数据库时钟。首次受理时 `available_at` 取数据库当前时间；延迟重试时保存退避到期的时刻。relay 和 worker 用同一个时间基准，不各自看本地时钟。
 
-outbox 意图有自己的状态 `pending → published`，不能拿它代替 job 状态。每一轮排队（首次受理、每次重排）都插入一条**新的**意图，各有唯一的 `intent_id`。relay 回写时以 `intent_id` 为条件：
+outbox 意图有自己的生命周期，不能拿它代替 job 状态。每一轮排队（首次受理、每次重排）都插入一条**新的**意图，各有唯一的 `intent_id`：
+
+~~~mermaid
+stateDiagram-v2
+    direction LR
+    [*] --> pending : 首次受理或每次重排<br/>插入新的 intent_id
+    pending --> published : relay 核实发布结果后<br/>以 intent_id 和 pending 为条件回写
+    published --> [*] : 过了审计与排障保留期<br/>按策略删除
+~~~
+
+relay 的回写语句：
 
 ~~~sql
 UPDATE report_outbox
@@ -8798,7 +8940,7 @@ WHERE intent_id = :intent_id AND state = 'pending';
 
 这样，上一轮意图迟到的发布回执只会改它自己那一行，不会把新一轮的意图误标为已发布。这种“按身份条件回写”是栅栏原理的一个实例，原理本身在[怎样保证一个任务同一时刻只由一个 worker 推进](#43.%20%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E4%B8%80%E4%B8%AA%E4%BB%BB%E5%8A%A1%E5%90%8C%E4%B8%80%E6%97%B6%E5%88%BB%E5%8F%AA%E7%94%B1%E4%B8%80%E4%B8%AA%20worker%20%E6%8E%A8%E8%BF%9B%EF%BC%9F)讲。
 
-清理也按各自的生命周期：已发布的意图在满足审计与排障保留期后按策略删除；未发布的意图必须保留，不能和结果对象用同一个删除条件。
+清理也按各自的生命周期：未发布的意图必须保留，不能和结果对象用同一个删除条件。
 
 ### 状态、取消、结果与保留期怎样约定？
 
@@ -8834,14 +8976,38 @@ WHERE intent_id = :intent_id AND state = 'pending';
 
 上一章的状态机约定：`job-demo-731` 成功时，同一事务还会写一条 `report.ready` outbox (事务发件箱) 意图（这笔成功提交怎样写，见[领取与栅栏一章](#43.%20%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E4%B8%80%E4%B8%AA%E4%BB%BB%E5%8A%A1%E5%90%8C%E4%B8%80%E6%97%B6%E5%88%BB%E5%8F%AA%E7%94%B1%E4%B8%80%E4%B8%AA%20worker%20%E6%8E%A8%E8%BF%9B%EF%BC%9F)）。本支线跟着这条意图走出服务：发送服务用一个 HTTP 回调（webhook）把“报表 42 已完成”通知给另一个服务，即接收方。接收方可能暂时不可用，也可能已经把事件写进数据库，返回的响应却在网络中丢失，所以发送方无法只凭一次 HTTP 往返判断对方是否收下。本章站在接收方回答：怎样确认请求真实、没有被重放、在有效期内，并在什么条件下回应“已受理”；也说明发送方怎样重试、怎样轮换共享密钥。
 
-接收方处理每个请求，都按同一个顺序检查，前一步不通过就不做后一步：
+接收方处理每个请求，都按同一个顺序检查，前一步不通过就不做后一步。下图是整条判定路径，编号就是检查顺序：格式、认证、授权、期限、去重、受理；最后一步持久写入收件记录（`inbox`）和处理意图，提交成功后才回应 202。图里的截止点 D、去重用的墓碑等在后文逐节定义，初读先看主干的顺序和各出口的状态码。
 
-1. **格式**：原始字节、请求头、大小、编码是否符合约定；
-2. **认证**：签名是否由登记过的密钥算出，签名时间是否新鲜；
-3. **授权**：这个已认证的来源是否有权发送这种事件、针对这个资源；
-4. **期限**：事件是否还在固定的投递期限内；
-5. **去重**：这个逻辑事件是否已经受理过；
-6. **受理**：持久写入收件记录和处理意图，提交成功后才回应 202。
+```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 300}}}%%
+flowchart TD
+    R[收到 POST /hooks/reports] --> G1["① 格式<br/>头唯一、大小、无内容编码、Content-Type"]
+    G1 -->|不通过| X1["400：头重复或错误、正文过大、带内容编码<br/>415：Content-Type 缺失或不支持<br/>都不写 inbox"]
+    G1 -->|通过| G2["② 认证<br/>(endpointId, keyId) 查到可用键<br/>HMAC 相符、签名时间在 ±300 s 内"]
+    G2 -->|"通过，信任注册记录的 sourceId"| G3["③ 严格解析 JSON 与业务授权<br/>来源、事件类型、reportId 42"]
+    G2 -->|任一项失败| X401["401，统一正文<br/>不透露原因，不写 inbox"]
+    G3 -->|不通过| X3["400：重复成员名或语法无效<br/>403：来源无权<br/>都不写 inbox"]
+    G3 -->|通过| G4["④ 期限<br/>签名时间 &lt; D = createdAt + 30 天"]
+    G4 -->|通过| G5["⑤ 去重<br/>INSERT … ON CONFLICT DO NOTHING<br/>返回一行吗？"]
+    G4 -->|达到或超过 D| X410["410<br/>不写 inbox"]
+    G5 -->|否：读胜者摘要| G6["已提交的行"]
+    G5 -->|是：同事务插入处理 outbox| G7["⑥ 受理：COMMIT 结果"]
+    G6 -->|摘要相同| D202["202 重复受理<br/>不新增处理意图"]
+    G6 -->|摘要不同| D409["409<br/>写隔离记录并告警"]
+    G6 -->|查不到墓碑| D503["503 并告警<br/>不重跑插入；fail-closed 门闩<br/>关闭该端点/来源的首次受理"]
+    G7 -->|确认成功| A202["202 首次受理<br/>两行已持久化"]
+    G7 -->|明确未提交| A503["503<br/>两行都不存在"]
+    G7 -->|结果未知| A503u["503 或无响应<br/>不宣称回滚"]
+    D202 ~~~ D409 ~~~ D503
+    A202 ~~~ A503 ~~~ A503u
+
+    classDef reject fill:#fff0ed,stroke:#a54838
+    classDef ok fill:#e7f6ec,stroke:#34734a
+    classDef warn fill:#fff6df,stroke:#9a6a12
+    class X1,X401,X3,X410 reject
+    class D202,A202 ok
+    class D409,D503,A503,A503u warn
+```
 
 > [!info] 本例约定与通用原则
 > 本章定义一个只供教学的合成 HMAC 协议，不兼容 Stripe、GitHub 或任何 webhook 提供方。下面这些都是**本例约定**：请求头名称与签名输入格式、±300 秒的签名新鲜度窗口、`createdAt + 30 天`的投递期限、各验证结果对应的状态码、发送方最多 12 次自动发送和 15 分钟退避上限。所有域名、密钥和业务数据都是合成的。通用的原则是：验签与去重分开、先认证再查收件记录、持久提交后才确认受理、去重记录要比最后一份合法请求活得久、密钥轮换先兼容后切换。
@@ -8953,19 +9119,12 @@ HMAC (基于哈希的消息认证码) 用共享密钥证明完整性和“持钥
 
 ### 每种验证结果怎样回应？
 
-| 验证结果 | 本例响应 | 持久状态 |
-| --- | --- | --- |
-| 重复或格式错误的头、正文过大、带内容编码、重复 JSON 成员名、载荷语法无效 | 400 | 不写 `inbox`；安全日志只记失败类别 |
-| 缺少或不支持的 `Content-Type` | 415 | 不写 `inbox` |
-| `keyId` 未知/未生效/已撤销、摘要不匹配、时间超出 ±300 秒 | 401，统一的认证失败正文与 challenge | 不写 `inbox`；不透露具体原因 |
-| 签名有效，但来源无权发送该类型或资源 | 403 | 不写 `inbox` |
-| 前述检查都通过，但签名时间达到或超过 D | 410 | 不写 `inbox` |
-| 完整验证通过，事件已存在且正文摘要相同 | 202 | 只对照已提交的行，不新增处理意图 |
-| 完整验证通过，事件已存在但正文摘要不同 | 409 | 写受限的冲突审计或隔离记录，告警 |
-| 首次受理，`inbox` 与处理意图已提交且确认成功 | 202 | 两行都已持久化；worker 可能早于响应就开始 |
-| 观察到唯一键冲突，却查不到本应保留的墓碑 | 503 并告警 | 不重跑首次插入；关闭该端点/来源的首次受理，直到恢复或对账 |
-| 数据库明确确认受理事务未提交 | 503 | 两行都不存在；发送方按原事件重试 |
-| `COMMIT` 已发出，但没收到提交结果 | 连接还能应答时回 503；否则发送方看到的也是未知 | 可能已提交，也可能没有；不宣称回滚 |
+开头的判定图给出了每个结果的状态码。它们留下的持久状态不同：
+
+- **拒绝出口**（400、415、401、403、410）都不写 `inbox`。安全日志只记失败类别；401 不透露具体原因。
+- **两种 202** 都以已提交的行为准：重复受理只对照已有行，不新增处理意图；首次受理时 `inbox` 与处理意图都已持久化，worker 可能早于响应就开始。
+- **409** 写受限的冲突审计或隔离记录，并告警。
+- **三种 503** 含义不同。冲突后查不到墓碑：不重跑首次插入，关闭该端点/来源的首次受理，直到恢复或对账。数据库明确确认未提交：两行都不存在，发送方按原事件重试。`COMMIT` 结果未知：可能已提交，也可能没有，不宣称回滚。
 
 401 要带适用于目标资源的 `WWW-Authenticate` challenge。这里的 `Webhook-HMAC` 是本例私有的认证方案：HTTP 只提供 challenge/response 的框架，并没有定义它；凭据放在自定义的 `X-Webhook-*` 头里，challenge 也不会让它们变成标准的 HTTP 认证凭据。公开互操作的实现要发布完整的方案规范，并按 RFC 9110 的认证方案注册程序处理。因为 HTTP 的缓存规则认不出这些自定义凭据头，本端点对所有响应都设 `Cache-Control: no-store`。认证失败的正文统一，不透露 `keyId` 是否存在或比较细节：
 
@@ -8999,23 +9158,21 @@ Content-Type: application/problem+json
 
 墓碑保存的是“这个事件已经受理过”的证据。它必须活到**最后一份仍可能通过验签的请求完成数据库裁决之后**；否则一份迟到的重复请求会因为旧行已删而被当成新事件。这是[去重要覆盖所有在途和晚到请求](#%E5%8E%BB%E9%87%8D%E8%A6%81%E8%A6%86%E7%9B%96%E5%A4%9A%E9%95%BF%E6%97%B6%E9%97%B4%EF%BC%9F)这条原则在 webhook 上的具体推导。
 
-| 记号 | 含义 |
-| --- | --- |
-| D | 固定签发截止点 `createdAt + 30 天`；本例为 `2026-12-09T04:00:00Z` |
-| B | 从最后一次通过 ±300 秒检查，到数据库完成提交或确认中止的最长耗时；包括解析、授权、排队、连接池、锁等待和全部事务语句 |
-| S | 清理所用的数据库时钟最多比验签实例快多少；本合同固定这个上界 |
-| G | 清理调度与存储的安全余量 |
+下图沿时间轴推导这个时刻。能进入数据库受理的请求，签名时间早于固定截止点 D（`createdAt + 30 天`），所以验签时实例的时钟早于 D + 300 秒。之后还要依次加上三个上界：
 
-推导：能进入数据库受理的请求，签名时间 `< D`，验签时实例的时钟因此 `< D + 300 秒`；之后数据库裁决最多再用 B；清理时钟最多快 S。所以把
+- **B**：从最后一次通过 ±300 秒检查，到数据库完成提交或确认中止的最长耗时，包括解析、授权、排队、连接池、锁等待和全部事务语句；
+- **S**：清理所用的数据库时钟最多比验签实例快多少，由本合同固定；
+- **G**：清理调度与存储的安全余量。
+
+![从 createdAt 起 30 天到 D，再依次加 300 s、B、S、G 得到 dedupe_until；本例 B = 20 s、S = G = 5 s，墓碑最早在 2026-12-09T04:05:30Z 才允许清理](../../engineering-foundations/services/resources/webhook-tombstone-retention.svg)
+
+所以把
 
 ~~~text
 dedupe_until ≥ D + 300 s + B + S + G
 ~~~
 
-随墓碑一起持久保存。清理进程使用数据库时钟，只清理已到期、且处理 outbox 已经终结的记录。
-
-> [!example] 换算到本例时钟
-> 设已强制 B = 20 s，固定 S = 5 s，再留 G = 5 s。墓碑最早在 D 之后 `300 + 20 + 5 + 5 = 330 s` 才允许清理，即 `2026-12-09T04:05:30Z`。这些数值只演示推导，部署前要证明自己的实际上界。
+随墓碑一起持久保存。清理进程使用数据库时钟，只清理已到期、且处理 outbox 已经终结的记录。图中的 B、S、G 取值只演示推导，部署前要证明自己的实际上界。
 
 几条让这个公式成立的前提：
 
@@ -9227,17 +9384,28 @@ worker 可能卡住：进程停顿、网络分区、机器失联。为了让 job
 1. **单调递增的代次。** 每次领取都让 attempt 加一。代次只增不减，新执行者的编号一定大于旧的。
 2. **在提交处检查。** 每一次写入（成功、失败、取消、续租）都把“我是第几代”写进条件里：`WHERE status = 'running' AND attempt = :my_attempt`。不匹配，就更新零行。
 
-于是栅栏生效的时刻是**恢复器的接管事务提交的那一刻**，而不是时钟到达租约时刻。以 `job-demo-731` 为例：
+于是栅栏生效的时刻是**恢复器的接管事务提交的那一刻**，而不是时钟到达租约时刻。下图以 `job-demo-731` 为例，画出恢复器先提交时 A 怎样被挡住：
 
-| 时点 | 数据库里的行 | 结果 |
-| --- | --- | --- |
-| A 领取 | `running / attempt = 1`，写入租约 | A 开始执行 |
-| A 停顿，租约到期 | 仍是 `running / attempt = 1` | 恢复器取得竞争资格；A 若此时醒来提交成功，仍然有效 |
-| 恢复器先提交接管 | 改回 `queued`，等待槽和新 outbox 一起提交 | 栅栏从这一刻生效 |
-| B 领取新一轮 | `running / attempt = 2` | B 开始执行 |
-| A 醒来，尝试提交 `attempt = 1` 的成功 | 条件 `status = 'running' AND attempt = 1` 不成立 | 更新零行，A 的结果不生效 |
+~~~mermaid
+sequenceDiagram
+    participant A as worker A
+    participant DB as job-demo-731 行
+    participant R as 恢复器
+    participant B as worker B
+    A->>DB: 条件领取
+    DB-->>A: running / attempt = 1，写入租约
+    Note over A: 停顿
+    Note over DB: 租约到期：行仍是 running / attempt = 1<br/>A 若此刻醒来提交成功，仍然有效
+    R->>DB: 接管：锁行，仍是 running / attempt = 1 且租约已过期
+    DB-->>R: 提交 queued + 等待槽 + 新 outbox 意图
+    Note over DB: 栅栏从这一刻生效
+    B->>DB: 条件领取新一轮
+    DB-->>B: running / attempt = 2
+    A->>DB: 醒来提交成功，条件<br/>status = 'running' AND attempt = 1
+    DB-->>A: 更新零行，A 的结果不生效
+~~~
 
-反过来，如果 A 的成功事务先于恢复器提交，job 就是 `succeeded`；恢复器随后看到终态，不会重排。两种顺序都只有一个赢家，赢家由行锁和提交顺序决定。恢复器在接管时怎样在取消、失败和重排之间选择，见[任务失败、被取消或 worker 失联后怎样收尾](#46.%20%E4%BB%BB%E5%8A%A1%E5%A4%B1%E8%B4%A5%E3%80%81%E8%A2%AB%E5%8F%96%E6%B6%88%E6%88%96%20worker%20%E5%A4%B1%E8%81%94%E5%90%8E%EF%BC%8C%E6%80%8E%E6%A0%B7%E6%94%B6%E5%B0%BE%E8%80%8C%E4%B8%8D%E9%87%8D%E5%A4%8D%E4%B9%9F%E4%B8%8D%E7%95%99%E5%AD%A4%E5%84%BF%EF%BC%9F)。
+反过来，如果 A 的成功事务先于恢复器提交，job 就是 `succeeded`；恢复器随后看到终态，不会重排。两种顺序都只有一个赢家，赢家由行锁和提交顺序决定。恢复器在接管时怎样在取消、失败和重排之间选择，见[收尾一章的决策图](#%E9%87%8D%E8%AF%95%E4%B8%8E%E6%81%A2%E5%A4%8D%E6%8C%89%E4%BB%80%E4%B9%88%E9%A1%BA%E5%BA%8F%E5%86%B3%E5%AE%9A%EF%BC%9F)。
 
 栅栏挡住的是**写入**，不是**进程**。A 在被栅栏之后仍可能继续读数据、上传对象、占着它的物理执行槽，直到它自己停下。所以对象键要按 attempt 区分，物理槽要等 A 真正释放资源后才归还；这两件事在收尾一章展开。
 
@@ -9338,15 +9506,25 @@ worker 每次处理完一条消息，都要回答“这条消息还需要保留�
 
 这个变体常和另一种租约约定一起出现，必须先说清楚。本主线的案例采用**宽松约定**：租约到期只给恢复器竞争资格，旧 worker 在接管提交之前仍可能先完成。另一种是**严格租期**：每次写入都额外要求 `lease_expires_at > clock_timestamp()`，租约一到期就拒绝旧 worker，即使恢复器还没接管。两种都成立，但**同一种 job 只能选一种**，不能有的写入检查租期、有的不检查。
 
-下面用一个与 `job-demo-731` 无关的独立任务 `pg-job-demo-42` 展示严格租期变体（30 秒租约是演示值）：
+下面用一个与 `job-demo-731` 无关的独立任务 `pg-job-demo-42` 展示严格租期变体（30 秒租约是演示值）。和上一张栅栏图对照，区别在于 A 在租约到期、B 还没接管时就已被拒绝：
 
-| 时点 | 状态与结果 |
-| --- | --- |
-| A 领取 | `running / attempt = 1`，租约 30 秒 |
-| A 的租约到期，B 尚未接管 | A 尝试完成：严格租期条件不成立，更新零行 |
-| B 用 `SKIP LOCKED` 接管 | `running / attempt = 2`，写入新租约 |
-| B 正常完成 | 同一事务写 `succeeded`、`reports/42/attempt-2` 和唯一的 `report.ready` 意图 |
-| A 迟到 | attempt 与状态都不匹配，更新零行，不覆盖 B 的结果 |
+~~~mermaid
+sequenceDiagram
+    participant A as worker A
+    participant DB as pg-job-demo-42 行
+    participant B as worker B
+    A->>DB: SKIP LOCKED 领取
+    DB-->>A: running / attempt = 1，租约 30 秒
+    Note over DB: A 的租约到期，B 尚未接管
+    A->>DB: 醒来尝试完成，条件含<br/>lease_expires_at > clock_timestamp()
+    DB-->>A: 更新零行（严格租期拒绝）
+    B->>DB: SKIP LOCKED 接管过期行
+    DB-->>B: running / attempt = 2，新租约
+    B->>DB: 同一事务：succeeded、<br/>reports/42/attempt-2、report.ready 意图
+    DB-->>B: 1 行，提交
+    A->>DB: 迟到完成 attempt = 1
+    DB-->>A: 状态与 attempt 都不匹配，更新零行，不覆盖 B
+~~~
 
 这个例子还演示了另一种情况：在最终结果之前允许发出的“处理中”通知 `report.processing`。它同样只能由当前 attempt 登记，用单条语句同时完成“有没有写权”和“插入或比对已有意图”。结果有四列，含义如下：
 
@@ -9617,17 +9795,13 @@ worker 每次处理完一条消息，都要回答“这条消息还需要保留�
 
 ### 三个事实，由三个不同的组件观察
 
-一次导出要经过三道交接，每道交接产生一个独立的事实：
+一次导出从 API 到 ACK 要经过六段交接。下图是整条链路的总览：每段只有自己的证据（绿字），其中三段各产生一个独立的事实——API 看到数据库持久受理了 job，relay 看到 broker 按约定接收了一次发布，worker 看到业务结果已完成；右栏是观测这一段的信号，红圈 ①–④ 是后文要分析的崩溃点。后文的发布确认图展开第 2 段，成功分支图展开第 4–6 段。
 
-| 事实 | 谁观察到 | 证据 |
-| --- | --- | --- |
-| 数据库持久受理了 job | API | 受理事务提交成功（job、等待槽、outbox (事务发件箱) 意图） |
-| broker 按约定接收了一次发布 | relay | 本次发布的 publisher confirm，且路由与持久性条件满足 |
-| 业务结果已完成 | worker | `succeeded` 与私有对象引用、`report.ready` 意图同一事务提交 |
+![交接链从 API 受理、relay 发布、broker 队列、worker 领取、成功提交到 ACK；每段标出证据与观测信号，四个红圈标出崩溃点](../../engineering-foundations/services/resources/queue-handoff-chain.svg)
 
 这三件事不能互相推导。publisher confirm 只说明 broker 收下了消息，不知道 worker 是否收到、处理或完成；consumer ACK 只是结束 broker 对**这一次投递**的待确认状态，它本身不说明报表成功了。按上一章的规则，worker 在 ACK 之前必须已经提交某个终态，或已经持久安排好重试或接管，所以 ACK 可能对应成功、失败、取消或“已交给下一轮”，任何一种都有可能。
 
-数据库和 broker 之间也没有共享的原子事务。outbox 消除的只是“数据库已提交、进程却在发布前崩溃”这一个缺口（见[耗时任务怎样被持久受理](#41.%20%E8%80%97%E6%97%B6%E4%BB%BB%E5%8A%A1%E6%80%8E%E6%A0%B7%E8%A2%AB%E6%8C%81%E4%B9%85%E5%8F%97%E7%90%86%EF%BC%8C%E5%B9%B6%E4%BF%9D%E8%AF%81%E4%B8%80%E5%AE%9A%E4%BC%9A%E8%A2%AB%E5%94%A4%E9%86%92%EF%BC%9F)），relay 和 worker 仍然必须容忍重复。因此本领域不把“最终业务效果只发生一次”简称为 exactly-once (恰好一次)：它靠的是数据库里的状态条件、幂等键、远端的去重约定和恢复路径，而不是哪一层的某一次确认。
+数据库和 broker 之间也没有共享的原子事务。outbox (事务发件箱) 消除的只是“数据库已提交、进程却在发布前崩溃”这一个缺口（见[耗时任务怎样被持久受理](#41.%20%E8%80%97%E6%97%B6%E4%BB%BB%E5%8A%A1%E6%80%8E%E6%A0%B7%E8%A2%AB%E6%8C%81%E4%B9%85%E5%8F%97%E7%90%86%EF%BC%8C%E5%B9%B6%E4%BF%9D%E8%AF%81%E4%B8%80%E5%AE%9A%E4%BC%9A%E8%A2%AB%E5%94%A4%E9%86%92%EF%BC%9F)），relay 和 worker 仍然必须容忍重复。因此本领域不把“最终业务效果只发生一次”简称为 exactly-once (恰好一次)：它靠的是数据库里的状态条件、幂等键、远端的去重约定和恢复路径，而不是哪一层的某一次确认。
 
 还要分清三种身份：幂等键 `export-demo-415` 识别客户端的一次意图，报表 ID 42 识别业务对象，job ID `job-demo-731` 识别一次持久受理的作业。消息里只带最后一个。
 
@@ -9657,7 +9831,7 @@ relay 要把一个异步回执对应到唯一一次发布。本例的做法是�
 
 这样仍消除不了“broker 已接受、数据库还没回写”造成的重复：broker 不会按业务 job ID 替应用去重。worker 一侧依靠上一章的条件领取处理重复。
 
-![outbox 意图经 relay 发布到 RabbitMQ；每条 channel 只保留一条在途发布，以本次 return 与 confirm 决定意图能否标为 published](../../engineering-foundations/services/resources/queue-publish-confirm.svg)
+![交接链第 2 段的展开：outbox 意图经 relay 发布到 RabbitMQ；每条 channel 只保留一条在途发布，以本次 return 与 confirm 决定意图能否标为 published](../../engineering-foundations/services/resources/queue-publish-confirm.svg)
 
 ### consumer ACK 的规则
 
@@ -9669,7 +9843,7 @@ broker 把消息投递给 worker 之后，这次 delivery (投递) 处于“待�
 
 可靠的任务处理要用手动确认。自动确认模式下，broker 在发出消息时就视为已交付；worker 若在持久化结果之前崩溃，broker 不会重投这条消息。
 
-![成功分支：worker 条件领取，写私有对象，同一事务提交成功状态、对象键与 ready 意图，最后单条 ACK](../../engineering-foundations/services/resources/queue-consumer-ack.svg)
+![交接链第 4–6 段的展开，成功分支：worker 条件领取，写私有对象，同一事务提交成功状态、对象键与 ready 意图，最后单条 ACK](../../engineering-foundations/services/resources/queue-consumer-ack.svg)
 
 > [!info] 实例：RabbitMQ 4.4 的消费者确认（核对于 2026-11-12）
 > - 用接收该消息的 channel 上的 delivery tag 确认；并行处理时 `multiple=false`。`multiple=true` 会连带确认该 channel 上更早的所有未确认投递。
@@ -9697,16 +9871,9 @@ broker 把消息投递给 worker 之后，这次 delivery (投递) 处于“待�
 
 ### 在不同时刻崩溃，系统会落在哪里？
 
-故障发生的位置，决定消息、job 和对象之间是什么关系：
+故障发生的位置，决定消息、job 和对象之间是什么关系。四个崩溃点及其落点已画在本章开头的交接链图里：① 让同一 job ID 出现多条消息，② 和 ③ 让同一条消息被再次投递，三者都靠数据库里的条件领取、终态和恢复器收敛。
 
-| 失败时点 | broker 可能的动作 | 应用要保住的事实 |
-| --- | --- | --- |
-| broker 已接受发布，relay 没收到 confirm | relay 按 outbox 重发，同一 job ID 出现多条消息 | 每条意图按自己的 `intent_id` 回写；worker 靠条件领取和终态更新去重 |
-| worker 在持久化结果前崩溃，尚未 ACK | 连接或 channel 关闭后重新投递 | 重投只触发读取 job；有效 attempt 不并行，租约过期也要等恢复器接管 |
-| 数据库已提交 `succeeded`，ACK 是否到达未知 | 消息可能再次投递 | 后来的 worker 读到终态，直接 ACK，不重复生成、不覆盖结果 |
-| 先 ACK，再在提交结果前崩溃 | broker 已删除消息，不会因它重投 | job 能否恢复只取决于独立、持久的租约扫描与重排；没有它，job 永远停在 `running` |
-
-最后一行说明了为什么“先 ACK 再处理”是错的：它把唯一的恢复信号交了出去。
+④ 不同：它是把 ACK 挪到成功提交之前的错误顺序，broker 不会再投递，恢复只剩独立的租约扫描。这说明了为什么“先 ACK 再处理”是错的：它把唯一的恢复信号交了出去。
 
 ### prefetch 限制的是什么？
 
@@ -9726,17 +9893,7 @@ FIFO (先进先出) 队列只描述消息的排队和投递次序。多个 consu
 
 ### 怎样分段观测这条链路？
 
-每个确认只证明一段交接，所以观测也必须分段。只看一个数字（例如 ACK 数）会把不同位置的积压混在一起。
-
-| 交接段 | 观测信号 | 它能说明什么 |
-| --- | --- | --- |
-| API 受理 | 受理时延；429/503 拒绝数 | 准入是否在拒绝；拒绝不产生 job |
-| 数据库 → relay | 最老 `pending` outbox 意图的年龄；发布尝试次数 | relay 是否停摆或反复失败 |
-| relay → broker | confirm / NACK / return 计数 | 发布是否被接收、是否路由正确 |
-| broker 内 | queue depth (队列深度)、最老消息年龄、未确认数、重投数、DLQ 数量 | 消息是否积压、是否被反复退回 |
-| 等待领取 | 最老 `queued` job 的年龄；等待槽占用 | 已受理的工作等了多久 |
-| 执行 | 活跃物理执行槽；被栅栏但仍在运行的 attempt；连接池等待与 SQL 时长 | worker 是否有能力、资源是否被旧 attempt 占着 |
-| 完成 | `succeeded`/`failed`/`cancelled` 计数与错误码；对象引用提交；完成时延分位数 | 业务结果是否在产生 |
+每个确认只证明一段交接，所以观测也必须分段：本章开头交接链图的右栏，就是每一段各自的信号。只看一个数字（例如 ACK 数）会把不同位置的积压混在一起；被栅栏但仍在运行的 attempt 和连接池等待，说明执行资源可能被旧 attempt 占着，而不是 worker 不够。
 
 读这些信号的几条要点：
 
@@ -10003,14 +10160,26 @@ COMMIT;
 
 ### 重试与恢复按什么顺序决定？
 
-worker 遇到可重试的暂时错误并停止当前工作之后，或者恢复器发现租约过期之后，都按**同一个顺序**判断，第一条成立就停下：
+worker 遇到错误并停止当前工作之后，或者恢复器发现租约过期之后，都按**同一个顺序**判断，第一条成立就停下。取消优先于任何重试；入口处的代次核对不成立，说明别人已经做了决定。
 
-1. **核对当前 attempt。** 锁住 job 行，确认它仍是 `running`，attempt 仍是自己看到的那一代（恢复器还要用 `clock_timestamp()` 确认租约确实已过期）。不是，就说明别人已经做了决定，自己什么都不写，重读后按新状态处理手上的消息。
-2. **有取消请求，落 `cancelled`。** 取消优先于任何重试。同时提交对已上传对象的清理或保留决定（见本章最后一节）。
-3. **永久错误或 attempt 已到上限，落 `failed`。** 不可重试的业务错误写对应的有限错误码；`attempt >= max_attempts` 写 `attempts_exhausted`。
-4. **否则，只有预留到等待槽才能重排。** 在同一个事务里：占一个等待槽，把 job 改回 `queued`，写入退避后的 `available_at`，清掉旧租约，插入一条新的 `pending` outbox 意图。等待槽已满，就落 `failed` 加 `capacity_exhausted`。
+~~~mermaid
+flowchart TD
+    W["worker 遇到错误<br/>并已停下当前工作"] --> L
+    R["恢复器发现租约过期<br/>（按 clock_timestamp()）"] --> L
+    L{{"锁住 job 行：仍是 running，<br/>attempt 仍是我看到的那一代？"}}
+    L -- 否 --> N["什么都不写<br/>重读，按新状态<br/>处理手上的消息"]
+    L -- 是 --> C{{"cancel_requested？"}}
+    C -- 是 --> CX["① cancelled<br/>同时提交对象<br/>清理或保留决定<br/>不占等待槽"]
+    C -- 否 --> P{{"永久错误，或<br/>attempt ≥ max_attempts？"}}
+    P -- 是 --> F1["② failed<br/>对应错误码或<br/>attempts_exhausted<br/>不占槽、不写 outbox"]
+    P -- 否 --> S{{"能预留到等待槽？<br/>（240 个未满）"}}
+    S -- 否 --> F2["③ failed<br/>capacity_exhausted<br/>不占槽、不写 outbox"]
+    S -- 是 --> Q["④ queued<br/>新 available_at = 退避到期<br/>清除旧租约<br/>占一个等待槽<br/>新 pending outbox 意图"]
+~~~
 
-第 4 步的事务如下（第 1 步已在同一事务里 `SELECT ... FOR UPDATE` 锁住 job 行并完成前三项判断）：
+四个落点都要等事务提交成功之后，才可以 ACK 旧投递。
+
+重排分支 ④ 的事务如下（入口处已在同一事务里 `SELECT ... FOR UPDATE` 锁住 job 行并完成前面的判断）：
 
 ~~~sql
 -- 占一个等待槽；返回零行说明 240 个槽已满，改走 capacity_exhausted
@@ -10032,13 +10201,9 @@ COMMIT;
 
 `:backoff` 用带上限的指数退避加全抖动计算，公式和参数含义见[重试要等多久、最多试几次](#%E9%87%8D%E8%AF%95%E8%A6%81%E7%AD%89%E5%A4%9A%E4%B9%85%E3%80%81%E6%9C%80%E5%A4%9A%E8%AF%95%E5%87%A0%E6%AC%A1%EF%BC%9F)。重排只占等待槽，不消耗新 job 的速率令牌：令牌限制的是新逻辑 job 的到达速度，重排不是新 job。等待槽怎样计数见[容量章](#47.%20%E4%B8%80%E6%9D%A1%E5%BC%82%E6%AD%A5%E7%AE%A1%E7%BA%BF%E8%83%BD%E6%8E%A5%E5%A4%9A%E5%B0%91%E5%B7%A5%E4%BD%9C%EF%BC%8C%E8%B6%85%E5%87%BA%E6%97%B6%E5%9C%A8%E5%93%AA%E9%87%8C%E6%8B%92%E7%BB%9D%EF%BC%9F)。
 
-提交之后，才可以 ACK 旧的那条投递：新的可执行时间、槽位和唤醒意图都已持久，新一轮有了自己的唤醒。relay (中继) 按 `available_at` 到期再发布新意图；如果旧消息或别的重复消息提前到达，领取条件 `available_at <= clock_timestamp()` 会拦住它。只有到期唤醒已持久安排好，早到的重复消息才可以被确认。
+④ 提交之后旧投递可以 ACK，因为新的可执行时间、槽位和唤醒意图都已持久，新一轮有了自己的唤醒。relay (中继) 按 `available_at` 到期再发布新意图；如果旧消息或别的重复消息提前到达，领取条件 `available_at <= clock_timestamp()` 会拦住它。只有到期唤醒已持久安排好，早到的重复消息才可以被确认。
 
-用三个具体走向检查这个顺序：
-
-- attempt 1 遇到暂时错误，停下业务操作，预留到槽并写退避唤醒；attempt 2 成功。job 最终 `succeeded`。
-- attempt 1、2、3 依次失败或失联。第三次之后的判断走到第 3 步，写 `failed / attempts_exhausted`，不再预留第四次。
-- attempt 1 失联时 240 个槽恰好占满。恢复器走到第 4 步拿不到槽，写 `failed / capacity_exhausted`。这是一个持久终态，可以查询，而不是靠 broker 无限重投把压力变成看不见的积压。
+沿图走三个例子：attempt 1 遇到暂时错误，走 ④，attempt 2 成功，job 最终 `succeeded`；attempt 1、2、3 依次失败或失联，第三次之后走 ②，不再预留第四次；attempt 1 失联时 240 个槽恰好占满，恢复器走 ③，这是一个可以查询的持久终态，而不是靠 broker 无限重投把压力变成看不见的积压。
 
 “最多 3 次”限制的是**启动**次数，不保证旧 attempt 立刻停下。被栅栏的 attempt 仍可能占着资源运行一段时间；限制这种重叠持续多久的，是每页读取和上传的 deadline 以及可观察的停止路径。
 
@@ -10061,16 +10226,9 @@ COMMIT;
 
 ### 恢复器先提交时会走哪条分支？
 
-租约到期之后，恢复器和原 worker 可能同时动作。如果原 worker 的成功事务先提交，job 就是 `succeeded`，恢复器读到终态后什么都不做。如果恢复器先提交，按上面的决策顺序，`job-demo-731` 会落进下面某一行：
+租约到期之后，恢复器和原 worker 可能同时动作。如果原 worker 的成功事务先提交，job 就是 `succeeded`，恢复器锁行后读到的已不是 `running`，走上图的“否”分支，什么都不做。如果恢复器先提交，`job-demo-731` 落进上图 ①–④ 之一。
 
-| 恢复器读到的情况 | 持久状态变化 | 等待槽与 outbox | 旧投递 |
-| --- | --- | --- | --- |
-| 有取消请求 | `running → cancelled`，同时提交对象清理或保留决定 | 不占槽 | 决定提交后可 ACK |
-| attempt 已到 3 | `running → failed`，`error_code = 'attempts_exhausted'` | 不占槽、不写 outbox | 提交后可 ACK |
-| 未取消、还有额度，但 240 个槽已满 | `running → failed`，`error_code = 'capacity_exhausted'` | 不占槽、不写 outbox | 提交后可 ACK |
-| 未取消、还有额度、有空槽 | `running → queued`，清除旧租约，写退避后的 `available_at` | 预留一个槽，插入新的 `pending` outbox | 三者都提交后可 ACK |
-
-最后一种情况之后，新的 worker B 领取 attempt 2；A 若再醒来提交 attempt 1 的结果，会因状态或 attempt 不匹配而更新零行（时序见领取与栅栏一章）。恢复器不需要“杀死” A，也做不到：它只改变 A 能写进数据库的东西。
+走 ④ 之后，新的 worker B 领取 attempt 2；A 若再醒来提交 attempt 1 的结果，会因状态或 attempt 不匹配而更新零行（时序见领取与栅栏一章）。恢复器不需要“杀死” A，也做不到：它只改变 A 能写进数据库的东西。
 
 ### 取消和领取同时发生，谁赢？
 
@@ -10106,7 +10264,7 @@ WHERE job_id = :job_id AND status = 'running';
 
 **运行中的取消由谁落终态？** 持有当前 attempt 的 worker 在每个有限的工作步骤之间、以及成功提交之前检查取消标志。看到 `cancel_requested = true`，就以 job ID、`status = 'running'`、自己的 attempt 和取消标志为条件提交 `cancelled` 及清理或保留决定。它不归还等待槽（领取时已经还过），只在停止执行后释放自己的物理执行槽。
 
-**worker 在提交取消之前失联了。** 取消请求留在数据库里，租约到期后由恢复器代写 `cancelled` 和同样的清理决定（上表第一行）。恢复器不会为了取消去抢等待槽。在这个决定持久化之前，旧投递不能 ACK：`cancel_requested` 只是请求，不是终态，也不是确认许可。
+**worker 在提交取消之前失联了。** 取消请求留在数据库里，租约到期后由恢复器代写 `cancelled` 和同样的清理决定（决策图的 ①）。恢复器不会为了取消去抢等待槽。在这个决定持久化之前，旧投递不能 ACK：`cancel_requested` 只是请求，不是终态，也不是确认许可。
 
 **取消和成功同时发生。** 仍由提交顺序决定唯一终态。取消标志先写入，成功提交的条件 `cancel_requested = false` 不成立，更新零行，worker 转去提交取消；成功先提交，取消端读到 `succeeded`，返回现有的成功状态，不改写终态。
 
@@ -10162,13 +10320,9 @@ WHERE job_id = :job_id AND status = 'running';
 
 “系统能接多少”不是一个数字。导出路径上有几道各管一件事的门槛，任何一道都可能最先到顶：
 
-| 门槛 | 计数什么 | 在哪里检查 |
-| --- | --- | --- |
-| 准入速率与突发 | 新的逻辑 job 以多快的速度进入 | 受理事务 |
-| 等待槽 | 已承诺、还没被 worker 领取的排队轮次 | 受理事务、重排事务；领取和取消时归还 |
-| 物理执行槽 | 同时运行的 attempt (执行尝试)，即实际占用的 CPU、连接、游标、上传句柄 | worker 进程内，领取之前 |
-| 数据库连接 | 每个进程的连接池上限之和 | 每次借用连接时 |
-| 对象存储与入口字节 | 结果对象体量、请求正文流量 | 存储与网络 |
+下图沿导出路径标出每道门槛的位置、本例取值、计数什么和何时归还；取值的推导在后文各节。图中的 attempt (执行尝试) 是 job 的一次实际运行，物理执行槽按它计数。
+
+![导出路径上的门槛：受理事务里的令牌桶（7 个每秒、突发 30，不足回 429）和等待槽（240，满回 503）都在 202 之前拒绝；outbox 到 broker 不额外占槽；worker 进程有 64 个物理执行槽；受理事务和 worker 共用数据库连接（上限 200、预算 240）；结果写入对象存储](../../engineering-foundations/services/resources/capacity-admission-gates.svg)
 
 加长队列只能改变工作**在哪里**等，不能让下游处理得更快。下面先讲拒绝发生在哪里，再逐道算数。
 
@@ -10301,13 +10455,13 @@ r × T + b
 
 几种控制看起来相似，管的却是不同的资源，不能互相代替：
 
-| 控制 | 本例取值 | 管住什么 | 管不住什么 |
-| --- | ---: | --- | --- |
-| rate limit (速率限制)：令牌补充速率 | 7 个每秒 | 新工作的长期平均到达速度 | 下游能否及时完成 |
-| 突发容量：桶深 | 30 个 | 短时成批提交 | 不提供无限的等待区 |
-| quota (配额) | 本例未设 | 较长周期（如每天、每月）的总量 | 某一时刻的并发 |
-| concurrency limit (并发上限)：物理执行槽 | 64 个 | 同时运行的 attempt 与实时资源 | 排队和 outbox 积压 |
-| 有界队列：等待槽 | 240 个 | 已受理、尚未开始的工作量 | 正在执行的 attempt 占用的资源 |
+| 控制 | 管住什么 | 管不住什么 |
+| --- | --- | --- |
+| rate limit (速率限制)：令牌补充速率 | 新工作的长期平均到达速度 | 下游能否及时完成 |
+| 突发容量：桶深 | 短时成批提交 | 不提供无限的等待区 |
+| quota (配额)，本例未设 | 较长周期（如每天、每月）的总量 | 某一时刻的并发 |
+| concurrency limit (并发上限)：物理执行槽 | 同时运行的 attempt 与实时资源 | 排队和 outbox 积压 |
+| 有界队列：等待槽 | 已受理、尚未开始的工作量 | 正在执行的 attempt 占用的资源 |
 
 这些门槛同时生效。流量远超容量或遭到攻击时，每一层还能挡住什么，见支线[流量远超容量或遭到攻击时，每一层能挡住什么](#48.%20%E6%B5%81%E9%87%8F%E8%BF%9C%E8%B6%85%E5%AE%B9%E9%87%8F%E6%88%96%E9%81%AD%E5%88%B0%E6%94%BB%E5%87%BB%E6%97%B6%EF%BC%8C%E6%AF%8F%E4%B8%80%E5%B1%82%E8%83%BD%E6%8C%A1%E4%BD%8F%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
@@ -10361,7 +10515,7 @@ r × T + b
 
 ### 怎样确认最先到顶的是哪一道？
 
-估算只告诉你哪项预算可能先紧，最先到顶的瓶颈要靠分阶段加压找出来。用有代表性的请求大小、12 页读取和结果体量逐步加压，再分别跑这些场景：20 个每秒持续十分钟、30 个突发、240 槽占满、慢查询、对象上传变慢、重试、worker 丢失、租约重叠。每个场景按阶段记录受理、排队、执行、下载的时延 p50/p95/p99（6 秒只是假设的平均 attempt 时长，不是 p95 目标），并对照下表读信号：
+估算只告诉你哪项预算可能先紧，最先到顶的瓶颈要靠分阶段加压找出来。用有代表性的请求大小、12 页读取和结果体量逐步加压，再分别跑这些场景：20 个每秒持续十分钟、30 个突发、240 槽占满、慢查询、对象上传变慢、重试、worker 丢失、租约重叠。每个场景按阶段记录受理、排队、执行、下载的时延 p50/p95/p99（6 秒只是假设的平均 attempt 时长，不是 p95 目标），并对照上文的门槛图和下表读信号：
 
 | 门槛 | 到顶时最先看到的信号 | 常见误读 |
 | --- | --- | --- |
@@ -11005,22 +11159,11 @@ function commit(candidate, { recordHistory = true } = {}) {
 
 ### 从 r12 到 r18：每一步改了哪份状态
 
-下表把案例走完。被接受的命令、撤销和重做都生成新修订；选择、拖动和取消既不增加修订，也不改撤销栈；保存和发布各自只动自己那份状态。
+下图把案例走完：从上往下是用户动作，四条泳道是生命周期不同的四份状态，跨越多行的块或竖条表示那份状态在这段时间里没有变：
 
-| 用户动作 | 会话与画布 | 文档与历史 | 访客 |
-| --- | --- | --- | --- |
-| 初始 | `selectedId=null`、`dragPreview=null` | r12，`children=['heading-1','button-1']` | r12 |
-| 确认标题“欢迎” | 输入组件提交 `setText` | r13，`heading-1` 的 ID 不变；撤销历史 +1 | r12 |
-| 选中标题 | `selectedId='heading-1'` | 仍 r13 | r12 |
-| 拖到按钮后方，未松手 | `dragPreview` 记录候选；画布按候选顺序显示 | 仍 r13，`children` 未变 | r12 |
-| 取消拖动 | 清空候选，画布回到文档顺序 | 仍 r13 | r12 |
-| 再拖一次并松手 | 提交移动命令，成功后清空候选 | r14，`children=['button-1','heading-1']`；历史 +1 | r12 |
-| 撤销，再重做 | 选择仍是 `heading-1` | r15 恢复原顺序，r16 恢复重排 | r12 |
-| 保存 r16 | — | 保存这个确切修订 | r12 |
-| 请求发布 r16 | — | 发布服务重新校验已保存的 r16，通过 | 原子切到 r16 |
-| 插入 `image-1`，`alt=''` | 画布显示 `<img alt="">` | r17；草稿检查通过 | r16 |
-| 保存 r17 并请求发布 | — | 发布门禁以“图片 alt 为空”拒绝；r17 草稿仍在 | r16 |
-| 补上 `alt`，保存并发布 r18 | — | r18 通过发布门禁 | 原子切到 r18 |
+![四条泳道随用户动作推进：选中后 selectedId 一直是 heading-1，拖动候选只在会话里出现并在取消后清空；文档从 r12 依次到 r18，选择、拖动和取消期间仍是 r13；草稿存储依次保存 r16、r17、r18；公开指针在 r16 校验通过前一直是 r12，发布 r17 因 alt 为空被拒仍停在 r16，r18 通过后切到 r18。](../../engineering-foundations/practice/resources/page-editor-r12-to-r18.svg)
+
+图里的发布每次都由发布服务重新校验那个已保存的确切修订，r17 能通过草稿检查却过不了发布门禁；两类规则的分工见下文“schema 管形状”与“发布”两节。
 
 ### 所有者交出的是不可变副本
 
@@ -11607,14 +11750,9 @@ report = session.scalar(
 
 ### 一次改动停在哪一层
 
-Git 里的改动依次经过四层状态：
+Git 里的改动依次经过四层状态。下图从上往下画出每一层是什么、哪条命令把改动推进下一层，右侧括号标出两条比较命令各看哪两层：
 
-| 层 | 是什么 | 怎样进入下一层 |
-| --- | --- | --- |
-| working tree (工作区) | 磁盘上正在编辑的文件 | `git add` 把文件当前内容复制进暂存区 |
-| index (暂存区) | 准备放进下一次提交的快照 | `git commit` 把暂存区写成提交 |
-| commit (提交) | 一份完整的目录快照（tree）及其父提交 | 分支引用移动到新提交 |
-| branch (分支) | 指向某个提交的可移动引用；`HEAD` 指向当前分支 | `git push` 等操作把引用共享出去 |
+![改动自上而下经过工作区、暂存区、提交与分支、远端：git add 复制执行那一刻的内容，git commit 写成提交并移动分支，git push 共享引用；git diff 比较工作区与暂存区，git diff --cached 比较暂存区与 HEAD。](../../engineering-foundations/practice/resources/git-change-layers.svg)
 
 本章只讨论在分支上工作的常见情况：`HEAD` 指向当前分支，分支指向当前提交，提交成功后分支移动到新提交。分清改动停在哪一层，后面才能选对比较命令和恢复命令。
 
@@ -11629,10 +11767,7 @@ Git 里的改动依次经过四层状态：
 | 再编辑为 `v2`，没有再次 add | `v2` | `v1` | `v0` |
 | `git commit` | `v2` | `v1` | `v1` |
 
-最后一步只提交了账户条件，错误处理仍是未暂存的改动。两条比较命令各看一段：
-
-- `git diff`：工作区对暂存区，即“还没暂存的改动”。
-- `git diff --cached`：暂存区对 HEAD，即“这次会提交的改动”。
+最后一步只提交了账户条件，错误处理仍是未暂存的改动：此刻 `git diff` 显示 `v1` 到 `v2` 的错误处理，`git diff --cached` 为空。
 
 问题在于测试通常读取工作区里的文件。`v2` 通过了测试，不能说明只含 `v1` 的提交也能通过。所以验收要让被测内容与准备提交的快照一致：要么先把工作区整理到与暂存区相同再测试，要么在隔离目录里测试待提交的快照，例如用 `git worktree` 检出一份干净副本。工作区混有其他任务的改动时，后一种做法更可靠。
 
@@ -11681,9 +11816,11 @@ git fetch origin
 git log --left-right --oneline --graph HEAD...origin/main
 ~~~
 
-三点写法 `HEAD...origin/main` 配合 `--left-right`，列出两边各自独有的提交：`<` 表示只能从当前 `HEAD` 到达，`>` 表示只能从 `origin/main` 到达。两点写法 `HEAD..origin/main` 只列远端独有的提交，看不出本地是否还有没推送的提交。
+三点写法 `HEAD...origin/main` 配合 `--left-right`，列出两边各自独有的提交。本案例获取后的历史如下，`>` 一侧是同事的提交：为减少读取量，他把同一行改成了延迟加载报表正文。
 
-在本案例中，`>` 一侧出现了同事的提交 `perf(reports): defer report body`：为减少读取量，他把同一行改成了延迟加载报表正文。
+![共同祖先之后分成两支：origin/main 上是 perf(reports): defer report body，标为 >；本地分支 fix/report-account-scope 上是修复提交 6ab06f8，标为 <。](../../engineering-foundations/practice/resources/git-before-rebase.svg)
+
+两点写法 `HEAD..origin/main` 只列远端独有的提交，即图中 `>` 那一支，看不出本地是否还有没推送的提交。
 
 ### merge 还是 rebase
 
@@ -11695,7 +11832,9 @@ git log --left-right --oneline --graph HEAD...origin/main
 
 两个容易误解的边界：如果当前提交是远端提交的祖先（本地没有新提交），`git merge` 会 fast-forward (快进)，直接移动分支，不新增合并提交；如果远端没有本地缺少的提交，就没有需要整合的东西，也不会凭空生成合并节点。具体用哪种，以仓库现行策略为准，不要套用某个通用分支模型。
 
-本案例的分支还没推送，团队约定用 rebase：`git rebase origin/main`。
+本案例的分支还没推送，团队约定用 rebase：`git rebase origin/main`。下图是 rebase 完成后的历史，也标出了重放时冲突两侧各是谁：
+
+![rebase 把 6ab06f8 重放到 perf 之后，得到新提交 c4f2a91，分支移到它上面，旧提交不再被分支指向；重放冲突时 ours 即 HEAD 是上游 perf 一侧，theirs 是本地修复；CI 要在新 ID 上重跑。](../../engineering-foundations/practice/resources/git-after-rebase.svg)
 
 ### 冲突按语义不变量解决
 
@@ -11727,7 +11866,7 @@ rebase 在 `src/reports.py` 上停了下来，因为两边改了同一行：
     )
 ~~~
 
-**rebase 时 ours 和 theirs 是反的。** rebase 把本地提交一个个重放到上游之上，所以冲突里的 `HEAD`（ours）是**上游**的版本，theirs 才是正在重放的本地修复。上面的 `HEAD` 一侧正是同事那行 `session.get`。不看内容就执行 `git checkout --ours src/reports.py`，等于把越权缺陷原样恢复；整块接受 theirs，则丢掉了上游的改动。不理解冲突内容时，两种整块接受都不要做。
+**rebase 时 ours 和 theirs 是反的。** rebase 把本地提交一个个重放到上游之上，所以冲突里的 `HEAD`（ours）是上游那一侧，即上面同事那行 `session.get`，theirs 才是本地修复。不看内容就执行 `git checkout --ours src/reports.py`，等于把越权缺陷原样恢复；整块接受 theirs，则丢掉了上游的改动。不理解冲突内容时，两种整块接受都不要做。
 
 解决后的检查顺序：
 
@@ -11735,7 +11874,7 @@ rebase 在 `src/reports.py` 上停了下来，因为两边改了同一行：
 2. 运行测试；跨账户反例会拦住误选上游一侧的结果。
 3. 暂存并继续：`git add src/reports.py`，然后 `git rebase --continue`（如果进行的是 merge，用 `git merge --continue`；先看 `git status` 确认当前操作）。
 
-rebase 完成后，修复提交从 `6ab06f8` 变成了新的 `c4f2a91`。CI 必须在新 ID 上重新验证，上一节“证据绑定提交 ID”的规则在这里生效。
+rebase 完成后得到上一节图中的 `c4f2a91`。CI 必须在新 ID 上重新验证，“证据绑定提交 ID”的规则在这里生效。
 
 **想放弃整合时：**
 
@@ -11757,27 +11896,21 @@ rebase 完成后，修复提交从 `6ab06f8` 变成了新的 `c4f2a91`。CI 必�
 
 ### 按变化所在层恢复
 
-出错时，先判断要撤销的改动停在哪一层，再选命令。这张表是本领域恢复命令的权威版本：
+出错时，先判断要撤销的改动停在哪一层，再选命令。下图沿用上面的四层：右侧箭头是 restore 从哪一层把内容复制回哪一层，左侧竖条是 `git reset` 各选项改动的层，共享边界以下只用 revert：
 
-| 改动停在哪 | 想做什么 | 命令 | 效果与风险 |
-| --- | --- | --- | --- |
-| 暂存区 | 取消暂存，保留编辑 | `git restore --staged <path>` | 该路径的暂存内容恢复为 HEAD 的版本；工作区不变 |
-| 工作区 | 丢弃未暂存的编辑 | `git restore <path>` | 工作区恢复为暂存区的版本；被覆盖的编辑**无法找回** |
-| 未共享的本地提交 | 重新划分提交（如把两个合成一个） | `git reset --soft` 或 `--mixed <target>` | 分支移到目标；改动留在暂存区或工作区 |
-| 未共享的本地提交 | 连同改动一起丢弃 | `git reset --hard <target>` | 先确认工作区内容可以丢弃 |
-| 已共享的提交 | 撤销它的效果 | `git revert <commit>` | 新增一个反向提交，原提交留在历史中供审计 |
-| 已共享的合并提交 | 撤销这次合并 | `git revert -m 1 <merge-commit>` | `-m` 指定以哪个父提交为主线；先检查反向差异，以及它对之后再次合并同一分支的影响 |
-| 分支被误移 | 找回原来的提交 | `git reflog`，再 `git branch recovery/report-scope <commit-id>` | reflog 只是本地记录，会过期，不同步到远端 |
+![restore --staged 把暂存区恢复为 HEAD 的版本，restore 把工作区恢复为暂存区的版本；reset --soft 只移动分支，--mixed 还重置暂存区，--hard 再改工作区，只用于未共享的本地提交；已共享的提交用 revert 新增反向提交；reflog 找回误移前的提交。](../../engineering-foundations/practice/resources/git-recovery-by-layer.svg)
+
+图上放不下的条件和风险记在下表，它与上图一起是本领域恢复命令的权威版本：
+
+| 命令 | 什么时候用，风险是什么 |
+| --- | --- |
+| `git restore <path>` | 丢弃未暂存的编辑；被覆盖的编辑**无法找回** |
+| `git reset --soft` 或 `--mixed <target>`（`--mixed` 是默认） | 重新划分未共享的本地提交，如把两个合成一个；改动留在暂存区或工作区 |
+| `git reset --hard <target>` | 连同改动一起丢弃：受跟踪文件的改动被丢弃，可能覆盖同名的未跟踪文件，目标中没有的受跟踪文件被删除；先确认工作区内容可以丢弃 |
+| `git revert -m 1 <merge-commit>` | 撤销已共享的合并提交；`-m` 指定以哪个父提交为主线；先检查反向差异，以及它对之后再次合并同一分支的影响 |
+| `git reflog`，再 `git branch recovery/report-scope <commit-id>` | 分支被误移时找回原提交；reflog 只是本地记录，会过期，不同步到远端 |
 
 撤销共享历史用 revert，不要把远端分支强制指回旧位置：别人可能已经基于那些提交工作了。
-
-`git reset` 的三个选项决定它除了移动分支之外还动哪几层：
-
-| 选项 | 分支引用 | 暂存区 | 工作区 |
-| --- | --- | --- | --- |
-| `--soft <target>` | 移到目标 | 保留 | 保留 |
-| `--mixed <target>`（默认） | 移到目标 | 重置为目标内容 | 保留 |
-| `--hard <target>` | 移到目标 | 重置为目标内容 | 全部改成目标版本：丢弃受跟踪文件的改动，可能覆盖同名的未跟踪文件，目标中没有的受跟踪文件被删除 |
 
 找回误移的提交后，先 `git show --stat recovery/report-scope` 检查这份快照，再决定是否推送。三个命令的分工可以这样记：reset 移动当前分支（并可重置暂存区和工作区），restore 恢复文件内容，revert 新增反向提交。
 
@@ -12313,7 +12446,7 @@ liveness 不要依赖每个短暂的下游故障。数据库抖动一下，所�
 进程收到停止信号后，每个服务立即在自己的控制面开始关闭，不等入口路由更新传播完，也不等其他服务先结束：
 
 - **API**：收到通知就关闭本地业务门闩，拒绝开始新的业务操作，开始排空在途请求；同时让 readiness 返回未就绪，让平台异步更新路由目标。路由摘除传播期间仍可能有请求到达，所以本地门闩不能依赖探针传播。已开始的请求在宽限期内完成或按应用契约安全中止，然后关闭连接池、线程、临时文件和 telemetry exporter (遥测导出器)。
-- **worker**：独立停止领取新的 delivery (消息投递)，再分两类处理。运行中的 attempt 能在截止前完成，就先持久提交业务结果、再 ACK；不能完成就不 ACK，让 broker 重新投递，由租约恢复器按租约规则接管。已预取但还没启动的投递，按 broker 的关闭与归还契约放回队列（各 broker 的做法见[队列确认章](#44.%20%E5%8F%91%E5%B8%83%E7%A1%AE%E8%AE%A4%E3%80%81%E6%B6%88%E8%B4%B9%E8%80%85%E7%A1%AE%E8%AE%A4%E5%92%8C%E4%B8%9A%E5%8A%A1%E5%AE%8C%E6%88%90%E5%90%84%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)）。readiness 不会替 worker 暂停队列消费。
+- **worker**：独立停止领取新的 delivery (消息投递)，再分两类处理。运行中的 attempt 能在截止前完成，就先持久提交业务结果、再 ACK；不能完成就不 ACK，让 broker 重新投递，由租约恢复器按租约规则接管。已预取但还没启动的投递，按 broker 的关闭与归还契约放回队列：本例的 RabbitMQ 由关闭 channel 把它们自动重新入队，`basic.cancel` 本身不会让它们回队（细节见[队列确认章的 prefetch 一节](#prefetch%20%E9%99%90%E5%88%B6%E7%9A%84%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F)）。readiness 不会替 worker 暂停队列消费。
 - **outbox relay**：停止认领新的待发意图，宽限期内等待已开始的发布得出可判定的结果。只有 broker 的确认、路由和持久性条件都满足、且数据库里的 `published` 更新成功，才把意图标为完成；缺确认或更新未提交时不伪记成功，释放认领（或等认领租约过期），由新的 relay 重试。重复发布同一个 job ID 是允许的，worker 的持久条件领取负责去重。
 
 ![API 收到通知即关本地门闩、不等路由传播；worker 独立停止领取，归还未启动的预取投递，运行中的 attempt 完成后先持久提交再 ACK，否则不 ACK，由重投与租约恢复器接手。](../../engineering-foundations/practice/resources/runtime-api-and-worker-shutdown.svg)
@@ -12504,21 +12637,13 @@ worker 的一条规则值得单独说：队列消息只带 job ID，worker 读�
 
 ### 成熟窗口：只数已经到期的 job
 
-只统计已经成功或失败的任务，会悄悄漏掉仍在排队的任务：队列越堵，分母越小，完成率反而好看。解决办法是给每个 job 定一个观测期限，只在期限到了之后才判它：
+只统计已经成功或失败的任务，会悄悄漏掉仍在排队的任务：队列越堵，分母越小，完成率反而好看。解决办法是给每个 job 定一个观测期限 `due = accepted_commit_confirmed_at + 2 min`，只在期限到了之后才判它：以 `T` 为窗口结束时刻、`W` 为窗口长度，窗口 `(T−W, T]` 只收入满足 `T−W < due ≤ T` 的“成熟”任务。下图用 12:00 结束的十分钟窗口看三个任务怎样归入，时间均为提交**确认**时刻：
 
-- 期限 `due = accepted_commit_confirmed_at + 2 min`。
-- 以 `T` 为窗口结束时刻、`W` 为窗口长度，窗口 `(T−W, T]` 只收入满足 `T−W < due ≤ T` 的“成熟”任务，也就是期限落在本窗口内的任务。
+![12:00 结束的十分钟窗口左开右闭：11:57:00 受理的任务 due 11:59:00 在窗口内，11:59:01 才成功，计坏；11:58:00 受理的任务 due 12:00:00 落在右闭端，12:00:01 成功，计坏；11:59:30 受理的任务虽在窗口内受理，due 12:01:30 在窗口外，不进分母。](../../engineering-foundations/practice/resources/sli-mature-window.svg)
+
 - 好事件：`succeeded_commit_confirmed_at ≤ due`。坏事件：`failed`、`cancelled`、到期仍为 `queued` 或 `running`，以及过了期限才成功。本例把受理后的取消也算未完成；若要排除用户主动取消，要另行定义可审计的取消来源和分母规则。
 - 期限未到的任务暂不进分母，但要同时观察其中最老任务已经等了多久。
-
-> [!example] 12:00 结束的十分钟窗口，哪些任务已经成熟？
-> 窗口为 `(11:50, 12:00]`，均用提交**确认**时间，“坏”只针对确认口径的 SLI。
->
-> | 受理确认 → 期限 | 成功确认 | 本窗口怎样计 |
-> | --- | --- | --- |
-> | 11:57:00 → 11:59:00 | 11:59:01 | 用时 121 秒，计坏；推不出物理提交也晚了 1 秒 |
-> | 11:59:30 → 12:01:30 | 尚未观察到 | 期限还没到，不进本窗口分母 |
-> | 11:58:00 → 12:00:00 | 12:00:01 | 期限 12:00:00 落在窗口内；用时 121 秒，计坏。即使事务内 `succeeded_at` 写的是 11:59:59，也不改变本口径 |
+- 图中的“坏”只针对确认口径的 SLI：用时 121 秒推不出物理提交也晚了 1 秒；即使第二个任务事务内的 `succeeded_at` 写的是 11:59:59，也不改变本口径。
 
 窗口结果什么时候能发布：只有当 watermark (事件时间完整水位) 越过 `T`，即 `T` 之前的事件都已收齐，且到期的 job 已逐一与数据库核对后，才发布。任务是否存在仍以数据库中的 job 行为准。缺少受理确认、算不出期限时，把窗口标为“测量不完整”，发布门禁保持不放行；期限已确定、水位越过后仍没有成功确认，就计为坏。不能悄悄删掉缺遥测的任务，也不能用“它现在已经成功了”改写它当时是否按期完成。这套观测期限不改变任务本身的业务期限或租约约定。
 
@@ -12636,13 +12761,15 @@ SLO 再进一步，就能算出 error budget (错误预算)。本例读取 SLO �
 
 ### 数据库结构怎样迁移才能回退：expand/contract
 
-代码可以切回旧摘要，数据库结构却不会跟着回去。所以结构迁移采用 expand/contract (扩展/收缩)：先让新旧版本能共存，确认旧版本不会再回来之后再收缩。设要把旧列 `report_name_old` 换成新列 `report_name`：
+代码可以切回旧摘要，数据库结构却不会跟着回去。所以结构迁移采用 expand/contract (扩展/收缩)：先让新旧版本能共存，确认旧版本不会再回来之后再收缩。设要把旧列 `report_name_old` 换成新列 `report_name`，下图逐阶段画出两列由谁写、读写权威在哪一列、同步朝哪个方向，以及此时还能不能回退到只读旧列的旧版本：
 
-1. **扩展。** 添加新列，旧列暂时仍是权威写入源；旧版 API 和 worker 照常只写旧列。
-2. **捕获并回填。** 回填开始**之前**先启用触发器或变更捕获，记录旧列的每次更新。分批回填时用行版本或更新时间保护并发修改，避免一个已读出的旧快照覆盖之后的更新；也可以按提交顺序重放捕获的变更。持续核对两列并追到明确的水位。但这次核对还不能授权切换，因为旧写入仍可能在核对之后提交。
-3. **兼容发布与切换权威。** 新版代码先兼容新旧两种结构：旧列仍是读写权威，新版可在同一事务里更新两列，旧版的写入由触发器或捕获流程复制到新列。用异步捕获时，切换读写权威之前，先暂停旧侧接收新写、排空在途任务，记录旧侧最后一个已提交变更的水位；等捕获追到这个水位、核对无差异后，才把读写权威切到新列并开放新写入。若数据库事务能原子地维护两种表示、原子地选择权威，且没有绕过事务的写入者，就可以在事务边界协调切换，不必停写。
-4. **保留可回退窗口。** 若允许回退到只读旧列的版本，新列成为权威期间的每次写入也要同步回旧列，例如同一事务双写或有序的反向变更捕获。异步模式下切回旧列，同样先暂停新侧写入、排空、记录最后提交水位，冻结或隔离新侧写入直到反向捕获追平并核对，才把权威交回旧列；在解冻旧版写入之前，重新启用旧到新的同步，保证旧版写入继续更新新列。维持不了这个条件，就冻结或隔离新写、缩小可回退的版本集合；数据已经不兼容时，只能隔离或前向修复，不能假定旧版读旧列仍得到当前事实。
-5. **收缩。** 只有所有现行进程、在途任务和获准恢复的旧版本都不再读写旧列，才停止同步并删除旧列。
+![expand/contract 五个阶段：扩展时旧列是权威；先启用旧到新捕获再回填；新版同事务写两列，异步捕获时按暂停旧侧新写、排空、记水位、追平核对的顺序把权威切到新列；可回退窗口内新列的写入同步回旧列；所有进程和获准恢复的旧版本都不再用旧列后才删除旧列。](../../engineering-foundations/practice/resources/schema-expand-contract.svg)
+
+图上画的是顺序，下面补上为什么必须是这个顺序：
+
+- **先捕获再回填。** 回填读出的是某一刻的快照；若回填开始之后才启用捕获，这之间旧列上的更新就没有记录。防覆盖之外，也可以按提交顺序重放捕获的变更。
+- **核对追平不等于可以切换。** 第 2 阶段的核对之后，旧侧仍可能提交写入，所以异步捕获的切换依据是暂停旧侧新写、排空之后记下的最后提交水位。
+- **可回退窗口靠反向同步维持。** 新列成为权威后若不同步回旧列，退回只读旧列的版本就会读到过时的事实；切回旧列后若不先恢复旧→新同步，旧版的写入又会让新列落后。
 
 捕获、回填、双写和反向同步的具体实现取决于数据库和业务写入模型；异步捕获必须定义提交顺序、水位和重放与重复处理的语义。独立迁移任务和锁只防止并发执行，不保证任务恰好执行一次；任务还需要版本记录、幂等批次、检查点和可恢复的步骤，重试前先核实部分批次的真实数据库状态。
 
@@ -12707,6 +12834,8 @@ micro-frontend (微前端) 把前端的一部分按业务或团队边界独立�
 
 沿用主线五的案例。`d-new` 正承担 10% 的金丝雀流量。12:10 起，用户读取 acct-17 的报表 42 变慢或遇到 `5xx`；同一时段，导出请求已收到 `202 Accepted`，结果却迟迟不来。[SLI 章](#59.%20%E6%80%8E%E6%A0%B7%E7%94%A8%E7%94%A8%E6%88%B7%E7%BB%93%E6%9E%9C%E8%A1%A1%E9%87%8F%E4%B8%80%E4%B8%AA%E6%9C%8D%E5%8A%A1%EF%BC%8C%E5%B9%B6%E5%86%B3%E5%AE%9A%E8%BF%98%E8%83%BD%E4%B8%8D%E8%83%BD%E6%94%BE%E9%87%8F%EF%BC%9F)已经定义了怎样判断这两种用户结果的好坏，[金丝雀章](#60.%20%E6%96%B0%E7%89%88%E6%9C%AC%E6%80%8E%E6%A0%B7%E9%80%90%E6%AD%A5%E6%94%BE%E9%87%8F%EF%BC%8C%E5%87%BA%E9%97%AE%E9%A2%98%E6%97%B6%E8%83%BD%E6%92%A4%E5%9B%9E%E4%BB%80%E4%B9%88%EF%BC%9F)给出了止损与回退的条件。本章回答剩下的问题：metrics (指标)、traces (追踪) 和 logs (日志) 各能把人带到哪里；两个同时出现的症状怎样下结论而不把相关当成根因；怎样按证据缓解，并用同一口径确认真的恢复了；遥测怎样既可诊断，又不爆炸、不泄露。文中的时间、计数和日志都是教学构造。
 
+下图是全章的总览，把从信号到复验压成四个交接，每步的输出是下一步的输入。它与后文“按证据缓解与复验的六步”的对应关系是：图中第 1、2 步的用户结果和分母沿用 SLI 章的定义，落在六步的第 1、2 步（确认影响与信号质量、核对任务停在哪个持久边界）；图中第 3 步是“指标、追踪和日志”与案例两节的内容，也是六步的第 3 步；图中第 4 步对应六步的第 4、5 步；六步的第 6 步（事后改进）不在图中。
+
 ![从用户结果到事故复验的四步：定义用户结果，固定分母与时间边界，聚合定位再核对事件，缓解后复验用户路径。](../../engineering-foundations/practice/resources/observability-diagnosis-flow.svg)
 
 ### 指标、追踪和日志各回答什么
@@ -12745,9 +12874,13 @@ trace 把一次操作拆成有父子关系的 span (操作区间)。同步调用
 
 ### 案例：12:10–12:20 的两个症状
 
+下图先把本例的所有时刻放在一条时间轴上：前三行是隔离预检和读取的症状、止损与复验，后两行是两个导出任务。本节讲 12:20 之前的症状，12:20 之后的复验在后面第 5 步：
+
+![12:00–12:35 时间线：隔离预检全程覆盖交给 d-old 的读取；d-new 12:10 起变慢，12:15–12:20 六个评价点满足持续止损，12:20 切回 d-old，12:30 复验窗口 1,000/1,000；job-demo-731 12:00 受理、12:02 到期、12:16 仍 queued、12:26 才成功仍计坏；job-demo-732 12:31 受理、12:32 成功。](../../engineering-foundations/practice/resources/incident-timeline.svg)
+
 #### 读取变慢：先确认缺口真实，再下钻
 
-在 12:10–12:20 这个窗口里，同一路由、同一区域的 `d-new` 收到 100 次合格读请求，98 次在 400 ms 内给出了与授权关系一致的结果；稳定版 `d-old` 是 900/900（它带着跨账户缺陷，这些读取之所以都好，是因为受影响入口已按金丝雀章隔离）。按 SLI 章的规则，只看 `d-new` 自身（[为什么不能合并](#%E9%87%91%E4%B8%9D%E9%9B%80%E4%B8%8D%E8%83%BD%E5%92%8C%E7%A8%B3%E5%AE%9A%E7%89%88%E5%90%88%E5%9C%A8%E4%B8%80%E8%B5%B7%E8%AF%84%E4%BC%B0)），它低于 99% 的门槛。门禁每分钟评价一次：12:15 到 12:20 的六个评价点上，`d-new` 各自的滚动 10 分钟窗口都至少有 100 次请求、好事件率都低于 99%，首末相隔整 5 分钟，满足持续止损条件。事先运行的冒烟核验也确认，钉到 `d-new` 的 `user-17` 得到 `200` 和已知标记，`user-29` 经 acct-29 读 42 得到与报表 43 相同的 `404`，所以这个缺口不是把正当的拒绝误算成了失败。
+在 12:10–12:20 这个窗口里，同一路由、同一区域的 `d-new` 收到 100 次合格读请求，98 次在 400 ms 内给出了与授权关系一致的结果；稳定版 `d-old` 是 900/900（它带着跨账户缺陷，这些读取之所以都好，是因为受影响入口已按金丝雀章隔离）。按 SLI 章的规则，只看 `d-new` 自身（[为什么不能合并](#%E9%87%91%E4%B8%9D%E9%9B%80%E4%B8%8D%E8%83%BD%E5%92%8C%E7%A8%B3%E5%AE%9A%E7%89%88%E5%90%88%E5%9C%A8%E4%B8%80%E8%B5%B7%E8%AF%84%E4%BC%B0)），它低于 99% 的门槛。门禁每分钟评价一次，图中六个评价点首末相隔整 5 分钟，每个点上 `d-new` 的滚动 10 分钟窗口都满足样本数和比例条件，所以满足持续止损条件。事先运行的冒烟核验也确认，钉到 `d-new` 的 `user-17` 得到 `200` 和已知标记，`user-29` 经 acct-29 读 42 得到与报表 43 相同的 `404`，所以这个缺口不是把正当的拒绝误算成了失败。
 
 接着从指标下钻到 trace。同一窗口里一条慢读请求总耗时 900 ms：
 
@@ -12788,9 +12921,9 @@ trace 把一次操作拆成有父子关系的 span (操作区间)。同步调用
    - **新导出。** 对尚未受理的新导出请求，可以按准入约定在 `202` 之前返回 `429`/`503`；已经受理的任务要保持可查询、可恢复，不能把拒绝新请求伪装成 job 失败。
 
 5. **用同一用户结果复验，再考虑放量。**
-   - **读取。** 12:20 把流量切回 `d-old`，等切换后第一个完整的滚动 10 分钟窗口在 12:30 结束，用同一个读取 SLI 口径复验：该窗口内 1,000 个合格读请求全部为好事件，且每个请求都能归到 `d-old`。样本不足或归属缺失就维持当前流量，不能拿切换前的数据或跨摘要的总量代替。业务核验另从实际部署的入口做：`user-17` 读报表 42 得到 `200` 和已知标记；`user-29` 经 acct-29 读 42 得到与报表 43 相同的 `404`。这个 `404` 来自隔离预检而不是 `d-old` 的代码，它证明的是隔离仍然有效，不是缺陷已修好。
-   - **旧任务。** `job-demo-731` 在 12:16 仍是 `queued`；12:26 才观察到成功提交确认，随后按当前授权下载并核对了文件。它在原期限之后才成功，在完成 SLI 里仍是坏事件；而且 API 回退并不控制 worker，这次迟到的完成不能直接归功于回退，只说明这个旧任务后来可用了。
-   - **新请求的完整路径。** 旧任务恢复代替不了新请求的复验。用新的幂等键 `export-demo-416` 发起导出，创建 `job-demo-732`：12:31 确认受理提交并返回 `202`；12:32 观察到成功提交确认，结果引用与 `report.ready` outbox 已原子提交；然后从同一入口按授权下载并核对文件。60 秒的确认间隔满足 2 分钟的完成 SLI（它不证明实际 COMMIT 间隔，见 SLI 章）。
+   - **读取。** 切回 `d-old` 后，等切换后第一个完整的滚动 10 分钟窗口结束，用同一个读取 SLI 口径复验：时间线图中这个窗口的合格读请求全部为好事件，且每个请求都能归到 `d-old`。样本不足或归属缺失就维持当前流量，不能拿切换前的数据或跨摘要的总量代替。业务核验另从实际部署的入口做：`user-17` 读报表 42 得到 `200` 和已知标记；`user-29` 经 acct-29 读 42 得到与报表 43 相同的 `404`。这个 `404` 来自隔离预检而不是 `d-old` 的代码，它证明的是隔离仍然有效，不是缺陷已修好。
+   - **旧任务。** `job-demo-731` 观察到成功提交确认后，按当前授权下载并核对了文件。它在原期限之后才成功，在完成 SLI 里仍是坏事件；而且 API 回退并不控制 worker，这次迟到的完成不能直接归功于回退，只说明这个旧任务后来可用了。
+   - **新请求的完整路径。** 旧任务恢复代替不了新请求的复验。用新的幂等键 `export-demo-416` 发起导出，创建 `job-demo-732`：确认受理提交后返回 `202`；观察到成功提交确认时，结果引用与 `report.ready` outbox 已原子提交；然后从同一入口按授权下载并核对文件。时间线图中 60 秒的确认间隔满足 2 分钟的完成 SLI（它不证明实际 COMMIT 间隔，见 SLI 章）。
    - **不能当作恢复证据的。** 告警没有持续触发满 5 分钟，可能只是尚未触发或刚刚解除；队列 ACK 不代表用户拿到了文件；通知是否送达要按独立的通知 SLI 复验。30 天的长期错误预算继续单独跟踪。
 
 6. **记录可执行的事后改进。** 记下用户受影响的时间窗、各 SLI 的分子与分母、摘要和阶段证据、采取的缓解措施（含切回 `d-old` 依赖的那道隔离何时生效、何时撤除）、前向修复的计划、相关测试，以及现有门禁为什么没有更早发现问题。只写“服务已恢复”，没有用户路径和时间窗，就无法判断是否真正止损。

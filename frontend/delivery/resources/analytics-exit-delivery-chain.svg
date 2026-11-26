@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1010" viewBox="0 0 800 1010" role="img" aria-labelledby="title desc">
+  <title id="title">离页分析事件从入队到服务端记录的链路</title>
+  <desc id="desc">左列是一批分析事件从页面内存队列到服务端记录的链路，右列是每一步观察到的信号能证明和不能证明什么，红色标出链路上可能丢失的位置。事件先在内存队列；文档变为 hidden 时 flushOneBatch 取出一批并先移出队列；sendBeacon 返回 true 只表示浏览器接受排队，不可用或返回 false 时改用 keepalive Fetch，两者共享 64 KiB 在途额度；排队后请求仍可能被中止或进程被结束；服务端入口日志只证明请求到达；按事件 ID 去重提交后服务端才按事务契约记录，浏览器不知道这个结果。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#263b52"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#b03a3a"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; fill: #172b3f; }
+      .head { font-size: 19px; font-weight: 700; }
+      .sub { font-size: 17px; font-weight: 600; }
+      .body { font-size: 16px; }
+      .small { font-size: 15px; fill: #44566a; }
+      .code { font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 15px; }
+      .red { fill: #9e2f2f; }
+      .arrow { fill: none; stroke: #263b52; stroke-width: 2.2; marker-end: url(#arrow); }
+      .arrow-red { fill: none; stroke: #b03a3a; stroke-width: 2.2; marker-end: url(#arrow-red); }
+      .dash { stroke-dasharray: 7 5; }
+    </style>
+  </defs>
+  <rect x="6" y="6" width="788" height="998" rx="18" fill="#ffffff" stroke="#d7e0e8" stroke-width="2"/>
+  <text x="400.0" y="40" class="head" text-anchor="middle">一批事件离页时经过哪几步，每步能证明到哪里</text>
+  <rect x="22" y="60" width="330" height="44" rx="12" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="187.0" y="88" class="sub" text-anchor="middle">链路</text>
+  <rect x="394" y="60" width="384" height="44" rx="12" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="586.0" y="88" class="sub" text-anchor="middle">观察到这一步，能证明什么</text>
+  <rect x="22" y="120" width="330" height="66" rx="10" fill="#f2f6fb" stroke="#6d879f" stroke-width="2"/>
+  <text x="36" y="147" class="sub">页面内存队列</text>
+  <text x="36" y="170" class="code">report_opened、sort_changed</text>
+  <rect x="394" y="120" width="384" height="66" rx="10" fill="#fbfcfd" stroke="#d7e0e8" stroke-width="2"/>
+  <text x="408" y="147" class="body">能：本页面暂存了事件</text>
+  <text x="408" y="171" class="small">不能：页面销毁后还能恢复</text>
+  <path class="arrow" d="M187.0 186 V210"/>
+  <text x="197.0" y="212" class="small"></text>
+  <rect x="22" y="214" width="330" height="90" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="36" y="241" class="sub">visibilitychange → hidden</text>
+  <text x="36" y="264" class="small">本例：点“帮助”进入新文档</text>
+  <text x="36" y="287" class="small">处理器调用 flushOneBatch()</text>
+  <rect x="394" y="214" width="384" height="90" rx="10" fill="#fbfcfd" stroke="#d7e0e8" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="408" y="241" class="body">离页前首选的时机</text>
+  <text x="408" y="265" class="small">pagehide、unload 不作发送钩子；</text>
+  <text x="408" y="288" class="small">单页应用改路由通常不触发 hidden</text>
+  <path class="arrow" d="M187.0 304 V330"/>
+  <rect x="22" y="334" width="330" height="66" rx="10" fill="#f2f6fb" stroke="#6d879f" stroke-width="2"/>
+  <text x="36" y="361" class="code">takeBatchBody()</text>
+  <text x="36" y="384" class="small">≤ 50 条、≤ 8 KiB，先移出队列</text>
+  <rect x="394" y="334" width="384" height="66" rx="10" fill="#fbfcfd" stroke="#d7e0e8" stroke-width="2"/>
+  <text x="408" y="361" class="body">能：这一批已离开队列</text>
+  <text x="408" y="385" class="small">不能：之后失败还会放回队列</text>
+  <path class="arrow" d="M187.0 400 V426"/>
+  <rect x="22" y="430" width="330" height="66" rx="10" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2"/>
+  <text x="36" y="457" class="code">sendBeacon()</text>
+  <text x="36" y="480" class="small">返回 true，或不可用 / false</text>
+  <rect x="394" y="430" width="384" height="66" rx="10" fill="#fbfcfd" stroke="#d7e0e8" stroke-width="2"/>
+  <text x="408" y="457" class="body">能：返回 true：浏览器接受了排队</text>
+  <text x="408" y="481" class="small">不能：网络请求完成，或服务器已处理</text>
+  <path class="arrow dash" d="M187.0 496 V516"/>
+  <text x="197.0" y="516" class="small">false 或不可用</text>
+  <rect x="22" y="520" width="330" height="66" rx="10" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="36" y="547" class="sub">keepalive Fetch</text>
+  <text x="36" y="570" class="small">与 Beacon 共享 64 KiB 在途额度</text>
+  <rect x="394" y="520" width="384" height="66" rx="10" fill="#fff7f7" stroke="#d9a3a3" stroke-width="2"/>
+  <text x="408" y="547" class="body" style="fill:#9e2f2f">✕ 额度超出：两条通道都拒绝</text>
+  <text x="408" y="571" class="small" style="fill:#7c2a2a">两者都失败时，这批事件丢失</text>
+  <path class="arrow" d="M187.0 586 V636"/>
+  <path class="arrow" d="M352 463 H378 V673 H356"/>
+  <text x="365" y="575.0" class="small" text-anchor="middle" transform="rotate(-90 365 575.0)">返回 true</text>
+  <rect x="22" y="640" width="330" height="66" rx="10" fill="#f2f6fb" stroke="#6d879f" stroke-width="2"/>
+  <text x="36" y="667" class="sub">浏览器发出请求</text>
+  <text x="36" y="690" class="small">页面不再得到这批事件的消息</text>
+  <rect x="394" y="620" width="384" height="106" rx="10" fill="#fff7f7" stroke="#d9a3a3" stroke-width="2"/>
+  <text x="408" y="647" class="body" style="fill:#9e2f2f">✕ 排队之后仍会丢</text>
+  <text x="408" y="671" class="small" style="fill:#7c2a2a">实测：请求被拦截中止，服务端无记录</text>
+  <text x="408" y="694" class="small" style="fill:#7c2a2a">浏览器进程也可能在传输前被结束</text>
+  <text x="408" y="717" class="small" style="fill:#7c2a2a">页面侧取消：服务端可能收到，也可能没收到</text>
+  <path class="arrow" d="M187.0 706 V766"/>
+  <rect x="22" y="770" width="330" height="66" rx="10" fill="#e8f5ee" stroke="#4b8a68" stroke-width="2"/>
+  <text x="36" y="797" class="sub">服务端入口日志出现请求</text>
+  <text x="36" y="820" class="small">同一事件发了两次，就有两行原始记录</text>
+  <rect x="394" y="770" width="384" height="66" rx="10" fill="#fbfcfd" stroke="#d7e0e8" stroke-width="2"/>
+  <text x="408" y="797" class="body">能：请求到达了这个服务端入口</text>
+  <text x="408" y="821" class="small">不能：已写入耐久存储或业务事务已提交</text>
+  <path class="arrow" d="M187.0 836 V862"/>
+  <rect x="22" y="866" width="330" height="66" rx="10" fill="#e8f5ee" stroke="#4b8a68" stroke-width="2"/>
+  <text x="36" y="893" class="sub">按事件 ID 去重并提交</text>
+  <text x="36" y="916" class="small">同一事件 ID 的重复行只算一次</text>
+  <rect x="394" y="866" width="384" height="66" rx="10" fill="#fbfcfd" stroke="#d7e0e8" stroke-width="2"/>
+  <text x="408" y="893" class="body">能：服务端按自己的事务契约记录了事件</text>
+  <text x="408" y="917" class="small">不能：浏览器知道这个结果（Beacon 无回调）</text>
+  <text x="22" y="980" class="small">蓝色：浏览器的两条发送通道；绿色：服务端；红色：链路上可能丢失的位置。</text>
+</svg>

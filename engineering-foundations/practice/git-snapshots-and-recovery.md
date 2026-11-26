@@ -6,14 +6,9 @@
 
 ## 一次改动停在哪一层
 
-Git 里的改动依次经过四层状态：
+Git 里的改动依次经过四层状态。下图从上往下画出每一层是什么、哪条命令把改动推进下一层，右侧括号标出两条比较命令各看哪两层：
 
-| 层 | 是什么 | 怎样进入下一层 |
-| --- | --- | --- |
-| working tree (工作区) | 磁盘上正在编辑的文件 | `git add` 把文件当前内容复制进暂存区 |
-| index (暂存区) | 准备放进下一次提交的快照 | `git commit` 把暂存区写成提交 |
-| commit (提交) | 一份完整的目录快照（tree）及其父提交 | 分支引用移动到新提交 |
-| branch (分支) | 指向某个提交的可移动引用；`HEAD` 指向当前分支 | `git push` 等操作把引用共享出去 |
+![改动自上而下经过工作区、暂存区、提交与分支、远端：git add 复制执行那一刻的内容，git commit 写成提交并移动分支，git push 共享引用；git diff 比较工作区与暂存区，git diff --cached 比较暂存区与 HEAD。](resources/git-change-layers.svg)
 
 本章只讨论在分支上工作的常见情况：`HEAD` 指向当前分支，分支指向当前提交，提交成功后分支移动到新提交。分清改动停在哪一层，后面才能选对比较命令和恢复命令。
 
@@ -28,10 +23,7 @@ Git 里的改动依次经过四层状态：
 | 再编辑为 `v2`，没有再次 add | `v2` | `v1` | `v0` |
 | `git commit` | `v2` | `v1` | `v1` |
 
-最后一步只提交了账户条件，错误处理仍是未暂存的改动。两条比较命令各看一段：
-
-- `git diff`：工作区对暂存区，即“还没暂存的改动”。
-- `git diff --cached`：暂存区对 HEAD，即“这次会提交的改动”。
+最后一步只提交了账户条件，错误处理仍是未暂存的改动：此刻 `git diff` 显示 `v1` 到 `v2` 的错误处理，`git diff --cached` 为空。
 
 问题在于测试通常读取工作区里的文件。`v2` 通过了测试，不能说明只含 `v1` 的提交也能通过。所以验收要让被测内容与准备提交的快照一致：要么先把工作区整理到与暂存区相同再测试，要么在隔离目录里测试待提交的快照，例如用 `git worktree` 检出一份干净副本。工作区混有其他任务的改动时，后一种做法更可靠。
 
@@ -80,9 +72,11 @@ git fetch origin
 git log --left-right --oneline --graph HEAD...origin/main
 ~~~
 
-三点写法 `HEAD...origin/main` 配合 `--left-right`，列出两边各自独有的提交：`<` 表示只能从当前 `HEAD` 到达，`>` 表示只能从 `origin/main` 到达。两点写法 `HEAD..origin/main` 只列远端独有的提交，看不出本地是否还有没推送的提交。
+三点写法 `HEAD...origin/main` 配合 `--left-right`，列出两边各自独有的提交。本案例获取后的历史如下，`>` 一侧是同事的提交：为减少读取量，他把同一行改成了延迟加载报表正文。
 
-在本案例中，`>` 一侧出现了同事的提交 `perf(reports): defer report body`：为减少读取量，他把同一行改成了延迟加载报表正文。
+![共同祖先之后分成两支：origin/main 上是 perf(reports): defer report body，标为 >；本地分支 fix/report-account-scope 上是修复提交 6ab06f8，标为 <。](resources/git-before-rebase.svg)
+
+两点写法 `HEAD..origin/main` 只列远端独有的提交，即图中 `>` 那一支，看不出本地是否还有没推送的提交。
 
 ## merge 还是 rebase
 
@@ -94,7 +88,9 @@ git log --left-right --oneline --graph HEAD...origin/main
 
 两个容易误解的边界：如果当前提交是远端提交的祖先（本地没有新提交），`git merge` 会 fast-forward (快进)，直接移动分支，不新增合并提交；如果远端没有本地缺少的提交，就没有需要整合的东西，也不会凭空生成合并节点。具体用哪种，以仓库现行策略为准，不要套用某个通用分支模型。
 
-本案例的分支还没推送，团队约定用 rebase：`git rebase origin/main`。
+本案例的分支还没推送，团队约定用 rebase：`git rebase origin/main`。下图是 rebase 完成后的历史，也标出了重放时冲突两侧各是谁：
+
+![rebase 把 6ab06f8 重放到 perf 之后，得到新提交 c4f2a91，分支移到它上面，旧提交不再被分支指向；重放冲突时 ours 即 HEAD 是上游 perf 一侧，theirs 是本地修复；CI 要在新 ID 上重跑。](resources/git-after-rebase.svg)
 
 ## 冲突按语义不变量解决
 
@@ -126,7 +122,7 @@ rebase 在 `src/reports.py` 上停了下来，因为两边改了同一行：
     )
 ~~~
 
-**rebase 时 ours 和 theirs 是反的。** rebase 把本地提交一个个重放到上游之上，所以冲突里的 `HEAD`（ours）是**上游**的版本，theirs 才是正在重放的本地修复。上面的 `HEAD` 一侧正是同事那行 `session.get`。不看内容就执行 `git checkout --ours src/reports.py`，等于把越权缺陷原样恢复；整块接受 theirs，则丢掉了上游的改动。不理解冲突内容时，两种整块接受都不要做。
+**rebase 时 ours 和 theirs 是反的。** rebase 把本地提交一个个重放到上游之上，所以冲突里的 `HEAD`（ours）是上游那一侧，即上面同事那行 `session.get`，theirs 才是本地修复。不看内容就执行 `git checkout --ours src/reports.py`，等于把越权缺陷原样恢复；整块接受 theirs，则丢掉了上游的改动。不理解冲突内容时，两种整块接受都不要做。
 
 解决后的检查顺序：
 
@@ -134,7 +130,7 @@ rebase 在 `src/reports.py` 上停了下来，因为两边改了同一行：
 2. 运行测试；跨账户反例会拦住误选上游一侧的结果。
 3. 暂存并继续：`git add src/reports.py`，然后 `git rebase --continue`（如果进行的是 merge，用 `git merge --continue`；先看 `git status` 确认当前操作）。
 
-rebase 完成后，修复提交从 `6ab06f8` 变成了新的 `c4f2a91`。CI 必须在新 ID 上重新验证，上一节“证据绑定提交 ID”的规则在这里生效。
+rebase 完成后得到上一节图中的 `c4f2a91`。CI 必须在新 ID 上重新验证，“证据绑定提交 ID”的规则在这里生效。
 
 **想放弃整合时：**
 
@@ -156,27 +152,21 @@ rebase 完成后，修复提交从 `6ab06f8` 变成了新的 `c4f2a91`。CI 必�
 
 ## 按变化所在层恢复
 
-出错时，先判断要撤销的改动停在哪一层，再选命令。这张表是本领域恢复命令的权威版本：
+出错时，先判断要撤销的改动停在哪一层，再选命令。下图沿用上面的四层：右侧箭头是 restore 从哪一层把内容复制回哪一层，左侧竖条是 `git reset` 各选项改动的层，共享边界以下只用 revert：
 
-| 改动停在哪 | 想做什么 | 命令 | 效果与风险 |
-| --- | --- | --- | --- |
-| 暂存区 | 取消暂存，保留编辑 | `git restore --staged <path>` | 该路径的暂存内容恢复为 HEAD 的版本；工作区不变 |
-| 工作区 | 丢弃未暂存的编辑 | `git restore <path>` | 工作区恢复为暂存区的版本；被覆盖的编辑**无法找回** |
-| 未共享的本地提交 | 重新划分提交（如把两个合成一个） | `git reset --soft` 或 `--mixed <target>` | 分支移到目标；改动留在暂存区或工作区 |
-| 未共享的本地提交 | 连同改动一起丢弃 | `git reset --hard <target>` | 先确认工作区内容可以丢弃 |
-| 已共享的提交 | 撤销它的效果 | `git revert <commit>` | 新增一个反向提交，原提交留在历史中供审计 |
-| 已共享的合并提交 | 撤销这次合并 | `git revert -m 1 <merge-commit>` | `-m` 指定以哪个父提交为主线；先检查反向差异，以及它对之后再次合并同一分支的影响 |
-| 分支被误移 | 找回原来的提交 | `git reflog`，再 `git branch recovery/report-scope <commit-id>` | reflog 只是本地记录，会过期，不同步到远端 |
+![restore --staged 把暂存区恢复为 HEAD 的版本，restore 把工作区恢复为暂存区的版本；reset --soft 只移动分支，--mixed 还重置暂存区，--hard 再改工作区，只用于未共享的本地提交；已共享的提交用 revert 新增反向提交；reflog 找回误移前的提交。](resources/git-recovery-by-layer.svg)
+
+图上放不下的条件和风险记在下表，它与上图一起是本领域恢复命令的权威版本：
+
+| 命令 | 什么时候用，风险是什么 |
+| --- | --- |
+| `git restore <path>` | 丢弃未暂存的编辑；被覆盖的编辑**无法找回** |
+| `git reset --soft` 或 `--mixed <target>`（`--mixed` 是默认） | 重新划分未共享的本地提交，如把两个合成一个；改动留在暂存区或工作区 |
+| `git reset --hard <target>` | 连同改动一起丢弃：受跟踪文件的改动被丢弃，可能覆盖同名的未跟踪文件，目标中没有的受跟踪文件被删除；先确认工作区内容可以丢弃 |
+| `git revert -m 1 <merge-commit>` | 撤销已共享的合并提交；`-m` 指定以哪个父提交为主线；先检查反向差异，以及它对之后再次合并同一分支的影响 |
+| `git reflog`，再 `git branch recovery/report-scope <commit-id>` | 分支被误移时找回原提交；reflog 只是本地记录，会过期，不同步到远端 |
 
 撤销共享历史用 revert，不要把远端分支强制指回旧位置：别人可能已经基于那些提交工作了。
-
-`git reset` 的三个选项决定它除了移动分支之外还动哪几层：
-
-| 选项 | 分支引用 | 暂存区 | 工作区 |
-| --- | --- | --- | --- |
-| `--soft <target>` | 移到目标 | 保留 | 保留 |
-| `--mixed <target>`（默认） | 移到目标 | 重置为目标内容 | 保留 |
-| `--hard <target>` | 移到目标 | 重置为目标内容 | 全部改成目标版本：丢弃受跟踪文件的改动，可能覆盖同名的未跟踪文件，目标中没有的受跟踪文件被删除 |
 
 找回误移的提交后，先 `git show --stat recovery/report-scope` 检查这份快照，再决定是否推送。三个命令的分工可以这样记：reset 移动当前分支（并可重置暂存区和工作区），restore 恢复文件内容，revert 新增反向提交。
 

@@ -45,21 +45,11 @@ URL 的三段在这里分工明确：
 
 ![React Router v8.5.1 Data Mode 中，sort 从目标 URL 进入报表 loader，等待结果后提交页面或路由错误。](resources/react-router-data-navigation.svg)
 
-地址栏何时变化，取决于导航类型。PUSH（新增历史项，点击链接或调用 `navigate` 的默认行为）由路由器发起：它先等 loader，成功或失败后才调用 `history.pushState` 写入新历史项，所以等待期间地址栏仍是旧地址。POP（在已有历史项之间移动，即 Back/Forward）由浏览器发起：浏览器先移动历史指针、改地址栏，再派发 `popstate`，路由器这时才开始运行 loader，所以地址栏先变，已提交数据后变。
+地址栏何时变化，取决于谁发起导航。PUSH（新增历史项，点击链接或调用 `navigate` 的默认行为）由路由器发起：它等 loader 成功或失败后才调用 `history.pushState`，所以等待期间地址栏仍是旧地址。POP（在已有历史项之间移动，即 Back/Forward）由浏览器发起：浏览器先移动历史指针、改地址栏，再派发 `popstate`，路由器这时才开始运行 loader，所以地址栏先变，已提交数据后变。下图沿案例走一遍首次加载、PUSH 和 POP，每一行是两个事件之间三个读取口的值：
 
-下表假设首次加载成功，且用户等 oldest 导航结束后才按 Back。表中 recent / oldest 指完整地址中的 `sort` 值，path 始终是 `/reports/42`，fragment 始终是 `#summary`。
+![React Router 排序导航中，地址栏、已提交数据和待定导航随 PUSH、POP 先后变化；oldest loader 失败时地址仍提交并显示 ErrorBoundary](resources/react-router-commit-timeline.svg)
 
-| 时点 | 地址栏与历史 | `useLoaderData()` 与屏幕 | `useNavigation()` |
-|---|---|---|---|
-| 首次打开，loader 等待中 | recent；初始文档的历史项 | 还没有已提交数据，显示 `HydrateFallback` | `idle`（不反映首次读取） |
-| 首次加载完成 | recent | recent；May → April | `idle` |
-| 点“最早优先”（PUSH），loader 等待中 | 仍为 recent；目标历史项尚未写入 | 仍为 recent；May → April，并提示“正在切换到最早顺序…” | `loading`，`location` 为 oldest |
-| oldest loader 成功 | 提交 oldest，新增历史项 | oldest；April → May | `idle` |
-| oldest loader 失败（另一分支） | 仍提交 oldest 地址和历史项 | 路由 `ErrorBoundary` 替换列表 | `idle` |
-| 成功后按 Back（POP），loader 等待中 | 浏览器已回到 recent 历史项 | 仍为 oldest；April → May，并提示正在加载 | `loading`，`location` 为 recent |
-| POP 的 loader 成功 | recent | recent；May → April | `idle` |
-
-最后一行按旧 URL **重新读取**，得到的是服务端此刻的数据，不保证与首次访问时那份相同。URL 记住的是读取条件，不是数据快照。
+第 ⑥ 步按旧 URL **重新读取**，得到的是服务端此刻的数据，不保证与首次访问时那份相同。URL 记住的是读取条件，不是数据快照。
 
 ### 页面里另起的请求也要跟已提交值走
 

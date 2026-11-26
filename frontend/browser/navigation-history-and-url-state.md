@@ -116,14 +116,11 @@ function initializeReportControls() {
 
 写地址时先从 `location.href` 解析现有地址，只改 `sort`，所以 path、其他查询参数和 `#summary` 都保留。初始化时按 URL 渲染一次：若用户打开的是同事分享的 `sort=oldest` 链接，而服务器只会按 `recent` 输出，这一步会把列表改对。更好的做法是让服务器也按查询参数输出行和按钮状态，首屏就不会先显示错的顺序再跳变。
 
-三个时刻加上前进：
+下图把三个时刻、前进，以及下一节的片段导航和换文档的对照画在同一份会话历史上，回答每一步是否新增历史项、是否换 `Document`、派发哪些事件，以及按钮和行序随之变成什么：
 
-| 时点 | 文档、历史与事件 | 地址与界面 |
-|---|---|---|
-| 初次打开 | 浏览器用收到的 HTML 创建 `Document`；模块初始化时读 URL | `sort=recent`；`aria-pressed` 为 `true`/`false`；May → April |
-| 点“最早优先” | `pushState()` 在同一文档上新增历史项；不请求新 HTML，不派发 `popstate`/`hashchange`；处理器自己调用 `renderReports()` | `sort=oldest`；`false`/`true`；April → May |
-| 后退 | 激活上一个同文档历史项，派发 `popstate`；`#summary` 没变，不派发 `hashchange` | 监听器读当前 URL，恢复 `sort=recent`、`true`/`false`、May → April |
-| 前进 | 再激活 `sort=oldest` 那一项，派发 `popstate` | 恢复 `false`/`true`、April → May |
+![报表页会话历史：同一 Document 内的三个历史项，pushState、后退前进、location.hash 和 replaceState 各自怎样改动历史与派发事件；location.assign 改 query 时加载新 Document](resources/session-history-report-sort.svg)
+
+初次打开时浏览器用收到的 HTML 创建 `Document`，模块初始化时读 URL 得到历史项 1 的状态。点“最早优先”时 `pushState()` 不派发 `popstate`，所以 `chooseSort()` 必须自己调用 `renderReports()`；后退和前进只派发 `popstate`，由监听器读当前 URL 恢复按钮与行序。
 
 `pushState()` 的第一个参数可以保存一份可结构化克隆的状态，之后从 `popstate` 事件的 `event.state` 或随时从 `history.state` 读回。本例传 `null`，排序只从 URL 读，所以 `event.state` 是 `null`，也就不会出现 URL 和 state 说法不一的情况。
 
@@ -131,17 +128,11 @@ function initializeReportControls() {
 
 ## 只改片段时发生什么
 
-普通导航只有在目标与当前 URL 除 fragment 外完全相同时，才走同文档的片段导航。在 `/reports/42?sort=oldest#summary` 上执行 `location.hash = "#reports"`：
-
-1. 浏览器沿用当前 `Document`，新增一项历史记录，滚动到 `ol#reports`。
-2. 同步派发 `popstate`（`event.state` 为 `null`）。本例的监听器会从 URL 重读排序并重建列表，顺序不变。
-3. 再以一个排队的任务派发 `hashchange`。
-
-本机 Chrome 157 在这条路径上观察到的顺序也是先 `popstate`、后 `hashchange`，与规范一致。
+普通导航只有在目标与当前 URL 除 fragment 外完全相同时，才走同文档的片段导航。上图的历史项 3 就是在 `/reports/42?sort=oldest#summary` 上执行 `location.hash = "#reports"` 的结果。图中第 ① 步同步派发的 `popstate` 带的 `event.state` 是 `null`，本例监听器照样从 URL 重建列表；第 ② 步的 `hashchange` 要等排队的任务。本机 Chrome 157 在这条路径上观察到的顺序也是先 `popstate`、后 `hashchange`，与规范一致。
 
 两个容易混淆的对照：
 
-- 在 `/reports/42?sort=recent#summary` 上 `location.assign("?sort=oldest#summary")`：query 变了，即使保留了 `#summary`，也会导航到一个新的 `Document`。
+- 图中的 `location.assign("?sort=oldest#summary")` 只多改了 query，即使保留了 `#summary`，也会导航到一个新的 `Document`。
 - 用 `pushState()` 改成另一个片段：浏览器不滚动，调用本身也不派发 `popstate` 或 `hashchange`；只有之后通过前进后退回到这一项时，才按历史遍历的步骤处理。本例的排序历史项只改 query、保留 `#summary`，所以前进后退只触发 `popstate`。
 
 客户端路由器也建立在这些历史项之上，但改地址和更新视图始终是两件事。路由器怎样在地址变化后加载数据、区分已提交和待定的导航，见[路由怎样把 URL 变成已提交的数据和界面？](../ui-state/routing-and-loaders.md)。

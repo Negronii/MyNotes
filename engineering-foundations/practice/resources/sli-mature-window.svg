@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="458" viewBox="0 0 820 458" role="img" aria-labelledby="title desc">
+  <title id="title">12:00 结束的十分钟窗口，哪些任务已经成熟</title>
+  <desc id="desc">窗口 (11:50, 12:00] 左开右闭，只收期限 due 落在窗口内的任务，时间均为提交确认时刻。任务 1：11:57:00 受理确认，due 11:59:00 在窗口内，11:59:01 才观察到成功确认，用时 121 秒，计坏。任务 2：11:58:00 受理确认，due 12:00:00 恰在右闭端，进分母，12:00:01 成功确认，计坏。任务 3：11:59:30 受理确认，虽在窗口内受理，但 due 12:01:30 在窗口外，不进本窗口分母。只有事件完整水位越过 12:00 且到期 job 已逐一与数据库核对，才发布本窗口结果。</desc>
+  <style>
+    text { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #172033; font-size: 15px; }
+    .hd { font-size: 16px; font-weight: 700; }
+    .tick { font-size: 13px; fill: #475569; }
+    .m { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 14px; }
+    .bad { fill: #b91c1c; font-weight: 700; }
+    .faint { fill: #475569; }
+    .win { fill: #dbeafe; opacity: 0.55; }
+    .bar { fill: #f1f5f9; stroke: #64748b; stroke-width: 1.5; }
+    .due { stroke: #b45309; stroke-width: 3; }
+    .grid { stroke: #e2e8f0; stroke-width: 1; }
+  </style>
+  <rect width="820" height="458" fill="#fff"/>
+<text x="20.0" y="30" class="hd">窗口 (T−W, T] = (11:50, 12:00]：只收 11:50 &lt; due ≤ 12:00 的任务，due = 受理确认 + 2 分钟</text>
+<rect x="170.0" y="78" width="400.0" height="290" class="win"/>
+<line x1="130.0" y1="78" x2="130.0" y2="368" class="grid"/>
+<line x1="170.0" y1="78" x2="170.0" y2="368" class="grid"/>
+<text x="170.0" y="68" class="tick" text-anchor="middle">11:50</text>
+<line x1="210.0" y1="78" x2="210.0" y2="368" class="grid"/>
+<text x="210.0" y="68" class="tick" text-anchor="middle">11:51</text>
+<line x1="250.0" y1="78" x2="250.0" y2="368" class="grid"/>
+<text x="250.0" y="68" class="tick" text-anchor="middle">11:52</text>
+<line x1="290.0" y1="78" x2="290.0" y2="368" class="grid"/>
+<text x="290.0" y="68" class="tick" text-anchor="middle">11:53</text>
+<line x1="330.0" y1="78" x2="330.0" y2="368" class="grid"/>
+<text x="330.0" y="68" class="tick" text-anchor="middle">11:54</text>
+<line x1="370.0" y1="78" x2="370.0" y2="368" class="grid"/>
+<text x="370.0" y="68" class="tick" text-anchor="middle">11:55</text>
+<line x1="410.0" y1="78" x2="410.0" y2="368" class="grid"/>
+<text x="410.0" y="68" class="tick" text-anchor="middle">11:56</text>
+<line x1="450.0" y1="78" x2="450.0" y2="368" class="grid"/>
+<text x="450.0" y="68" class="tick" text-anchor="middle">11:57</text>
+<line x1="490.0" y1="78" x2="490.0" y2="368" class="grid"/>
+<text x="490.0" y="68" class="tick" text-anchor="middle">11:58</text>
+<line x1="530.0" y1="78" x2="530.0" y2="368" class="grid"/>
+<text x="530.0" y="68" class="tick" text-anchor="middle">11:59</text>
+<line x1="570.0" y1="78" x2="570.0" y2="368" class="grid"/>
+<text x="570.0" y="68" class="tick" text-anchor="middle">12:00</text>
+<line x1="610.0" y1="78" x2="610.0" y2="368" class="grid"/>
+<text x="610.0" y="68" class="tick" text-anchor="middle">12:01</text>
+<line x1="650.0" y1="78" x2="650.0" y2="368" class="grid"/>
+<text x="650.0" y="68" class="tick" text-anchor="middle">12:02</text>
+<line x1="690.0" y1="78" x2="690.0" y2="368" class="grid"/>
+<text x="690.0" y="68" class="tick" text-anchor="middle">12:03</text>
+<line x1="130.0" y1="78" x2="690.0" y2="78" stroke="#475569" stroke-width="1.5"/>
+<circle cx="170.0" cy="78" r="6" fill="#fff" stroke="#1d4ed8" stroke-width="2.5"/>
+<circle cx="570.0" cy="78" r="6" fill="#1d4ed8"/>
+<text x="180.0" y="100" class="faint">左端开：不含 11:50</text>
+<text x="560.0" y="100" class="faint" text-anchor="end">右端闭：含 12:00</text>
+<rect x="450.0" y="140" width="80.0" height="22" rx="4" class="bar"/>
+<circle cx="450.0" cy="151" r="5" fill="#334155"/>
+<line x1="530.0" y1="132" x2="530.0" y2="170" class="due"/>
+<circle cx="536.6666666666667" cy="151" r="6" fill="#b91c1c"/>
+<text x="438.0" y="146" text-anchor="end">受理确认 11:57:00</text>
+<text x="438.0" y="166" text-anchor="end">due 11:59:00 在窗口内：进分母</text>
+<text x="550.0" y="146">成功确认 11:59:01</text>
+<text x="550.0" y="166" class="bad">用时 121 s：坏</text>
+<rect x="490.0" y="220" width="80.0" height="22" rx="4" class="bar"/>
+<circle cx="490.0" cy="231" r="5" fill="#334155"/>
+<line x1="570.0" y1="212" x2="570.0" y2="250" class="due"/>
+<circle cx="576.6666666666667" cy="231" r="6" fill="#b91c1c"/>
+<text x="478.0" y="226" text-anchor="end">受理确认 11:58:00</text>
+<text x="478.0" y="246" text-anchor="end">due 12:00:00 落在右闭端：进分母</text>
+<text x="590.0" y="226">成功确认 12:00:01</text>
+<text x="590.0" y="246" class="bad">用时 121 s：坏</text>
+<rect x="550.0" y="300" width="80.0" height="22" rx="4" class="bar"/>
+<circle cx="550.0" cy="311" r="5" fill="#334155"/>
+<line x1="630.0" y1="292" x2="630.0" y2="330" class="due"/>
+<text x="538.0" y="306" text-anchor="end">受理确认 11:59:30，在窗口内受理，</text>
+<text x="538.0" y="326" text-anchor="end">但 due 12:01:30 在窗口外：不进本窗口分母</text>
+<text x="650.0" y="306">尚未观察到</text>
+<text x="650.0" y="326">成功确认</text>
+<rect x="20" y="388" width="22" height="14" rx="3" class="bar"/>
+<text x="48.0" y="400">受理确认 → due</text>
+<line x1="186" y1="386" x2="186" y2="404" class="due"/>
+<text x="196.0" y="400">due</text>
+<circle cx="250" cy="395" r="6" fill="#b91c1c"/>
+<text x="262.0" y="400">成功确认：晚于 due 即坏（图中把 1 s 的差放大画出）</text>
+<text x="20.0" y="436">发布条件：事件完整水位越过 T = 12:00，且到期 job 已逐一与数据库核对，才发布本窗口结果。</text>
+</svg>

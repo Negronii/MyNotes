@@ -51,7 +51,7 @@
 <text x="45" y="1685" text-anchor="start" font-size="25px" font-weight="700" fill="#24415f"><tspan x="45" dy="0">B · 单独的后台令牌撤销（可选）</tspan></text>
 <line x1="450" y1="1850" x2="770" y2="1850" stroke="#2b668f" stroke-width="3" marker-end="url(#arrow)"/>
 <rect x="468.0" y="1708" width="284" height="130" rx="8" fill="#ffffff" stroke="#d7e0e8" stroke-width="1"/>
-<text x="610.0" y="1734" text-anchor="middle" font-size="22px" font-weight="600" fill="#263746"><tspan x="610.0" dy="0">HTTPS POST /revoke</tspan><tspan x="610.0" dy="27">Refresh Token</tspan><tspan x="610.0" dy="27">confidential client auth</tspan><tspan x="610.0" dy="27">固定 IdP endpoint</tspan></text>
+<text x="610.0" y="1734" text-anchor="middle" font-size="22px" font-weight="600" fill="#263746"><tspan x="610.0" dy="0">HTTPS POST /revoke</tspan><tspan x="610.0" dy="27">Refresh Token</tspan><tspan x="610.0" dy="27">机密客户端认证</tspan><tspan x="610.0" dy="27">固定 IdP 撤销端点</tspan></text>
 <circle cx="475" cy="1876" r="18" fill="#24415f"/><text x="475" y="1883" text-anchor="middle" font-size="21px" font-weight="700" fill="#ffffff">6</text>
 <line x1="770" y1="2005" x2="450" y2="2005" stroke="#2b668f" stroke-width="3" marker-end="url(#arrow)"/>
 <rect x="468.0" y="1891" width="284" height="102" rx="8" fill="#ffffff" stroke="#d7e0e8" stroke-width="1"/>

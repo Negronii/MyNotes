@@ -18,13 +18,17 @@
 ["reports", "acct-a", "42", "rows", "recent"]
 ~~~
 
-同一账户、同一报表的各排序共享前缀 `["reports", "acct-a", "42", "rows"]`，失效时可以一次刷新该报表的全部排序；账户级前缀 `["reports", "acct-a"]` 用于退出登录时整体移除。若再加筛选、搜索词或页码，它们也要进键。fragment `#summary` 不随请求发送、不改变结果，所以不进键；只有应用明确把某个片段转成请求参数时，转换后的值才属于查询输入。
+键按段组成一棵树。完整键选中一格结果，前缀选中一棵子树，失效和移除都按前缀批量操作：
+
+![报表行查询键按账户、报表、rows、排序分层；报表前缀用于失效全部排序，账户前缀用于整体移除，acct-b 下没有缓存](resources/react-query-key-tree.svg)
+
+若再加筛选、搜索词或页码，它们也要进键，各占一段。fragment `#summary` 不随请求发送、不改变结果，所以不进键；只有应用明确把某个片段转成请求参数时，转换后的值才属于查询输入。
 
 | 阶段 | 当前键 | 列表与提示 |
 |---|---|---|
 | 初始路由 | `…/rows/recent` | 路由随页面交付的 May、April 作为这个键的初始数据，直接显示 |
 | 点“最早优先” | 路由提交 `sort=oldest`，键变为 `…/rows/oldest` | 若该键无缓存：把同账户、同一完整行集合的路由行在本地排成 April、May，标明“正在等待服务端确认”，行内操作禁用 |
-| oldest 响应到达 | 只写 `…/rows/oldest` | 列表换成该键的服务端数据。较早的 recent 请求即使此后才完成，也只写进 recent 的键 |
+| oldest 响应到达 | 只写 `…/rows/oldest` | 列表换成该键的服务端数据；较早的 recent 请求此后才完成，也只写进 recent 的键 |
 | 切换到 `acct-b` | `["reports", "acct-b", "42", "rows", sort]` | 没有 B 的缓存或路由行时，显示等待或空状态；绝不把 A 的行当成 B 的结果 |
 
 第二行的本地重排有严格前提：行的成员完全相同，只是顺序不同。只要账户、筛选、搜索词或页码改变了集合，旧集合重排后就不能冒充当前结果，切换期间只能显示当前键的缓存或等待状态。
@@ -43,6 +47,10 @@
 4. **落点有两种。** 按身份分格存储时，每份结果都写进自己的格，旧结果不浪费，只是不显示（查询缓存）；只有一个槽位时，身份不匹配的结果直接丢弃（Effect、Redux 预览、编辑抽屉）。
 5. **认领与取消是两件事。** 取消尽量省掉客户端工作，但不保证结果不回来，也不撤销服务端已发生的事（见[取消与超时停得住什么](../javascript/cancellation-timeouts-and-concurrency.md)）；按身份认领才保证界面正确。两者通常一起用。
 6. **写入的回执不能丢弃。** 读取结果过期了可以扔掉；写入的回执说明服务器状态已经改变，必须按发起时捕获的身份更新对应的缓存，只有“要不要改当前界面”才看它是否仍属于当前会话。
+
+用案例里先 recent、后 oldest 的两次读取走一遍第 3、4 条：
+
+![同一组发起与到达次序下，查询缓存把迟到的 recent 结果写进自己的格但不显示，单槽状态把它与当前所有者比较后丢弃](resources/async-result-landing.svg)
 
 下表是本书各处的实例。它们的身份长得不一样，机制相同：
 
@@ -120,7 +128,30 @@ onError: (_error, _change, snapshot, context) => {
 },
 ~~~
 
-它只在“保存期间没有任何其他写入碰这个键”时可靠。`cancelQueries` 只取消调用那一刻已在途的读取，不是锁；新鲜期过后的焦点重取、轮询或手动 `refetch` 仍会在保存期间写缓存。一次本地回放正好踩中这一点：把时钟推进 31 秒（超过 30 秒的 `staleTime`）后触发焦点重取，读取先把服务端 April 的 `false` 和 May 的新标题写进缓存，盖掉了乐观写入的 `true`；随后保存失败，旧快照把整张表恢复成保存前的样子，May 的新标题就此丢失。快照代表的是“某一刻的整张表”，而回滚时它已不是权威值。
+它只在“保存期间没有任何其他写入碰这个键”时可靠。`cancelQueries` 只取消调用那一刻已在途的读取，不是锁；新鲜期过后的焦点重取、轮询或手动 `refetch` 仍会在保存期间写缓存。下图是一次踩中这一点的本地回放：
+
+~~~mermaid
+%%{init: {"sequence": {"mirrorActors": false, "actorMargin": 40, "width": 130}}}%%
+sequenceDiagram
+    participant UI as 界面
+    participant C as 查询缓存<br/>acct-a/oldest
+    participant M as mutation
+    participant S as 服务端
+    UI->>M: 点 April“标为已审阅”
+    M->>C: onMutate：cancelQueries<br/>只取消此刻在途的读取
+    Note over M: 存快照 previous<br/>April false，May 旧标题
+    M->>C: 写入 April reviewed=true<br/>（乐观值）
+    M->>S: 发出保存请求
+    Note over UI,S: 时钟推进 31 秒，超过 30 秒的 staleTime；窗口重新聚焦
+    C->>S: 焦点重取
+    S-->>C: April false，May 新标题
+    Note over C: 乐观的 true 被盖掉
+    S-->>M: 保存失败
+    M->>C: onError：写回快照 previous
+    Note over C: April false，May 旧标题<br/>✕ May 的新标题丢失
+~~~
+
+快照代表的是“某一刻的整张表”，回滚时它已不是权威值。
 
 overlay 不会出这个问题，因为它从不把待处理的值写进共享缓存，也不需要回滚。缓存法的好处是其他读者（例如另一个显示同一行的组件）也能看到乐观值；选它时要保证同一个键在保存期间没有并行写入。
 

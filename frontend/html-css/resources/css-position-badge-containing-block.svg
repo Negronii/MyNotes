@@ -17,16 +17,18 @@
   <rect x="492.8" y="87.2" width="44.8" height="33.6" rx="3" fill="#b75537" stroke="#853b28" stroke-width="1.5"/>
   <text x="515.2" y="108" text-anchor="middle" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="14" fill="#ffffff">徽标</text>
   <!-- top inset measure -->
+  <path d="M548 76 H566 M537.6 87.2 H566" stroke="#8c9eaa" stroke-width="1" stroke-dasharray="3 3"/>
   <line x1="572" y1="76" x2="572" y2="87.2" stroke="#365d7a" stroke-width="1.5"/>
   <line x1="567" y1="76" x2="578" y2="76" stroke="#365d7a" stroke-width="1.2"/>
   <line x1="567" y1="87.2" x2="578" y2="87.2" stroke="#365d7a" stroke-width="1.2"/>
-  <text x="586" y="87" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="15" fill="#25445a">top = 8px</text>
+  <text x="586" y="88" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="15" fill="#25445a">top = 8px</text>
   <!-- right inset measure -->
+  <path d="M537.6 120.8 V132" stroke="#8c9eaa" stroke-width="1" stroke-dasharray="3 3"/>
   <line x1="537.6" y1="138" x2="548" y2="138" stroke="#365d7a" stroke-width="1.5"/>
   <line x1="537.6" y1="133" x2="537.6" y2="144" stroke="#365d7a" stroke-width="1.2"/>
   <line x1="548" y1="133" x2="548" y2="144" stroke="#365d7a" stroke-width="1.2"/>
   <text x="560" y="145" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="15" fill="#25445a">right = 8px</text>
-  <text x="560" y="169" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="15" fill="#25445a">徽标：32 × 24px</text>
+  <text x="482" y="109" text-anchor="end" font-family="Arial, 'Noto Sans CJK SC', sans-serif" font-size="15" fill="#25445a">徽标 32 × 24px</text>
   <!-- coordinate guide -->
   <line x1="100" y1="350" x2="492.8" y2="350" stroke="#273a4b" stroke-width="1.5" marker-end="url(#axisArrow)"/>
   <line x1="492.8" y1="350" x2="492.8" y2="121" stroke="#8c9eaa" stroke-width="1.2" stroke-dasharray="5 4"/>

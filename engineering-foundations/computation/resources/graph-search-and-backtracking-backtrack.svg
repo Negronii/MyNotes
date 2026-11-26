@@ -1,10 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="740" height="740" viewBox="0 0 740 740" role="img" aria-labelledby="desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="720" viewBox="0 0 740 720" role="img" aria-labelledby="desc">
   <title id="desc">简单路径递归中的路径状态与回退</title>
   <defs>
-    <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#667085"/></marker>
-    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#2469a5"/></marker>
-    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#21845b"/></marker>
-    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L10,5 L0,10 z" fill="#bf3c35"/></marker>
+    <marker id="arrow-gray" viewBox="0 0 10 10" markerWidth="13" markerHeight="13" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,5 L0,10 z" fill="#667085"/></marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" markerWidth="13" markerHeight="13" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,5 L0,10 z" fill="#2469a5"/></marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" markerWidth="13" markerHeight="13" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,5 L0,10 z" fill="#21845b"/></marker>
+    <marker id="arrow-red" viewBox="0 0 10 10" markerWidth="13" markerHeight="13" refX="8" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L10,5 L0,10 z" fill="#bf3c35"/></marker>
     <style>
       text { font-family: Arial, "Noto Sans CJK SC", sans-serif; fill: #202938; }
       .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.5; }
@@ -26,7 +26,7 @@
     </style>
   </defs>
 
-  <rect x="0" y="0" width="740" height="740" fill="#ffffff"/>
+  <rect x="0" y="0" width="740" height="720" fill="#ffffff"/>
   <rect x="10" y="10" width="720" height="330" rx="12" class="panel"/>
   <text x="34" y="43" class="heading">① 先走 S → A → T</text>
   <text x="34" y="72" class="state">到达 T：path = [S, A, T]　·　onPath = {S, A, T}</text>

@@ -271,16 +271,11 @@ function throttleLeading(fn, interval) {
 
 ### 同一条时间线上两者怎样不同
 
-下表是合成时间线：防抖等待和节流间隔都是 `100ms`；`debouncedSearch`、`throttledSearch` 分别包装同一个搜索函数，该函数记下接收者（`pageA`、`pageB`、`pageC` 代表不同接收者）和搜索词。每行把相同输入同时交给两个包装器。时刻按理想时钟推演，不是实测。
+下图是合成时间线：防抖等待和节流间隔都是 `100ms`；`debouncedSearch`、`throttledSearch` 分别包装同一个搜索函数，该函数记下接收者（`pageA`、`pageB`、`pageC` 代表不同接收者）和搜索词。相同的三次输入同时交给两个包装器。
 
-| 理想时刻 | 防抖包装器 | 首沿节流包装器 |
-| ---: | --- | --- |
-| `0ms` | 收到 `pageA, "A"`：设 `100ms` 计时 | 收到 `pageA, "A"`：立即执行，记下 `0` |
-| `40ms` | 收到 `pageB, "B"`：清掉旧计时，重新等 `100ms` | 收到 `pageB, "B"`：丢弃，距上次通过 `40ms` |
-| `110ms` | 收到 `pageC, "C"`：再次清掉旧计时，重新等 `100ms` | 收到 `pageC, "C"`：执行，距上次通过 `110ms` |
-| `210ms` 起 | 无新调用时，以 `pageC, "C"` 执行 | 无新调用 |
+![合成时间线：0、40、110ms 三次输入；尾沿防抖两次清掉旧计时，只在 210ms 以 pageC "C" 执行；首沿节流在 0ms 执行 A、40ms 丢弃 B、110ms 执行 C](resources/debounce-throttle-timeline.svg)
 
-防抖只执行了最后一次；首沿节流执行了第一次和间隔外的一次，丢掉了中间的 B。
+防抖只执行了最后一次，而且用的是最后一次的接收者和参数；首沿节流执行了第一次和间隔外的一次，丢掉了中间的 B。
 
 ### leading、trailing 与 maxWait
 
@@ -315,15 +310,11 @@ function throttleLeading(fn, interval) {
 
 `_.debounce(func, wait, options)` 默认只在尾沿执行；`options` 有 `leading`、`trailing`、`maxWait`，返回的函数带 `cancel()` 和 `flush()`。`_.throttle(func, wait, options)` 默认 `leading` 和 `trailing` 都为 `true`，实现上就是调用 `_.debounce`，并令 `maxWait` 等于 `wait`。
 
-> [!example] maxWait 已处理的输入，不会被尾沿重复发送
-> 搜索框用 `_.debounce(search, 300, { trailing: true, maxWait: 1000 })`。第一次输入在 `0ms`，之后每隔 `120ms` 输入一次，依次是 `Ops 0`、`Ops 1`……
->
-> | 输入情况 | `1000ms` 时（maxWait 到期） | 停止输入之后 |
-> |---|---|---|
-> | 共 9 次，最后一次在 `960ms` | 执行最新的 `Ops 8` | 没有待执行输入，不再调用 |
-> | 共 12 次，最后一次在 `1320ms` | 执行当时最新的 `Ops 8` | `1080`–`1320ms` 又有新输入；`1620ms`（最后输入后 `300ms`）尾沿执行 `Ops 11` |
->
-> 尾沿只执行仍待执行的输入。第一种情况里 `Ops 8` 已被 maxWait 执行，尾沿就没有可做的事。
+下图上半部分把上节的 `0/40/110ms` 时间线交给默认的 `_.throttle(search, 100)`；下半部分是搜索框用 `_.debounce(search, 300, { trailing: true, maxWait: 1000 })`、从 `0ms` 起每隔 `120ms` 输入一次（依次是 `Ops 0`、`Ops 1`……）的两种输入长度：
+
+![lodash 4.18.1：默认 _.throttle 在 0ms 首沿执行 A、100ms 尾沿执行 B、210ms 尾沿执行 C；maxWait 1000 时，输入 9 次只在 1000ms 执行 Ops 8，输入 12 次在 1000ms 执行 Ops 8、1620ms 尾沿执行 Ops 11](resources/lodash-throttle-maxwait-timeline.svg)
+
+上半部分与手写的首沿节流不同：B 不会被丢弃，而在 `100ms` 尾沿执行；C 到达时已处在新窗口里，于 `210ms` 尾沿执行。要得到“只要首沿”的行为，需显式传 `{ trailing: false }`。下半部分说明尾沿只执行仍待执行的输入：只输入 9 次时，`Ops 8` 已在 `1000ms` 被 maxWait 执行，lodash 同时清掉计时器，`1260ms` 不会再有一次尾沿检查。
 
 首沿、尾沿都开时，第一次立即执行；窗口内再有调用，尾沿才执行。需要立即提交尚待执行的尾部输入时调用 `flush()`：
 
@@ -333,8 +324,6 @@ search({ sort: "recent", query: "O" });   // 首沿立即执行
 search({ sort: "recent", query: "Ops" }); // 窗口内第二次调用，尾沿待执行
 search.flush();                           // 现在就执行 "Ops"
 ~~~
-
-把上节的 `0/40/110ms` 时间线交给默认的 `_.throttle(search, 100)`，结果和手写的首沿节流不同：A 在 `0ms` 首沿执行；B 不会被丢弃，而在 `100ms` 尾沿执行；C 在 `110ms` 到达时已处在新窗口里，于 `210ms` 尾沿执行。要得到“只要首沿”的行为，需显式传 `{ trailing: false }`。
 
 在 React 组件里，同一个 debounce 实例要跨渲染保存（例如放进 ref，只创建一次）。下面的 Hook 把本章规则放回报表页：排序由路由提交，Hook 只用已提交的 `committedSort`（已提交与待定导航的区别见[路由怎样把 URL 变成已提交的数据和界面？](../ui-state/routing-and-loaders.md)）；每次输入只更新参数和请求代次，不取消实例；清空输入、排序提交或卸载时才取消，并递增代次让旧响应作废。
 
@@ -456,5 +445,5 @@ ahooks 把同样的计时策略包成两类 Hook：一类延迟**值**，一类�
 > - 缓存键的存在检查与序列化（“memoize”）：[ECMAScript 2026 Map.prototype.has](https://tc39.es/ecma262/2026/multipage/keyed-collections.html#sec-map.prototype.has)（§24.1.3.9）、[JSON.stringify](https://tc39.es/ecma262/2026/multipage/structured-data.html#sec-json.stringify)（§25.5.4）。
 > - 原始练习的题目契约与作者解法（rest 参数、组合、`once`、记忆化）：存档 [Return Length of Arguments Passed](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2703.%20Return%20Length%20of%20Arguments%20Passed.md)、[Function Composition](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2629.%20Function%20Composition.md)、[Allow One Function Call](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2666.%20Allow%20One%20Function%20Call.md)、[Memoize](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2623.%20Memoize.md)。
 > - 计时器延迟只是安排任务、Node.js 的延迟钳制（“cancel 和 flush 只管还没执行的调用”末段）：[WHATWG HTML Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)（Living Standard，核对日期 2026-11-12）、[Node.js Timers: `setTimeout`](https://nodejs.org/api/timers.html#settimeoutcallback-delay-args)（官方文档 26.13.1；略短等待为 Node.js 26.13.0 实测）。请求取消只停客户端：[WHATWG DOM Aborting ongoing activities](https://dom.spec.whatwg.org/#aborting-ongoing-activities)、[Fetch Standard: Aborting a fetch](https://fetch.spec.whatwg.org/#abort-fetch)、[MDN AbortController.abort()](https://developer.mozilla.org/en-US/docs/Web/API/AbortController/abort)。
-> - lodash 实例（“实例：lodash 的 `_.debounce` 与 `_.throttle`”）：[Lodash 4.18.1 release](https://github.com/lodash/lodash/releases/latest)（2026-04-01 发布，2026-11-12 核对）；[`_.debounce` 的 leading/trailing/maxWait、cancel、flush 说明](https://github.com/lodash/lodash/blob/4.18.1/doc/README.md#_debouncefunc-wait0-options)；`_.throttle` 默认值及其委托 `_.debounce`、`maxWait: wait` 的实现：[lodash 4.18.1 `lodash.js`](https://github.com/lodash/lodash/blob/4.18.1/lodash.js)（`throttle` 函数）。maxWait 表与 `_.throttle` 时间线为 lodash 4.18.1 + 假时钟复算。Hook 例子用到的 React [`useRef`](https://react.dev/reference/react/useRef) 与 [`useEffect`](https://react.dev/reference/react/useEffect)，核对日期 2026-11-12。
+> - lodash 实例（“实例：lodash 的 `_.debounce` 与 `_.throttle`”）：[Lodash 4.18.1 release](https://github.com/lodash/lodash/releases/latest)（2026-04-01 发布，2026-11-12 核对）；[`_.debounce` 的 leading/trailing/maxWait、cancel、flush 说明](https://github.com/lodash/lodash/blob/4.18.1/doc/README.md#_debouncefunc-wait0-options)；`_.throttle` 默认值及其委托 `_.debounce`、`maxWait: wait` 的实现：[lodash 4.18.1 `lodash.js`](https://github.com/lodash/lodash/blob/4.18.1/lodash.js)（`throttle` 函数）。maxWait 与 `_.throttle` 两条时间线为 lodash 4.18.1 + 假时钟复算。Hook 例子用到的 React [`useRef`](https://react.dev/reference/react/useRef) 与 [`useEffect`](https://react.dev/reference/react/useEffect)，核对日期 2026-11-12。
 > - ahooks 实例（“实例：ahooks 的防抖与节流 Hook”）：[useDebounce](https://ahooks.js.org/hooks/use-debounce/)、[useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn/)、[useThrottle](https://ahooks.js.org/hooks/use-throttle/)、[useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn/)；v3 `debounceWait` / `throttleWait`：[v3.11.0 useRequest option types](https://github.com/alibaba/hooks/blob/v3.11.0/packages/hooks/src/useRequest/src/types.ts)；v2 旧选项迁移：[ahooks upgrade guide](https://ahooks.js.org/guide/upgrade/)（2026-11-06）；版本：[ahooks v3.11.0 release](https://github.com/alibaba/hooks/releases/tag/v3.11.0)（2026-10-27 发布，2026-11-12 核对）。

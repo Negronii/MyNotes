@@ -2,10 +2,10 @@
   <title id="title">job-demo-731 一页报表数据经过 Node.js 的执行顺序</title>
   <desc id="desc">时间由上至下。主事件循环发起数据库读取；socket 通知后，主 isolate 中的驱动解析字节并形成有界报表行。同一作业固定到一个有状态压缩 worker，按序处理各页并回传零个或多个块和独立 batchDone。没有输出时只需等 batchDone。主线程把有输出的块写入文件，异步文件操作由 libuv threadpool 执行。EOF 后通知同一 worker flush；写入方收到 streamFinished 并写完全部尾块（可为零块）后关闭临时文件。</desc>
   <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+    <marker id="arrow" viewBox="0 0 10 10" markerWidth="16" markerHeight="16" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L10,5 L0,10 z" fill="#58769a"/>
     </marker>
-    <marker id="arrow-green" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+    <marker id="arrow-green" viewBox="0 0 10 10" markerWidth="16" markerHeight="16" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M0,0 L10,5 L0,10 z" fill="#32927e"/>
     </marker>
     <style>
@@ -20,8 +20,8 @@
   </defs>
   <rect width="1000" height="1040" fill="#f8fafc"/>
 
-  <text x="28" y="126" class="small" fill="#58769a">时间向下</text>
-  <path d="M44 145 V913" class="arrow"/>
+  <text x="10" y="132" class="small" fill="#58769a">时间向下</text>
+  <path d="M26 145 V913" class="arrow"/>
 
   <rect x="44" y="32" width="262" height="72" rx="13" fill="#e9f2fc" stroke="#91b7e1" stroke-width="2"/>
   <text x="175" y="61" text-anchor="middle" class="head">主线程</text>

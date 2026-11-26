@@ -12,7 +12,7 @@
     </style>
   </defs>
 <rect width="900" height="1060" fill="#fafbfe"/>
-<text x="450" y="43" text-anchor="middle" class="label">接图二：已领取的 running attempt</text>
+<text x="450" y="43" text-anchor="middle" class="label">接领取图：已领取的 running attempt</text>
 <path class="edge" d="M450 61 L450 106"/>
 <g transform="translate(0,-730)">
   <rect x="205" y="843" width="490" height="134" rx="16" fill="#ffffff" stroke="#cbd6e4" stroke-width="2"/>

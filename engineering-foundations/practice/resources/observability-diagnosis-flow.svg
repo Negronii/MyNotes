@@ -1,41 +1,49 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="940" viewBox="0 0 1000 940" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="532" viewBox="0 0 700 532" role="img" aria-labelledby="title desc">
   <title id="title">从用户结果到事故复验</title>
-  <desc id="desc">每步以明确的输入开始，并产出后续判断所需的证据：用户结果、分母、阶段线索、复验结果。</desc>
+  <desc id="desc">四步依次相接，每步的输出是下一步的输入：1 定义真实用户结果，输入读取与导出契约，输出 400 ms 内正确的 200 或 404，202 不等于完成；2 固定分母和时间边界，输出按摘要、路由、时间窗分组的好事件与总数；3 聚合定位再核对事件，输出可核对的慢或失败阶段、版本与依赖证据；4 缓解后复验用户路径，输出安全止损，并复验读取、已到期 job 和授权下载。</desc>
   <defs>
-    <marker id="arrow" markerWidth="14" markerHeight="14" refX="7" refY="7" orient="auto" markerUnits="userSpaceOnUse">
-      <path d="M1,1 L13,7 L1,13 z" fill="#355c7d"/>
-    </marker>
+    <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#36546f"/></marker>
     <style>
-      .box { fill:#f4f8fb; stroke:#355c7d; stroke-width:3; }
-      .head { fill:#17324d; font:700 32px "Noto Sans CJK SC", "PingFang SC", sans-serif; }
-      .body { fill:#1f2933; font:400 30px "Noto Sans CJK SC", "PingFang SC", sans-serif; }
-      .connector { stroke:#355c7d; stroke-width:4; fill:none; marker-end:url(#arrow); }
+      text { font-family: "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #18324b; }
+      .head { font-size: 17px; font-weight: 700; }
+      .body { font-size: 15px; }
+      .label { font-size: 14px; fill: #557c9a; font-weight: 600; }
+      .num { font-size: 16px; font-weight: 700; fill: #fff; }
+      .box { fill: #f4f8fb; stroke: #557c9a; stroke-width: 1.6; }
+      .badge { fill: #36546f; }
+      .line { fill: none; stroke: #36546f; stroke-width: 2; marker-end: url(#arrow); }
     </style>
   </defs>
-  <rect width="1000" height="940" fill="#ffffff"/>
-  <rect class="box" x="60" y="30" width="880" height="160" rx="18"/>
-  <text class="head" x="95" y="72">1　定义真实用户结果</text>
-  <text class="body" x="95" y="118">输入：读取与导出契约</text>
-  <text class="body" x="95" y="155">输出：≤400 ms 内的正确 200 或 404；202 ≠ 完成</text>
+  <rect x="1" y="1" width="698" height="530" rx="14" fill="#fff" stroke="#d4e0e8"/>
 
-  <path class="connector" d="M500 192 L500 258"/>
+  <rect x="40" y="20" width="620" height="96" rx="11" class="box"/>
+  <circle cx="72" cy="48" r="14" class="badge"/>
+  <text x="72" y="54" text-anchor="middle" class="num">1</text>
+  <text x="98" y="54" class="head">定义真实用户结果</text>
+  <text x="98" y="80" class="label">输入</text><text x="138" y="80" class="body">读取与导出契约</text>
+  <text x="98" y="103" class="label">输出</text><text x="138" y="103" class="body">400 ms 内的正确 200 或 404；202 ≠ 完成</text>
+  <path d="M350 116 V150" class="line"/>
 
-  <rect class="box" x="60" y="266" width="880" height="160" rx="18"/>
-  <text class="head" x="95" y="308">2　固定分母和时间边界</text>
-  <text class="body" x="95" y="354">输入：用户结果与完成期限</text>
-  <text class="body" x="95" y="391">输出：按摘要、路由、时间窗分组的好/总数</text>
+  <rect x="40" y="152" width="620" height="96" rx="11" class="box"/>
+  <circle cx="72" cy="180" r="14" class="badge"/>
+  <text x="72" y="186" text-anchor="middle" class="num">2</text>
+  <text x="98" y="186" class="head">固定分母和时间边界</text>
+  <text x="98" y="212" class="label">输入</text><text x="138" y="212" class="body">用户结果与完成期限</text>
+  <text x="98" y="235" class="label">输出</text><text x="138" y="235" class="body">按摘要、路由、时间窗分组的好/总数</text>
+  <path d="M350 248 V282" class="line"/>
 
-  <path class="connector" d="M500 428 L500 494"/>
+  <rect x="40" y="284" width="620" height="96" rx="11" class="box"/>
+  <circle cx="72" cy="312" r="14" class="badge"/>
+  <text x="72" y="318" text-anchor="middle" class="num">3</text>
+  <text x="98" y="318" class="head">聚合定位，再核对事件</text>
+  <text x="98" y="344" class="label">输入</text><text x="138" y="344" class="body">受影响摘要、路由与时间窗</text>
+  <text x="98" y="367" class="label">输出</text><text x="138" y="367" class="body">可核对的慢/失败阶段、版本与依赖证据</text>
+  <path d="M350 380 V414" class="line"/>
 
-  <rect class="box" x="60" y="502" width="880" height="160" rx="18"/>
-  <text class="head" x="95" y="544">3　聚合定位，再核对事件</text>
-  <text class="body" x="95" y="590">输入：受影响摘要、路由与时间窗</text>
-  <text class="body" x="95" y="627">输出：可核对的慢/失败阶段、版本与依赖证据</text>
-
-  <path class="connector" d="M500 664 L500 730"/>
-
-  <rect class="box" x="60" y="738" width="880" height="160" rx="18"/>
-  <text class="head" x="95" y="780">4　缓解后复验用户路径</text>
-  <text class="body" x="95" y="826">输入：交叉核对的依赖与版本证据</text>
-  <text class="body" x="95" y="863">输出：安全止损；读、成熟 job、授权下载均复验</text>
+  <rect x="40" y="416" width="620" height="96" rx="11" class="box"/>
+  <circle cx="72" cy="444" r="14" class="badge"/>
+  <text x="72" y="450" text-anchor="middle" class="num">4</text>
+  <text x="98" y="450" class="head">缓解后复验用户路径</text>
+  <text x="98" y="476" class="label">输入</text><text x="138" y="476" class="body">交叉核对的依赖与版本证据</text>
+  <text x="98" y="499" class="label">输出</text><text x="138" y="499" class="body">安全止损；读、已到期 job、授权下载均复验</text>
 </svg>

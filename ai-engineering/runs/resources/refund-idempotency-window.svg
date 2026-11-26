@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="800" viewBox="0 0 900 800" role="img" aria-label="K-R204 的去重窗口与第 26 小时醒来的旧发送者：本地保守窗口从首次意图时间起算 24 小时，提供方键记录至少保留 24 小时，窗口外继续 POST 可能产生第二笔退款，在发送边界重查则停止">
+<defs><marker id="ag" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#7086a3"/></marker><marker id="ar" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#c0504d"/></marker><marker id="an" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#3f8f6b"/></marker><marker id="ab" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#4a7bbf"/></marker><marker id="ap" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#8a63c2"/></marker><pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#f1f3f6"/><line x1="0" y1="0" x2="0" y2="10" stroke="#c9d0da" stroke-width="4"/></pattern></defs>
+<rect width="900" height="800" rx="14" fill="#f7f9fc"/>
+<g font-family="Arial, PingFang SC, Noto Sans CJK SC, sans-serif" fill="#24364c">
+<rect x="40" y="22" width="820" height="58" rx="12" fill="#fff5e9" stroke="#e8cda7" stroke-width="2"/>
+<text x="450" y="60" font-size="23" text-anchor="middle" font-weight="600">Stripe API v1：旧发送者登记意图后暂停，第 26 小时才醒来</text>
+<line x1="190" y1="118" x2="400" y2="118" stroke="#7086a3" stroke-width="2" stroke-linecap="round"/>
+<line x1="450.0" y1="118" x2="880.0" y2="118" stroke="#7086a3" stroke-width="2" marker-end="url(#ag)" stroke-linecap="round"/>
+<text x="425.0" y="125" font-size="24" text-anchor="middle" fill="#7086a3">≈</text>
+<line x1="190" y1="112" x2="190" y2="124" stroke="#7086a3" stroke-width="2" stroke-linecap="round"/>
+<text x="190" y="104" font-size="18" text-anchor="middle" fill="#5a6b82">0</text>
+<line x1="295" y1="112" x2="295" y2="124" stroke="#7086a3" stroke-width="2" stroke-linecap="round"/>
+<text x="295" y="104" font-size="18" text-anchor="middle" fill="#5a6b82">1</text>
+<line x1="400" y1="112" x2="400" y2="124" stroke="#7086a3" stroke-width="2" stroke-linecap="round"/>
+<text x="400" y="104" font-size="18" text-anchor="middle" fill="#5a6b82">2</text>
+<line x1="450.0" y1="112" x2="450.0" y2="124" stroke="#7086a3" stroke-width="2" stroke-linecap="round"/>
+<text x="450.0" y="104" font-size="18" text-anchor="middle" fill="#5a6b82">22</text>
+<line x1="555.0" y1="112" x2="555.0" y2="124" stroke="#7086a3" stroke-width="2" stroke-linecap="round"/>
+<text x="555.0" y="104" font-size="18" text-anchor="middle" fill="#5a6b82">24</text>
+<line x1="660.0" y1="112" x2="660.0" y2="124" stroke="#7086a3" stroke-width="2" stroke-linecap="round"/>
+<text x="660.0" y="104" font-size="18" text-anchor="middle" fill="#5a6b82">26</text>
+<line x1="765.0" y1="112" x2="765.0" y2="124" stroke="#7086a3" stroke-width="2" stroke-linecap="round"/>
+<text x="765.0" y="104" font-size="18" text-anchor="middle" fill="#5a6b82">28</text>
+<line x1="870.0" y1="112" x2="870.0" y2="124" stroke="#7086a3" stroke-width="2" stroke-linecap="round"/>
+<text x="870.0" y="104" font-size="18" text-anchor="middle" fill="#5a6b82">30 h</text>
+<rect x="20" y="150" width="860" height="84" rx="10" fill="#ffffff" stroke="#e3e9f1" stroke-width="2"/>
+<text x="32" y="199" font-size="20" text-anchor="start" font-weight="600">本地 R-204</text>
+<rect x="20" y="250" width="860" height="84" rx="10" fill="#ffffff" stroke="#e3e9f1" stroke-width="2"/>
+<text x="32" y="299" font-size="20" text-anchor="start" font-weight="600">Stripe 键记录</text>
+<rect x="20" y="350" width="860" height="84" rx="10" fill="#ffffff" stroke="#e3e9f1" stroke-width="2"/>
+<text x="32" y="399" font-size="20" text-anchor="start" font-weight="600">恢复器</text>
+<rect x="20" y="450" width="860" height="84" rx="10" fill="#ffffff" stroke="#e3e9f1" stroke-width="2"/>
+<text x="32" y="499" font-size="20" text-anchor="start" font-weight="600">旧发送者</text>
+<line x1="190" y1="128" x2="190" y2="540" stroke="#b7c3d3" stroke-width="2" stroke-dasharray="5 6" stroke-linecap="round"/>
+<line x1="555.0" y1="128" x2="555.0" y2="540" stroke="#b7c3d3" stroke-width="2" stroke-dasharray="5 6" stroke-linecap="round"/>
+<line x1="660.0" y1="128" x2="660.0" y2="540" stroke="#b7c3d3" stroke-width="2" stroke-dasharray="5 6" stroke-linecap="round"/>
+<rect x="190" y="166" width="365.0" height="52" rx="8" fill="#eef5ff" stroke="#9dbbe3" stroke-width="2"/>
+<text x="372.5" y="190" font-size="19" text-anchor="middle" font-weight="600">保守窗口：首次意图时间 t0 起 24h</text>
+<text x="372.5" y="211" font-size="18" text-anchor="middle" fill="#40546e">每次 POST 前核验剩余时间仍够</text>
+<text x="670.0" y="188" font-size="18" text-anchor="start" fill="#40546e">窗口将尽或时间不明：</text>
+<text x="670.0" y="210" font-size="18" text-anchor="start" fill="#40546e">只读核对，不再写</text>
+<rect x="190" y="266" width="365.0" height="52" rx="8" fill="#ecf7f2" stroke="#8cc5aa" stroke-width="2"/>
+<text x="372.5" y="290" font-size="19" text-anchor="middle" font-weight="600">保存同键响应（含 500），至少 24h</text>
+<text x="372.5" y="311" font-size="17" text-anchor="middle" fill="#40546e">从首个开始执行的请求起算，不早于 t0</text>
+<rect x="555.0" y="266" width="323.0" height="52" rx="8" fill="url(#hatch)" stroke="#c9d0da" stroke-width="2" stroke-dasharray="6 5"/>
+<text x="716.5" y="290" font-size="18" text-anchor="middle" font-weight="600" fill="#5a6b82">可能已被清理</text>
+<text x="716.5" y="311" font-size="18" text-anchor="middle" fill="#5a6b82">同键可能被当成新请求</text>
+<circle cx="295" cy="392" r="9" fill="#3f8f6b"/>
+<text x="313" y="386" font-size="19" text-anchor="start" font-weight="600" fill="#2f6f52">第 1h：查清结果，退款完成</text>
+<text x="313" y="410" font-size="18" text-anchor="start" fill="#40546e">运行进入 completed，终态不再变化</text>
+<circle cx="190" cy="492" r="9" fill="#7086a3"/>
+<text x="206" y="478" font-size="18" text-anchor="start" fill="#40546e">登记意图后暂停</text>
+<line x1="202" y1="492" x2="646.0" y2="492" stroke="#7086a3" stroke-width="3" stroke-dasharray="4 8" stroke-linecap="round"/>
+<circle cx="660.0" cy="492" r="9" fill="#c0504d"/>
+<text x="676.0" y="486" font-size="19" text-anchor="start" font-weight="600" fill="#9a3b38">第 26h 醒来</text>
+<text x="676.0" y="510" font-size="18" text-anchor="start" fill="#40546e">手里仍是旧的发送许可</text>
+<path d="M660.0,503 L660.0,560 L330,560 L330,586" fill="none" stroke="#c0504d" stroke-width="3" marker-end="url(#ar)" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M660.0,560 L720.0,560 L720.0,586" fill="none" stroke="#3f8f6b" stroke-width="3" marker-end="url(#an)" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="40" y="596" width="390" height="108" rx="12" fill="#fdeeee" stroke="#e3a7a5" stroke-width="2"/>
+<text x="235" y="628" font-size="20" text-anchor="middle" font-weight="600" fill="#9a3b38">✗ 继续之前那次 POST</text>
+<text x="235" y="656" font-size="18" text-anchor="middle">到达时可能已过键记录的保留期</text>
+<text x="235" y="682" font-size="18" text-anchor="middle" font-weight="600" fill="#9a3b38">可能被当成新请求：第二笔退款</text>
+<rect x="470" y="596" width="410" height="108" rx="12" fill="#ecf7f2" stroke="#8cc5aa" stroke-width="2"/>
+<text x="675" y="628" font-size="20" text-anchor="middle" font-weight="600" fill="#2f6f52">✓ 在发送边界重查</text>
+<text x="675" y="656" font-size="18" text-anchor="middle">运行已 completed，且已超出 24h 窗口</text>
+<text x="675" y="682" font-size="18" text-anchor="middle" font-weight="600" fill="#2f6f52">停止发送，不用旧许可继续写</text>
+<text x="450" y="742" font-size="19" text-anchor="middle" fill="#40546e">“查无记录”证明不了旧请求不会晚到：前提 2 要求窗口覆盖它，</text>
+<text x="450" y="770" font-size="19" text-anchor="middle" fill="#40546e">前提 4 要求旧发送者必然停下或必然落在窗口内</text>
+</g>
+</svg>

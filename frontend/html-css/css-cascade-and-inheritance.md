@@ -2,14 +2,45 @@
 
 同一个元素的同一个属性，常有好几条 CSS 声明同时适用：浏览器默认样式、组件库、业务样式、工具类，可能还有内联样式。另一些属性则一条声明都没有。本章回答浏览器怎样为每个元素的每个属性定出一个值：哪些声明有资格参与比较，cascade (层叠，也称级联) 按什么顺序选出胜者，没有胜者时值从哪里来。
 
-本章沿用主线一的报表页，并接着前两章已经写好的骨架、表格和表单。浏览器为一个属性求值分四步：
+本章沿用主线一的报表页，并接着前两章已经写好的骨架、表格和表单。下图是浏览器为一个元素的一个属性求值的全过程：先过滤出有资格的声明；层叠逐步比较，选出 cascaded value (层叠值)；没有声明时取默认值；胜出的值若是 `inherit`、`revert` 等 CSS-wide keyword (CSS 全局关键字)，再按关键字求值。
 
-1. **匹配与过滤**：选择器决定声明适用于哪些元素或伪元素，无效声明被丢弃。
-2. **层叠**：剩下的声明按固定顺序比较，选出一个 cascaded value (层叠值)。
-3. **默认值**：没有任何声明胜出时，继承属性取父元素的计算值，非继承属性取初始值。
-4. **关键字**：胜出的值若是 `inherit`、`revert` 等 CSS-wide keyword (CSS 全局关键字)，按关键字取继承值、初始值或回滚结果。
+```mermaid
+flowchart TD
+    S["该元素某个属性的<br/>全部声明"] --> F["匹配与过滤<br/>丢弃不适用、语法无效的声明<br/>含 var() 的值暂视为有效"]
+    F --> Q{"还剩声明吗？"}
+    Q -- 有 --> cascade
+    subgraph cascade ["层叠：按编号比较，某一步分出高下就停，持平才看下一步"]
+        direction TB
+        subgraph r1 [" "]
+            direction LR
+            C1["1 来源与重要性"] -- 持平 --> C2["2 封装上下文"]
+            C2 -- 持平 --> C3["3 style 属性"]
+        end
+        subgraph r2 [" "]
+            direction LR
+            C4["4 层叠层"] -- 持平 --> C5["5 选择器权重"]
+        end
+        subgraph r3 [" "]
+            direction LR
+            C55["作用域接近度<br/>（Level 6）"] -- 持平 --> C6["6 声明顺序"]
+        end
+        r1 -- 3 仍持平 --> r2
+        r2 -- 5 仍持平 --> r3
+    end
+    cascade -- 胜出声明 --> W["层叠值"]
+    Q -- 没有 --> D["默认值<br/>继承属性：父元素的计算值<br/>非继承属性：初始值"]
+    W --> K{"是 CSS<br/>全局关键字？"}
+    K -- 是 --> KV["按关键字求值<br/>inherit、initial、unset<br/>取继承值或初始值<br/>revert、revert-layer<br/>回滚到更低的声明"]
+    K -- 否 --> CV
+    KV --> CV["计算值<br/>var() 在此替换<br/>替换后无效按 unset"]
+    D --> CV
+    CV --> U["width: auto 等值<br/>到布局阶段才变成<br/>used value"]
+    style r1 fill:none,stroke:none
+    style r2 fill:none,stroke:none
+    style r3 fill:none,stroke:none
+```
 
-得到的 computed value (计算值) 还不是最终几何；`width: auto` 这类值要到布局阶段才变成 used value (使用值)，见[DOM 改动后浏览器重做了什么？](../browser/rendering-pipeline-and-forced-layout.md)。
+图末得到的 computed value (计算值) 还不是最终几何；`width: auto` 这类值要到布局阶段才变成 used value (使用值)，见[DOM 改动后浏览器重做了什么？](../browser/rendering-pipeline-and-forced-layout.md)。
 
 ## 选择器决定声明落到哪个元素上
 
@@ -96,7 +127,7 @@ clearfix 也是 `::after` 的常见用法：生成一个空的辅助盒，用 `c
 
 ## 层叠按六步比较
 
-剩下的有效声明按下面的顺序比较。每一步只比较同一元素的同一属性；某一步分出高下，后面的步骤就不再看。
+剩下的有效声明按开头流程图中层叠框里的顺序比较，每一步只比较同一元素的同一属性。各步的规则如下：
 
 1. **来源与重要性。** 声明来自三个来源：user agent (用户代理，即浏览器默认样式)、用户（读者自己配置的样式）、作者（网页开发者）。加上 `!important` 和动画、过渡，优先级从高到低是：
 
@@ -189,16 +220,13 @@ CSS Cascading Level 6 在第 5、6 步之间又加了一步：作用域接近度
 
 后三段演示 `revert-layer`。它不是“改用上一条规则”。它让浏览器重新计算这个属性，仿佛**当前层的声明，以及优先级排序中位于当前层“普通级位置”和“重要级位置”之间的所有声明**都不存在。
 
-把这个例子里作者来源的优先级从高到低排开，便于看清“之间”指什么：
+下图把第 1 步的来源与重要性和第 4 步的层序合成一条完整的梯子，标出本例每条 `color` 声明所在的位置，再用括号画出后三段的 `revert-layer` 各自略去哪一段区间、露出哪个值：
 
-~~~text
-reset !important > components !important > utilities !important > 未分层 !important
-  > 动画 > 未分层普通 > utilities 普通 > components 普通 > reset 普通
-~~~
+![层叠优先级梯子：过渡、用户代理与用户的重要声明、作者重要声明的四层、动画、作者普通声明的四层、用户与用户代理普通声明；两个括号分别标出 .revert-normal 与 .revert-important 略去的区间，以及露出的棕色、绿色和浏览器默认颜色](resources/cascade-layer-ladder-revert-layer.svg)
 
-- **第二段**：普通声明里 `utilities` 层最强，它的 `revert-layer` 胜出。回滚时略去 `utilities` 普通到 `utilities !important` 之间的一切；本例中只有 `utilities` 层自己的声明与这一段相关，下面露出 `components` 层的棕色。
-- **第三段**：重要声明里靠前的层强，`components` 层的 `revert-layer !important` 胜出，压过 `utilities` 的 `#555 !important`。回滚时略去 `components !important` 到 `components 普通` 之间的一切，其中包括 `utilities` 层的重要灰色；`reset` 层的普通绿色在区间之外，于是绿色胜出。
-- **第四段**：没有 `.has-reset`，略去同一区间后，作者来源里已经没有可用的声明。这时退回前一来源：先看用户样式，没有用户样式就露出浏览器默认颜色。
+- **第二段**：区间从 `utilities` 普通一直延伸到 `utilities !important`，但能匹配这一段的只有 `utilities` 层自己的声明，所以结果就是下一层 `components` 的棕色。
+- **第三段**：区间里包括压过别人的 `utilities` 重要灰色；`reset` 层的普通绿色在区间之外，于是绿色胜出。
+- **第四段**：区间相同，但没有 `.has-reset`，作者来源里已经没有可用的声明，于是退回前一来源：先看用户样式，没有用户样式就露出浏览器默认颜色。
 
 ## @scope 让更近的作用域胜出
 

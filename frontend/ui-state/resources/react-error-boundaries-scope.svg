@@ -15,8 +15,8 @@
     <rect x="523" y="182" width="130" height="72" rx="8" fill="#fff3e8" stroke="#a45b26" />
   </g>
   <g fill="none" stroke="#607a84" stroke-width="2" stroke-dasharray="6 5">
-    <path d="M350 76 V89 H147 V118" />
-    <path d="M350 76 V86 H487 V88" />
+    <path d="M350 76 V86 H147 V126" />
+    <path d="M350 86 H487 V94" />
   </g>
   <path d="M464 218 H514" fill="none" stroke="#a45b26" stroke-width="2" marker-end="url(#replacement-arrow)" />
   <g fill="#24343b" font-family="system-ui, -apple-system, sans-serif" font-size="19" text-anchor="middle">

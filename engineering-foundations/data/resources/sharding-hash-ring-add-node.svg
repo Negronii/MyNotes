@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="780" viewBox="0 0 1100 780" role="img" aria-labelledby="title desc">
+  <title id="title">0–99 玩具环上加入节点 D=20 后各键的归属</title>
+  <desc id="desc">token A=0、B=33、C=66，每个节点负责（前一个 token，自己的 token]。加入 D=20 后，D 只接管 (0,20]，原属 B 的键 17 和 20 改归 D；21 仍归 B，35、49、52、65 归 C，70、82 归 A。九个键中两个搬家，取模从 %3 改为 %4 时九个中八个换目标。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" fill="#334155"/></marker>
+    <style>
+      text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#243247}
+      .h{font-size:26px;font-weight:600}
+      .t{font-size:23px}
+      .k{font-size:22px;font-weight:600;text-anchor:middle;dominant-baseline:middle}
+      .tok{font-size:24px;font-weight:700;text-anchor:middle;dominant-baseline:middle}
+    </style>
+  </defs>
+  <rect width="1100" height="780" fill="#ffffff"/>
+  <text x="40" y="52" class="h">加入 D=20 后的 0–99 环：键归顺时针遇到的第一个 token</text>
+  <path d="M370.0 150.0 A270 270 0 0 1 626.8 336.6" fill="none" stroke="#d8f0e0" stroke-width="40"/>
+  <path d="M370.0 150.0 A270 270 0 0 1 626.8 336.6" fill="none" stroke="#3c9a5f" stroke-width="6"/>
+  <path d="M626.8 336.6 A270 270 0 0 1 606.6 550.1" fill="none" stroke="#f8e6cc" stroke-width="40"/>
+  <path d="M626.8 336.6 A270 270 0 0 1 606.6 550.1" fill="none" stroke="#d08a2c" stroke-width="6"/>
+  <path d="M606.6 550.1 A270 270 0 0 1 142.0 564.7" fill="none" stroke="#eadff5" stroke-width="40"/>
+  <path d="M606.6 550.1 A270 270 0 0 1 142.0 564.7" fill="none" stroke="#8a62b8" stroke-width="6"/>
+  <path d="M142.0 564.7 A270 270 0 0 1 370.0 150.0" fill="none" stroke="#dbe6f7" stroke-width="40"/>
+  <path d="M142.0 564.7 A270 270 0 0 1 370.0 150.0" fill="none" stroke="#4f7cc4" stroke-width="6"/>
+  <path d="M370.0 270.0 A150 150 0 0 1 501.4 492.3" fill="none" stroke="#d08a2c" stroke-width="4" stroke-dasharray="10 8"/>
+  <text x="335" y="430" class="t" text-anchor="middle" style="fill:#d08a2c">虚线：加入前 B 负责 (0, 33]</text>
+  <line x1="370.0" y1="176.0" x2="370.0" y2="124.0" stroke="#4f7cc4" stroke-width="7"/>
+  <text x="370" y="90" class="tok" style="fill:#4f7cc4">A=0</text>
+  <line x1="602.1" y1="344.6" x2="651.5" y2="328.5" stroke="#3c9a5f" stroke-width="7"/>
+  <text x="684" y="318" class="tok" style="fill:#3c9a5f">D=20</text>
+  <line x1="583.8" y1="537.5" x2="629.4" y2="562.6" stroke="#d08a2c" stroke-width="7"/>
+  <text x="659" y="579" class="tok" style="fill:#d08a2c">B=33</text>
+  <line x1="164.0" y1="550.7" x2="120.1" y2="578.6" stroke="#8a62b8" stroke-width="7"/>
+  <text x="91" y="597" class="tok" style="fill:#8a62b8">C=66</text>
+  <circle cx="606.6" cy="289.9" r="14" fill="none" stroke="#c0392b" stroke-width="3"/>
+  <circle cx="606.6" cy="289.9" r="8" fill="#3c9a5f" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="626.8" cy="336.6" r="14" fill="none" stroke="#c0392b" stroke-width="3"/>
+  <circle cx="626.8" cy="336.6" r="8" fill="#3c9a5f" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="631.5" cy="352.9" r="8" fill="#d08a2c" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="588.4" cy="578.7" r="8" fill="#8a62b8" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="387.0" cy="689.5" r="8" fill="#8a62b8" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="336.2" cy="687.9" r="8" fill="#8a62b8" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="151.6" cy="578.7" r="8" fill="#8a62b8" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="113.2" cy="503.4" r="8" fill="#4f7cc4" stroke="#ffffff" stroke-width="2"/>
+  <circle cx="125.7" cy="305.0" r="8" fill="#4f7cc4" stroke="#ffffff" stroke-width="2"/>
+  <line x1="606.6" y1="289.9" x2="542.5" y2="267.9" stroke="#94a3b8" stroke-width="2"/>
+  <text x="534" y="276" class="k" style="fill:#3c9a5f">17</text>
+  <line x1="626.8" y1="336.6" x2="584.9" y2="338.0" stroke="#94a3b8" stroke-width="2"/>
+  <text x="574" y="342" class="k" style="fill:#3c9a5f">20</text>
+  <line x1="631.5" y1="352.9" x2="599.9" y2="427.2" stroke="#94a3b8" stroke-width="2"/>
+  <text x="588" y="427" class="k" style="fill:#d08a2c">21</text>
+  <text x="546" y="548" class="k" style="fill:#8a62b8">35</text>
+  <text x="384" y="638" class="k" style="fill:#8a62b8">49</text>
+  <text x="343" y="636" class="k" style="fill:#8a62b8">52</text>
+  <text x="194" y="548" class="k" style="fill:#8a62b8">65</text>
+  <text x="163" y="487" class="k" style="fill:#4f7cc4">70</text>
+  <text x="173" y="327" class="k" style="fill:#4f7cc4">82</text>
+  <text x="730" y="150" class="h">归属（加入 D 后）</text>
+  <rect x="730" y="184" width="28" height="28" rx="5" fill="#dbe6f7" stroke="#4f7cc4" stroke-width="3"/>
+  <text x="772" y="206" class="t"><tspan font-weight="700" style="fill:#4f7cc4">A</tspan> (66, 99] 与 0：70、82</text>
+  <rect x="730" y="234" width="28" height="28" rx="5" fill="#d8f0e0" stroke="#3c9a5f" stroke-width="3"/>
+  <text x="772" y="256" class="t"><tspan font-weight="700" style="fill:#3c9a5f">D</tspan> (0, 20]：17、20</text>
+  <rect x="730" y="284" width="28" height="28" rx="5" fill="#f8e6cc" stroke="#d08a2c" stroke-width="3"/>
+  <text x="772" y="306" class="t"><tspan font-weight="700" style="fill:#d08a2c">B</tspan> (20, 33]：21</text>
+  <rect x="730" y="334" width="28" height="28" rx="5" fill="#eadff5" stroke="#8a62b8" stroke-width="3"/>
+  <text x="772" y="356" class="t"><tspan font-weight="700" style="fill:#8a62b8">C</tspan> (33, 66]：35、49、52、65</text>
+  <circle cx="744" cy="414" r="13" fill="none" stroke="#c0392b" stroke-width="3"/>
+  <text x="772" y="422" class="t">搬家的键：17、20</text>
+  <text x="772" y="458" class="t">B → D，共 2/9</text>
+  <text x="730" y="530" class="h">对比固定取模</text>
+  <text x="730" y="574" class="t">%3 → %4：8/9 换目标，</text>
+  <text x="730" y="610" class="t">只有 49 不变</text>
+</svg>

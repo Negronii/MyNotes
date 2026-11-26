@@ -20,7 +20,7 @@
 <path d="M450,440 L450,486" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
 <rect x="65" y="502" width="770" height="173" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
 <text x="450.0" y="537" text-anchor="middle" font-size="25" font-weight="600">提供方 API 返回 → 核对完整关联</text>
-<text x="450.0" y="575" text-anchor="middle" font-size="23">账户 + P-73 + 2000 + usd</text>
+<text x="450.0" y="575" text-anchor="middle" font-size="23">acct-M9 + P-73 + 2000 + usd</text>
 <text x="450.0" y="607" text-anchor="middle" font-size="23">R-204 的操作关联（本例写入 metadata）</text>
 <text x="450.0" y="639" text-anchor="middle" font-size="23">仅“同一金额”不能排除另一笔退款</text>
 <path d="M450,687 L450,735 L240,735 L240,787" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>

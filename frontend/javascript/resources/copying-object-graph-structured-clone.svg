@@ -93,7 +93,7 @@
   <text class="node-body" x="520" y="1043">amount: 120</text>
 
   <rect class="clone-node" x="265" y="1180" width="230" height="92" rx="16"/>
-  <text class="node-title" x="380" y="1216">sharedOwner #5&#8242;</text>
+  <text class="node-title" x="380" y="1216">owner 副本 #5&#8242;</text>
   <text class="node-body" x="380" y="1246">id: u-17 · name: Ada</text>
   </g>
 </svg>

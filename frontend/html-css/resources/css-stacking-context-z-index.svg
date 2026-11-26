@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="596" viewBox="0 0 760 596" role="img" aria-labelledby="title desc">
+  <title id="title">z-index: 9999 的弹窗为什么仍被 z-index: 2 的兄弟盖住</title>
+  <desc id="desc">左侧是层级结构：.stage 内有 .shell（z-index 1，建立堆叠上下文）和 .other（z-index 2）；.dialog（z-index 9999）在 .shell 组内，只和组内比较。.stage 的 z-index 为 auto，不建堆叠上下文；外层上下文只比较 .shell 的 1 和 .other 的 2，所以整组 .shell 画在 .other 下面。右侧绘制结果：蓝色 .other 盖住紫色 .dialog；把 .shell 改成 z-index 3 后，整组排到上面，紫色弹窗可见。最上方的 top layer 画在整个文档之上，showModal 打开的 dialog 和显示的 popover 在这里，文档里的 z-index 都盖不住它。</desc>
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0 0L10 5L0 10z" fill="#3f5871"/></marker>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .h{font-size:18px;font-weight:700}
+      .b{font-size:14px;fill:#334155}
+      .bb{font-size:14px;font-weight:700}
+      .c{font-family:Menlo,Consolas,monospace;font-size:14px;fill:#172033}
+      .ed{fill:none;stroke:#3f5871;stroke-width:2.5}
+    </style>
+  </defs>
+  <rect width="760" height="596" rx="12" fill="#ffffff"/>
+  <rect x="16" y="16" width="728" height="86" rx="10" fill="#fef9c3" stroke="#a16207" stroke-width="2"/>
+  <text class="h" x="32" y="44">top layer (顶层)：画在整个文档之上</text>
+  <text class="b" x="32" y="70"><tspan class="c">showModal()</tspan> 打开的 <tspan class="c">&lt;dialog&gt;</tspan>、显示的 popover 在这里；</text>
+  <text class="b" x="32" y="91">不受祖先包含块和堆叠上下文影响，文档里任何 z-index 都盖不住它。</text>
+  <rect x="16" y="116" width="728" height="464" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="7 5"/>
+  <text class="h" x="32" y="146">普通文档内部</text>
+  <!-- tree -->
+  <rect x="30" y="160" width="400" height="404" rx="10" fill="#ffffff" stroke="#64748b" stroke-width="2"/>
+  <text class="bb" x="46" y="186">.stage（z-index: auto，不建堆叠上下文）</text>
+  <rect x="46" y="202" width="200" height="250" rx="10" fill="#f5f0ff" stroke="#7c3aed" stroke-width="2.5"/>
+  <text class="c" x="60" y="228" style="font-weight:700">.shell  z-index: 1</text>
+  <text class="b" x="60" y="252">定位盒 + 非 auto z-index</text>
+  <text class="b" x="60" y="274">→ 建立自己的堆叠上下文</text>
+  <rect x="58" y="292" width="176" height="146" rx="8" fill="#ded3f4" stroke="#7c3aed" stroke-width="1.5"/>
+  <text class="c" x="70" y="318" style="font-weight:700">.dialog</text>
+  <text class="c" x="70" y="338" style="font-weight:700">z-index: 9999</text>
+  <text class="b" x="70" y="366">只和 .shell 组内的盒子</text>
+  <text class="b" x="70" y="388">比较，越不过组的边界</text>
+  <text class="b" x="70" y="410">（组内只有它）</text>
+  <rect x="262" y="202" width="152" height="250" rx="10" fill="#cfe2fa" stroke="#1769aa" stroke-width="2.5"/>
+  <text class="c" x="276" y="228" style="font-weight:700">.other</text>
+  <text class="c" x="276" y="250" style="font-weight:700">z-index: 2</text>
+  <path class="ed" d="M146 460V486H338V460" marker-start="url(#ar)" marker-end="url(#ar)"/>
+  <text class="bb" x="230" y="514" text-anchor="middle">外层堆叠上下文只比较这两项：1 &lt; 2</text>
+  <text class="b" x="230" y="540" text-anchor="middle">整组 .shell（连同 .dialog）画在 .other 下面</text>
+  <!-- results -->
+  <text class="h" x="450" y="186" style="font-size:16px">绘制结果（三者覆盖同一块区域）</text>
+  <text class="bb" x="450" y="222">现在：.shell 1 &lt; .other 2</text>
+  <rect x="450" y="236" width="180" height="110" fill="#cfe2fa" stroke="#1769aa" stroke-width="1.5"/>
+  <rect x="466" y="252" width="148" height="78" fill="none" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 4"/>
+  <text class="b" x="540" y="286" text-anchor="middle">.dialog 被盖住</text>
+  <text class="b" x="540" y="308" text-anchor="middle">（虚线只标位置）</text>
+  <text class="b" x="642" y="284">蓝色 .other</text>
+  <text class="b" x="642" y="306">在最上面</text>
+  <text class="bb" x="450" y="388">改为 .shell { z-index: 3 }：3 &gt; 2</text>
+  <rect x="450" y="402" width="180" height="110" fill="#cfe2fa" stroke="#1769aa" stroke-width="1.5"/>
+  <rect x="466" y="418" width="148" height="78" fill="#ded3f4" stroke="#7c3aed" stroke-width="2"/>
+  <text class="b" x="540" y="462" text-anchor="middle">紫色 .dialog 可见</text>
+  <text class="b" x="642" y="450">整组排到</text>
+  <text class="b" x="642" y="472">.other 之上</text>
+  <text class="b" x="450" y="546">.dialog 的 9999 两次都没有参与父级比较。</text>
+</svg>

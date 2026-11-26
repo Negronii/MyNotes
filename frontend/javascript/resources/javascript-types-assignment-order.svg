@@ -11,9 +11,9 @@
     <style>
       text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", sans-serif; fill: #18212b; }
       .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.4; }
-      .head { font-size: 15px; font-weight: 700; }
-      .body { font-size: 13px; }
-      .small { font-size: 12px; }
+      .head { font-size: 16px; font-weight: 700; }
+      .body { font-size: 14px; }
+      .small { font-size: 13px; }
       .var { fill: #eff6ff; stroke: #1769aa; stroke-width: 1.3; }
       .obj { fill: #f8fafc; stroke: #475569; stroke-width: 1.3; }
       .varline { fill: none; stroke: #1769aa; stroke-width: 2; marker-end: url(#arrow-blue); }

@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="660" viewBox="0 0 800 660" role="img" aria-labelledby="title desc">
+  <title id="title">按改动所在的层选恢复命令</title>
+  <desc id="desc">沿用工作区、暂存区、提交与分支、远端四层。右侧：git restore --staged 把暂存区恢复为 HEAD 的版本，git restore 把工作区恢复为暂存区的版本，被覆盖的编辑无法找回；git reflog 找回分支误移前的提交，只在本地且会过期。左侧三条竖条：git reset 的 --soft 只移动分支，--mixed 还重置暂存区，--hard 再把工作区也改成目标版本，只用于未共享的本地提交。共享边界以下的已共享提交用 git revert 新增反向提交，原提交留在历史。</desc>
+  <defs>
+    <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="12" markerHeight="12" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+    <style>
+      text { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #172033; }
+      .title { font-size: 20px; font-weight: 700; }
+      .body { font-size: 17px; }
+      .cmd { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 16px; font-weight: 700; }
+      .wt { fill: #eff6ff; stroke: #2563eb; stroke-width: 2; }
+      .ix { fill: #f5f3ff; stroke: #7e22ce; stroke-width: 2; }
+      .cm { fill: #f0fdf4; stroke: #15803d; stroke-width: 2; }
+      .rm { fill: #f8fafc; stroke: #64748b; stroke-width: 2; }
+      .arrow { fill: none; stroke: #334155; stroke-width: 3; marker-end: url(#arrow); }
+      .bar { stroke: #b91c1c; stroke-width: 8; stroke-linecap: round; }
+      .reset { fill: #991b1b; }
+      .boundary { stroke: #64748b; stroke-width: 2; stroke-dasharray: 8 6; }
+    </style>
+  </defs>
+  <rect width="800" height="660" fill="#fff"/>
+
+  <rect x="250" y="60" width="280" height="76" rx="12" class="wt"/>
+  <text x="270" y="92" class="title">工作区</text>
+  <text x="270" y="122" class="body">正在编辑的文件</text>
+
+  <rect x="250" y="196" width="280" height="76" rx="12" class="ix"/>
+  <text x="270" y="228" class="title">暂存区</text>
+  <text x="270" y="258" class="body">下一次提交的快照</text>
+
+  <rect x="250" y="332" width="280" height="104" rx="12" class="cm"/>
+  <text x="270" y="364" class="title">提交与分支</text>
+  <text x="270" y="394" class="body">HEAD → 当前分支 → 提交</text>
+  <text x="270" y="422" class="body">此处的提交尚未共享</text>
+
+  <line x1="20" y1="486" x2="780" y2="486" class="boundary"/>
+  <text x="270" y="474" class="body" fill="#475569">共享边界：越过后不再改写历史</text>
+
+  <rect x="250" y="510" width="280" height="76" rx="12" class="rm"/>
+  <text x="270" y="542" class="title">远端：已共享的提交</text>
+  <text x="270" y="572" class="body">别人可能已基于它继续工作</text>
+
+  <!-- reset bars -->
+  <text x="80" y="50" text-anchor="middle" class="cmd reset">--hard</text>
+  <line x1="80" y1="68" x2="80" y2="428" class="bar"/>
+  <text x="150" y="186" text-anchor="middle" class="cmd reset">--mixed</text>
+  <line x1="150" y1="204" x2="150" y2="428" class="bar"/>
+  <text x="220" y="322" text-anchor="middle" class="cmd reset">--soft</text>
+  <line x1="220" y1="340" x2="220" y2="428" class="bar"/>
+  <text x="20" y="474" class="cmd reset">git reset &lt;target&gt;</text>
+  <text x="20" y="616" class="body">左侧竖条：<tspan class="cmd reset">git reset &lt;target&gt;</tspan> 把覆盖到的层改成目标版本；三种都移动分支，</text>
+  <text x="20" y="644" class="body">只用于未共享的本地提交。<tspan class="cmd reset">--hard</tspan> 会丢弃受跟踪文件的改动。</text>
+
+  <!-- restore arrows -->
+  <path d="M532 222 C 580 222, 580 98, 536 98" class="arrow"/>
+  <text x="586" y="118" class="cmd">git restore</text>
+  <text x="586" y="142" class="body">工作区 ← 暂存区版本</text>
+  <text x="586" y="166" class="body">被覆盖的编辑无法找回</text>
+
+  <path d="M532 360 C 580 360, 580 246, 536 246" class="arrow"/>
+  <text x="586" y="262" class="cmd">git restore --staged</text>
+  <text x="586" y="286" class="body">暂存区 ← HEAD 版本</text>
+  <text x="586" y="310" class="body">工作区不变</text>
+
+  <text x="560" y="396" class="cmd">git reflog</text>
+  <text x="560" y="420" class="body">找回分支误移前的提交；</text>
+  <text x="560" y="444" class="body">只在本地，会过期</text>
+
+  <text x="556" y="530" class="cmd">git revert &lt;commit&gt;</text>
+  <text x="556" y="554" class="body">新增反向提交并推送；</text>
+  <text x="556" y="578" class="body">原提交留在历史中</text>
+</svg>

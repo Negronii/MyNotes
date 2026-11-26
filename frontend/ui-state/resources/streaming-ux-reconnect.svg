@@ -10,7 +10,7 @@
 <rect x="60" y="250" width="780" height="135" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
 <text x="450.0" y="285" text-anchor="middle" font-size="25" font-weight="600">浏览器重连同一 EventSource URL</text>
 <text x="450.0" y="323" text-anchor="middle" font-size="23">URL 仍含 after=103；请求头 Last-Event-ID: 104</text>
-<text x="450.0" y="355" text-anchor="middle" font-size="23">本例服务优先采用有效的该头，从 104 之后续读</text>
+<text x="450.0" y="355" text-anchor="middle" font-size="23">本例服务端优先用有效的请求头，从 104 之后续读</text>
 <path d="M450,397 L450,460" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
 <rect x="60" y="475" width="780" height="135" rx="12" fill="#ecf7f2" stroke="#b8dccc" stroke-width="2"/>
 <text x="450.0" y="510" text-anchor="middle" font-size="25" font-weight="600">收到 id: 105 → 验证并应用终态</text>

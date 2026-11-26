@@ -26,12 +26,12 @@
 
 ~~~mermaid
 flowchart TD
-    Input["1 应用组装输入<br/>指令 + 问题 + 工具定义"]
+    Input["1 应用组装输入<br/>指令 + 问题<br/>+ 工具定义"]
     Model["2 模型生成输出"]
     Choice{"输出是什么？"}
-    Tool["3 应用检查并执行 c1<br/>核对权限后读取 build 42 日志"]
-    Next["4 结果回到下一次输入<br/>追加调用与结果"]
-    Answer["5 应用保存终态并返回"]
+    Tool["3 应用检查 c1<br/>核对权限后执行<br/>读 build 42 日志"]
+    Next["4 结果回到<br/>下一次输入<br/>追加调用与结果"]
+    Answer["5 应用保存终态<br/>并返回"]
     Input --> Model --> Choice
     Choice -->|工具请求| Tool
     Tool -->|日志或错误结果| Next
@@ -155,13 +155,14 @@ flowchart TD
 整个计算可以先看成一个循环：
 
 ~~~mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
     Text["输入文本 ababca"] --> Tok["分词<br/>[257, 99, 97]"]
     Tok --> E["embedding 查表<br/>X₀：3 × 8"]
     E --> Layers["L 层 Transformer<br/>每层：Norm → Attention → 残差<br/>Norm → SwiGLU → 残差"]
     Layers --> Head["最终 Norm → 取最后一行<br/>LM head：1×8 · 8×258"]
     Head --> Select["logits → 贪心或采样<br/>选出一个 ID"]
-    Select --> Stop{"应当停止？<br/>结束词元、停止序列、长度上限、取消"}
+    Select --> Stop{"应当停止？<br/>结束词元、停止序列<br/>长度上限、取消"}
     Stop -->|是| Out["把生成的 ID 解码为文本"]
     Stop -->|否| Next["把这个 ID 放到下一位置<br/>只算新位置，复用各层 K/V"]
     Next --> Layers
@@ -847,9 +848,6 @@ $$
 
 之后进入 decode (增量解码)。每一步只把上一步选出的词元作为一个新位置送入模型：算出它的 query、key、value，把新 K/V 追加进各层缓存，再让新 query 读全部历史 K/V。因果掩码保证旧位置从不读取后来的位置，所以旧位置的 K/V 算一次就能一直沿用。
 
-> [!example] 第一个输出词元什么时候进入缓存？
-> 7 个提示词元占位置 1–7。Prefill 计算并缓存这 7 个位置的 K/V，从位置 7 的 logits 选出首个输出 `y₁`。此时 `y₁` 已经可以返回给用户，但缓存仍只到位置 7。下一次 decode 才把 `y₁` 当作位置 8 的输入，写入位置 8 的 K/V，并给出选 `y₂` 的分布。所以已生成的词元数总比已缓存的输出位置多 1。
-
 两个阶段的瓶颈不同。原因在于每读一次权重能做多少计算：
 
 - **Prefill** 一次送入 `T` 个位置。每个权重矩阵从显存读出一次，要和 `T` 行输入相乘；注意力还要算 `T` 个 query 与因果掩码允许的 key 之间的所有分数。计算量大，读写相对少，通常受算力限制。
@@ -862,7 +860,11 @@ $$
 
 `C` 是这一步之前已缓存的词元数。KV 缓存省掉的是旧位置的重复前向；对普通 dense attention (稠密注意力)，新 query 仍要读全部历史，所以每步 decode 的读取量随历史长度线性增长。实际瓶颈还取决于模型、并发、长度、精度和硬件，要测。
 
-用户看到的两个时延分别对应这两个阶段：TTFT (time to first token，首词元时延)主要由排队和 prefill 决定；ITL (inter-token latency，词元间隔)由每步 decode 决定。
+用户看到的两个时延分别对应这两个阶段：TTFT (time to first token，首词元时延)主要由排队和 prefill 决定；ITL (inter-token latency，词元间隔)由每步 decode 决定。下图用 7 个提示词元的请求把这两段排在一条时间线上：
+
+![一条请求的时间线：排队和 prefill 之后 y₁ 返回，TTFT 结束；之后每步 decode 把上一步的输出作为新位置写入缓存并给出下一个词元，相邻输出之间是 ITL](../../ai-engineering/model/resources/kv-serving-request-timeline.svg)
+
+Prefill 从位置 7 的 logits 选出 `y₁`，它可以立即返回，但缓存仍只到位置 7；下一次 decode 才把 `y₁` 当作位置 8 的输入，写入它的 K/V 并给出 `y₂` 的分布。所以已生成的词元数总比已缓存的输出位置多 1。
 
 ### 一条请求的 KV 占多少显存？
 
@@ -949,7 +951,11 @@ $$
 | 短请求吞吐低，GPU 利用不足 | continuous batching (连续批处理)：每个 decode 步之间补入新请求、移出已完成请求 | 排队时间和 p95 首词元时延；批越大，单条请求可能等得越久 |
 | Decode 词元间隔长 | 按输出长度和活跃数分桶测显存带宽，再比较量化或[推测解码](#8.%20%E6%8E%A8%E6%B5%8B%E8%A7%A3%E7%A0%81%E6%80%8E%E6%A0%B7%E5%8A%A0%E9%80%9F%E5%8F%88%E4%B8%8D%E6%94%B9%E5%8F%98%E8%BE%93%E5%87%BA%E5%88%86%E5%B8%83%EF%BC%9F) | 推测解码要测每轮平均接受的候选数、每轮目标计算、草稿成本、峰值暂存 KV 和拒绝比例 |
 
-Continuous batching 的思想来自 Orca 的迭代级调度：批的组成在每个生成步之间都可以变，不必等整批请求全部结束。
+表中 chunked prefill 和 continuous batching 两个杠杆改的都是多条请求怎样分享同一串 GPU 步。Continuous batching 的思想来自 Orca 的迭代级调度；chunked prefill 把一个长 prefill 拆进多个步。下图用三条示意请求对比：
+
+![上：静态批处理等整批结束才补入 R3，连续批处理在 R1 结束后的下一步就补入；下：不分块时 24 个提示词元占一个长步，拉长 R1、R2 的词元间隔，按每步 8 个词元分块后 decode 每个短步都出词元，R3 的首词元更晚](../../ai-engineering/model/resources/kv-serving-batching-chunked-prefill.svg)
+
+分块没有减少 R3 的 prefill 计算，只是把它拆成几段，与正在进行的 decode 交错：正在 decode 的请求不再被一个长步卡住，长提示自己的首词元则来得更晚。
 
 > [!info] 实例：vLLM 的 chunked prefill（核对于 2026-11-12）
 > vLLM V1 把大型 prefill 切成小块，与 decode 混合调度，并优先安排排队中的 decode。每步的词元预算决定 TTFT 与 ITL 之间的取舍，应按自己的流量测试。
@@ -1535,20 +1541,11 @@ v=\begin{bmatrix}3\\1\end{bmatrix},\quad
 \beta=0.5.
 $$
 
-| 步骤 | 计算 | 结果 |
-| --- | --- | --- |
-| 衰减旧状态 | $\widetilde S=\operatorname{diag}(\alpha)S_0$ | $\begin{bmatrix}1&0\\4&6\end{bmatrix}$ |
-| 用 key 预测 value | $\widehat v=\widetilde S^\top k$ | $\begin{bmatrix}1\\0\end{bmatrix}$ |
-| 计算误差 | $e=v-\widehat v$ | $\begin{bmatrix}2\\1\end{bmatrix}$ |
-| 形成本次写入 | $\beta k e^\top$ | $\begin{bmatrix}1&0.5\\0&0\end{bmatrix}$ |
-| 得到新状态 | $S_1=\widetilde S+\beta k e^\top$ | $\begin{bmatrix}2&0.5\\4&6\end{bmatrix}$ |
+本次 query 取 $q=[1,0]^\top$。下图按上一节的五步走一遍，下方面板把读回值画在 value 平面上，对比换两个条件的结果：
 
-本次 query 取 $q=[1,0]^\top$，读到 $o=S_1^\top q=[2,0.5]^\top$。
+![KDA 二维例子：S0 按 α 逐行缩放为 S̃，用 k 读回 v̂=(1,0)，误差 e=(2,1)，β=0.5 的外积写入与 S̃ 相加得 S1，q 读出 o=(2,0.5)；下方对比 β=1 和纯累加](../../ai-engineering/model/resources/kda-delta-update-2d.svg)
 
-key 是单位向量、query 与 key 相同，所以读出的正是第一行。写入强度 $\beta=0.5$ 让预测沿误差方向走了一半：从 $[1,0]^\top$ 移到 $[2,0.5]^\top$，目标是 $[3,1]^\top$。换两个条件对比：
-
-- $\beta=1$ 时写入 $ke^\top$，新状态第一行变成 $[3,1]$，重读恰好得到 $v$。
-- 如果像前一节那样纯累加 $\widetilde S+kv^\top$，第一行变成 $[4,1]$，重读得到 $[4,1]^\top$，冲过了目标。delta rule 只写误差，避免同一个 key 反复写入时无限叠加。
+key 是单位向量、query 与 key 相同，所以读出的正是第一行。写入强度 $\beta=0.5$ 让预测沿误差方向走了一半：从 $[1,0]^\top$ 移到 $[2,0.5]^\top$，目标是 $[3,1]^\top$。$\beta=1$ 时写入整份误差，重读恰好得到 $v$；像前一节那样纯累加 $\widetilde S+kv^\top$，则读回 $[4,1]^\top$，冲过了目标。delta rule 只写误差，避免同一个 key 反复写入时无限叠加。
 
 第一行是“第一个 key 坐标对应的 value 关联”，不是第一个历史词元。状态里没有词元位置索引可以回查。
 
@@ -1774,11 +1771,12 @@ $$
 停止条件在每输出一个词元后都要检查：被接受的候选是 EOS、替换词元是 EOS、bonus 是 EOS，或者达到长度上限，都立即结束本次生成，不再验证后续候选，也不抽 bonus。
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
     A{"逐个校正候选<br/>每次输出后检查停止条件"}
     A -->|全部接受且未触发停止| B["提交 x₁,…,xₘ<br/>若长度允许，从 pₘ₊₁ 抽 bonus"]
     A -->|位置 j 首次拒绝| R["保留 x₁,…,xⱼ₋₁<br/>从残差 rⱼ 抽替换词元 z"]
-    A -->|接受的候选是 EOS / 已达长度上限| E["保留已输出前缀<br/>丢弃剩余候选与 bonus<br/>结束生成"]
+    A -->|接受的候选是 EOS<br/>或已达长度上限| E["保留已输出前缀<br/>丢弃剩余候选与 bonus<br/>结束生成"]
     B --> S{"已触发<br/>停止条件？"}
     R --> S
     S -->|是| T["结束生成"]
@@ -1796,8 +1794,9 @@ Greedy decoding (贪心解码)下有一个更简单的变体：候选等于目�
 - 于是第 `j` 个候选位置的输出就是 `p_{j+1}`。一次前向得到 `p₂, …, p_{m+1}`；其中 `p_{m+1}` 只在全部接受时供 bonus 使用。
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
-    C["前缀 C：目标 KV 已提交，p₁ 已就绪"] --> P["Proposer 按 q_j 依次提出 x₁,…,xₘ"]
+    C["前缀 C：目标 KV 已提交，p₁ 已就绪"] --> P["Proposer 按 qⱼ 依次提出 x₁,…,xₘ"]
     P --> F["目标模型一次前向处理整段候选"]
     F --> L["得到 p₂,…,pₘ₊₁，按位置顺序校正候选"]
 ```
@@ -3157,7 +3156,7 @@ $$
 
 ### 候选不全时怎样补查
 
-只有初始候选缺了依据，或者复合问题缺了一环，才追加检索。追加时保留原始查询和调用者的租户、构建等范围约束；每次补查都按当时的权威状态重新核定 ACL 和当前版本，不能沿用可能过期的快照。
+只有初始候选缺了依据，或者复合问题缺了一环，才追加检索。追加时保留原始查询，以及调用者身份和构建范围；每次补查都按当时的权威状态重新核定 ACL 和当前版本，不能沿用可能过期的快照。
 
 | 失败信号 | 追加方式 | 必须避免 |
 |---|---|---|
@@ -3302,16 +3301,11 @@ B 在 L1 的重筛以 B 为中心，候选按到 B 的距离排为 X 0.4、C 2�
 | C | 2 | `d(C,X)=2.4 > 2` | 保留，选满 |
 | A | 3 | 已选满，不再检查 | 剪掉 |
 
-插入后 L1 的出邻居（一个节点指向谁）变成：
+下图按真实横坐标把 L1 上的这次插入画出来。四个点都在 x 轴上，“同一方向”就是同在 X 的一侧：C 躲在 B 后面，A 在另一侧。每条弧是一条出边（一个节点指向谁），上方弧向右、下方弧向左：
 
-| 节点 | 插入前 | 插入后 |
-|---|---|---|
-| A | B | B、X |
-| B | A、C | X、C |
-| C | B | B |
-| X | — | A、B |
+![在 L1 插入 X=(3.4,0)：插入前 A、B、C 双向相连；X 先接受 B，跳过与 B 同侧的 C，接受 A；插入后 B 重筛剪掉 B→A，A→B 仍在](../../ai-engineering/context/resources/hnsw-insert-x-l1.svg)
 
-`A→B` 还在，`B→A` 已经没有了。图的结构由每个节点的邻居列表决定，不要假设边永远双向。
+插入后 X 指向 A、B；A 指向 B、X；B 指向 X、C；C 仍指向 B。`A→B` 还在，`B→A` 已经没有了：图的结构由每个节点的出邻居列表决定，不要假设边永远双向。
 
 多样化选邻试图让边指向不同方向，保留跨区域导航的机会。它是构图策略，不是正确性证明；连边稀疏、数据分布变化或过滤条件很严时，查询仍可能错过近邻。
 
@@ -3963,12 +3957,13 @@ agent 循环每轮都要检查：是否达到完成条件，调用次数、时�
 应用在本轮向模型提供只读工具 `read_build_log`，参数 `build_id` 为整数。用户问 `Why did build 42 fail?`，模型提出调用 `read_build_log`、参数 `build_id=42`，这条请求的 ID 记作 `c1`。从这里开始，每一步都由应用完成：
 
 ~~~mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
     A[应用整理当前消息和本轮可用工具] --> B[模型生成下一步]
-    B --> C{输出里有待处理的工具请求?}
+    B --> C{{"输出里有待处理的工具请求？"}}
     C -->|没有| G[应用按运行状态与策略处理答复]
     C -->|有 c1| D[解析工具名和参数]
-    D --> E{解析成功、工具本轮可用、参数合规?}
+    D --> E{{"解析成功、工具本轮可用、<br/>参数合规？"}}
     E -->|否| X[形成可识别的失败结果]
     E -->|是| F[runtime 核对调用者与目标资源]
     F -->|拒绝| X
@@ -4474,14 +4469,15 @@ create_issue(
 应用要把这条请求变成一次真实写入，必须依次通过五道关。每一关回答不同的问题，过了前一关不代表后一关自动成立：
 
 ~~~mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
     Req["c2：create_issue 请求<br/>参数形状已校验"]
-    G1{"第一关<br/>create_issue 对本轮可见？"}
-    G2{"第二关<br/>user-17 对 build-service 有权建单？"}
-    G3{"第三关<br/>有面向工单 API、scope 足够的凭据？"}
-    G4{"第四关<br/>用户批准的正是这一份草稿？"}
-    G5{"第五关<br/>由谁在什么环境里执行？"}
-    Recheck["发送前刷新凭据<br/>并复核第二到第四关"]
+    G1{{"第一关<br/>create_issue 对本轮可见？"}}
+    G2{{"第二关<br/>user-17 对 build-service 有权建单？"}}
+    G3{{"第三关<br/>有面向工单 API、scope 足够的凭据？"}}
+    G4{{"第四关<br/>用户批准的正是这一份草稿？"}}
+    G5["第五关<br/>确定由谁在什么环境里执行"]
+    Recheck{{"发送前刷新凭据<br/>第二到第四关仍成立？"}}
     Out["持久化放行记录<br/>交给主线四"]
     Stop["拒绝：按 c2 记录原因<br/>不发出任何写请求"]
     Req --> G1 -->|是| G2 -->|是| G3 -->|是| G4 -->|是| G5 --> Recheck -->|仍成立| Out
@@ -5225,13 +5221,15 @@ plan-and-execute (先计划、再执行)适合这样的目标：能拆成若干�
 
 运行中会出现三种看起来都像“又调用了一次”的情况：SDK 重试、运行恢复和模型循环重复。它们的含义完全不同，所以每一层都要记录自己的身份和输入，而不是只数工具被调用了几次。各层分工是：应用为每次模型调用分配 ID；SDK 在这次调用之下重试底层 HTTP 请求；执行进程从 checkpoint (检查点)恢复；模型响应提出各个工具调用；外部写入另由操作键去重。下文的图 thread 是编排框架（如 LangGraph）为这次图执行保存状态的标识，它能恢复什么见[LangGraph 能恢复什么](#29.%20LangGraph%20%E8%83%BD%E6%81%A2%E5%A4%8D%E4%BB%80%E4%B9%88%EF%BC%8C%E5%8F%88%E4%B8%8D%E6%9B%BF%E5%BA%94%E7%94%A8%E8%AE%B0%E4%BD%8F%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
-下面是 `run-r42-10` 一段简化的 trace (追踪)，所有事件共用同一运行 ID 和同一图 thread：
+下面是 `run-r42-10` 一段简化的 trace (追踪)，所有事件共用同一运行 ID 和同一图 thread。下图逐个事件标出它改变了哪一层，以及下一节定义的无进展计数怎样变化：
 
-1. **用户补充目标。** 用户追加“请查代码级根因”，计划从 v1 升为 v2，启动请求摘要不变。这是一次状态推进。
-2. **底层请求重试，不是新一轮。** 应用的模型调用 `mi-17` 第一次只收到 HTTP `503`，没有模型输出。SDK attempt 从 `1` 变为 `2`，请求内容不变；第二次响应提出两条只读请求 `c-test`、`c-diff`，应用核验权限后并发执行。每次传输的服务方 request ID 只标识那一次尝试，不替代运行 ID 或调用 ID。
-3. **执行进程恢复，已有观察不重取。** `c-test`、`c-diff` 的结果持久化后，执行进程崩溃；恢复时 worker attempt 加一。检查点里已有两份结果，应用重新载入，不产生新的模型调用或工具调用 ID，也不增加模型循环轮次。若模型调用已返回、节点状态尚未提交就崩溃，未提交的步骤可能再执行一次，要按应用记录和服务契约对账。
-4. **模型重复提议，调用 ID 是新的，证据没变。** 恢复后的模型调用 `mi-18` 提出 `c-reread-1`，规范化参数仍是 `read_build_log(build_id=42)`，与 `c1` 相同；日志的来源版本也没变，`c1` 已在上下文里。这既不是 SDK 重试，也不是运行恢复。应用重新核验权限后，可以把已存的 `c1` 结果关联到这条新调用，不必重复取数。没有新增观察，也没有完成新阶段，这一轮计为无进展。
-5. **证据使阶段完成。** 模型调用 `mi-19` 对照 `c1`、`c-test`、`c-diff` 给出解释；应用核对三者与构建元数据都指向 `a17d92e`，P2 完成，计划进入 P3。
+![run-r42-10 的五个事件各改变了哪一层：补充目标改计划版本，mi-17 的 SDK 重试只改 SDK attempt 并带回 c-test、c-diff，worker 恢复只加 worker attempt，mi-18 换了调用 ID 却没有新观察计为无进展，mi-19 完成 P2 使计数归零](../../ai-engineering/actions/resources/orchestration-repeat-call-layers.svg)
+
+1. **用户补充目标。** 用户追加“请查代码级根因”，计划从 v1 升为 v2，启动请求摘要不变。
+2. **底层请求重试，不是新一轮。** `mi-17` 第一次只收到 HTTP `503`，没有模型输出；SDK 用不变的请求内容重发，第二次响应提出两条只读请求 `c-test`、`c-diff`，应用核验权限后并发执行。每次传输的服务方 request ID 只标识那一次尝试，不替代运行 ID 或调用 ID。
+3. **执行进程恢复，已有观察不重取。** 两份结果持久化后执行进程崩溃；恢复后从检查点重新载入它们，不产生新的模型调用或工具调用 ID，也不增加模型循环轮次。若模型调用已返回、节点状态尚未提交就崩溃，未提交的步骤可能再执行一次，要按应用记录和服务契约对账。
+4. **模型重复提议，调用 ID 是新的，证据没变。** `mi-18` 提出的 `c-reread-1` 规范化参数仍是 `read_build_log(build_id=42)`，与 `c1` 相同，日志的来源版本也没变，`c1` 已在上下文里。应用重新核验权限后，可以把已存的 `c1` 结果关联到这条新调用，不必重复取数。
+5. **证据使阶段完成。** `mi-19` 对照 `c1`、`c-test`、`c-diff` 给出解释；应用核对三者与构建元数据都指向 `a17d92e`，P2 完成，计划进入 P3。
 
 如果契约或差异对应的提交与 build 42 不一致，P2 就不算完成：保留 `c1`，修订计划，改取 build 42 实际所用提交的证据；受权限或来源限制无法核实时，明确停在“根因未知”。
 
@@ -5242,7 +5240,7 @@ plan-and-execute (先计划、再执行)适合这样的目标：能拆成若干�
 
 事件 4 引出的问题是：怎样判断循环“没有进展”？进展要由可核对的状态变化来定义，例如新增了一条授权有效的来源观察、某个验收阶段由证据完成、用户确认了改变计划约束的信息。换一种措辞、多花一些 token、拿到一个新的随机调用 ID，都不算进展。判断时比较这些字段：运行与图 thread、worker attempt、应用模型调用 ID、SDK attempt、工具调用 ID、规范化参数摘要、来源版本、观察集合和计划版本。
 
-按这个定义数上面的 trace：`mi-17` 内的 SDK 重试不是新一轮；从检查点恢复不增加模型调用数；`mi-18` 的 `c-reread-1` 同参同源、没有新观察，计为第 1 轮无进展；`mi-19` 完成了 P2，计数归零。本合成运行把“连续 2 轮无进展”设为停止门槛，这不是通用默认值。另外还要设总调用数、截止时间和费用上限。副作用始终走已审批的操作记录和对账流程，不允许模型新一轮的输出生成新的操作键。
+按这个定义数上面的 trace，就是图中最后一行：SDK 重试和检查点恢复都不算新一轮；`mi-18` 的 `c-reread-1` 同参同源、没有新观察，计为第 1 轮无进展；`mi-19` 完成了 P2，计数归零。本合成运行把“连续 2 轮无进展”设为停止门槛，这不是通用默认值。另外还要设总调用数、截止时间和费用上限。副作用始终走已审批的操作记录和对账流程，不允许模型新一轮的输出生成新的操作键。
 
 ### 长程任务怎样留下可复用的中间成果
 
@@ -5314,12 +5312,7 @@ plan-and-execute (先计划、再执行)适合这样的目标：能拆成若干�
 
 ### 谁持有运行的权威状态？
 
-答案是应用自己。一次运行会经过很多参与者：客户端到服务的 HTTP 请求、推送进度的事件流、执行步骤的 worker (工作进程)、唤醒 worker 的队列消息、模型的上下文，以及供应商侧的会话或线程。它们都可能单独消失，而且消失本身不说明任何事：
-
-- 浏览器断线，不说明运行停止了，也不说明客户想取消；
-- worker 崩溃，不说明它登记意图后的请求没有发出；
-- HTTP 客户端读超时，不说明提供方没有创建退款；
-- 队列消息被重投，不说明任务需要从头再做一遍。
+答案是应用自己。一次运行会经过很多参与者：客户端到服务的 HTTP 请求、推送进度的事件流、执行步骤的 worker (工作进程)、唤醒 worker 的队列消息、模型的上下文，以及供应商侧的会话或线程。它们都可能单独消失，而且消失本身不说明任何事：浏览器断线不说明运行停止或客户想取消，worker 崩溃不说明它登记意图后的请求没有发出，读超时不说明提供方没有创建退款，消息重投不说明任务要从头再做。
 
 所以，能回答“任务到哪一步、外部动作发生了什么”的，只能是应用在自己的数据库里用条件事务提交的记录。恢复的顺序也随之固定：先读持久状态，再按外部接口的契约去查询、去重或对账。不要让一轮新的模型生成来决定“要不要再退一次”：重新调用模型可能给出不同的输出，而外部结果是一个已经发生或尚未发生的事实，只能查。
 
@@ -5368,37 +5361,37 @@ plan-and-execute (先计划、再执行)适合这样的目标：能拆成若干�
 
 ```mermaid
 stateDiagram-v2
-    [*] --> accepted: 持久化运行记录与 outbox
-    accepted --> queued: 发布器投递唤醒
-    queued --> running: worker 领取 attempt 与 lease
-    running --> queued: lease 过期且没有发送意图
-    running --> awaiting_input: 向客户提问后挂起
-    awaiting_input --> queued: 答复或到期，同事务写唤醒
-    running --> awaiting_approval: 保存方案 Q-204
-    awaiting_approval --> queued: 客户确认，同事务建 R-204
+    [*] --> accepted: 持久化运行记录<br/>与 outbox
+    accepted --> queued: 投递唤醒
+    queued --> running: 领取 attempt<br/>与 lease
+    running --> queued: lease 过期<br/>且无发送意图
+    running --> awaiting_input: 提问后挂起
+    awaiting_input --> queued: 答复或到期
+    running --> awaiting_approval: 保存 Q-204
+    awaiting_approval --> queued: 确认，建 R-204
     awaiting_approval --> rejected: 客户拒绝
-    running --> effect_in_flight: 发送闸门登记意图
-    running --> failed: 无意图的不可恢复错误
-    effect_in_flight --> completed: 回执为 succeeded
-    effect_in_flight --> provider_pending: 回执为 pending
-    effect_in_flight --> failed: 契约证明未产生退款
-    effect_in_flight --> effect_unknown: 超时、500 或 lease 过期
-    effect_unknown --> effect_unknown: 对账无结论或同键重放
-    effect_unknown --> provider_pending: 找到 pending 对象
-    effect_unknown --> completed: 找到 succeeded 对象
-    effect_unknown --> failed: 找到 failed 或 canceled 对象
-    provider_pending --> completed: 读到 succeeded
-    provider_pending --> failed: 读到 failed 或 canceled
-    effect_in_flight --> cancel_requested: 已有意图时取消
-    effect_unknown --> cancel_requested: 已有意图时取消
-    cancel_requested --> completed: 对账确认已退款
-    cancel_requested --> failed: 对账读到 failed 或 canceled 对象
-    cancel_requested --> canceled: 证实没有也不会有退款
-    accepted --> canceled: 无意图时取消
-    queued --> canceled: 无意图时取消
-    running --> canceled: 无意图时取消
-    awaiting_input --> canceled: 无意图时取消
-    awaiting_approval --> canceled: 无意图时取消
+    running --> effect_in_flight: 发送闸门<br/>登记意图
+    running --> failed: 无意图的<br/>不可恢复错误
+    effect_in_flight --> completed
+    effect_in_flight --> provider_pending
+    effect_in_flight --> failed: 契约证明<br/>未产生退款
+    effect_in_flight --> effect_unknown: 超时、500<br/>或 lease 过期
+    effect_unknown --> effect_unknown: 对账无结论<br/>或同键重放
+    effect_unknown --> provider_pending
+    effect_unknown --> completed
+    effect_unknown --> failed
+    provider_pending --> completed
+    provider_pending --> failed
+    effect_in_flight --> cancel_requested: 取消
+    effect_unknown --> cancel_requested: 取消
+    cancel_requested --> completed
+    cancel_requested --> failed
+    cancel_requested --> canceled: 证实没有<br/>也不会有退款
+    accepted --> canceled
+    queued --> canceled
+    running --> canceled
+    awaiting_input --> canceled
+    awaiting_approval --> canceled
 ```
 
 | 状态 | 含义 | 谁能推进它 | 详见 |
@@ -5408,24 +5401,67 @@ stateDiagram-v2
 | `running` | 某个 attempt 持有有效 lease，执行读订单、调模型、拟方案等不产生外部写入的步骤 | 当前 attempt；lease 过期后由扫描器放回 `queued` | 同上；模型调用的边界见[有界的模型 API 调用](#26.%20%E6%80%8E%E6%A0%B7%E8%AE%A9%E4%B8%80%E6%AC%A1%E6%A8%A1%E5%9E%8B%20API%20%E8%B0%83%E7%94%A8%E5%9C%A8%E9%99%90%E9%A2%9D%E3%80%81%E5%A4%B1%E8%B4%A5%E5%92%8C%E6%88%AA%E6%AD%A2%E6%97%B6%E9%97%B4%E5%86%85%E6%9C%89%E7%95%8C%EF%BC%9F) |
 | `awaiting_input` | 向客户提的问题已保存在待答记录里，不依赖答案的步骤已做完，等答复或截止时刻；期间没有执行 lease | 只消费这条待答记录的答复、超时或取消事务 | [断线、取消与用户输入](#31.%20%E7%94%A8%E6%88%B7%E6%96%AD%E7%BA%BF%E3%80%81%E5%8F%96%E6%B6%88%E6%88%96%E8%A6%81%E5%9B%9E%E7%AD%94%E4%B8%80%E4%B8%AA%E9%97%AE%E9%A2%98%E6%97%B6%EF%BC%8C%E5%90%8C%E4%B8%80%E6%AC%A1%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E7%BB%A7%E7%BB%AD%EF%BC%9F) |
 | `awaiting_approval` | 不可变方案 `Q-204` 已保存，等客户确认；期间没有执行 lease | 只消费当前待审版本的确认、拒绝或取消事务 | [外部写入与对账](#28.%20%E9%80%80%E6%AC%BE%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E6%80%8E%E6%A0%B7%E6%9F%A5%E6%B8%85%E7%BB%93%E6%9E%9C%E8%80%8C%E4%B8%8D%E9%87%8D%E5%A4%8D%E6%89%A3%E6%AC%BE%EF%BC%9F) |
-| `effect_in_flight` | 当前 attempt 已登记发送意图，请求可能正在发送或处理 | 当前 attempt 写回回执；lease 过期后由扫描器转 `effect_unknown` | 同上 |
-| `effect_unknown` | 已登记意图，但没有可判定的结果 | 对账 worker；满足全部前提时才可同键重放 | 同上 |
-| `provider_pending` | 已找到并核实提供方的退款对象，它仍是 `pending` 或 `requires_action` | 读取提供方对象的 worker 或已验签事件 | 同上 |
-| `cancel_requested` | 已有发送意图时收到取消；停止新动作，只读对账 | 对账 worker | [断线、取消与用户输入](#31.%20%E7%94%A8%E6%88%B7%E6%96%AD%E7%BA%BF%E3%80%81%E5%8F%96%E6%B6%88%E6%88%96%E8%A6%81%E5%9B%9E%E7%AD%94%E4%B8%80%E4%B8%AA%E9%97%AE%E9%A2%98%E6%97%B6%EF%BC%8C%E5%90%8C%E4%B8%80%E6%AC%A1%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E7%BB%A7%E7%BB%AD%EF%BC%9F) |
+| `effect_in_flight` | 当前 attempt 已登记发送意图，请求可能正在发送或处理 | 当前 attempt 按回执推进：`succeeded` 转 `completed`，`pending` 或 `requires_action` 转 `provider_pending`；lease 过期后由扫描器转 `effect_unknown` | 同上 |
+| `effect_unknown` | 已登记意图，但没有可判定的结果 | 对账 worker：找到 `pending`、`succeeded` 对象分别转 `provider_pending`、`completed`，找到 `failed` 或 `canceled` 对象转 `failed`；满足全部前提时才可同键重放 | 同上 |
+| `provider_pending` | 回执或对账给出的提供方退款对象已核实，仍是 `pending` 或 `requires_action` | 读取提供方对象的 worker 或已验签事件：读到 `succeeded` 转 `completed`，读到 `failed` 或 `canceled` 转 `failed` | 同上 |
+| `cancel_requested` | 已有发送意图时收到取消；停止新动作，只读对账 | 对账 worker：确认已退款转 `completed`，读到 `failed` 或 `canceled` 对象转 `failed` | [断线、取消与用户输入](#31.%20%E7%94%A8%E6%88%B7%E6%96%AD%E7%BA%BF%E3%80%81%E5%8F%96%E6%B6%88%E6%88%96%E8%A6%81%E5%9B%9E%E7%AD%94%E4%B8%80%E4%B8%AA%E9%97%AE%E9%A2%98%E6%97%B6%EF%BC%8C%E5%90%8C%E4%B8%80%E6%AC%A1%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E7%BB%A7%E7%BB%AD%EF%BC%9F) |
 | `completed` | 终态：提供方确认退款 `succeeded`，答复已保存 | 不再变化 | — |
 | `rejected` | 终态：客户拒绝方案，未产生发送意图 | 不再变化 | — |
-| `canceled` | 终态：证实没有退款，也不会再有退款被提交 | 不再变化 | 取消的完整条件见[断线、取消与用户输入](#31.%20%E7%94%A8%E6%88%B7%E6%96%AD%E7%BA%BF%E3%80%81%E5%8F%96%E6%B6%88%E6%88%96%E8%A6%81%E5%9B%9E%E7%AD%94%E4%B8%80%E4%B8%AA%E9%97%AE%E9%A2%98%E6%97%B6%EF%BC%8C%E5%90%8C%E4%B8%80%E6%AC%A1%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E7%BB%A7%E7%BB%AD%EF%BC%9F) |
+| `canceled` | 终态：证实没有退款，也不会再有退款被提交。尚未登记发送意图的 `accepted`、`queued`、`running`、`awaiting_input`、`awaiting_approval` 收到取消时直接进入 | 不再变化 | 取消的完整条件见[断线、取消与用户输入](#31.%20%E7%94%A8%E6%88%B7%E6%96%AD%E7%BA%BF%E3%80%81%E5%8F%96%E6%B6%88%E6%88%96%E8%A6%81%E5%9B%9E%E7%AD%94%E4%B8%80%E4%B8%AA%E9%97%AE%E9%A2%98%E6%97%B6%EF%BC%8C%E5%90%8C%E4%B8%80%E6%AC%A1%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E7%BB%A7%E7%BB%AD%EF%BC%9F) |
 | `failed` | 终态：确定没有未知外部效果的失败，例如无意图的不可恢复错误，或提供方明确返回 `failed`、`canceled` | 不再变化 | — |
 
-本主线跟踪的是其中一条路径：
+本主线跟踪的是其中一条路径。下图把它分成 7 步展开：每一步由谁发起、写下哪条记录、带着哪个标识符，以及运行此刻处在哪个状态。
 
-1. 客户提交请求，`run-o73-1` 进入 `accepted`，发布器投递唤醒后进入 `queued`。
-2. attempt 1 领取后进入 `running`，经 `call-r1`、`call-r2` 生成 `Q-204`，进入 `awaiting_approval` 并结束 lease。
-3. 客户确认 `Q-204`，同一事务保存 `R-204` 与 `K-R204`，运行回到 `queued`。
-4. attempt 2 领取并通过发送闸门，登记意图后进入 `effect_in_flight`，发出退款请求。
-5. 请求读超时，attempt 2 用一笔条件事务把运行转为 `effect_unknown`。
-6. attempt 3 只读对账，找到并核实退款对象 `re_demo_204`，状态为 `pending`，运行进入 `provider_pending`。
-7. 稍后读到 `succeeded`，运行进入 `completed`，客户重连后读到保存的答复。
+```mermaid
+%%{init: {"sequence": {"actorMargin": 30, "width": 100, "noteMargin": 6}}}%%
+sequenceDiagram
+    participant C as 客户端
+    participant API as 服务与<br/>运行记录
+    participant W as worker
+    participant M as 模型 API
+    participant L as 操作账本
+    participant P as 支付提供方
+    Note over C,P: 第 1 步：受理
+    C->>API: POST /runs<br/>Idempotency-Key:<br/>cli-o73-1
+    API-->>C: 202<br/>runId=run-o73-1
+    Note over API: accepted<br/>→ 投递唤醒后<br/>queued
+    Note over C,P: 第 2 步：attempt 1 拟出方案
+    API->>W: attempt 1<br/>条件领取<br/>取得 lease
+    Note over API: running
+    W->>M: 模型请求
+    M-->>W: 工具调用 call-r1：<br/>读订单与<br/>退款资格
+    Note over W: 应用执行 call-r1：<br/>P-73 已扣款，<br/>可退 2000 美分
+    W->>M: 带上 call-r1 的<br/>结果再请求
+    M-->>W: 工具调用 call-r2：<br/>为 O-73 退款<br/>20.00 USD
+    W->>API: 应用核验后保存<br/>不可变方案 Q-204<br/>与 plan_digest，<br/>结束 lease
+    Note over API: awaiting_approval
+    Note over C,P: 第 3 步：客户确认
+    C->>API: cust-55 确认<br/>Q-204（针对<br/>plan_digest）
+    API->>L: 同一事务保存 R-204：<br/>完整参数、K-R204，<br/>发送意图为空
+    Note over API: queued
+    Note over C,P: 第 4 步：attempt 2 过发送闸门
+    API->>W: attempt 2<br/>条件领取
+    W->>L: 登记发送意图：<br/>attempt 2、K-R204、<br/>plan_digest、grantRef=g-58
+    Note over API: effect_in_flight
+    W->>P: POST /v1/refunds，Idempotency-Key: K-R204<br/>charge=P-73、amount=2000、<br/>metadata[operation_id]=R-204
+    Note over C,P: 第 5 步：结果未知
+    Note over W,P: 读超时，没有回执
+    Note over C: 几乎同时<br/>浏览器断线
+    W->>API: 条件事务转<br/>effect_unknown，<br/>结束 lease
+    Note over API: effect_unknown：<br/>保留 R-204、K-R204<br/>和发送意图
+    Note over C,P: 第 6 步：attempt 3 只读对账
+    API->>W: attempt 3<br/>条件领取
+    W->>P: 按候选 ID 读取 re_demo_204
+    P-->>W: pending；账户、P-73、2000、<br/>usd、R-204 关联都相符
+    W->>L: 把 re_demo_204<br/>绑定到 R-204
+    Note over API: provider_pending
+    Note over C,P: 第 7 步：完成
+    W->>P: 再次读取 re_demo_204
+    P-->>W: succeeded
+    W->>API: 同一事务保存<br/>对象、最终答复<br/>和 completed
+    C->>API: 重连：GET<br/>/runs/run-o73-1
+    API-->>C: 已保存的答复<br/>不重跑模型
+```
 
 第 1–2 步的受理、领取和崩溃恢复见[受理与领取](#27.%20%E8%AF%B7%E6%B1%82%E5%8F%97%E7%90%86%E5%90%8E%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BF%9D%E8%AF%81%E4%BB%BB%E5%8A%A1%E6%9C%80%E7%BB%88%E8%A2%AB%E6%89%A7%E8%A1%8C%E4%B8%94%E4%B8%8D%E8%A2%AB%E4%B8%A4%E4%B8%AA%20worker%20%E5%90%8C%E6%97%B6%E6%8E%A8%E8%BF%9B%EF%BC%9F)；第 3–7 步的写入、对账和重放条件见[外部写入与对账](#28.%20%E9%80%80%E6%AC%BE%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E6%80%8E%E6%A0%B7%E6%9F%A5%E6%B8%85%E7%BB%93%E6%9E%9C%E8%80%8C%E4%B8%8D%E9%87%8D%E5%A4%8D%E6%89%A3%E6%AC%BE%EF%BC%9F)；断线、取消和中途向客户提问见[断线、取消与用户输入](#31.%20%E7%94%A8%E6%88%B7%E6%96%AD%E7%BA%BF%E3%80%81%E5%8F%96%E6%B6%88%E6%88%96%E8%A6%81%E5%9B%9E%E7%AD%94%E4%B8%80%E4%B8%AA%E9%97%AE%E9%A2%98%E6%97%B6%EF%BC%8C%E5%90%8C%E4%B8%80%E6%AC%A1%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E7%BB%A7%E7%BB%AD%EF%BC%9F)；商户在第 4–6 步之间撤销 `g-58` 的情形见[撤权与重新授权](#30.%20%E7%94%A8%E6%88%B7%E6%92%A4%E6%9D%83%E6%88%96%E4%BB%A4%E7%89%8C%E5%A4%B1%E6%95%88%E5%90%8E%EF%BC%8C%E8%BF%9B%E8%A1%8C%E4%B8%AD%E7%9A%84%E5%86%99%E5%85%A5%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E6%81%A2%E5%A4%8D%EF%BC%9F)。
 
@@ -5924,7 +5960,7 @@ RFC 9110 中的 `202` 只表示请求已被接受处理，不表示处理完成�
 
 ### worker 怎样领取运行，旧 worker 怎样被挡在外面？
 
-队列消息只负责唤醒，执行权由数据库里的条件领取、lease (租约) 和只增不减的代次决定。worker A 收到唤醒后，用一笔条件事务领取运行：只有运行仍是 `queued`、代次等于消息预期的值、且没有有效 lease 时，才把它改为 `running`，代次加一成为 attempt 1，并写入 lease 持有者和到期时间；两个 worker 同时收到重复消息，只有一个能成功。代次就是 fencing token (栅栏令牌)：之后每次写入都以它为条件，新代次一旦被领取，旧 worker 就写不进运行记录。lease 到期不会杀死旧进程，lease 是否有效要在取得行锁之后按数据库的实际时间判断（PostgreSQL 中是 `clock_timestamp()`，不是事务开始时刻的 `CURRENT_TIMESTAMP`）；这些通用规则见[怎样保证一个任务同一时刻只由一个 worker 推进？](../../engineering-foundations/services/job-claims-leases-and-fencing.md)。
+队列消息只负责唤醒，执行权由数据库里的条件领取、lease (租约) 和只增不减的代次决定。worker A 收到唤醒后，用一笔条件事务领取运行：只有运行仍是 `queued`、代次等于消息预期的值、且没有有效 lease 时，才把它改为 `running`，代次加一成为 attempt 1，并写入 lease 持有者和到期时间；重复消息只会让一个 worker 领取成功。代次就是 fencing token (栅栏令牌)：之后每次写入都以它为条件，旧 worker 怎样因此被挡在外面，见[扫描器一节的时序图](#%E6%89%AB%E6%8F%8F%E5%99%A8%E6%80%8E%E6%A0%B7%E5%A4%84%E7%90%86%E7%A7%9F%E7%BA%A6%E8%BF%87%E6%9C%9F%E7%9A%84%E8%BF%90%E8%A1%8C%EF%BC%9F)。lease 到期不会杀死旧进程，lease 是否有效要在取得行锁之后按数据库的实际时间判断（PostgreSQL 中是 `clock_timestamp()`，不是事务开始时刻的 `CURRENT_TIMESTAMP`）；这些通用规则见[怎样保证一个任务同一时刻只由一个 worker 推进？](../../engineering-foundations/services/job-claims-leases-and-fencing.md)。
 
 运行在这套规则上多了两点。第一，attempt 1 每推进一次本地状态（保存观察、保存检查点、改状态），都要在一笔短事务里重新核验四件事：运行处在预期状态、当前代次仍是 1、lease 尚未过期、运行没有被取消。核验失败就回滚并停止，不再写任何记录。事务要短小，不能在持锁期间等模型或网络。第二，栅栏只挡本地写入，撤不回旧进程已经发出的远端请求，例如一次已经发出的退款；这类效果靠操作账本和对账收尾，见下文扫描器一节。
 
@@ -5936,8 +5972,7 @@ RFC 9110 中的 `202` 只表示请求已被接受处理，不表示处理完成�
 
 `awaiting_approval` 只能由针对当前待审版本的决定唤醒：客户确认时，同一事务写入确认记录、把运行改回 `queued` 并写一条 outbox 唤醒；拒绝写 `rejected`，取消写 `canceled`，都不入队；迟到、重复或针对旧版本的确认不能让运行重新入队。确认事务里还要锁订单、消费 `Q-204` 并保存退款操作 `R-204`，这些写入细节见[退款请求超时后，怎样查清结果而不重复扣款](#28.%20%E9%80%80%E6%AC%BE%E8%AF%B7%E6%B1%82%E8%B6%85%E6%97%B6%E5%90%8E%EF%BC%8C%E6%80%8E%E6%A0%B7%E6%9F%A5%E6%B8%85%E7%BB%93%E6%9E%9C%E8%80%8C%E4%B8%8D%E9%87%8D%E5%A4%8D%E6%89%A3%E6%AC%BE%EF%BC%9F)。
 
-> [!example] 变体：attempt 1 在保存方案前崩溃
-> 设 worker A 保存了 `call-r1` 的观察后进程消失，还没来得及保存 `Q-204`。消息未被确认，lease 到期后，扫描器发现这个运行处在 `running`、操作账本里没有任何发送意图，于是条件地把它改回 `queued` 并写一条普通 outbox 唤醒。worker B 收到唤醒，领取 attempt 2，从检查点读到已有的订单观察，接着调用模型生成方案。如果 worker A 之后醒来，它的代次 1 已经过时，任何写入都会被条件事务拒绝。本主线的主路径假设没有这次崩溃，所以发送由 attempt 2 负责。
+attempt 1 若在保存方案之前停顿或崩溃，由扫描器把运行放回队列、另一个 worker 从检查点接着做，见[扫描器一节的时序图](#%E6%89%AB%E6%8F%8F%E5%99%A8%E6%80%8E%E6%A0%B7%E5%A4%84%E7%90%86%E7%A7%9F%E7%BA%A6%E8%BF%87%E6%9C%9F%E7%9A%84%E8%BF%90%E8%A1%8C%EF%BC%9F)。
 
 ### 扫描器怎样处理租约过期的运行？
 
@@ -5950,7 +5985,34 @@ worker 确认消息后才崩溃，就不会再有重投，这时要靠扫描器�
 | `effect_unknown`、`provider_pending` 或 `cancel_requested` 中，对账 attempt 的 lease 过期 | 保持原状态，写一条新的对账 outbox | 下一个对账 worker；沿用原键和累计的全部发送意图 |
 | `awaiting_input`、`awaiting_approval` | 不处理：这两个挂起状态本来就没有执行 lease | 前者只由答复、超时或取消事务推进，后者只由确认、拒绝或取消事务推进 |
 
-扫描器只做条件状态变更和 outbox 写入。它不领取 lease、不增加代次，也不查询远端；领取永远由收到唤醒的 worker 完成。这样，若原 attempt 恰好在扫描前成功提交，扫描器读到的就是新状态；若扫描和唤醒之后新 worker 先领取，旧 attempt 就会因代次不符而失效。
+扫描器只做条件状态变更和 outbox 写入。它不领取 lease、不增加代次，也不查询远端；领取永远由收到唤醒的 worker 完成。若原 attempt 恰好在扫描前成功提交，扫描器的条件不成立，读到的就是新状态。下图是另一种结局：worker A 保存了 `call-r1` 的观察之后、保存 `Q-204` 之前停顿，lease 到期，扫描器把运行放回队列，新 worker 领取了下一代。
+
+```mermaid
+%%{init: {"sequence": {"actorMargin": 30, "width": 110, "noteMargin": 6}}}%%
+sequenceDiagram
+    participant MQ as 队列消息
+    participant A as worker A
+    participant DB as 运行记录<br/>run-o73-1
+    participant S as 扫描器
+    participant B as worker B
+    MQ->>A: 唤醒 run-o73-1
+    A->>DB: 条件领取：仍为 queued、<br/>代次为 0、无有效 lease
+    Note over DB: running<br/>attempt 1<br/>lease 归 A
+    A->>DB: 保存 call-r1 观察与检查点<br/>同一事务复核：running、<br/>代次 1、lease 有效、未取消
+    Note over A: 停顿或失联<br/>lease 到期<br/>不会让 A 停下
+    S->>DB: 条件变更：<br/>仍为 running、<br/>lease 已过期、<br/>没有发送意图
+    Note over DB: queued<br/>代次仍为 1<br/>无 lease<br/>写普通 outbox
+    Note over S: 不领取<br/>不加代次<br/>不查远端
+    MQ->>B: outbox 投递的唤醒
+    B->>DB: 条件领取：仍为 queued、<br/>代次为 1、无有效 lease
+    Note over DB: running<br/>attempt 2<br/>lease 归 B
+    DB-->>B: 检查点里的 call-r1 观察<br/>接着拟方案
+    A->>DB: 醒来后继续写入<br/>条件含“代次 = 1”
+    DB-->>A: 条件不成立<br/>回滚并停止
+    Note over A,DB: 本例 A 尚未登记发送意图。<br/>若已登记，扫描器改走 effect_unknown，<br/>A 已发出的远端请求只能靠操作账本对账
+```
+
+在这个变体里，生成方案的是 attempt 2；本主线的主路径假设没有这次停顿，所以后文由 attempt 2 负责发送。
 
 对账 worker 收到重复唤醒时，只有在运行仍处于该分支、消息预期的代次相符、且按数据库实际时间确认现有 lease 已过期或为空时，才能领取下一代；并发的重复消息只有一条能成功。对账一轮查不出结论时，worker 在确认消息之前，必须持久安排下一次只读处理，或指定一位人工责任人。转人工的项目永远不自动重放。
 
@@ -5979,19 +6041,19 @@ attempt 2 发出 `POST /v1/refunds` 后读超时，此时有三种可能：请�
 
 ```mermaid
 stateDiagram-v2
-    awaiting_approval --> queued: 确认事务：消费 Q-204，保存 R-204 与 K-R204
+    awaiting_approval --> queued: 确认事务：消费 Q-204<br/>保存 R-204 与 K-R204
     queued --> running: attempt 2 领取
-    running --> effect_in_flight: 发送闸门：条件核验并登记意图
-    effect_in_flight --> completed: 回执核实为 succeeded
-    effect_in_flight --> provider_pending: 回执核实为 pending 或 requires_action
-    effect_in_flight --> failed: 契约证明未产生退款
-    effect_in_flight --> effect_unknown: 超时、结果不明的 500、lease 过期
-    effect_unknown --> effect_unknown: 对账无结论；或满足全部前提的同键重放
-    effect_unknown --> provider_pending: 找到并核实 pending 对象
-    effect_unknown --> completed: 找到并核实 succeeded 对象
-    effect_unknown --> failed: 找到并核实 failed 或 canceled 对象
+    running --> effect_in_flight: 发送闸门：条件核验<br/>并登记意图
+    effect_in_flight --> completed: 回执核实为<br/>succeeded
+    effect_in_flight --> provider_pending: 回执核实为 pending<br/>或 requires_action
+    effect_in_flight --> effect_unknown: 超时、结果不明的 500<br/>lease 过期
+    effect_in_flight --> failed: 契约证明<br/>未产生退款
+    effect_unknown --> effect_unknown: 对账无结论；<br/>或满足全部前提的<br/>同键重放
+    effect_unknown --> provider_pending: 找到并核实<br/>pending 对象
+    effect_unknown --> completed: 找到并核实<br/>succeeded 对象
+    effect_unknown --> failed: 找到并核实 failed<br/>或 canceled 对象
     provider_pending --> completed: 读到 succeeded
-    provider_pending --> failed: 读到 failed 或 canceled
+    provider_pending --> failed: 读到 failed<br/>或 canceled
 ```
 
 已有发送意图时收到取消，运行转入 `cancel_requested`，同样只能只读对账；取消的完整规则见[用户断线、取消或要回答一个问题时，同一次运行怎样继续](#31.%20%E7%94%A8%E6%88%B7%E6%96%AD%E7%BA%BF%E3%80%81%E5%8F%96%E6%B6%88%E6%88%96%E8%A6%81%E5%9B%9E%E7%AD%94%E4%B8%80%E4%B8%AA%E9%97%AE%E9%A2%98%E6%97%B6%EF%BC%8C%E5%90%8C%E4%B8%80%E6%AC%A1%E8%BF%90%E8%A1%8C%E6%80%8E%E6%A0%B7%E7%BB%A7%E7%BB%AD%EF%BC%9F)。
@@ -6109,7 +6171,7 @@ attempt 2 领取运行后，重新读取 `Q-204`、确认记录和 `R-204`。真
 3. **闸门条件与首次发送相同。** 确认仍有效、写权限仍在、当前 attempt 与 lease 有效、未取消，并在同一笔条件事务里登记这次的发送意图。新的意图不会清除已有的未知结果；结果一旦确认，就不再重放。
 4. **旧发送者都已停下或必然落在窗口内。** 发送端要能约束暂停后恢复的旧 worker、SDK 内部重试和传输延迟。单查一次数据库或发一个取消信号，证明不了已在途的请求会按时停止。
 
-第 2 条最容易被忽视：原请求若卡在网络里，等重放建立的去重记录过期后才到达，接收方会把它当成新请求再退一次款。所以暂时“查无记录”也不能证明旧请求以后不会提交；去重窗口为什么必须覆盖在途和晚到的副本、窗口外为什么要留墓碑，见[写请求超时后，怎样查清结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md#%E5%8E%BB%E9%87%8D%E8%A6%81%E8%A6%86%E7%9B%96%E5%A4%9A%E9%95%BF%E6%97%B6%E9%97%B4%EF%BC%9F)。
+第 2 条最容易被忽视：原请求若卡在网络里，到去重记录过期后才到达，就会被当成新请求再退一次款，所以暂时“查无记录”不能证明旧请求以后不会提交（下文 Stripe 实例的时间轴画出了暂停的旧发送者晚到的同类情形）；去重窗口为什么必须覆盖在途和晚到的副本、窗口外为什么要留墓碑，见[写请求超时后，怎样查清结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md#%E5%8E%BB%E9%87%8D%E8%A6%81%E8%A6%86%E7%9B%96%E5%A4%9A%E9%95%BF%E6%97%B6%E9%97%B4%EF%BC%9F)。
 
 即使所有前提都在，重放也可能一直拿回缓存的同一个 `500`，这不算查清了结果，仍要对账。
 
@@ -6119,7 +6181,11 @@ attempt 2 领取运行后，重新读取 `Q-204`、确认记录和 `R-204`。真
 
 本例因此用本地持久化的首次发送意图时间作保守起点，不因重试重新计时。首次发送、恢复接管和 SDK 自动重试都经过同一道发送边界：每次真正发出 POST 前，重查操作仍允许写入，并核验仍在保守的 24 小时窗口内，调度、退避和网络传输的耗时都要从余量里扣除；通过后才按原键原参有界发送。已经得到可信结论、窗口将尽或时间不明时，一律转为只读核对，不能拿旧的发送许可继续写。
 
-举例：首个发送者登记意图后暂停；恢复器在第 1 小时已经查清并完成了退款；旧发送者在第 26 小时恢复，它必须停止，而不是继续它之前那次 POST。此时键可能已被清理，这次 POST 就可能被当成一笔新退款。
+下图把这条规则放进一个场景：首个发送者登记意图后暂停，恢复器在第 1 小时已经查清并完成了退款，旧发送者第 26 小时才醒来。
+
+![K-R204 的时间轴：本地保守窗口从首次意图时间起 24 小时，提供方键记录至少保留 24 小时；第 26 小时醒来的旧发送者若继续 POST 可能产生第二笔退款，在发送边界重查则停止](../../ai-engineering/runs/resources/refund-idempotency-window.svg)
+
+旧发送者手里那份发送许可已经失效：它必须在发送边界重查并停下，而不是继续之前那次 POST。
 
 API v2 的失败重试语义不同，不能把 v1 的规则推广到所有 Stripe API，更不能推广到其他提供方。
 
@@ -6339,15 +6405,16 @@ grant、审批和登录会话为什么是三种不同的记录，见[模型提�
 接下来的处理只取决于一个问题：撤权时，`R-204` 有没有已登记的发送意图。
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
-    A[撤权或 invalid_grant] --> B{R-204 有发送意图吗？}
-    B -- 没有，当前 worker 已停，<br/>也没有更早的未结清 attempt --> C[不构成 effect_unknown]
-    C --> C1{运行已取消？}
+    A[撤权或 invalid_grant] --> B{{"R-204 有发送意图吗？"}}
+    B -- "没有，当前 worker 已停，<br/>也没有更早的未结清 attempt" --> C[不构成 effect_unknown]
+    C --> C1{{"运行已取消？"}}
     C1 -- 是 --> C2[直接停止，不补发]
     C1 -- 否 --> C3[等商户重新授权，<br/>再完整核验]
-    B -- 有，持有意图的 attempt 失联 --> D[按 effect_unknown 处理]
+    B -- "有，持有意图的<br/>attempt 失联" --> D[按 effect_unknown 处理]
     D --> D1[只做合法查询和<br/>不产生新效果的对账]
-    B -- 有，已发请求回来明确成功 --> E[当前 attempt 照常写回；<br/>旧 worker 交给当前恢复流程]
+    B -- "有，已发请求<br/>回来明确成功" --> E[当前 attempt 照常写回；<br/>旧 worker 交给当前恢复流程]
 ```
 
 - **没有发送意图。** 当前 worker 已明确停止，也没有更早的未结清 attempt，那就不存在要核对的远端副作用，运行不进入 `effect_unknown`。运行未取消时，等待商户重新授权并重新核验；运行已取消时直接停止。重新授权之后，也不能按原键“补发”一个从来没发出过的效果来收尾一个已取消的运行。
@@ -6458,18 +6525,48 @@ flowchart TD
 
 设 attempt 1 读完订单后发现 `O-73` 里有两件商品，客户只说“坏了的那件”。助手需要问清是哪一件，才能确定退款金额。它可以先发出一个异步问题，继续做不依赖答案的只读检查（例如读取退货政策），做完之后再挂起等待。挂起沿用 `awaiting_approval` 的模式：等待期间运行不占执行 lease，只能由针对这条待答记录的事务唤醒。
 
-1. **发出问题。** attempt 1 在一笔条件事务里保存待答记录（下表第一行），运行仍是 `running`。
-2. **挂起。** 不依赖答案的步骤做完后，attempt 1 在一笔条件事务里核验 `running`、当前代次和有效 lease，并确认待答记录仍是待答，然后保存检查点、把运行改为 `awaiting_input`、结束自己的 lease。若答复或超时已经先提交，就不挂起，直接按已保存的结果继续。
-3. **唤醒。** 答复或超时事务提交时，若运行处在 `awaiting_input`，同一事务把它改回 `queued` 并写 outbox 唤醒，下一 attempt 领取后从检查点继续；若运行仍是 `running`，事务只更新待答记录，由当前 attempt 在下一笔条件事务里读到它。
+下图按时间顺序画出提问、挂起和唤醒，以及答复或超时抢在挂起之前提交时的分支：
+
+```mermaid
+%%{init: {"sequence": {"actorMargin": 30, "width": 100, "noteMargin": 6}}}%%
+sequenceDiagram
+    participant W as attempt 1
+    participant R as 运行记录
+    participant Q as 待答记录
+    participant C as 答复处理器
+    participant T as 超时 worker
+    W->>Q: 发出问题：保存待答记录<br/>tool_call_id、<br/>deadline_at、等待版本
+    Note over R: 仍为 running
+    W->>W: 继续不依赖<br/>答案的只读检查<br/>（如读退货政策）
+    alt 答复或超时<br/>抢在挂起之前提交
+        C->>Q: 答复事务写 answered<br/>（或超时事务<br/>写 no_answer）
+        Note over R: 运行仍为 running<br/>只改待答记录<br/>不唤醒
+        W->>Q: 挂起事务读到<br/>待答记录已有结果
+        Note over W: 不挂起<br/>按已保存的结果继续
+    else 待答记录仍是待答
+        W->>R: 挂起事务：<br/>核验 running、<br/>当前代次、有效 lease；<br/>保存检查点，<br/>改为 awaiting_input，<br/>结束 lease
+        Note over R,T: 答复与超时竞争同一条待答记录，只有一笔条件事务能提交（见下一小节）
+        alt 受理时刻<br/>received_at ≤ deadline_at
+            C->>Q: 答复事务：保存答复，<br/>写 answered
+            C->>R: 同一事务：<br/>awaiting_input → queued，<br/>写续跑 outbox
+        else 当前时刻已过 deadline_at<br/>且没有及时答复
+            T->>Q: 超时事务：<br/>写 no_answer
+            T->>R: 同一事务：<br/>awaiting_input → queued，<br/>写续跑 outbox
+        end
+        Note over R: 下一 attempt 领取<br/>从检查点继续
+    end
+    C->>Q: 截止后才受理的答复
+    Note over Q: 不回填已关闭的等待点<br/>不唤醒：记作迟到事件<br/>或新的用户输入
+```
 
 扫描器不处理 `awaiting_input`，因为它本来就没有 lease；到期由按 `deadline_at` 调度的超时 worker 推进。待答记录保存这些内容：
 
-| 状态或事件 | 应用持久化的内容 | 运行怎样处理 |
+| 状态或事件 | 应用持久化的内容 | 运行怎样继续 |
 |---|---|---|
-| 发出问题 | `runId`、这次提问的 `tool_call_id`、发送时间、绝对截止时刻 `deadline_at`、待答状态、等待版本 | 仍为 `running`，只继续不依赖答案的步骤，做完后转入 `awaiting_input`；提问不等于批准 |
-| 截止前收到答复 | 原 `runId`、匹配的 `tool_call_id`、答复内容、受理时刻 `received_at`、去重标记 | 作为同一运行的新观察；运行回到 `queued`，下一 attempt 用它拟方案 |
-| 到期仍无答复 | 原 `runId`、`tool_call_id`、截止时刻、终态 `no_answer` | 运行同样回到 `queued`，由下一 attempt 走预先定义的安全分支：结束，或继续不依赖答案的步骤；沉默不是同意 |
-| 截止后才收到答复 | 原 `tool_call_id`、受理时刻、已过期状态 | 不回填已关闭的等待点，也不唤醒运行；记作迟到事件，或转成一条新的用户输入 |
+| 发出问题 | `runId`、这次提问的 `tool_call_id`、发送时间、绝对截止时刻 `deadline_at`、待答状态、等待版本 | 仍为 `running`，挂起前只做不依赖答案的步骤；提问不等于批准 |
+| 截止前收到答复 | 原 `runId`、匹配的 `tool_call_id`、答复内容、受理时刻 `received_at`、去重标记 | 下一 attempt 把答复当作同一运行的新观察，用它拟方案 |
+| 到期仍无答复 | 原 `runId`、`tool_call_id`、截止时刻、终态 `no_answer` | 下一 attempt 走预先定义的安全分支：结束，或继续不依赖答案的步骤；沉默不是同意 |
+| 截止后才收到答复 | 原 `tool_call_id`、受理时刻、已过期状态 | 不唤醒运行；记作迟到事件，或转成一条新的用户输入 |
 
 待答记录有自己的状态：待答、`answered`（及时答复）、`no_answer`（到期无答复）。它们与运行记录的 `status` 分开保存：运行的 `awaiting_input` 只说明运行在等某条待答记录，待答记录的状态说明那个问题本身有没有答复。
 
@@ -6477,8 +6574,7 @@ flowchart TD
 
 时间由应用裁定。客户说的“今晚 8 点前回复”要先解析成带时区的绝对时刻并持久化。答复处理器和超时 worker 竞争同一条待答记录，两者都先取得运行记录和这条待答记录的更新权（按同一顺序加锁），再读取同一个时钟，本例用数据库的实际时间；为什么必须在取锁之后读、为什么不能用各进程的本地时间，与 lease 判断同理，见[怎样保证一个任务同一时刻只由一个 worker 推进？](../../engineering-foundations/services/job-claims-leases-and-fencing.md#%E7%A7%9F%E7%BA%A6%E8%A6%81%E7%94%A8%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E6%97%B6%E9%92%9F%E5%88%A4%E6%96%AD)。
 
-- 答复事务用读到的时刻作为 `received_at`，核对原 `runId`、`tool_call_id`、等待版本、待答状态以及 `received_at ≤ deadline_at`，然后在一笔事务里保存答复和 `answered` 状态；运行若处在 `awaiting_input`，同时改回 `queued` 并写续跑 outbox。
-- 超时事务核对同一等待版本与状态、没有已保存的及时答复、当前时刻晚于 `deadline_at`，然后写入 `no_answer`；运行若处在 `awaiting_input`，同样改回 `queued` 并写续跑 outbox。
+两笔事务都核对原 `runId`、`tool_call_id`、等待版本和待答状态。答复事务把读到的时刻记作 `received_at`，要求 `received_at ≤ deadline_at`，保存答复和 `answered`；超时事务要求当前时刻晚于 `deadline_at` 且没有已保存的及时答复，写入 `no_answer`。运行是否在同一事务里改回 `queued` 并写续跑 outbox，取决于它是否已经挂起在 `awaiting_input`，见上图。
 
 同一条记录上的两笔条件事务只有一笔能提交。本例以应用受理时间为准：即使网络包先到，截止后才被受理的答复仍算迟到。答复以事务提交为“已受理”的边界；失败就按同一个答复事件标识重试，已提交的重复答复返回原结果。恢复后的 worker 按运行、调用和等待版本核验重复的唤醒。
 
@@ -6841,7 +6937,7 @@ B 通过离线门槛后，才分阶段放量，A 登记为回滚目标。放量�
 ~~~mermaid
 flowchart LR
     Request[任务 ID<br/>与用户请求] --> Trace[关联追踪<br/>与运行版本]
-    Trace --> Outcome[记录交付、工具状态<br/>与费用]
+    Trace --> Outcome[记录交付、<br/>工具状态与费用]
     Outcome --> Feedback[关联反馈<br/>与结果核验]
 ~~~
 
@@ -6916,12 +7012,11 @@ AI 应用的一次任务往往不止一次调用，所以关联键要分层：
 > [!example] 合成计数：同一批数据，五个分母
 > 假设一段时间内有 100 个符合条件任务、101 次尝试（一个任务重试了一次）、60 次工具调用。80 个任务已确认完成。从全部 100 个任务中随机抽 20 个，取得了可信标签，其中 17 个满足契约。60 次工具调用中 57 次成功。101 次尝试的总费用记为 `$C`。
 >
-> - 任务完成率 = 80/100 = 80%。
-> - 工具调用成功率 = 57/60 = 95%。
-> - 审核样本正确率 = 17/20 = 85%；标签覆盖率 = 20/100 = 20%。
-> - 每次尝试成本 = `$C/101`；每个已完成任务成本 = `$C/80`。未完成尝试的费用仍在两个分子里。
+> 下图把三层观察单位分开画，标出每个指标的分子和分母各取自哪一层、哪一组：
 >
-> 85% 是 20 个被审核任务的观测比例。如果有人把 17 除以 100，得到 17%，就把未审核的 80 个任务全当成了失败；把 17 除以 80 个已完成任务，又混进了两个不同的样本。
+> ![合成计数的三层观察单位：100 个任务按完成状态和审核各自划分，101 次尝试含 1 次重试，60 次工具调用 57 次成功；两种错误除法用红色标出](../../ai-engineering/evaluation-and-release/resources/metric-denominators-synthetic-counts.svg)
+>
+> 85% 是 20 个被审核任务的观测比例。17/100 把未审核的 80 个任务全当成了失败；17/80 的分子和分母来自两组不同的任务。未完成尝试的费用仍在两个成本指标的分子里。
 
 **什么时候能从审核样本外推总体。** 只有抽样过程和实际取得标签的过程都足以支持外推时，才估计总体正确率。抽样权重只能校正已知的抽取概率。如果已完成或成功的任务更容易拿到标签，就要按结果和任务类别检查标签缺失，补充审核或限制结论；权重修复不了系统性缺失。
 
@@ -7055,7 +7150,7 @@ build 73 的误诊已经[从线上定位到解释层](#34.%20%E4%B8%8A%E7%BA%BF%
 flowchart TD
     Signal[核对线上失败<br/>确认可见证据与版本] --> Scope[固定任务契约、改动对象与预算]
     Scope --> Propose[产生候选<br/>记录版本与搜索依据]
-    Propose --> Screen{低成本契约筛查通过？}
+    Propose --> Screen{{"低成本契约筛查通过？"}}
     Screen -->|否| Drop[记录失败理由<br/>淘汰该候选]
     Drop -->|预算内继续| Propose
     Drop -->|预算耗尽或全局停止| Keep[保留 A，不放量]
@@ -7064,7 +7159,7 @@ flowchart TD
     Develop -->|预算耗尽或全局停止| Keep
     Develop -->|冻结候选、协议与门槛| Holdout[A/B 在同一批独立新题上<br/>按冻结协议运行]
     Holdout --> Review[独立人工核验标签<br/>复核关键输出]
-    Review --> Gate{预设门槛全部达标？}
+    Review --> Gate{{"预设门槛全部达标？"}}
     Gate -->|是| Retain[接受候选，小流量发布<br/>登记 A 为回滚目标]
     Gate -->|否| Reject[保留 A<br/>已用验收题转入开发集]
     Reject -->|预算内继续且未触发全局停止| Propose
@@ -7920,9 +8015,11 @@ clipped surrogate (裁剪代理目标) 取未裁剪项和裁剪项中较小的�
 - 裁剪项：`1.20 × 1.414 ≈ 1.697`；
 - 目标取较小的 `1.697`。
 
-这个值不再随参数变化，所以该项对参数的梯度为零：这个词元的正优势不会再推它的概率继续上升。实际的概率比仍是 `1.30`；裁剪只让这一项进入“平台”，其他词元、共享参数上的梯度和 KL 项仍可能继续改变它的概率。
+把这一项画成 $\rho$ 的函数，就能看出哪一段对参数没有梯度：
 
-所以裁剪不硬性限制实际概率比，也不会把答案“裁”成对或错；它只改变特定优势项的梯度。优势为负时，概率比低于下界也会进入对应的平台。裁剪范围太窄，可能削弱大量词元的学习信号；太宽，又可能放任不稳定的大幅更新，要在目标任务上验证。
+![裁剪代理目标随概率比变化：正优势在 ρ>1.2 一侧进入平台，D 的词元在 ρ=1.30 处取 1.697；负优势在 ρ<0.8 一侧进入平台](../../ai-engineering/evaluation-and-release/resources/reward-training-clipped-surrogate.svg)
+
+平台上的值不随参数变化，所以该项梯度为零：D 的正优势不会再推 `14` 的概率继续上升。但实际概率比仍是 `1.30`，其他词元、共享参数上的梯度和 KL 项仍可能继续改变它。裁剪不硬性限制概率比，也不把答案“裁”成对或错，只让特定优势项的梯度停下。负优势的平台在另一侧：概率比低于 `0.8` 后，继续压低它不再得到收益。图中 $\rho=1.10$ 落在区间内，梯度不为零，[一个回答的优势怎样落到参数上](#%E4%B8%80%E4%B8%AA%E5%9B%9E%E7%AD%94%E7%9A%84%E4%BC%98%E5%8A%BF%E6%80%8E%E6%A0%B7%E8%90%BD%E5%88%B0%E5%8F%82%E6%95%B0%E4%B8%8A%EF%BC%9F)一节用它手算一步更新。裁剪范围太窄，可能削弱大量词元的学习信号；太宽，又可能放任不稳定的大幅更新，要在目标任务上验证。
 
 ### KL 项和完整目标函数怎样写？
 
@@ -7953,7 +8050,11 @@ DeepSeek-R1 正文 Eq. 2 对整条采样回答的概率比用同一个标量变�
 
 #### 把各项装进一个目标
 
-组内奖励给出优势，概率比比较新旧策略，裁剪限制 surrogate，KL 约束相对参考策略的漂移。题目 $q$ 取自题目分布 $\mathcal{D}$，给定 $q$ 后从旧策略独立采样 $o_1,\ldots,o_G$。一个常见的词元级 GRPO 最大化目标分两步写，先写位置 $(i,t)$ 的收益：
+下图把前面几节的量串成一次更新：哪些量在采样后就固定，哪些随当前参数 $\theta$ 重算，三个策略各在哪里出场；最后的梯度上升在[下一节](#%E4%B8%80%E4%B8%AA%E5%9B%9E%E7%AD%94%E7%9A%84%E4%BC%98%E5%8A%BF%E6%80%8E%E6%A0%B7%E8%90%BD%E5%88%B0%E5%8F%82%E6%95%B0%E4%B8%8A%EF%BC%9F)展开。
+
+![一次 GRPO 更新的数据流：旧策略为螺丝题采样四条回答，检查器打分 0、1、1、2，组内标准化得到优势并广播到每个词元；当前策略在同一前缀上重算概率，算概率比、裁剪并减去相对参考策略的 KL，聚合成目标后梯度上升更新参数](../../ai-engineering/evaluation-and-release/resources/grpo-update-data-flow.svg)
+
+写成公式时，题目 $q$ 取自题目分布 $\mathcal{D}$，给定 $q$ 后从旧策略独立采样 $o_1,\ldots,o_G$。一个常见的词元级 GRPO 最大化目标分两步写，先写位置 $(i,t)$ 的收益：
 
 $$
 g_{i,t}(\theta)=\min\Bigl(\rho_{i,t}\hat A_i,\ \operatorname{clip}(\rho_{i,t},1-\epsilon_{clip},1+\epsilon_{clip})\hat A_i\Bigr)-\beta\widehat D_{i,t},
@@ -8681,7 +8782,7 @@ TCO 是一期的总账。把它按[每份成功报告的完整成本](#40.%20%E6
 ~~~mermaid
 %%{init: {"flowchart": {"nodeSpacing": 12, "rankSpacing": 30}}}%%
 flowchart LR
-  A["① 本地 mock<br/>合成准备"] --> G["② 冻结候选组合<br/>真实端点<br/>合成测试"] --> C["③ 冻结版实际输出<br/>独立最终验收"] --> D["④ 上线前容量回放<br/>代表性峰值负载"]
+  A["① 本地 mock<br/>合成准备"] --> G["② 真实端点<br/>合成测试"] --> C["③ 冻结候选<br/>实际输出<br/>独立最终验收"] --> D["④ 上线前容量回放<br/>代表性峰值负载"]
 ~~~
 
 独立验收和容量回放都通过、生产条件也就绪后，才进入第二段的三个阶段：
@@ -8730,7 +8831,7 @@ flowchart LR
 ~~~mermaid
 %%{init: {"flowchart": {"wrappingWidth": 280}}}%%
 flowchart TD
-    Freeze[冻结 B 与验收协议<br/>预先设定门槛] --> Offline{离线验收通过？}
+    Freeze[冻结 B 与验收协议<br/>预先设定门槛] --> Offline{{"离线验收通过？"}}
     Offline -->|否| Keep[B 停止<br/>A 继续服务]
     Offline -->|是| Canary[B 小流量试运行<br/>A 作为回滚目标]
 ~~~

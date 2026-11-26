@@ -289,16 +289,41 @@ refreshButton.addEventListener("click", () => {
 > [!example] HTTP 404 怎样走到界面提示
 > 报表 Fetch 得到 404，摘要和权限 Fetch 也都履行为 `Response`。第一轮 `Promise.all` 履行后，`loadReport` 检查 `response.ok` 并抛错；状态检查先于 `json()`，三份正文都不读，也不提交新的报表、摘要和权限。`catch` 记录原始错误，中止当前控制器，显示错误提示；`finally` 关闭 loading。上一次已提交的报表、摘要和权限仍然保留，但刷新开始时已换上空列表，旧行不会保留。错误处理完成后，`onRefreshClick` 的 Promise 履行 `undefined`。若摘要或权限的 Fetch 先拒绝，第一轮 `Promise.all` 以它的原因拒绝，404 检查不会运行。
 
-> [!example] 两次筛选交错返回
-> 用户先按 `recent` 发起请求，随后改为 `oldest`。新请求先递增序号，再中止旧信号、换上新列表。旧请求之后无论成功还是失败，都过不了 `requestId !== latestReportRequest` 这一关：它不提交报表，不覆盖当前提示，它的 `finally` 也不会关闭新请求的 loading。旧请求里已经开始、又无法取消的行追加，完成后只写进已移除的旧列表；`appendReportRows` 每次追加后都检查信号，不会再拉取下一行。旧请求的非取消错误仍交给 `logReportError` 记录。
+第二种情况是两次筛选交错：用户先按 `recent` 发起调用 1，随后改为 `oldest` 发起调用 2。下图画出调用 2 开始后，调用 1 停在不同位置时各自怎样收场：
+
+~~~mermaid
+%%{init: {"sequence": {"actorMargin": 70}}}%%
+sequenceDiagram
+  participant R1 as 调用 1（recent）
+  participant R2 as 调用 2（oldest）
+  participant P as 页面状态
+  participant L1 as 列表 L1
+  participant L2 as 列表 L2
+  R1->>P: latestReportRequest = 1<br/>activeController = c1，loading 开
+  R1->>L1: 用新的 L1 换下旧列表
+  Note over R1: 等基础三项<br/>或已提交并在追加行
+  R2->>P: latestReportRequest = 2，中止 c1<br/>activeController = c2，loading 开
+  R2->>L2: 用新的 L2 换下 L1，L1 脱离文档
+  alt 调用 1 还在等基础三项，请求被取消
+    Note over R1: 以 c1.signal.reason 拒绝<br/>catch 静默返回
+  else 没能停下，迟到成功
+    Note over R1: requestId 1 ≠ 2<br/>不提交，直接返回
+  else 迟到失败（不是取消原因）
+    R1->>P: 只 logReportError，1 ≠ 2：不 setError
+  else 调用 1 已在追加行
+    R1->>L1: 已开始的行追加完成，只写进脱离文档的 L1
+    Note over R1: 追加后复查信号<br/>appendReportRows 正常返回，不再拉取
+  end
+  Note over R1: finally：1 ≠ 2<br/>不关 loading，不动 activeController
+  R2->>P: 2 是最新：提交报表、摘要、权限，清除错误
+  R2->>L2: appendReportRows 追加 oldest 的行
+  R2->>P: finally：关闭 loading，activeController = null
+~~~
+
+四条分支的共同结果是：调用 2 开始之后，调用 1 不再提交任何状态、不覆盖当前提示，也不关闭调用 2 的 loading，只有非取消错误仍被记录。
 
 > [!example] 追加 r-104 时点了取消
 > 分页第一页是 `r-104`、`r-103`。用户在 `prepareReportRow(r-104)` 等待时点“取消”，已经开始的追加撤不回来；当前列表仍在页面上，这一行完成后照样出现。`appendReportRows` 随即复查信号、关闭迭代器并正常返回，不再交付内存里的 `r-103`，也不请求下一页。页面的 `await appendReportRows(...)` 正常履行，跳过 `catch`，由 `finally` 关闭 loading。
-
-| 等待行追加时发生什么 | 已开始的 `r-104` 追加写到哪里 | 谁结束 loading |
-|---|---|---|
-| 当前筛选点“取消” | 当前列表仍在页面上，行仍可能出现 | `appendReportRows` 正常返回，当前请求的 `finally` |
-| 改为新筛选 | 旧列表已移除，迟到的旧行不会混入新列表 | 旧请求退出但不改 loading；新请求结束时自己关闭 |
 
 分工归结为一句：信号只请求停止；已经开始、又不支持取消的工作照样会完成，它对界面的影响由请求序号和每次筛选独立的列表隔离。
 

@@ -51,7 +51,7 @@
   <rect x="882" y="457" width="242" height="94" rx="15" class="db"/>
   <text class="label" x="907" y="491">同事务提交</text>
   <text class="note" x="907" y="521">SKU-7 · 1 → 0</text>
-  <text class="note" x="907" y="545">+ reservation row</text>
+  <text class="note" x="907" y="545">+ 预留记录</text>
 
   <circle cx="1003" cy="585" r="20" fill="#d6e4f0"/><text class="label" x="996" y="593">4</text>
   <text class="label" x="697" y="570">COMMIT 确认</text>
@@ -69,7 +69,7 @@
   <path d="M220 867 H574" class="arrow"/>
 
   <circle cx="600" cy="926" r="20" fill="#d6e4f0"/><text class="label" x="593" y="934">7</text>
-  <text class="label" x="674" y="907">重新授权 · SELECT key</text>
+  <text class="label" x="674" y="907">重新授权 · 按作用域键 SELECT</text>
   <path d="M623 933 H977" class="arrow"/>
 
   <circle cx="1003" cy="992" r="20" fill="#d6e4f0"/><text class="label" x="996" y="1000">8</text>

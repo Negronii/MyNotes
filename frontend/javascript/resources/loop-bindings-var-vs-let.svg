@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="590" viewBox="0 0 960 590" role="img" aria-labelledby="title desc">
+  <title id="title">var 循环与 let 循环中回调读取的绑定</title>
+  <desc id="desc">上半部分：var i 在顶层环境里只有一份绑定，循环依次赋值 0、1、2、3，三个回调都指向它，读到 3、3、3。下半部分：let j 的 for 循环每轮新建一份环境；下一轮先复制上一轮的当前值，再在新绑定上执行 j++；前三份环境各被一个回调引用，读到 0、1、2；第四份环境 j 为 3，测试失败，没有回调。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#526176"/>
+    </marker>
+    <style>
+      .panel { fill:#ffffff; stroke:#cbd5e1; stroke-width:1.5; }
+      .head { font:700 18px sans-serif; fill:#172033; }
+      .label { font:700 16px sans-serif; fill:#253247; }
+      .small { font:16px sans-serif; fill:#536176; }
+      .node { fill:#f1f5f9; stroke:#94a3b8; stroke-width:1.2; }
+      .env { fill:#e0f2fe; stroke:#38bdf8; stroke-width:1.4; }
+      .unused { fill:#f8fafc; stroke:#94a3b8; stroke-width:1.2; stroke-dasharray:5 4; }
+      .cb { fill:#fef3c7; stroke:#f59e0b; stroke-width:1.4; }
+      .line { fill:none; stroke:#526176; stroke-width:1.8; marker-end:url(#arrow); }
+    </style>
+  </defs>
+  <rect width="960" height="590" fill="#ffffff"/>
+
+  <rect class="panel" x="8" y="8" width="944" height="240" rx="12"/>
+  <text class="head" x="26" y="38">var i：整个顶层代码只有一份绑定</text>
+  <rect class="env" x="300" y="58" width="360" height="62" rx="8"/>
+  <text class="label" x="318" y="83">顶层环境里的 i</text>
+  <text class="small" x="318" y="107">循环中依次赋值 0 → 1 → 2 → 3</text>
+  <rect class="cb" x="160" y="162" width="170" height="40" rx="8"/>
+  <text class="small" x="174" y="188">fromVar[0]() 读到 3</text>
+  <rect class="cb" x="395" y="162" width="170" height="40" rx="8"/>
+  <text class="small" x="409" y="188">fromVar[1]() 读到 3</text>
+  <rect class="cb" x="630" y="162" width="170" height="40" rx="8"/>
+  <text class="small" x="644" y="188">fromVar[2]() 读到 3</text>
+  <path class="line" d="M245 160 L392 124"/>
+  <path class="line" d="M480 160 V124"/>
+  <path class="line" d="M715 160 L568 124"/>
+  <text class="small" x="26" y="232">回调运行时循环早已结束，三个回调读的都是这一份 i = 3 → [3, 3, 3]</text>
+
+  <rect class="panel" x="8" y="262" width="944" height="318" rx="12"/>
+  <text class="head" x="26" y="292">let j：每轮一份新绑定，下一轮先复制当前值，再在新绑定上 j++</text>
+
+  <rect class="env" x="30" y="315" width="170" height="112" rx="8"/>
+  <text class="label" x="44" y="340">第 1 轮环境</text>
+  <text class="small" x="44" y="366">复制初值：j = 0</text>
+  <text class="small" x="44" y="390">首轮不执行 j++</text>
+  <text class="small" x="44" y="414">运行循环体，存回调</text>
+
+  <rect class="env" x="270" y="315" width="170" height="112" rx="8"/>
+  <text class="label" x="284" y="340">第 2 轮环境</text>
+  <text class="small" x="284" y="366">复制得 j = 0</text>
+  <text class="small" x="284" y="390">执行 j++：j = 1</text>
+  <text class="small" x="284" y="414">运行循环体，存回调</text>
+
+  <rect class="env" x="510" y="315" width="170" height="112" rx="8"/>
+  <text class="label" x="524" y="340">第 3 轮环境</text>
+  <text class="small" x="524" y="366">复制得 j = 1</text>
+  <text class="small" x="524" y="390">执行 j++：j = 2</text>
+  <text class="small" x="524" y="414">运行循环体，存回调</text>
+
+  <rect class="unused" x="750" y="315" width="180" height="112" rx="8"/>
+  <text class="label" x="764" y="340">第 4 份环境</text>
+  <text class="small" x="764" y="366">复制得 j = 2</text>
+  <text class="small" x="764" y="390">执行 j++：j = 3</text>
+  <text class="small" x="764" y="414">j &lt; 3 不成立，结束</text>
+
+  <path class="line" d="M202 371 H266"/>
+  <text class="small" x="218" y="362">复制</text>
+  <path class="line" d="M442 371 H506"/>
+  <text class="small" x="458" y="362">复制</text>
+  <path class="line" d="M682 371 H746"/>
+  <text class="small" x="698" y="362">复制</text>
+
+  <rect class="cb" x="30" y="475" width="170" height="40" rx="8"/>
+  <text class="small" x="46" y="501">fromLet[0]() 读到 0</text>
+  <rect class="cb" x="270" y="475" width="170" height="40" rx="8"/>
+  <text class="small" x="286" y="501">fromLet[1]() 读到 1</text>
+  <rect class="cb" x="510" y="475" width="170" height="40" rx="8"/>
+  <text class="small" x="526" y="501">fromLet[2]() 读到 2</text>
+  <path class="line" d="M115 473 V431"/>
+  <path class="line" d="M355 473 V431"/>
+  <path class="line" d="M595 473 V431"/>
+  <text class="small" x="764" y="501">没有回调引用它</text>
+  <text class="small" x="26" y="562">每个回调读自己那一轮的绑定；后面的复制和 j++ 只改新绑定 → [0, 1, 2]</text>
+</svg>

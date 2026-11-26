@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="525" viewBox="0 0 1120 525" role="img" aria-labelledby="title desc">
+  <title id="title">去重墓碑的最早清理时刻沿时间轴逐段累加</title>
+  <desc id="desc">createdAt 之后 30 天是固定截止点 D，能进入受理的请求签名时间都早于 D。验签实例的时钟因此早于 D 加 300 秒；数据库裁决最多再用 B；清理用的数据库时钟最多快 S；再留余量 G，得到 dedupe_until。本例 D 为 2026-12-09T04:00:00Z，B 为 20 秒，S 和 G 各 5 秒，dedupe_until 为 2026-12-09T04:05:30Z。墓碑若在此之前被删，迟到的合法重复会被当成新事件。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="9" markerHeight="9" orient="auto"><path d="M0 0L10 5L0 10z" fill="#334155"/></marker>
+    <style>
+      text{font-family:"PingFang SC","Noto Sans CJK SC",Arial,sans-serif;fill:#243247;text-anchor:middle}
+      .h{font-size:25px;font-weight:600;text-anchor:start}
+      .seg{font-size:24px;font-weight:700}
+      .d{font-size:20px}
+      .tick{font-size:22px;font-weight:600}
+      .time{font-size:19px;fill:#475569}
+      .warn{font-size:21px;fill:#a54838}
+      .f{font-size:21px;text-anchor:start}
+    </style>
+  </defs>
+  <rect width="1120" height="525" fill="#ffffff"/>
+  <text x="40" y="48" class="h">墓碑要活到最后一份合法请求完成数据库裁决之后（示意，不按比例）</text>
+  <rect x="90" y="120" width="250" height="130" fill="#eef5fe" stroke="#8fb0d9" stroke-width="2"/>
+  <text x="215.0" y="158" class="seg">30 天</text>
+  <text x="215.0" y="196" class="d">新尝试的签名时间</text>
+  <text x="215.0" y="224" class="d">必须 &lt; D</text>
+  <rect x="340" y="120" width="240" height="130" fill="#fff6df" stroke="#d6b85a" stroke-width="2"/>
+  <text x="460.0" y="158" class="seg">+300 s</text>
+  <text x="460.0" y="196" class="d">新鲜度窗口：验签</text>
+  <text x="460.0" y="224" class="d">实例时钟 &lt; D + 300 s</text>
+  <rect x="580" y="120" width="170" height="130" fill="#f3eefb" stroke="#b9a5dc" stroke-width="2"/>
+  <text x="665.0" y="158" class="seg">+B</text>
+  <text x="665.0" y="196" class="d">数据库完成</text>
+  <text x="665.0" y="224" class="d">提交或中止</text>
+  <rect x="750" y="120" width="130" height="130" fill="#eef8f1" stroke="#8cc7a1" stroke-width="2"/>
+  <text x="815.0" y="158" class="seg">+S</text>
+  <text x="815.0" y="196" class="d">清理时钟</text>
+  <text x="815.0" y="224" class="d">最多偏快</text>
+  <rect x="880" y="120" width="130" height="130" fill="#f1f5f9" stroke="#a3b1c2" stroke-width="2"/>
+  <text x="945.0" y="158" class="seg">+G</text>
+  <text x="945.0" y="196" class="d">调度与</text>
+  <text x="945.0" y="224" class="d">存储余量</text>
+  <path d="M60 270 H1080" stroke="#334155" stroke-width="3" fill="none" marker-end="url(#arrow)"/>
+  <path d="M201.0 282 L211.0 258 M219.0 282 L229.0 258" stroke="#334155" stroke-width="3"/>
+  <rect x="212.0" y="266" width="6" height="8" fill="#ffffff"/>
+  <line x1="90" y1="258" x2="90" y2="282" stroke="#334155" stroke-width="3"/>
+  <text x="90" y="312" class="tick">createdAt</text>
+  <text x="90" y="340" class="time">11-09 04:00:00Z</text>
+  <line x1="340" y1="258" x2="340" y2="282" stroke="#334155" stroke-width="3"/>
+  <text x="340" y="312" class="tick">D</text>
+  <text x="340" y="340" class="time">12-09 04:00:00Z</text>
+  <line x1="580" y1="258" x2="580" y2="282" stroke="#334155" stroke-width="3"/>
+  <text x="580" y="312" class="tick">D + 300 s</text>
+  <text x="580" y="340" class="time">04:05:00</text>
+  <line x1="750" y1="258" x2="750" y2="282" stroke="#334155" stroke-width="3"/>
+  <text x="750" y="312" class="tick">+ B</text>
+  <text x="750" y="340" class="time">04:05:20</text>
+  <line x1="880" y1="258" x2="880" y2="282" stroke="#334155" stroke-width="3"/>
+  <text x="880" y="312" class="tick">+ S</text>
+  <text x="880" y="340" class="time">04:05:25</text>
+  <line x1="1010" y1="258" x2="1010" y2="282" stroke="#334155" stroke-width="3"/>
+  <text x="1010" y="312" class="tick">dedupe_until</text>
+  <text x="1010" y="340" class="time">04:05:30Z</text>
+  <path d="M340 370 V382 H1010 V370" stroke="#a54838" stroke-width="3" fill="none" stroke-dasharray="9 6"/>
+  <text x="675.0" y="414" class="warn">墓碑必须仍在：此前删除，迟到的合法重复会被当成新事件</text>
+  <text x="40" y="474" class="f">dedupe_until ≥ D + 300 s + B + S + G；本例 B = 20 s、S = 5 s、G = 5 s，即 D + 330 s</text>
+  <text x="40" y="508" class="f">日期均为 2026 年，时间为 UTC；createdAt 到 D 的 30 天已压缩</text>
+</svg>

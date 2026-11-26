@@ -65,20 +65,11 @@ v=\begin{bmatrix}3\\1\end{bmatrix},\quad
 \beta=0.5.
 $$
 
-| 步骤 | 计算 | 结果 |
-| --- | --- | --- |
-| 衰减旧状态 | $\widetilde S=\operatorname{diag}(\alpha)S_0$ | $\begin{bmatrix}1&0\\4&6\end{bmatrix}$ |
-| 用 key 预测 value | $\widehat v=\widetilde S^\top k$ | $\begin{bmatrix}1\\0\end{bmatrix}$ |
-| 计算误差 | $e=v-\widehat v$ | $\begin{bmatrix}2\\1\end{bmatrix}$ |
-| 形成本次写入 | $\beta k e^\top$ | $\begin{bmatrix}1&0.5\\0&0\end{bmatrix}$ |
-| 得到新状态 | $S_1=\widetilde S+\beta k e^\top$ | $\begin{bmatrix}2&0.5\\4&6\end{bmatrix}$ |
+本次 query 取 $q=[1,0]^\top$。下图按上一节的五步走一遍，下方面板把读回值画在 value 平面上，对比换两个条件的结果：
 
-本次 query 取 $q=[1,0]^\top$，读到 $o=S_1^\top q=[2,0.5]^\top$。
+![KDA 二维例子：S0 按 α 逐行缩放为 S̃，用 k 读回 v̂=(1,0)，误差 e=(2,1)，β=0.5 的外积写入与 S̃ 相加得 S1，q 读出 o=(2,0.5)；下方对比 β=1 和纯累加](resources/kda-delta-update-2d.svg)
 
-key 是单位向量、query 与 key 相同，所以读出的正是第一行。写入强度 $\beta=0.5$ 让预测沿误差方向走了一半：从 $[1,0]^\top$ 移到 $[2,0.5]^\top$，目标是 $[3,1]^\top$。换两个条件对比：
-
-- $\beta=1$ 时写入 $ke^\top$，新状态第一行变成 $[3,1]$，重读恰好得到 $v$。
-- 如果像前一节那样纯累加 $\widetilde S+kv^\top$，第一行变成 $[4,1]$，重读得到 $[4,1]^\top$，冲过了目标。delta rule 只写误差，避免同一个 key 反复写入时无限叠加。
+key 是单位向量、query 与 key 相同，所以读出的正是第一行。写入强度 $\beta=0.5$ 让预测沿误差方向走了一半：从 $[1,0]^\top$ 移到 $[2,0.5]^\top$，目标是 $[3,1]^\top$。$\beta=1$ 时写入整份误差，重读恰好得到 $v$；像前一节那样纯累加 $\widetilde S+kv^\top$，则读回 $[4,1]^\top$，冲过了目标。delta rule 只写误差，避免同一个 key 反复写入时无限叠加。
 
 第一行是“第一个 key 坐标对应的 value 关联”，不是第一个历史词元。状态里没有词元位置索引可以回查。
 

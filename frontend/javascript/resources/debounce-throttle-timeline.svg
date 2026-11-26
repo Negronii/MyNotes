@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="506" viewBox="0 0 760 506" role="img" aria-labelledby="title desc">
+  <title id="title">同一串输入下，尾沿防抖与首沿节流各在何时执行</title>
+  <desc id="desc">合成时间线，防抖等待和节流间隔都是 100ms。输入在 0ms、40ms、110ms 分别为 pageA A、pageB B、pageC C。尾沿防抖每次输入都清掉旧计时、重新等 100ms，只在 210ms 以 pageC C 执行。首沿节流在 0ms 执行 A 并记下 0；40ms 的 B 距上次通过 40ms，被丢弃；110ms 的 C 距上次 110ms，执行。</desc>
+  <defs>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .h{font-size:18px;font-weight:700}
+      .ln{font-size:15px;font-weight:700}
+      .lc{font-family:Menlo,Consolas,monospace;font-size:13px;fill:#475569}
+      .b{font-size:14px;fill:#334155}
+      .s{font-size:13px;fill:#475569}
+      .t{font-size:13px;fill:#64748b}
+      .ok{font-size:13.5px;font-weight:700;fill:#15803d}
+      .no{font-size:13.5px;font-weight:700;fill:#b91c1c}
+      .timer{fill:#dbeafe;stroke:#1769aa;stroke-width:1.2}
+      .ghost{fill:none;stroke:#1769aa;stroke-width:1.2;stroke-dasharray:4 3}
+      .win{fill:#fef3c7;stroke:#d97706;stroke-width:1}
+      .guide{stroke:#94a3b8;stroke-width:1;stroke-dasharray:3 4}
+    </style>
+  </defs>
+  <rect width="760" height="506" rx="12" fill="#ffffff"/>
+  <text class="h" x="20" y="32">合成时间线：等待与间隔都是 100ms，按理想时钟推演，不是实测</text>
+  <rect x="12" y="48" width="736" height="96" rx="8" fill="#f8fafc"/>
+  <rect x="12" y="310" width="736" height="134" rx="8" fill="#f8fafc"/>
+  <line class="guide" x1="40.0" y1="146" x2="40.0" y2="462"/>
+  <line class="guide" x1="148.8" y1="146" x2="148.8" y2="462"/>
+  <line class="guide" x1="339.2" y1="146" x2="339.2" y2="462"/>
+  <line class="guide" x1="611.2" y1="146" x2="611.2" y2="462"/>
+  <text x="24" y="70"><tspan class="ln">输入</tspan><tspan class="s" dx="8">接收者, 搜索词</tspan></text>
+  <path d="M40.0 86L48.0 100L32.0 100z" fill="#334155"/>
+  <text class="b" x="32.0" y="118" text-anchor="start">0ms</text>
+  <text class="lc" x="32.0" y="136" text-anchor="start">pageA, "A"</text>
+  <path d="M148.8 86L156.8 100L140.8 100z" fill="#334155"/>
+  <text class="b" x="140.8" y="118" text-anchor="start">40ms</text>
+  <text class="lc" x="140.8" y="136" text-anchor="start">pageB, "B"</text>
+  <path d="M339.2 86L347.2 100L331.2 100z" fill="#334155"/>
+  <text class="b" x="331.2" y="118" text-anchor="start">110ms</text>
+  <text class="lc" x="331.2" y="136" text-anchor="start">pageC, "C"</text>
+  <text x="24" y="176"><tspan class="ln">尾沿防抖</tspan><tspan class="lc" dx="8">debounce(fn, 100)</tspan><tspan class="s">：每次输入清掉旧计时</tspan></text>
+  <rect class="timer" x="40.0" y="192" width="108.8" height="18" rx="3"/>
+  <rect class="ghost" x="148.8" y="192" width="163.2" height="18" rx="3"/>
+  <text class="s" x="320.0" y="206">在 40ms 被清除（原定 100ms）</text>
+  <rect class="timer" x="148.8" y="222" width="190.4" height="18" rx="3"/>
+  <rect class="ghost" x="339.2" y="222" width="81.6" height="18" rx="3"/>
+  <text class="s" x="428.8" y="236">在 110ms 被清除（原定 140ms）</text>
+  <rect class="timer" x="339.2" y="252" width="272.0" height="18" rx="3"/>
+  <text class="s" x="475.2" y="266" text-anchor="middle">静默 100ms</text>
+  <circle cx="611.2" cy="261" r="8" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+  <text class="ok" x="625.2" y="266">210ms 执行</text>
+  <text class="ok" x="625.2" y="286">pageC, "C"</text>
+  <text x="24" y="334"><tspan class="ln">首沿节流</tspan><tspan class="lc" dx="8">throttleLeading(fn, 100)</tspan><tspan class="s">：lastCallAt 记上次通过</tspan></text>
+  <rect class="win" x="40.0" y="394" width="272.0" height="12" rx="3"/>
+  <rect class="win" x="339.2" y="394" width="272.0" height="12" rx="3"/>
+  <text class="s" x="176.0" y="426" text-anchor="middle">间隔窗口 0–100</text>
+  <text class="s" x="475.2" y="426" text-anchor="middle">间隔窗口 110–210</text>
+  <circle cx="40.0" cy="378" r="8" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+  <text class="ok" x="28.0" y="362">执行 A</text>
+  <path d="M141.8 371L155.8 385M155.8 371L141.8 385" stroke="#b91c1c" stroke-width="3"/>
+  <text class="no" x="148.8" y="362" text-anchor="middle">丢弃 B：距上次 40</text>
+  <circle cx="339.2" cy="378" r="8" fill="#16a34a" stroke="#14532d" stroke-width="1.5"/>
+  <text class="ok" x="339.2" y="362" text-anchor="middle">执行 C：距上次 110</text>
+  <line x1="40.0" y1="468" x2="720.0" y2="468" stroke="#334155" stroke-width="1.5"/>
+  <line x1="40.0" y1="464" x2="40.0" y2="472" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="40.0" y="490" text-anchor="middle">0</text>
+  <line x1="148.8" y1="464" x2="148.8" y2="472" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="148.8" y="490" text-anchor="middle">40</text>
+  <line x1="339.2" y1="464" x2="339.2" y2="472" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="339.2" y="490" text-anchor="middle">110</text>
+  <line x1="611.2" y1="464" x2="611.2" y2="472" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="611.2" y="490" text-anchor="middle">210</text>
+  <line x1="720.0" y1="464" x2="720.0" y2="472" stroke="#334155" stroke-width="1.5"/>
+  <text class="t" x="720.0" y="490" text-anchor="middle">250</text>
+  <text class="t" x="734.0" y="490">ms</text>
+</svg>

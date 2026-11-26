@@ -48,10 +48,10 @@ concurrency (并发) 指多个任务在重叠的时间段内都有进展；只�
 
 ~~~mermaid
 flowchart TD
-    IOWait[I/O 阶段] --> HasAsync{运行时有合适的异步 API？}
-    HasAsync -->|有| AsyncAPI[用异步 API：等待期间<br/>事件循环处理其他工作]
-    HasAsync -->|没有| BlockingPool[放进有界线程池：<br/>每个等待占一个池线程]
-    AsyncAPI --> Limit[限制在途操作、连接、缓冲和队列]
+    IOWait[I/O 阶段] --> HasAsync{运行时有合适的<br/>异步 API？}
+    HasAsync -->|有| AsyncAPI[用异步 API<br/>等待期间事件循环<br/>处理其他工作]
+    HasAsync -->|没有| BlockingPool[放进有界线程池<br/>每个等待<br/>占一个池线程]
+    AsyncAPI --> Limit[限制在途操作<br/>连接、缓冲和队列]
     BlockingPool --> Limit
 ~~~
 

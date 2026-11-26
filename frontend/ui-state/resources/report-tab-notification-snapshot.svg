@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1120" viewBox="0 0 700 1120" role="img" aria-labelledby="desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="1060" viewBox="0 0 700 1060" role="img" aria-labelledby="desc">
   <desc id="desc">标签页 A 从报表 42 的版本 9 和游标 103 开始，先安装 BroadcastChannel 监听器，再请求服务端快照。标签页 B 提交重新生成；服务端提交失败时停止且不通知，成功返回版本 11、状态 ready 后发送提示。发送方不接收自己的消息；接收方在后续任务中处理提示。A 忽略无效或较旧提示，为较新提示读取权威快照。有效 v11 清除待确认；有效 v10 会推进画面但仍等待 v11；网络、HTTP 失败或字段校验失败保留最后有效画面。</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="10" refX="11" refY="5" markerUnits="userSpaceOnUse" orient="auto">
@@ -26,13 +26,13 @@
       .lifeline { stroke: #a9b4c2; stroke-width: 1.1; stroke-dasharray: 5 5; }
     </style>
   </defs>
-  <rect width="700" height="1120" fill="#ffffff"/>
+  <rect width="700" height="1060" fill="#ffffff"/>
 
   <text x="90" y="27" text-anchor="middle" class="lane">标签页 A</text>
   <text x="260" y="27" text-anchor="middle" class="lane">服务端</text>
   <text x="390" y="27" text-anchor="middle" class="lane">BroadcastChannel</text>
   <text x="605" y="27" text-anchor="middle" class="lane">标签页 B</text>
-  <path d="M90 40 V1100 M260 40 V1100 M390 40 V1100 M605 40 V1100" class="lifeline"/>
+  <path d="M90 40 V1050 M260 40 V1050 M390 40 V1050 M605 40 V1050" class="lifeline"/>
 
   <rect x="15" y="55" width="150" height="58" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
   <text x="90" y="79" text-anchor="middle" class="label">A 显示 v9 / running</text>
@@ -89,22 +89,22 @@
   <text x="90" y="881" text-anchor="middle" class="small">只应用更高版本</text>
 
   <path d="M90 897 V919 H435" fill="none" stroke="#7a8798" stroke-width="1.6"/>
-  <path d="M95 919 V950" class="success"/>
+  <path d="M90 919 V950" class="success"/>
   <path d="M265 919 V950" class="muted"/>
   <path d="M435 919 V950" class="failure"/>
-  <rect x="15" y="950" width="160" height="125" class="box" fill="#eff7f1" stroke="#83aa91"/>
+  <rect x="15" y="950" width="160" height="88" class="box" fill="#eff7f1" stroke="#83aa91"/>
   <text x="95" y="975" text-anchor="middle" class="label">有效快照 v11 / ready</text>
   <text x="95" y="1000" text-anchor="middle" class="small">应用新画面</text>
   <text x="95" y="1022" text-anchor="middle" class="small">清除待确认 v11</text>
-  <rect x="185" y="950" width="160" height="125" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
+  <rect x="185" y="950" width="160" height="88" class="box" fill="#edf4ff" stroke="#b9d1ef"/>
   <text x="265" y="975" text-anchor="middle" class="label">有效快照 v10</text>
   <text x="265" y="1000" text-anchor="middle" class="small">比 v9 更新，仍应用</text>
   <text x="265" y="1022" text-anchor="middle" class="small">继续待确认 v11</text>
-  <rect x="355" y="950" width="160" height="125" class="box" fill="#fff0ed" stroke="#e8b7ae"/>
+  <rect x="355" y="950" width="160" height="88" class="box" fill="#fff0ed" stroke="#e8b7ae"/>
   <text x="435" y="975" text-anchor="middle" class="label">无效 JSON / 字段</text>
   <text x="435" y="1000" text-anchor="middle" class="small">保留最后有效画面</text>
   <text x="435" y="1022" text-anchor="middle" class="small">目标未达才标不可用</text>
-  <rect x="525" y="950" width="160" height="125" class="box" fill="#fff0ed" stroke="#e8b7ae"/>
+  <rect x="525" y="950" width="160" height="88" class="box" fill="#fff0ed" stroke="#e8b7ae"/>
   <text x="605" y="975" text-anchor="middle" class="label">网络 / HTTP 失败</text>
   <text x="605" y="1000" text-anchor="middle" class="small">保留最后有效画面</text>
   <text x="605" y="1022" text-anchor="middle" class="small">目标未达才标不可用</text>

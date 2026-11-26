@@ -79,14 +79,14 @@ https://reports.example/reports/42?sort=recent#summary
 ```mermaid
 flowchart TD
     A[输入报表 URL] --> B[取得 HTML 响应]
-    B --> C[边下载边解析 HTML<br/>建立 DOM 并发现资源]
-    C --> D[可显示线：<br/>有可显示内容，渲染阻塞的 CSS 已就绪]
-    C --> E[可交互线：<br/>解析结束、模块图就绪、<br/>样式不再阻塞脚本]
-    D --> F[渲染机会：样式、布局、绘制、合成<br/>显示首帧]
-    E --> G["/reports.js 求值<br/>注册点击处理器并启用按钮"]
-    F --> H[画面可见且按钮可用]
+    B --> C[边下载边解析<br/>HTML，建立 DOM<br/>并发现资源]
+    C --> D[可显示线<br/>有可显示内容<br/>渲染阻塞的<br/>CSS 已就绪]
+    C --> E[可交互线<br/>解析结束<br/>模块图就绪<br/>样式不再阻塞脚本]
+    D --> F[渲染机会<br/>样式与布局<br/>绘制与合成<br/>显示首帧]
+    E --> G["/reports.js 求值<br/>注册点击处理器<br/>启用按钮"]
+    F --> H[画面可见<br/>按钮可用]
     G --> H
-    H --> I[点击“最早优先”<br/>更新 URL、选中态与行顺序]
+    H --> I[点击“最早优先”<br/>更新 URL、选中态<br/>与行顺序]
 ```
 
 **可显示线**决定画面何时出现：浏览器拿到足够的 HTML，以及当前内容所需的、会阻塞渲染的 CSS 后，就可以给出一帧。**可交互线**决定点击何时有效：模块及其依赖下载完、HTML 解析结束、没有样式表阻塞脚本，模块才会执行并注册处理器。两条线交叠推进，谁先完成取决于网络和资源顺序。首帧已经出现、处理器还没注册时，页面看得见却点不动；模块获取失败或初始化报错，页面会一直停在这个状态。
@@ -148,24 +148,15 @@ DOM 只记录节点怎样嵌套。浏览器还要把 CSS 规则匹配到这些�
 
 ### 脚本的六种调度方式
 
-下表只讨论 HTML 解析器在解析过程中遇到的 `<script>` 元素。用 JavaScript 创建并插入的脚本是另一套规则：外部经典脚本默认按 `async` 方式就绪即执行，把 `script.async` 设为 `false` 才按插入顺序执行。
+这里只讨论 HTML 解析器在解析过程中遇到的 `<script>` 元素。用 JavaScript 创建并插入的脚本是另一套规则：外部经典脚本默认按 `async` 方式就绪即执行，把 `script.async` 设为 `false` 才按插入顺序执行。
 
-| 脚本形式 | 下载与解析的关系 | 执行时机与顺序 |
-|---|---|---|
-| 外部经典脚本，不带 `async` / `defer` | 解析器遇到它时开始请求（预扫描器可能更早）；随后解析器停下，等脚本和阻塞脚本的样式表就绪 | 同步执行完，解析器才继续；多个脚本按文档顺序 |
-| 外部经典脚本 `defer` | 与解析并行下载 | 解析结束后、`DOMContentLoaded` 前执行；多个按文档顺序 |
-| 外部经典脚本 `async` | 与解析并行下载 | 下载完就尽快执行，若解析还在进行，会暂时打断它；多个 `async` 脚本之间不保证顺序 |
-| 模块脚本 `type="module"` | 模块文件及其 `import` 依赖与解析并行下载 | 默认延后：解析结束后按文档顺序求值；内联模块同样延后 |
-| `async` 模块脚本 | 同上 | 模块及其依赖就绪后尽快执行，不保证与其他异步脚本的顺序 |
-| 内联经典脚本（有无 `defer` 都一样） | 没有文件要下载 | 解析器到达它、且没有阻塞脚本的样式表时立即执行；没有 `src` 时 `defer` 不起作用 |
+下图回答每种写法的下载会不会让解析停下、执行落在解析结束和 `DOMContentLoaded` 的哪一侧；最下方一行换成本例的 `/reports.css` 与 `/reports.js`，并假设样式表在解析结束后才到；两种到达顺序的完整对照见下文[两种资源到达顺序下的时间线](#%E4%B8%A4%E7%A7%8D%E8%B5%84%E6%BA%90%E5%88%B0%E8%BE%BE%E9%A1%BA%E5%BA%8F%E4%B8%8B%E7%9A%84%E6%97%B6%E9%97%B4%E7%BA%BF)。
 
-怎样选：
+![六种 script 写法在同一条示意时间线上的下载、执行、解析暂停与 DOMContentLoaded 位置，以及本例中晚到的 /reports.css 推迟模块执行和 DOMContentLoaded](../../frontend/browser/resources/script-scheduling-timeline.svg)
 
-- 需要完整 DOM、几个脚本之间又要保持顺序的代码，用 `defer` 或模块脚本。
-- 不依赖 DOM 解析结果、也不依赖其他脚本的独立工作（例如统计脚本），用 `async`。
-- 模块脚本默认就像 `defer`；加 `async` 改为就绪即执行。
+图里没有画出的条件：外部经典脚本可能被预扫描器提前请求，但执行仍在解析器到达它之后；多个经典脚本、`defer` 脚本或普通模块之间都按文档顺序执行，只有 `async` 两种不保证顺序。
 
-本例的 `/reports.js` 是普通模块脚本：它和依赖在解析期间下载，但不让解析器停下；它要等解析结束、依赖就绪、`/reports.css` 不再阻塞脚本后才开始求值。“模块下载完”和“处理器注册完”因此是两个不同的时点。模块怎样解析地址、链接依赖，见[import 写下后，谁负责找到、链接和执行文件？](#31.%20import%20%E5%86%99%E4%B8%8B%E5%90%8E%EF%BC%8C%E8%B0%81%E8%B4%9F%E8%B4%A3%E6%89%BE%E5%88%B0%E3%80%81%E9%93%BE%E6%8E%A5%E5%92%8C%E6%89%A7%E8%A1%8C%E6%96%87%E4%BB%B6%EF%BC%9F)。
+据此选择：需要完整 DOM、几个脚本之间又要保持顺序的代码，用 `defer` 或模块脚本；不依赖 DOM 解析结果、也不依赖其他脚本的独立工作（例如统计脚本），用 `async`。本例的 `/reports.js` 是图中“模块脚本”一行，所以“模块下载完”和“处理器注册完”是两个不同的时点。模块怎样解析地址、链接依赖，见[import 写下后，谁负责找到、链接和执行文件？](#31.%20import%20%E5%86%99%E4%B8%8B%E5%90%8E%EF%BC%8C%E8%B0%81%E8%B4%9F%E8%B4%A3%E6%89%BE%E5%88%B0%E3%80%81%E9%93%BE%E6%8E%A5%E5%92%8C%E6%89%A7%E8%A1%8C%E6%96%87%E4%BB%B6%EF%BC%9F)。
 
 ### readyState、DOMContentLoaded 和 load 各保证什么
 
@@ -822,7 +813,7 @@ May 行自身和后代都没有 `id`，副本保留 `data-id="r-104"` 和 `data-
 > - `cloneNode()` 的复制范围（attribute 随节点复制，监听器不复制）：[WHATWG DOM Standard, clone a node](https://dom.spec.whatwg.org/#concept-node-clone)，Living Standard，核对于 2026-11-12。
 ## 4. 一次点击怎样传播到处理器，处理器该怎样注册和清理？
 
-用户点的是“最早优先”按钮里的文字或箭头，处理器却要拿到按钮本身和它的 `data-sort`。本章回答浏览器怎样把一次输入派发给监听器、监听器该挂在哪里、怎样注册和移除，以及键盘、指针、尺寸和滚动各自的事件契约。沿用主线一的报表页，读者手上已有上一章[怎样查询和修改 DOM？](#3.%20%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E5%92%8C%E4%BF%AE%E6%94%B9%20DOM%EF%BC%8C%E6%89%8D%E6%8B%BF%E5%88%B0%E5%B9%B6%E6%94%B9%E5%88%B0%E9%A2%84%E6%9C%9F%E7%9A%84%E8%8A%82%E7%82%B9%EF%BC%9F)里的 HTML 片段（`#sort-controls`、`data-sort`、`#reports`）和能把行重排成 April、May 的 `applySort(intent, activeButton)`；本章要让一次点击调用它。
+用户点的是“最早优先”按钮里的文字或箭头，处理器却要拿到按钮本身和它的 `data-sort`。本章回答浏览器怎样把一次输入派发给监听器、监听器该挂在哪里、怎样注册和移除，以及键盘、指针、尺寸和滚动各自的事件契约。沿用主线一的报表页，读者手上已有上一章[怎样查询和修改 DOM？](#3.%20%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E5%92%8C%E4%BF%AE%E6%94%B9%20DOM%EF%BC%8C%E6%89%8D%E6%8B%BF%E5%88%B0%E5%B9%B6%E6%94%B9%E5%88%B0%E9%A2%84%E6%9C%9F%E7%9A%84%E8%8A%82%E7%82%B9%EF%BC%9F)里的 HTML 片段（`#sort-controls`、`data-sort`、`#reports`，以及那一章给按钮文字 `span` 加上的 `class="sort-label"`）和能把行重排成 April、May 的 `applySort(intent, activeButton)`；本章要让一次点击调用它。
 
 ### 注册和移除监听器
 
@@ -1702,7 +1693,7 @@ for (const image of imageBatch.querySelectorAll("img[data-src]")) {
 一次回调可能带来多个条目，所以要逐个处理：
 
 1. `isIntersecting` 为 `false` 的条目跳过，继续观察。
-2. 为 `true` 时，把真实地址赋给标准的 `src`。这一步才让浏览器开始加载。
+2. 为 `true` 时，把真实地址赋给标准的 `src`。这一步才让浏览器开始加载；该地址已在缓存里时，可能不发网络请求就直接拿到图片。
 3. 之后移除 `data-src`、调用 `unobserve`，只是清理属性和观察关系，不会触发加载。
 
 **图：目标进入上下预加载区后，`src` 赋值触发加载；随后清理属性并停止观察**
@@ -1888,14 +1879,11 @@ function initializeReportControls() {
 
 写地址时先从 `location.href` 解析现有地址，只改 `sort`，所以 path、其他查询参数和 `#summary` 都保留。初始化时按 URL 渲染一次：若用户打开的是同事分享的 `sort=oldest` 链接，而服务器只会按 `recent` 输出，这一步会把列表改对。更好的做法是让服务器也按查询参数输出行和按钮状态，首屏就不会先显示错的顺序再跳变。
 
-三个时刻加上前进：
+下图把三个时刻、前进，以及下一节的片段导航和换文档的对照画在同一份会话历史上，回答每一步是否新增历史项、是否换 `Document`、派发哪些事件，以及按钮和行序随之变成什么：
 
-| 时点 | 文档、历史与事件 | 地址与界面 |
-|---|---|---|
-| 初次打开 | 浏览器用收到的 HTML 创建 `Document`；模块初始化时读 URL | `sort=recent`；`aria-pressed` 为 `true`/`false`；May → April |
-| 点“最早优先” | `pushState()` 在同一文档上新增历史项；不请求新 HTML，不派发 `popstate`/`hashchange`；处理器自己调用 `renderReports()` | `sort=oldest`；`false`/`true`；April → May |
-| 后退 | 激活上一个同文档历史项，派发 `popstate`；`#summary` 没变，不派发 `hashchange` | 监听器读当前 URL，恢复 `sort=recent`、`true`/`false`、May → April |
-| 前进 | 再激活 `sort=oldest` 那一项，派发 `popstate` | 恢复 `false`/`true`、April → May |
+![报表页会话历史：同一 Document 内的三个历史项，pushState、后退前进、location.hash 和 replaceState 各自怎样改动历史与派发事件；location.assign 改 query 时加载新 Document](../../frontend/browser/resources/session-history-report-sort.svg)
+
+初次打开时浏览器用收到的 HTML 创建 `Document`，模块初始化时读 URL 得到历史项 1 的状态。点“最早优先”时 `pushState()` 不派发 `popstate`，所以 `chooseSort()` 必须自己调用 `renderReports()`；后退和前进只派发 `popstate`，由监听器读当前 URL 恢复按钮与行序。
 
 `pushState()` 的第一个参数可以保存一份可结构化克隆的状态，之后从 `popstate` 事件的 `event.state` 或随时从 `history.state` 读回。本例传 `null`，排序只从 URL 读，所以 `event.state` 是 `null`，也就不会出现 URL 和 state 说法不一的情况。
 
@@ -1903,17 +1891,11 @@ function initializeReportControls() {
 
 ### 只改片段时发生什么
 
-普通导航只有在目标与当前 URL 除 fragment 外完全相同时，才走同文档的片段导航。在 `/reports/42?sort=oldest#summary` 上执行 `location.hash = "#reports"`：
-
-1. 浏览器沿用当前 `Document`，新增一项历史记录，滚动到 `ol#reports`。
-2. 同步派发 `popstate`（`event.state` 为 `null`）。本例的监听器会从 URL 重读排序并重建列表，顺序不变。
-3. 再以一个排队的任务派发 `hashchange`。
-
-本机 Chrome 157 在这条路径上观察到的顺序也是先 `popstate`、后 `hashchange`，与规范一致。
+普通导航只有在目标与当前 URL 除 fragment 外完全相同时，才走同文档的片段导航。上图的历史项 3 就是在 `/reports/42?sort=oldest#summary` 上执行 `location.hash = "#reports"` 的结果。图中第 ① 步同步派发的 `popstate` 带的 `event.state` 是 `null`，本例监听器照样从 URL 重建列表；第 ② 步的 `hashchange` 要等排队的任务。本机 Chrome 157 在这条路径上观察到的顺序也是先 `popstate`、后 `hashchange`，与规范一致。
 
 两个容易混淆的对照：
 
-- 在 `/reports/42?sort=recent#summary` 上 `location.assign("?sort=oldest#summary")`：query 变了，即使保留了 `#summary`，也会导航到一个新的 `Document`。
+- 图中的 `location.assign("?sort=oldest#summary")` 只多改了 query，即使保留了 `#summary`，也会导航到一个新的 `Document`。
 - 用 `pushState()` 改成另一个片段：浏览器不滚动，调用本身也不派发 `popstate` 或 `hashchange`；只有之后通过前进后退回到这一项时，才按历史遍历的步骤处理。本例的排序历史项只改 query、保留 `#summary`，所以前进后退只触发 `popstate`。
 
 客户端路由器也建立在这些历史项之上，但改地址和更新视图始终是两件事。路由器怎样在地址变化后加载数据、区分已提交和待定的导航，见[路由怎样把 URL 变成已提交的数据和界面？](#40.%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B7%B2%E6%8F%90%E4%BA%A4%E7%9A%84%E6%95%B0%E6%8D%AE%E5%92%8C%E7%95%8C%E9%9D%A2%EF%BC%9F)。
@@ -2816,14 +2798,45 @@ email.addEventListener("input", () => {
 
 同一个元素的同一个属性，常有好几条 CSS 声明同时适用：浏览器默认样式、组件库、业务样式、工具类，可能还有内联样式。另一些属性则一条声明都没有。本章回答浏览器怎样为每个元素的每个属性定出一个值：哪些声明有资格参与比较，cascade (层叠，也称级联) 按什么顺序选出胜者，没有胜者时值从哪里来。
 
-本章沿用主线一的报表页，并接着前两章已经写好的骨架、表格和表单。浏览器为一个属性求值分四步：
+本章沿用主线一的报表页，并接着前两章已经写好的骨架、表格和表单。下图是浏览器为一个元素的一个属性求值的全过程：先过滤出有资格的声明；层叠逐步比较，选出 cascaded value (层叠值)；没有声明时取默认值；胜出的值若是 `inherit`、`revert` 等 CSS-wide keyword (CSS 全局关键字)，再按关键字求值。
 
-1. **匹配与过滤**：选择器决定声明适用于哪些元素或伪元素，无效声明被丢弃。
-2. **层叠**：剩下的声明按固定顺序比较，选出一个 cascaded value (层叠值)。
-3. **默认值**：没有任何声明胜出时，继承属性取父元素的计算值，非继承属性取初始值。
-4. **关键字**：胜出的值若是 `inherit`、`revert` 等 CSS-wide keyword (CSS 全局关键字)，按关键字取继承值、初始值或回滚结果。
+```mermaid
+flowchart TD
+    S["该元素某个属性的<br/>全部声明"] --> F["匹配与过滤<br/>丢弃不适用、语法无效的声明<br/>含 var() 的值暂视为有效"]
+    F --> Q{"还剩声明吗？"}
+    Q -- 有 --> cascade
+    subgraph cascade ["层叠：按编号比较，某一步分出高下就停，持平才看下一步"]
+        direction TB
+        subgraph r1 [" "]
+            direction LR
+            C1["1 来源与重要性"] -- 持平 --> C2["2 封装上下文"]
+            C2 -- 持平 --> C3["3 style 属性"]
+        end
+        subgraph r2 [" "]
+            direction LR
+            C4["4 层叠层"] -- 持平 --> C5["5 选择器权重"]
+        end
+        subgraph r3 [" "]
+            direction LR
+            C55["作用域接近度<br/>（Level 6）"] -- 持平 --> C6["6 声明顺序"]
+        end
+        r1 -- 3 仍持平 --> r2
+        r2 -- 5 仍持平 --> r3
+    end
+    cascade -- 胜出声明 --> W["层叠值"]
+    Q -- 没有 --> D["默认值<br/>继承属性：父元素的计算值<br/>非继承属性：初始值"]
+    W --> K{"是 CSS<br/>全局关键字？"}
+    K -- 是 --> KV["按关键字求值<br/>inherit、initial、unset<br/>取继承值或初始值<br/>revert、revert-layer<br/>回滚到更低的声明"]
+    K -- 否 --> CV
+    KV --> CV["计算值<br/>var() 在此替换<br/>替换后无效按 unset"]
+    D --> CV
+    CV --> U["width: auto 等值<br/>到布局阶段才变成<br/>used value"]
+    style r1 fill:none,stroke:none
+    style r2 fill:none,stroke:none
+    style r3 fill:none,stroke:none
+```
 
-得到的 computed value (计算值) 还不是最终几何；`width: auto` 这类值要到布局阶段才变成 used value (使用值)，见[DOM 改动后浏览器重做了什么？](#5.%20DOM%20%E6%94%B9%E5%8A%A8%E5%90%8E%E6%B5%8F%E8%A7%88%E5%99%A8%E9%87%8D%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E8%AF%BB%E5%87%A0%E4%BD%95%E5%80%BC%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E5%8D%A1%E4%BD%8F%E8%84%9A%E6%9C%AC%EF%BC%9F)。
+图末得到的 computed value (计算值) 还不是最终几何；`width: auto` 这类值要到布局阶段才变成 used value (使用值)，见[DOM 改动后浏览器重做了什么？](#5.%20DOM%20%E6%94%B9%E5%8A%A8%E5%90%8E%E6%B5%8F%E8%A7%88%E5%99%A8%E9%87%8D%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E8%AF%BB%E5%87%A0%E4%BD%95%E5%80%BC%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E5%8D%A1%E4%BD%8F%E8%84%9A%E6%9C%AC%EF%BC%9F)。
 
 ### 选择器决定声明落到哪个元素上
 
@@ -2910,7 +2923,7 @@ clearfix 也是 `::after` 的常见用法：生成一个空的辅助盒，用 `c
 
 ### 层叠按六步比较
 
-剩下的有效声明按下面的顺序比较。每一步只比较同一元素的同一属性；某一步分出高下，后面的步骤就不再看。
+剩下的有效声明按开头流程图中层叠框里的顺序比较，每一步只比较同一元素的同一属性。各步的规则如下：
 
 1. **来源与重要性。** 声明来自三个来源：user agent (用户代理，即浏览器默认样式)、用户（读者自己配置的样式）、作者（网页开发者）。加上 `!important` 和动画、过渡，优先级从高到低是：
 
@@ -3003,16 +3016,13 @@ CSS Cascading Level 6 在第 5、6 步之间又加了一步：作用域接近度
 
 后三段演示 `revert-layer`。它不是“改用上一条规则”。它让浏览器重新计算这个属性，仿佛**当前层的声明，以及优先级排序中位于当前层“普通级位置”和“重要级位置”之间的所有声明**都不存在。
 
-把这个例子里作者来源的优先级从高到低排开，便于看清“之间”指什么：
+下图把第 1 步的来源与重要性和第 4 步的层序合成一条完整的梯子，标出本例每条 `color` 声明所在的位置，再用括号画出后三段的 `revert-layer` 各自略去哪一段区间、露出哪个值：
 
-~~~text
-reset !important > components !important > utilities !important > 未分层 !important
-  > 动画 > 未分层普通 > utilities 普通 > components 普通 > reset 普通
-~~~
+![层叠优先级梯子：过渡、用户代理与用户的重要声明、作者重要声明的四层、动画、作者普通声明的四层、用户与用户代理普通声明；两个括号分别标出 .revert-normal 与 .revert-important 略去的区间，以及露出的棕色、绿色和浏览器默认颜色](../../frontend/html-css/resources/cascade-layer-ladder-revert-layer.svg)
 
-- **第二段**：普通声明里 `utilities` 层最强，它的 `revert-layer` 胜出。回滚时略去 `utilities` 普通到 `utilities !important` 之间的一切；本例中只有 `utilities` 层自己的声明与这一段相关，下面露出 `components` 层的棕色。
-- **第三段**：重要声明里靠前的层强，`components` 层的 `revert-layer !important` 胜出，压过 `utilities` 的 `#555 !important`。回滚时略去 `components !important` 到 `components 普通` 之间的一切，其中包括 `utilities` 层的重要灰色；`reset` 层的普通绿色在区间之外，于是绿色胜出。
-- **第四段**：没有 `.has-reset`，略去同一区间后，作者来源里已经没有可用的声明。这时退回前一来源：先看用户样式，没有用户样式就露出浏览器默认颜色。
+- **第二段**：区间从 `utilities` 普通一直延伸到 `utilities !important`，但能匹配这一段的只有 `utilities` 层自己的声明，所以结果就是下一层 `components` 的棕色。
+- **第三段**：区间里包括压过别人的 `utilities` 重要灰色；`reset` 层的普通绿色在区间之外，于是绿色胜出。
+- **第四段**：区间相同，但没有 `.has-reset`，作者来源里已经没有可用的声明，于是退回前一来源：先看用户样式，没有用户样式就露出浏览器默认颜色。
 
 ### @scope 让更近的作用域胜出
 
@@ -3224,7 +3234,7 @@ margin-left + border-left + padding-left + width
 
 ### 用边框画一个小三角
 
-边框也占几何空间，这一点可以用来画三角。内容宽高和 padding 都为零时，四条等宽的实线边框在中心汇合，各自成为一个三角形（下图是 Chromium 的渲染结果，放大 4 倍）。只给左边框着色，其余三边透明，就露出一个朝右的三角：
+边框也占几何空间，这一点可以用来画三角。内容宽高和 padding 都为零时，四条等宽的实线边框在中心汇合，各自成为一个三角形（下图是按 CSS 边框几何画的示意，放大 4 倍）。只给左边框着色，其余三边透明，就露出一个朝右的三角：
 
 ![零尺寸盒子的四条边框收尖到中心，只显示左边框时形成向右三角](../../frontend/html-css/resources/box-model-border-triangle.svg)
 
@@ -3435,14 +3445,11 @@ BFC 阻止的只是盒内外跨边界的折叠。BFC 根自己的 margin 仍按�
 
 收缩按“权重 × 基础尺寸”分摊，是为了让大项目多缩、小项目少缩，避免小项目先被压到零。增长则只看 `flex-grow`。一行的 `flex-grow` 合计小于 1 时，项目只分走相应比例的正剩余空间，其余留空。
 
-> [!example] 负剩余空间遇到最小尺寸时重新分配
-> 容器内宽 `256px`，间距 `16px`，两项可用 `240px`。基础尺寸 `200px` 和 `100px`，`flex-shrink` 都为 1，合计多出 `60px`。
->
-> 1. 收缩权重 `1 × 200 : 1 × 100 = 2 : 1`，第一项缩 `40px`、第二项缩 `20px`，暂定 `160px` 和 `80px`。
-> 2. 第一项最小行内尺寸是 `180px`，暂定值低于下限，冻结在 `180px`。
-> 3. 第二项拿到剩下的 `240 − 180 = 60px`。
->
-> 最终 `180 + 60 + 16 = 256px`，正好填满容器。Chromium 探针也测得 `180px`、`60px`。
+下面的 `.shrink-demo` 把第 3 步走一遍：容器内宽 `256px`、间距 `16px`，两项基础尺寸 `200px` 和 `100px`，`flex-shrink` 都为 1，第一项最小行内尺寸 `180px`。图中每一行是分配过程的一个中间状态，竖虚线是容器边界：
+
+![flex 收缩分配四步：基础尺寸 200+16+100 超出 60px；按 2:1 暂定 160 和 80；第一项低于 min 180 被冻结；第二项分得剩余 60px，合计 256px](../../frontend/html-css/resources/flex-shrink-freeze.svg)
+
+图中第 ① 行用的是上文第 1 步的假设主尺寸：第一项限制到 min 之后仍是 `200px`（不低于 180），所以合计 316px 时第 2 步选的是收缩。最终 `180px`、`60px` 是手算结果，Chromium 探针也测得同样的值。
 
 ~~~html
 <div class="shrink-demo">
@@ -3826,13 +3833,11 @@ Grid 版把项目在格内两个方向对齐；Flex 版分别沿主轴和交叉�
 
 #### 包含块里没有移动空间
 
-文档顶部有一个 `300px` 高的包裹层，工具条是它的第一个子元素，高 `32px`，设 `top: 0`，窗口是滚动容器：
+文档顶部有一个 `300px` 高的包裹层，工具条是它的第一个子元素，高 `32px`，设 `top: 0`，窗口是滚动容器。下图按三个滚动量画出工具条和包裹层相对视口的位置，最后一格是包裹层与工具条同高的反例：
 
-- 窗口滚动 `100px`：包裹层顶边在 `y=−100`，工具条贴在视口 `y=0`。
-- 滚动到 `268px`：包裹层底边到了 `y=32`，工具条正好贴着包裹层底边，仍在 `y=0`。
-- 滚动到 `290px`：包裹层底边在 `y=10`，工具条不能越出包裹层，只能停在 `y = 10 − 32 = −22px`，随后跟着包裹层滚走。
+![sticky 工具条在 300px 包裹层中：滚动 100px 和 268px 时贴在 y=0，滚动 290px 时随包裹层底边停在 y=−22；包裹层只有 32px 时滚动 100px 后两者都在 y=−100](../../frontend/html-css/resources/css-sticky-containing-block-range.svg)
 
-若包裹层只有 `32px` 高，和工具条一样高，就没有移动空间：滚动 `100px` 后工具条在 `y=−100px`，看起来完全没粘住。
+工具条贴边的条件是包裹层底边仍在 `y ≥ 32`：滚动超过 `300 − 32 = 268px` 后，它不能越出包裹层，只能跟着包裹层底边滚走。反例的包裹层没有多余高度，工具条从一开始就没有移动空间，看起来完全没粘住。
 
 #### 最近的滚动容器不是你以为的那个
 
@@ -3860,12 +3865,16 @@ Grid 版把项目在格内两个方向对齐；Flex 版分别沿主轴和交叉�
 .other { z-index: 2; background: #cfe2fa; }
 ~~~
 
-`z-index` 的数值只在同一个堆叠上下文里比较。`.shell` 是定位盒且 `z-index: 1`，它建立了自己的堆叠上下文，`.dialog` 在这个组里。父上下文 `.stage` 里比较的是 `.shell`（1）和 `.other`（2），组内的 `9999` 越不过组的边界。结果是蓝色的 `.other` 盖住紫色弹窗；只把 `.shell` 改成 `z-index: 3`，弹窗才出现在上面。修复方法是调整实际参与比较的那一层祖先，或把弹窗移到能与目标同层比较的结构里。
+`z-index` 的数值只在同一个堆叠上下文里比较。`.shell` 是定位盒且 `z-index: 1`，它建立了自己的堆叠上下文，`.dialog` 在这个组里；`.stage` 的 `z-index` 是 `auto`，不建堆叠上下文，`.shell` 和 `.other` 在外层（本例是根元素）的上下文里比较。下图左侧画出参与比较的层级，右侧是对应的绘制结果，顶部是下文的 top layer：
+
+![.stage 内 .shell（z-index 1，建立堆叠上下文）包含 .dialog（z-index 9999），兄弟 .other 为 z-index 2；外层上下文只比较 1 与 2，蓝色 .other 盖住紫色弹窗，改为 z-index 3 后弹窗可见；top layer 画在整个文档之上](../../frontend/html-css/resources/css-stacking-context-z-index.svg)
+
+修复方法是调整实际参与比较的那一层祖先，或把弹窗移到能与目标同层比较的结构里。
 
 > [!info] 常见的堆叠上下文创建条件
 > 定位盒配非 `auto` 的 `z-index`；`fixed` 或 `sticky`（即使 `z-index: auto`）；Flex/Grid 项目配非 `auto` 的 `z-index`；非 `none` 的 `transform`、`perspective` 或 `filter`；小于 `1` 的 `opacity`；`isolation: isolate`；`contain: layout` 或 `contain: paint`。`will-change` 只有在它指向的属性本来就会产生这些效果时，才提前建立包含块或堆叠上下文。这些条件不都会建立包含块：例如 `opacity` 只建堆叠上下文。
 
-以上比较都发生在普通文档内部。原生 `<dialog>` 调用 `showModal()` 后进入 top layer (顶层)，显示的 popover 也进入 top layer。顶层内容绘制在整个文档之上，也不受祖先包含块和堆叠上下文影响，文档里任何 `z-index` 都盖不住它。做模态弹窗时，这通常比和 `z-index` 较劲更可靠。
+以上比较都发生在普通文档内部。原生 `<dialog>` 调用 `showModal()` 后进入图顶部的 top layer (顶层)，显示的 popover 也进入 top layer。顶层内容不受祖先包含块和堆叠上下文影响，文档里任何 `z-index` 都盖不住它们。做模态弹窗时，这通常比和 `z-index` 较劲更可靠。
 
 ### 排查位置与重叠问题先看哪一层
 
@@ -5693,16 +5702,11 @@ Reflect (反射 API)有 13 个函数，名字和参数与 13 个 trap 一一对�
 
 赋值有对称的路径：`obj[key] = value` 从 `obj.[[Set]](key, value, obj)` 开始，`set` trap 收到 target、键、值和 receiver。沿原型找到 setter 时，setter 的 `this` 是 receiver；找到可写数据属性时，赋值在 **receiver** 上更新或新建自有属性（前提是 receiver 已有的描述符和可扩展性允许）。所以 trap 收到的 `target` 参数不能说明值最终写到哪个对象。
 
-按顺序做三次写入：
+下面按顺序做三次写入，其中 `observedChild = Object.create(observed)`、`directChild = Object.create(direct)`。图中实线是赋值沿原型和转发走的路，虚线是 setter 内部 `this.prefix = value` 的写入，★ 标出值最终落在哪里：
 
-1. **`observed.prefix = "Ops"`。** receiver 是代理本身。`Reflect.set` 在 target 上找到可写的 `prefix`，接着查询 receiver 的自有描述符、在 receiver 上定义属性；handler 没有 `getOwnPropertyDescriptor` 和 `defineProperty` trap，这两步又被转发给 `service`，所以最终改的是 `service.prefix`。
-2. **`observedChild.label = "Branch"`，其中 `observedChild = Object.create(observed)`。** 子对象自己没有 `label`，赋值沿原型进入代理，receiver 是子对象。`Reflect.set` 转发后，继承来的 setter 以子对象为 `this`；setter 里的 `this.prefix = value` 也沿原型经过代理，最终由 `Reflect.set` 在子对象上新建自有 `prefix`，target 仍是 `"Ops"`。之后读子对象的 `label`，getter 的 `this` 仍是子对象，但 `this.prefix` 命中它自己的键，不再经过代理。
-3. **`directChild.label = "West"`，其中 `directChild = Object.create(direct)`。** `direct` 的 `set` trap 省略了 receiver，默认用 target：setter 把 target 的 `prefix` 改成 `"West"`，子对象没有新建这个键。
+![三次写入中 receiver 决定 setter 的 this 和 prefix 的落点](../../frontend/javascript/resources/proxy-receiver-write.svg)
 
-| 按顺序操作 | 子对象有自己的 `prefix` 吗 | 此时 `service.prefix` | 读子对象的 `label` |
-|---|---|---|---|
-| `observedChild.label = "Branch"` | 有，`"Branch"` | `"Ops"` | `"Branch reports"` |
-| `directChild.label = "West"` | 没有 | `"West"` | `"West reports"` |
+第 1 步里 receiver 就是代理本身，看不出它的作用，只为后两步定下 `service.prefix = "Ops"`。差别出在第 2、3 步 setter 里的 `this.prefix = value`：它是一次新赋值，从 setter 的 `this` 出发。第 2 步的 `this` 是子对象，新键建在子对象上，之后读子对象的 `label` 命中它自己的键；第 3 步的 trap 没传 receiver，`this` 成了 `service`，写入直接改掉了共享实例的 `prefix`。
 
 #### 方法调用，以及绕过代理的引用
 
@@ -5715,7 +5719,7 @@ Reflect (反射 API)有 13 个函数，名字和参数与 13 个 trap 一一对�
 - Proxy 是运行时特性，TypeScript 的类型系统看不到这些拦截。
 
 > [!example]- 完整代码：对照属性读取、子对象写入和方法日志
-> 从 `Sales` 开始：先调用报表方法得到 `Sales/daily: May #1`，改成 `Ops` 后再调用得到 `Ops/daily: May #2`，最后依次做上表两次子对象写入。全部代码共用同一个实例，按顺序运行。
+> 从 `Sales` 开始：先调用报表方法得到 `Sales/daily: May #1`，改成 `Ops` 后再调用得到 `Ops/daily: May #2`，最后依次做上图第 2、3 步的子对象写入。全部代码共用同一个实例，按顺序运行。
 >
 > ~~~javascript
 > function makeReportHandler(tag) {
@@ -7109,7 +7113,7 @@ const counter = createCounter(5);
 
 闭包保留绑定，所以在循环里保存回调、稍后再调用时，关键是这些回调读同一份绑定还是每轮各一份。
 
-`var` 循环变量在整个函数（顶层则是整个脚本或模块）只有一份绑定，每轮只是重新赋值。带 `let` 的 `for` 循环每轮提供新绑定：第一轮体读 `j = 0`，回调记住这份绑定；本轮结束后，语言先把当前值复制进下一轮的新绑定，再在新绑定上执行 `j++`。所以第一份回调仍读旧的 `0`。
+`var` 循环变量在整个函数（顶层则是整个脚本或模块）只有一份绑定，每轮只是重新赋值；带 `let` 的 `for` 循环每轮提供新绑定。下面的代码各存三个回调，循环结束后再调用：
 
 ~~~javascript
 const fromVar = [];
@@ -7121,6 +7125,10 @@ for (let j = 0; j < 3; j++) fromLet.push(() => j);
 [fromVar.map(fn => fn()), fromLet.map(fn => fn())];
 // [[3, 3, 3], [0, 1, 2]]
 ~~~
+
+下图画出两种循环里各有几份绑定、每个回调指向哪一份。`let` 循环的关键在相邻两轮之间：下一轮的新绑定先复制上一轮的当前值，`j++` 才在新绑定上执行，所以旧回调记住的那份绑定不会再被改写。
+
+![var 循环共用一份绑定，let 循环每轮复制出新绑定](../../frontend/javascript/resources/loop-bindings-var-vs-let.svg)
 
 没有 `let` 的旧代码常用 Immediately Invoked Function Expression (IIFE，立即调用函数表达式)：每轮调用一次函数，借形参为每轮新建一份绑定。
 
@@ -7712,16 +7720,11 @@ function throttleLeading(fn, interval) {
 
 #### 同一条时间线上两者怎样不同
 
-下表是合成时间线：防抖等待和节流间隔都是 `100ms`；`debouncedSearch`、`throttledSearch` 分别包装同一个搜索函数，该函数记下接收者（`pageA`、`pageB`、`pageC` 代表不同接收者）和搜索词。每行把相同输入同时交给两个包装器。时刻按理想时钟推演，不是实测。
+下图是合成时间线：防抖等待和节流间隔都是 `100ms`；`debouncedSearch`、`throttledSearch` 分别包装同一个搜索函数，该函数记下接收者（`pageA`、`pageB`、`pageC` 代表不同接收者）和搜索词。相同的三次输入同时交给两个包装器。
 
-| 理想时刻 | 防抖包装器 | 首沿节流包装器 |
-| ---: | --- | --- |
-| `0ms` | 收到 `pageA, "A"`：设 `100ms` 计时 | 收到 `pageA, "A"`：立即执行，记下 `0` |
-| `40ms` | 收到 `pageB, "B"`：清掉旧计时，重新等 `100ms` | 收到 `pageB, "B"`：丢弃，距上次通过 `40ms` |
-| `110ms` | 收到 `pageC, "C"`：再次清掉旧计时，重新等 `100ms` | 收到 `pageC, "C"`：执行，距上次通过 `110ms` |
-| `210ms` 起 | 无新调用时，以 `pageC, "C"` 执行 | 无新调用 |
+![合成时间线：0、40、110ms 三次输入；尾沿防抖两次清掉旧计时，只在 210ms 以 pageC "C" 执行；首沿节流在 0ms 执行 A、40ms 丢弃 B、110ms 执行 C](../../frontend/javascript/resources/debounce-throttle-timeline.svg)
 
-防抖只执行了最后一次；首沿节流执行了第一次和间隔外的一次，丢掉了中间的 B。
+防抖只执行了最后一次，而且用的是最后一次的接收者和参数；首沿节流执行了第一次和间隔外的一次，丢掉了中间的 B。
 
 #### leading、trailing 与 maxWait
 
@@ -7756,15 +7759,11 @@ function throttleLeading(fn, interval) {
 
 `_.debounce(func, wait, options)` 默认只在尾沿执行；`options` 有 `leading`、`trailing`、`maxWait`，返回的函数带 `cancel()` 和 `flush()`。`_.throttle(func, wait, options)` 默认 `leading` 和 `trailing` 都为 `true`，实现上就是调用 `_.debounce`，并令 `maxWait` 等于 `wait`。
 
-> [!example] maxWait 已处理的输入，不会被尾沿重复发送
-> 搜索框用 `_.debounce(search, 300, { trailing: true, maxWait: 1000 })`。第一次输入在 `0ms`，之后每隔 `120ms` 输入一次，依次是 `Ops 0`、`Ops 1`……
->
-> | 输入情况 | `1000ms` 时（maxWait 到期） | 停止输入之后 |
-> |---|---|---|
-> | 共 9 次，最后一次在 `960ms` | 执行最新的 `Ops 8` | 没有待执行输入，不再调用 |
-> | 共 12 次，最后一次在 `1320ms` | 执行当时最新的 `Ops 8` | `1080`–`1320ms` 又有新输入；`1620ms`（最后输入后 `300ms`）尾沿执行 `Ops 11` |
->
-> 尾沿只执行仍待执行的输入。第一种情况里 `Ops 8` 已被 maxWait 执行，尾沿就没有可做的事。
+下图上半部分把上节的 `0/40/110ms` 时间线交给默认的 `_.throttle(search, 100)`；下半部分是搜索框用 `_.debounce(search, 300, { trailing: true, maxWait: 1000 })`、从 `0ms` 起每隔 `120ms` 输入一次（依次是 `Ops 0`、`Ops 1`……）的两种输入长度：
+
+![lodash 4.18.1：默认 _.throttle 在 0ms 首沿执行 A、100ms 尾沿执行 B、210ms 尾沿执行 C；maxWait 1000 时，输入 9 次只在 1000ms 执行 Ops 8，输入 12 次在 1000ms 执行 Ops 8、1620ms 尾沿执行 Ops 11](../../frontend/javascript/resources/lodash-throttle-maxwait-timeline.svg)
+
+上半部分与手写的首沿节流不同：B 不会被丢弃，而在 `100ms` 尾沿执行；C 到达时已处在新窗口里，于 `210ms` 尾沿执行。要得到“只要首沿”的行为，需显式传 `{ trailing: false }`。下半部分说明尾沿只执行仍待执行的输入：只输入 9 次时，`Ops 8` 已在 `1000ms` 被 maxWait 执行，lodash 同时清掉计时器，`1260ms` 不会再有一次尾沿检查。
 
 首沿、尾沿都开时，第一次立即执行；窗口内再有调用，尾沿才执行。需要立即提交尚待执行的尾部输入时调用 `flush()`：
 
@@ -7774,8 +7773,6 @@ search({ sort: "recent", query: "O" });   // 首沿立即执行
 search({ sort: "recent", query: "Ops" }); // 窗口内第二次调用，尾沿待执行
 search.flush();                           // 现在就执行 "Ops"
 ~~~
-
-把上节的 `0/40/110ms` 时间线交给默认的 `_.throttle(search, 100)`，结果和手写的首沿节流不同：A 在 `0ms` 首沿执行；B 不会被丢弃，而在 `100ms` 尾沿执行；C 在 `110ms` 到达时已处在新窗口里，于 `210ms` 尾沿执行。要得到“只要首沿”的行为，需显式传 `{ trailing: false }`。
 
 在 React 组件里，同一个 debounce 实例要跨渲染保存（例如放进 ref，只创建一次）。下面的 Hook 把本章规则放回报表页：排序由路由提交，Hook 只用已提交的 `committedSort`（已提交与待定导航的区别见[路由怎样把 URL 变成已提交的数据和界面？](#40.%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B7%B2%E6%8F%90%E4%BA%A4%E7%9A%84%E6%95%B0%E6%8D%AE%E5%92%8C%E7%95%8C%E9%9D%A2%EF%BC%9F)）；每次输入只更新参数和请求代次，不取消实例；清空输入、排序提交或卸载时才取消，并递增代次让旧响应作废。
 
@@ -7897,7 +7894,7 @@ ahooks 把同样的计时策略包成两类 Hook：一类延迟**值**，一类�
 > - 缓存键的存在检查与序列化（“memoize”）：[ECMAScript 2026 Map.prototype.has](https://tc39.es/ecma262/2026/multipage/keyed-collections.html#sec-map.prototype.has)（§24.1.3.9）、[JSON.stringify](https://tc39.es/ecma262/2026/multipage/structured-data.html#sec-json.stringify)（§25.5.4）。
 > - 原始练习的题目契约与作者解法（rest 参数、组合、`once`、记忆化）：存档 [Return Length of Arguments Passed](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2703.%20Return%20Length%20of%20Arguments%20Passed.md)、[Function Composition](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2629.%20Function%20Composition.md)、[Allow One Function Call](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2666.%20Allow%20One%20Function%20Call.md)、[Memoize](../../archive/front-end/0-1_Learning_Notes/Typescript/leetcode30days/FunctionTransformations/2623.%20Memoize.md)。
 > - 计时器延迟只是安排任务、Node.js 的延迟钳制（“cancel 和 flush 只管还没执行的调用”末段）：[WHATWG HTML Timers](https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers)（Living Standard，核对日期 2026-11-12）、[Node.js Timers: `setTimeout`](https://nodejs.org/api/timers.html#settimeoutcallback-delay-args)（官方文档 26.13.1；略短等待为 Node.js 26.13.0 实测）。请求取消只停客户端：[WHATWG DOM Aborting ongoing activities](https://dom.spec.whatwg.org/#aborting-ongoing-activities)、[Fetch Standard: Aborting a fetch](https://fetch.spec.whatwg.org/#abort-fetch)、[MDN AbortController.abort()](https://developer.mozilla.org/en-US/docs/Web/API/AbortController/abort)。
-> - lodash 实例（“实例：lodash 的 `_.debounce` 与 `_.throttle`”）：[Lodash 4.18.1 release](https://github.com/lodash/lodash/releases/latest)（2026-04-01 发布，2026-11-12 核对）；[`_.debounce` 的 leading/trailing/maxWait、cancel、flush 说明](https://github.com/lodash/lodash/blob/4.18.1/doc/README.md#_debouncefunc-wait0-options)；`_.throttle` 默认值及其委托 `_.debounce`、`maxWait: wait` 的实现：[lodash 4.18.1 `lodash.js`](https://github.com/lodash/lodash/blob/4.18.1/lodash.js)（`throttle` 函数）。maxWait 表与 `_.throttle` 时间线为 lodash 4.18.1 + 假时钟复算。Hook 例子用到的 React [`useRef`](https://react.dev/reference/react/useRef) 与 [`useEffect`](https://react.dev/reference/react/useEffect)，核对日期 2026-11-12。
+> - lodash 实例（“实例：lodash 的 `_.debounce` 与 `_.throttle`”）：[Lodash 4.18.1 release](https://github.com/lodash/lodash/releases/latest)（2026-04-01 发布，2026-11-12 核对）；[`_.debounce` 的 leading/trailing/maxWait、cancel、flush 说明](https://github.com/lodash/lodash/blob/4.18.1/doc/README.md#_debouncefunc-wait0-options)；`_.throttle` 默认值及其委托 `_.debounce`、`maxWait: wait` 的实现：[lodash 4.18.1 `lodash.js`](https://github.com/lodash/lodash/blob/4.18.1/lodash.js)（`throttle` 函数）。maxWait 与 `_.throttle` 两条时间线为 lodash 4.18.1 + 假时钟复算。Hook 例子用到的 React [`useRef`](https://react.dev/reference/react/useRef) 与 [`useEffect`](https://react.dev/reference/react/useEffect)，核对日期 2026-11-12。
 > - ahooks 实例（“实例：ahooks 的防抖与节流 Hook”）：[useDebounce](https://ahooks.js.org/hooks/use-debounce/)、[useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn/)、[useThrottle](https://ahooks.js.org/hooks/use-throttle/)、[useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn/)；v3 `debounceWait` / `throttleWait`：[v3.11.0 useRequest option types](https://github.com/alibaba/hooks/blob/v3.11.0/packages/hooks/src/useRequest/src/types.ts)；v2 旧选项迁移：[ahooks upgrade guide](https://ahooks.js.org/guide/upgrade/)（2026-11-06）；版本：[ahooks v3.11.0 release](https://github.com/alibaba/hooks/releases/tag/v3.11.0)（2026-10-27 发布，2026-11-12 核对）。
 ## 26. 同步事件总线在分发途中增删监听器会怎样？
 
@@ -7992,16 +7989,42 @@ trace.join(" → ");
 // "summary v10 → summary v11 → once v11 → summary v12 → recovery v12 → recovery v11 → legacy v10"
 ~~~
 
-> [!example] 每层快照怎样变化、怎样返回
->
-> | 当前分发 | 本层开始时的快照 | 本层发生的事 |
-> | --- | --- | --- |
-> | `v10` | `[summary, once, legacy]` | `summary v10` 从 Set 删掉 `legacy`、加入 `recovery`，然后进入 `v11`。`v10` 的快照不变。 |
-> | `v11` | `[summary, once, recovery]` | `summary v11` 之后轮到 `once`：包装器先设 `fired = true` 并注销自己，再调用用户回调，进入 `v12`。 |
-> | `v12` | `[summary, recovery]` | Set 里已没有 `once`。依次记录 `summary v12`、`recovery v12`，返回 `v11`。 |
-> | 回到 `v11`、`v10` | 各层继续原快照 | `v11` 接着记录 `recovery v11`。回到 `v10`，旧快照还会碰到 `once` 包装器，`fired` 让它直接返回；旧快照里的 `legacy` 仍记录 `legacy v10`。 |
->
-> 按嵌套深度缩进的日志：
+下图把这次运行按时间展开：左列是总线此刻保存的 Set，右边三列是三层 `emit`，每层开始时复制的快照写在该层顶部，激活条的嵌套就是调用栈深度。
+
+~~~mermaid
+sequenceDiagram
+  participant Set as 总线 Set
+  participant E10 as emit v10
+  participant E11 as emit v11
+  participant E12 as emit v12
+  Note over Set: {summary, once, legacy}
+  activate E10
+  Note over E10: 快照 [summary, once, legacy]
+  Note over E10: 记录 summary v10
+  E10->>Set: summary：off(legacy)，on(recovery)
+  Note over Set: {summary, once, recovery}
+  E10->>E11: summary 同步调用 emit v11
+  activate E11
+  Note over E11: 快照 [summary, once, recovery]
+  Note over E11: 记录 summary v11
+  E11->>Set: once 包装器：fired = true，off(包装器)
+  Note over Set: {summary, recovery}
+  Note over E11: 记录 once v11（用户回调）
+  E11->>E12: 用户回调同步调用 emit v12
+  activate E12
+  Note over E12: 快照 [summary, recovery]
+  Note over E12: 记录 summary v12、recovery v12
+  E12-->>E11: v12 分发结束，返回
+  deactivate E12
+  Note over E11: 记录 recovery v11
+  E11-->>E10: v11 分发结束，返回
+  deactivate E11
+  Note over E10: once 包装器：fired 已为 true，直接返回
+  Note over E10: 记录 legacy v10（仍在 v10 的快照里）
+  deactivate E10
+~~~
+
+> [!example] 按嵌套深度缩进的日志
 >
 > ```text
 > summary v10
@@ -8013,7 +8036,7 @@ trace.join(" → ");
 > legacy v10
 > ```
 
-注意 `legacy` 在 `v10` 里就被删了，却仍记录了 `legacy v10`：删除发生时它已在 `v10` 的快照里。`recovery` 在 `v10` 中途才加入，所以不在 `v10` 里出现，却出现在之后的每一层。
+`legacy` 在 `v10` 中途就被删了，却仍记录了 `legacy v10`，因为删除时它已在 `v10` 的快照里；`recovery` 在 `v10` 中途才加入，只出现在之后建立的快照里。
 
 `once` 靠两道保护才真正只运行一次，各管一处：
 
@@ -9209,15 +9232,41 @@ compareForAwaitValues().then(console.log); // [true, "x", "x"]
 
 下面用一组合成数据走一遍：页 1 按 `sort=recent` 返回主线一的 May 行和 April 行，`items: [r-104, r-103]`，以及 `nextCursor: "c2"`；页 2 返回更早的 `items: [r-102]` 和 `nextCursor: null`。消费者的目标行是 April 行 `r-103`。
 
-| 消费者做什么 | 生成器推进到哪里 | 本次结果 / 是否请求下一页 |
-|---|---|---|
-| 第一次 `next()` | 请求并校验页 1，暂停在 `yield r-104` | 交付 `r-104`；页 1 留在内存里 |
-| 追加完 `r-104` 后再 `next()` | 恢复页内循环，暂停在 `yield r-103` | 交付 `r-103`；还没更新游标 |
-| `r-103` 是目标，追加后 `break` | 一次 `return()` 进入 `finally` | 关闭；不请求 `c2` |
-| 若不停止，追加完 `r-103` 后再 `next()` | 把游标更新为 `c2`，请求并校验页 2 | 交付 `r-102` |
-| 追加完 `r-102` 后再 `next()` | 读到 `nextCursor: null`，结束并清理 | `done: true`；没有下一页 |
+下图画出消费者、生成器和接口之间的往来，`alt` 的两支分别是在目标行停止和一直读到末页：
 
-`break` 会调用一次异步迭代器的 `return()`，并等待生成器的 `finally` 完成；生成器没走到更新游标那一步，所以不请求 `c2`。两类坏数据在不同时点暴露：结构错误的页在 `validateReportPage` 里、该页第一次 `yield` 之前就拒绝；重复游标要等当前页的行都交付后才检查。
+~~~mermaid
+sequenceDiagram
+  participant C as 消费者 for await
+  participant G as 生成器 reportRows
+  participant A as 行接口
+  C->>G: next()
+  G->>A: GET rows?sort=recent
+  A-->>G: 页 1：items [r-104, r-103]，nextCursor "c2"
+  Note over G: validateReportPage：结构错误在此拒绝，早于本页第一次 yield
+  G-->>C: yield r-104
+  Note over G: 暂停在页内循环，页 1 留在内存
+  Note over C: await appendRow(r-104)
+  C->>G: next()
+  G-->>C: yield r-103（游标仍未更新）
+  Note over C: await appendRow(r-103)，r-103 是目标
+  alt 到达目标：break
+    C->>G: return()
+    Note over G: 进入 finally，记录“报表行迭代已关闭”
+    G-->>C: 完成（循环等待 return() 结束）
+    Note over A: 不请求 c2
+  else 若不停止
+    C->>G: next()
+    Note over G: 本页行已交付完：查重复游标，cursor = "c2"
+    G->>A: GET rows?sort=recent&cursor=c2
+    A-->>G: 页 2：items [r-102]，nextCursor null
+    G-->>C: yield r-102
+    C->>G: next()
+    Note over G: nextCursor 为 null：return，进入 finally
+    G-->>C: done: true
+  end
+~~~
+
+不请求 `c2` 的原因是 `break` 时生成器还停在页内循环，没走到更新游标那一步。两类坏数据按图中两条注记的位置暴露：结构错误的页在交付任何一行之前就拒绝，重复游标要等本页的行都交付后才检查。
 
 > [!example]- 分页生成器与逐行消费者的完整实现
 > `appendRow` 返回“当前行追加完成”的 Promise，写入本次筛选自己的报表列表；`currentSort`、`selectedRowId`、取消按钮和错误展示函数由页面提供。`appendReportRows` 的两次信号检查分别守住“开始追加”和“再次拉取”两个边界。
@@ -9630,16 +9679,41 @@ refreshButton.addEventListener("click", () => {
 > [!example] HTTP 404 怎样走到界面提示
 > 报表 Fetch 得到 404，摘要和权限 Fetch 也都履行为 `Response`。第一轮 `Promise.all` 履行后，`loadReport` 检查 `response.ok` 并抛错；状态检查先于 `json()`，三份正文都不读，也不提交新的报表、摘要和权限。`catch` 记录原始错误，中止当前控制器，显示错误提示；`finally` 关闭 loading。上一次已提交的报表、摘要和权限仍然保留，但刷新开始时已换上空列表，旧行不会保留。错误处理完成后，`onRefreshClick` 的 Promise 履行 `undefined`。若摘要或权限的 Fetch 先拒绝，第一轮 `Promise.all` 以它的原因拒绝，404 检查不会运行。
 
-> [!example] 两次筛选交错返回
-> 用户先按 `recent` 发起请求，随后改为 `oldest`。新请求先递增序号，再中止旧信号、换上新列表。旧请求之后无论成功还是失败，都过不了 `requestId !== latestReportRequest` 这一关：它不提交报表，不覆盖当前提示，它的 `finally` 也不会关闭新请求的 loading。旧请求里已经开始、又无法取消的行追加，完成后只写进已移除的旧列表；`appendReportRows` 每次追加后都检查信号，不会再拉取下一行。旧请求的非取消错误仍交给 `logReportError` 记录。
+第二种情况是两次筛选交错：用户先按 `recent` 发起调用 1，随后改为 `oldest` 发起调用 2。下图画出调用 2 开始后，调用 1 停在不同位置时各自怎样收场：
+
+~~~mermaid
+%%{init: {"sequence": {"actorMargin": 70}}}%%
+sequenceDiagram
+  participant R1 as 调用 1（recent）
+  participant R2 as 调用 2（oldest）
+  participant P as 页面状态
+  participant L1 as 列表 L1
+  participant L2 as 列表 L2
+  R1->>P: latestReportRequest = 1<br/>activeController = c1，loading 开
+  R1->>L1: 用新的 L1 换下旧列表
+  Note over R1: 等基础三项<br/>或已提交并在追加行
+  R2->>P: latestReportRequest = 2，中止 c1<br/>activeController = c2，loading 开
+  R2->>L2: 用新的 L2 换下 L1，L1 脱离文档
+  alt 调用 1 还在等基础三项，请求被取消
+    Note over R1: 以 c1.signal.reason 拒绝<br/>catch 静默返回
+  else 没能停下，迟到成功
+    Note over R1: requestId 1 ≠ 2<br/>不提交，直接返回
+  else 迟到失败（不是取消原因）
+    R1->>P: 只 logReportError，1 ≠ 2：不 setError
+  else 调用 1 已在追加行
+    R1->>L1: 已开始的行追加完成，只写进脱离文档的 L1
+    Note over R1: 追加后复查信号<br/>appendReportRows 正常返回，不再拉取
+  end
+  Note over R1: finally：1 ≠ 2<br/>不关 loading，不动 activeController
+  R2->>P: 2 是最新：提交报表、摘要、权限，清除错误
+  R2->>L2: appendReportRows 追加 oldest 的行
+  R2->>P: finally：关闭 loading，activeController = null
+~~~
+
+四条分支的共同结果是：调用 2 开始之后，调用 1 不再提交任何状态、不覆盖当前提示，也不关闭调用 2 的 loading，只有非取消错误仍被记录。
 
 > [!example] 追加 r-104 时点了取消
 > 分页第一页是 `r-104`、`r-103`。用户在 `prepareReportRow(r-104)` 等待时点“取消”，已经开始的追加撤不回来；当前列表仍在页面上，这一行完成后照样出现。`appendReportRows` 随即复查信号、关闭迭代器并正常返回，不再交付内存里的 `r-103`，也不请求下一页。页面的 `await appendReportRows(...)` 正常履行，跳过 `catch`，由 `finally` 关闭 loading。
-
-| 等待行追加时发生什么 | 已开始的 `r-104` 追加写到哪里 | 谁结束 loading |
-|---|---|---|
-| 当前筛选点“取消” | 当前列表仍在页面上，行仍可能出现 | `appendReportRows` 正常返回，当前请求的 `finally` |
-| 改为新筛选 | 旧列表已移除，迟到的旧行不会混入新列表 | 旧请求退出但不改 loading；新请求结束时自己关闭 |
 
 分工归结为一句：信号只请求停止；已经开始、又不支持取消的工作照样会完成，它对界面的影响由请求序号和每次筛选独立的列表隔离。
 
@@ -9745,14 +9819,11 @@ export function message() {
 }
 ```
 
-浏览器处理这张模块图分四步：
+下图把这张模块图、每条边的地址基准，以及浏览器处理静态模块图的三个阶段画在一起：
 
-| 步骤 | 输入与操作 | 输出 |
-| --- | --- | --- |
-| 定位入口 | HTML 解析到模块脚本，按文档 base URL (基准 URL)解析 `src`，取回 `report-page.js` | 入口模块源码 |
-| 解析并取回依赖 | 读出入口的静态 `import`：`./report-api.js` 相对导入者解析；`@reports/` 经 import map 映射。再递归处理每个依赖的静态导入。已发现的模块并行取回，但浏览器只能边取边发现，事先并不知道整张图 | `report-api.js`、`report-format.js` 的源码；跨源模块还必须通过 Cross-Origin Resource Sharing (跨源资源共享，CORS) |
-| 链接 | 把每个导入名连到目标模块的导出绑定，检查名字是否存在 | 绑定连好；有名字对不上时，任何模块代码都不会开始执行 |
-| 求值 | 先执行依赖，再执行入口；入口的顶层 `await` 等待接口响应 | 检查通过后，入口把 `1,200` 写进 `output` |
+![报表页模块图：三种地址基准与取回、链接、求值三阶段](../../frontend/javascript/resources/module-graph-browser-loading.svg)
+
+浏览器事先并不知道整张图：取回一个模块、读出它的静态 `import`，才知道下一批要取什么，所以依赖链越深，往返越多；跨源模块还必须通过 Cross-Origin Resource Sharing (跨源资源共享，CORS)。链接在任何模块代码执行之前完成，只要有一个导入名在目标模块里找不到，整张图都不会开始求值。
 
 链接只是把名字连起来，不等于变量已经有值。如果导出方的 `let` 或 `const` 还没执行到初始化语句，提前读取仍抛 `ReferenceError`。这条边界和[作用域里的暂时性死区](#24.%20%E5%87%BD%E6%95%B0%E9%87%8C%E7%9A%84%E5%8F%98%E9%87%8F%E5%92%8C%20this%20%E4%BB%8E%E5%93%AA%E6%9D%A5%EF%BC%9F)相同，通常在循环依赖里才会碰到；本例没有循环，依赖总是先求值完毕。
 
@@ -9762,11 +9833,7 @@ export function message() {
 
 `@reports/report-format.js` 不以 `/`、`./`、`../` 开头，也不是完整 URL，属于 bare module specifier (裸模块说明符)。浏览器不会像 Node.js 那样去包目录里找它；没有 import map 提供映射，这条导入直接失败。
 
-页面里有三类地址，基准各不相同：
-
-- 模块里的相对导入 `./report-api.js`，相对**导入它的模块**的 URL 解析。
-- HTML 里入口脚本的 `src`，相对**文档的 base URL** 解析。
-- `fetch("/api/reports/42")` 是数据请求，不是模块加载。它按当前窗口的 API base URL 解析，通常就是文档 base URL。如果文档有跨源的 `<base href>`，根相对路径会指向那个源，请求也要受 CORS 约束。本例没有 `<base>`，请求发往提供页面的站点。
+图中各条边的基准不同：模块里的相对导入 `./report-api.js` 相对**导入它的模块**的 URL 解析；入口脚本的 `src` 和内联脚本里的 `import()` 相对**文档的 base URL (基准 URL)** 解析。`fetch("/api/reports/42")` 是数据请求，按当前窗口的 API base URL 解析，通常就是文档 base URL；如果文档有跨源的 `<base href>`，根相对路径会指向那个源，请求也要受 CORS 约束。本例没有 `<base>`，请求发往提供页面的站点。
 
 Node.js 的 `fetch()` 没有文档可作基准，直接传 `"/api/reports/42"` 会因缺少绝对 URL 而失败；要传完整地址，或用 `new URL("/api/reports/42", base)` 拼出来。
 
@@ -10571,13 +10638,13 @@ TypeScript 的类型注解、接口和类型别名在输出 JavaScript 时全部
 
 ```mermaid
 flowchart TB
-  A[接口或存储中的文本] --> B{第 1 步 解析：JSON.parse}
+  A["接口或存储<br/>中的文本"] --> B{"第 1 步 解析<br/>JSON.parse"}
   B -- 语法错误 --> E[返回 syntax]
-  B -- 成功 --> C[类型为 unknown 的运行时值]
-  C --> D{第 2 步 检查：逐项判断字段和值}
+  B -- 成功 --> C["类型为 unknown<br/>的运行时值"]
+  C --> D{"第 2 步 检查<br/>逐项判断字段和值"}
   D -- 不符 --> F[返回 shape]
-  D -- 通过 --> G[第 3 步 重建：只取已检查字段]
-  G --> H[业务代码使用 ReportData]
+  D -- 通过 --> G["第 3 步 重建<br/>只取已检查字段"]
+  G --> H["业务代码使用<br/>ReportData"]
 ```
 
 图里的 `syntax` 和 `shape` 是解析函数返回的失败原因。文本来自浏览器存储时还有第三种：`getItem` 返回 `null`（从没存过），在进入流程之前就返回 `missing`。
@@ -11238,18 +11305,34 @@ console.log(new LegacyReportService().loadRows("42"));
 
 ### 一次点击走过哪几步
 
-先看点击后没有再次切换的一轮。React 把工作分成几段，每段只做一件事：
+先看点击后没有再次切换的一轮。React 把工作分成几段，每段只做一件事；下图按时间画出每段由谁执行、交给下一段什么：
 
-| 阶段 | 谁在工作 | 本例这一轮做什么 |
-| --- | --- | --- |
-| 事件处理器 | 你的代码 | 排入 `sort="oldest"` 和 `requestId=1` 两个更新；处理器里读到的 `sort` 仍是 `"recent"`。 |
-| render | React 调用组件 | 用新状态算出界面描述：从上次成功的两行派生 April、May，提示“等待请求 #1”。不发请求，不碰 DOM。 |
-| commit | React 写宿主树 | 把按钮的 `aria-pressed`、两行的顺序和提示文字写进 DOM。 |
-| paint | 浏览器 | 在之后的渲染机会里重算样式、布局并绘制，用户才看到新顺序。 |
-| Effect | 你的代码，由 React 在 commit 后调用（不保证在 paint 之后） | 调用 `fetchReports("oldest")`。 |
-| 响应回调 | 你的代码 | 把带编号 `1` 的成功或失败结果排入状态；React 再走一轮 render 和 commit，显示“已确认”或报错。 |
+~~~mermaid
+%%{init: {"sequence": {"mirrorActors": false, "actorMargin": 30, "width": 130}}}%%
+sequenceDiagram
+  participant H as 事件处理器
+  participant R as React render
+  participant C as React commit
+  participant B as 浏览器
+  participant E as Effect
+  Note over H: 用户点“最早优先”
+  H->>R: 同一批排入<br/>sort = "oldest"<br/>requestId = 1
+  Note over H: 处理器里的 sort<br/>仍是 "recent"
+  Note over R: 调用组件<br/>派生 April、May<br/>提示“等待请求 #35;1”<br/>不发请求、不碰 DOM
+  R->>C: 协调出的必要改动
+  Note over C: 写 aria-pressed<br/>移动两行<br/>改提示文字
+  par 浏览器绘制
+    C-)B: DOM 已是新顺序
+    Note over B: 之后的渲染机会<br/>样式、布局、绘制
+  and Effect：与 paint 的先后不保证
+    C->>E: commit 后运行 setup
+    Note over E: fetchReports<br/>("oldest")<br/>等响应或失败
+  end
+  E->>R: 响应回调排入编号 1 的<br/>成功或失败结果
+  Note over R,C: 再走一轮 render 和 commit<br/>显示“已确认”或报错
+~~~
 
-下面各节依次解释：处理器为什么读到旧值，render、commit 和 paint 为什么是三件事，React 靠什么把前后两次的行对上，副作用该放在哪一段，以及迟到的响应怎样不写错界面。
+事件处理器、Effect 和响应回调是你的代码，render 和 commit 由 React 执行，paint 归浏览器。下面各节依次解释：处理器为什么读到旧值，render、commit 和 paint 为什么是三件事，React 靠什么把前后两次的行对上，副作用该放在哪一段，以及迟到的响应怎样不写错界面。
 
 ### 处理器读到的是这一轮的状态快照
 
@@ -11283,9 +11366,9 @@ React 用 `Object.is` 比较新旧状态。传给 setter 的值与当前状态�
 
 render 时 React 还要做 reconciliation (协调)：把新描述和上一次的描述逐个对应起来，算出哪些宿主节点要新建、移动、更新或删除。对应规则由树中位置、元素类型和 `key` 决定，见下一节。
 
-**commit** 是写入。React 把协调出的必要改动应用到宿主树（浏览器里就是 DOM）。一个 setter 不等于一次 DOM 修改：新旧描述相同，React 就不改 DOM；本例排序改变，React 移动两行并更新按钮属性。
+**commit** 是写入。React 把协调出的必要改动应用到宿主树（浏览器里就是 DOM）。一个 setter 不等于一次 DOM 修改：新旧描述相同，React 就不改 DOM。
 
-**paint** 是浏览器的事。commit 结束时 DOM 已经是新顺序，但用户看到它要等浏览器在之后的渲染机会里重算样式、布局并绘制。React 的 setter、render 次数和浏览器帧之间没有一一对应。浏览器怎样安排渲染机会，见[事件循环怎样安排任务、微任务和渲染？](#2.%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E6%80%8E%E6%A0%B7%E5%AE%89%E6%8E%92%E4%BB%BB%E5%8A%A1%E3%80%81%E5%BE%AE%E4%BB%BB%E5%8A%A1%E5%92%8C%E6%B8%B2%E6%9F%93%EF%BC%9F)；DOM 改动后浏览器重做了哪些工作，见[DOM 改动后浏览器重做了什么？](#5.%20DOM%20%E6%94%B9%E5%8A%A8%E5%90%8E%E6%B5%8F%E8%A7%88%E5%99%A8%E9%87%8D%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E8%AF%BB%E5%87%A0%E4%BD%95%E5%80%BC%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E5%8D%A1%E4%BD%8F%E8%84%9A%E6%9C%AC%EF%BC%9F)。
+**paint** 是浏览器的事。commit 结束时 DOM 已经是新顺序，用户看到它却要等之后的渲染机会。React 的 setter、render 次数和浏览器帧之间没有一一对应。浏览器怎样安排渲染机会，见[事件循环怎样安排任务、微任务和渲染？](#2.%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E6%80%8E%E6%A0%B7%E5%AE%89%E6%8E%92%E4%BB%BB%E5%8A%A1%E3%80%81%E5%BE%AE%E4%BB%BB%E5%8A%A1%E5%92%8C%E6%B8%B2%E6%9F%93%EF%BC%9F)；DOM 改动后浏览器重做了哪些工作，见[DOM 改动后浏览器重做了什么？](#5.%20DOM%20%E6%94%B9%E5%8A%A8%E5%90%8E%E6%B5%8F%E8%A7%88%E5%99%A8%E9%87%8D%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E8%AF%BB%E5%87%A0%E4%BD%95%E5%80%BC%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E5%8D%A1%E4%BD%8F%E8%84%9A%E6%9C%AC%EF%BC%9F)。
 
 #### 批处理：同一批更新只走一轮
 
@@ -11417,12 +11500,36 @@ React 不保证 Effect 总在浏览器绘制之后运行：由点击等交互引
 
 两道守卫各管一件事。`ignore` 让已被清理的 Effect 不再写状态；结果上附带的编号保证：即使旧回调抢在 cleanup 之前运行，它也只能写入自己的编号，不能把后来的请求标成已确认。
 
-现在走一遍快速反选。请求 `1`（oldest）还没结束，用户又点“最近优先”。处理器排入 `sort="recent"` 和 `requestId=2`；render 从当前 `lastSuccess` 派生 May、April，提示等待 `#2`；commit 写入 DOM；然后 React 先运行请求 `1` 那个 Effect 的 cleanup，再运行新 Effect 发出请求 `2`。请求 `1` 的回调可能在 cleanup 之前或之后运行。这里比较的是回调实际执行的时刻：Promise 早已完成，不代表排队的回调已经在 cleanup 前执行。
+现在走一遍快速反选：请求 `1`（oldest）还没结束，用户又点“最近优先”。commit 之后，React 先运行 Effect 1 的 cleanup，再运行 Effect 2 的 setup；请求 `1` 的回调可能落在 cleanup 之前或之后，下图的 `alt` 画出这两种结局：
 
-| 请求 1 的回调何时执行 | 回调做了什么 | 等待请求 2 时的界面 |
-| --- | --- | --- |
-| cleanup 之前 | `ignore` 还是 `false`，成功回调把响应写进 `lastSuccess`，但标记为 `requestId=1`。 | 用这份刚到的数据按 `recent` 排序显示；`lastSuccess.requestId` 是 1，不等于当前的 2，所以仍显示“等待请求 #2”。 |
-| cleanup 之后 | `ignore` 已是 `true`，回调什么也不写。 | 保留原来的 `lastSuccess`，按 `recent` 排序；仍等待请求 2。 |
+~~~mermaid
+%%{init: {"sequence": {"mirrorActors": false, "actorMargin": 24, "width": 110}}}%%
+sequenceDiagram
+  participant RC as React render<br/>与 commit
+  participant E1 as Effect 1<br/>（oldest）
+  participant E2 as Effect 2<br/>（recent）
+  participant S as 服务端
+  participant L as lastSuccess
+  Note over E1: setup<br/>ignore = false<br/>currentRequestId = 1
+  E1->>S: 请求 1<br/>fetchReports("oldest")
+  Note over RC: 处理器：用户点“最近优先”<br/>排入 sort = "recent"<br/>requestId = 2
+  Note over RC: render 从当前 lastSuccess<br/>派生 May、April<br/>提示等待请求 2<br/>commit 写入 DOM
+  alt 请求 1 的回调在 cleanup 之前执行
+    S-->>E1: 请求 1 成功，回调运行<br/>ignore 仍是 false
+    E1->>L: 写入 requestId = 1<br/>sort = "oldest" 和这批 reports
+    RC->>E1: cleanup：ignore = true
+    RC->>E2: setup：发出请求 2
+    Note over L: 1 ≠ 2<br/>这批数据按 recent<br/>排序显示，仍提示<br/>等待请求 2
+  else 回调在 cleanup 之后执行
+    RC->>E1: cleanup：ignore = true
+    RC->>E2: setup：发出请求 2
+    S-->>E1: 请求 1 的回调运行<br/>ignore 已是 true，什么也不写
+    Note over L: 原 lastSuccess<br/>不变，按 recent<br/>排序，仍提示<br/>等待请求 2
+  end
+  E2->>S: 请求 2<br/>fetchReports("recent")
+~~~
+
+这里比较的是回调实际执行的时刻：Promise 早已完成，不代表排队的回调已经在 cleanup 前执行。两种结局里界面都还在等请求 `2`：前一种 `ignore` 没拦住，但编号让写入只算请求 `1` 的成功。
 
 失败回调同理：cleanup 之前执行时，它只记下编号 `1` 的失败，不改 `lastSuccess`，也不能把请求 `2` 标成失败；cleanup 之后执行则被忽略。
 
@@ -11692,8 +11799,8 @@ Svelte 编译器把模板和对状态的引用转换成更新代码；收到新�
 
 ~~~mermaid
 flowchart TD
-    P["ReportsPage<br/>持有 sort<br/>派生有序 rows"] -->|"sort 与回调"| T["ReportToolbar<br/>显示选中按钮"]
-    P -->|"有序 reports"| L["ReportList<br/>按顺序显示行"]
+    P["ReportsPage<br/>持有 sort<br/>派生有序 rows"] -->|"sort、onSortChange"| T["ReportToolbar<br/>显示选中按钮"]
+    P -->|"reports（有序 rows）"| L["ReportList<br/>按顺序显示行"]
     T -->|"点击调用 onSortChange"| P
 ~~~
 
@@ -12029,21 +12136,11 @@ URL 的三段在这里分工明确：
 
 ![React Router v8.5.1 Data Mode 中，sort 从目标 URL 进入报表 loader，等待结果后提交页面或路由错误。](../../frontend/ui-state/resources/react-router-data-navigation.svg)
 
-地址栏何时变化，取决于导航类型。PUSH（新增历史项，点击链接或调用 `navigate` 的默认行为）由路由器发起：它先等 loader，成功或失败后才调用 `history.pushState` 写入新历史项，所以等待期间地址栏仍是旧地址。POP（在已有历史项之间移动，即 Back/Forward）由浏览器发起：浏览器先移动历史指针、改地址栏，再派发 `popstate`，路由器这时才开始运行 loader，所以地址栏先变，已提交数据后变。
+地址栏何时变化，取决于谁发起导航。PUSH（新增历史项，点击链接或调用 `navigate` 的默认行为）由路由器发起：它等 loader 成功或失败后才调用 `history.pushState`，所以等待期间地址栏仍是旧地址。POP（在已有历史项之间移动，即 Back/Forward）由浏览器发起：浏览器先移动历史指针、改地址栏，再派发 `popstate`，路由器这时才开始运行 loader，所以地址栏先变，已提交数据后变。下图沿案例走一遍首次加载、PUSH 和 POP，每一行是两个事件之间三个读取口的值：
 
-下表假设首次加载成功，且用户等 oldest 导航结束后才按 Back。表中 recent / oldest 指完整地址中的 `sort` 值，path 始终是 `/reports/42`，fragment 始终是 `#summary`。
+![React Router 排序导航中，地址栏、已提交数据和待定导航随 PUSH、POP 先后变化；oldest loader 失败时地址仍提交并显示 ErrorBoundary](../../frontend/ui-state/resources/react-router-commit-timeline.svg)
 
-| 时点 | 地址栏与历史 | `useLoaderData()` 与屏幕 | `useNavigation()` |
-|---|---|---|---|
-| 首次打开，loader 等待中 | recent；初始文档的历史项 | 还没有已提交数据，显示 `HydrateFallback` | `idle`（不反映首次读取） |
-| 首次加载完成 | recent | recent；May → April | `idle` |
-| 点“最早优先”（PUSH），loader 等待中 | 仍为 recent；目标历史项尚未写入 | 仍为 recent；May → April，并提示“正在切换到最早顺序…” | `loading`，`location` 为 oldest |
-| oldest loader 成功 | 提交 oldest，新增历史项 | oldest；April → May | `idle` |
-| oldest loader 失败（另一分支） | 仍提交 oldest 地址和历史项 | 路由 `ErrorBoundary` 替换列表 | `idle` |
-| 成功后按 Back（POP），loader 等待中 | 浏览器已回到 recent 历史项 | 仍为 oldest；April → May，并提示正在加载 | `loading`，`location` 为 recent |
-| POP 的 loader 成功 | recent | recent；May → April | `idle` |
-
-最后一行按旧 URL **重新读取**，得到的是服务端此刻的数据，不保证与首次访问时那份相同。URL 记住的是读取条件，不是数据快照。
+第 ⑥ 步按旧 URL **重新读取**，得到的是服务端此刻的数据，不保证与首次访问时那份相同。URL 记住的是读取条件，不是数据快照。
 
 #### 页面里另起的请求也要跟已提交值走
 
@@ -12668,13 +12765,17 @@ App Router 把一次页面请求分成三条线：服务端组件读数据、决
 ["reports", "acct-a", "42", "rows", "recent"]
 ~~~
 
-同一账户、同一报表的各排序共享前缀 `["reports", "acct-a", "42", "rows"]`，失效时可以一次刷新该报表的全部排序；账户级前缀 `["reports", "acct-a"]` 用于退出登录时整体移除。若再加筛选、搜索词或页码，它们也要进键。fragment `#summary` 不随请求发送、不改变结果，所以不进键；只有应用明确把某个片段转成请求参数时，转换后的值才属于查询输入。
+键按段组成一棵树。完整键选中一格结果，前缀选中一棵子树，失效和移除都按前缀批量操作：
+
+![报表行查询键按账户、报表、rows、排序分层；报表前缀用于失效全部排序，账户前缀用于整体移除，acct-b 下没有缓存](../../frontend/ui-state/resources/react-query-key-tree.svg)
+
+若再加筛选、搜索词或页码，它们也要进键，各占一段。fragment `#summary` 不随请求发送、不改变结果，所以不进键；只有应用明确把某个片段转成请求参数时，转换后的值才属于查询输入。
 
 | 阶段 | 当前键 | 列表与提示 |
 |---|---|---|
 | 初始路由 | `…/rows/recent` | 路由随页面交付的 May、April 作为这个键的初始数据，直接显示 |
 | 点“最早优先” | 路由提交 `sort=oldest`，键变为 `…/rows/oldest` | 若该键无缓存：把同账户、同一完整行集合的路由行在本地排成 April、May，标明“正在等待服务端确认”，行内操作禁用 |
-| oldest 响应到达 | 只写 `…/rows/oldest` | 列表换成该键的服务端数据。较早的 recent 请求即使此后才完成，也只写进 recent 的键 |
+| oldest 响应到达 | 只写 `…/rows/oldest` | 列表换成该键的服务端数据；较早的 recent 请求此后才完成，也只写进 recent 的键 |
 | 切换到 `acct-b` | `["reports", "acct-b", "42", "rows", sort]` | 没有 B 的缓存或路由行时，显示等待或空状态；绝不把 A 的行当成 B 的结果 |
 
 第二行的本地重排有严格前提：行的成员完全相同，只是顺序不同。只要账户、筛选、搜索词或页码改变了集合，旧集合重排后就不能冒充当前结果，切换期间只能显示当前键的缓存或等待状态。
@@ -12693,6 +12794,10 @@ App Router 把一次页面请求分成三条线：服务端组件读数据、决
 4. **落点有两种。** 按身份分格存储时，每份结果都写进自己的格，旧结果不浪费，只是不显示（查询缓存）；只有一个槽位时，身份不匹配的结果直接丢弃（Effect、Redux 预览、编辑抽屉）。
 5. **认领与取消是两件事。** 取消尽量省掉客户端工作，但不保证结果不回来，也不撤销服务端已发生的事（见[取消与超时停得住什么](#28.%20%E5%8F%96%E6%B6%88%E3%80%81%E8%B6%85%E6%97%B6%E5%92%8C%E5%B9%B6%E5%8F%91%E4%B8%8A%E9%99%90%E5%90%84%E8%87%AA%E5%81%9C%E5%BE%97%E4%BD%8F%E4%BB%80%E4%B9%88%EF%BC%9F)）；按身份认领才保证界面正确。两者通常一起用。
 6. **写入的回执不能丢弃。** 读取结果过期了可以扔掉；写入的回执说明服务器状态已经改变，必须按发起时捕获的身份更新对应的缓存，只有“要不要改当前界面”才看它是否仍属于当前会话。
+
+用案例里先 recent、后 oldest 的两次读取走一遍第 3、4 条：
+
+![同一组发起与到达次序下，查询缓存把迟到的 recent 结果写进自己的格但不显示，单槽状态把它与当前所有者比较后丢弃](../../frontend/ui-state/resources/async-result-landing.svg)
 
 下表是本书各处的实例。它们的身份长得不一样，机制相同：
 
@@ -12770,7 +12875,30 @@ onError: (_error, _change, snapshot, context) => {
 },
 ~~~
 
-它只在“保存期间没有任何其他写入碰这个键”时可靠。`cancelQueries` 只取消调用那一刻已在途的读取，不是锁；新鲜期过后的焦点重取、轮询或手动 `refetch` 仍会在保存期间写缓存。一次本地回放正好踩中这一点：把时钟推进 31 秒（超过 30 秒的 `staleTime`）后触发焦点重取，读取先把服务端 April 的 `false` 和 May 的新标题写进缓存，盖掉了乐观写入的 `true`；随后保存失败，旧快照把整张表恢复成保存前的样子，May 的新标题就此丢失。快照代表的是“某一刻的整张表”，而回滚时它已不是权威值。
+它只在“保存期间没有任何其他写入碰这个键”时可靠。`cancelQueries` 只取消调用那一刻已在途的读取，不是锁；新鲜期过后的焦点重取、轮询或手动 `refetch` 仍会在保存期间写缓存。下图是一次踩中这一点的本地回放：
+
+~~~mermaid
+%%{init: {"sequence": {"mirrorActors": false, "actorMargin": 40, "width": 130}}}%%
+sequenceDiagram
+    participant UI as 界面
+    participant C as 查询缓存<br/>acct-a/oldest
+    participant M as mutation
+    participant S as 服务端
+    UI->>M: 点 April“标为已审阅”
+    M->>C: onMutate：cancelQueries<br/>只取消此刻在途的读取
+    Note over M: 存快照 previous<br/>April false，May 旧标题
+    M->>C: 写入 April reviewed=true<br/>（乐观值）
+    M->>S: 发出保存请求
+    Note over UI,S: 时钟推进 31 秒，超过 30 秒的 staleTime；窗口重新聚焦
+    C->>S: 焦点重取
+    S-->>C: April false，May 新标题
+    Note over C: 乐观的 true 被盖掉
+    S-->>M: 保存失败
+    M->>C: onError：写回快照 previous
+    Note over C: April false，May 旧标题<br/>✕ May 的新标题丢失
+~~~
+
+快照代表的是“某一刻的整张表”，回滚时它已不是权威值。
 
 overlay 不会出这个问题，因为它从不把待处理的值写进共享缓存，也不需要回滚。缓存法的好处是其他读者（例如另一个显示同一行的组件）也能看到乐观值；选它时要保证同一个键在保存期间没有并行写入。
 
@@ -13131,12 +13259,13 @@ DevTools 能看到所有派发过的 action 和 state，所以不要把凭证放
 这是“按身份归属”的单槽版本。身份是 `createAsyncThunk` 为每次调用在客户端生成的 `requestId`，随生命周期 action 的 `meta` 传给 reducer；它不进 HTTP 请求，也不需要服务器回传。
 
 ~~~mermaid
+%%{init: {"flowchart": {"wrappingWidth": 400}}}%%
 flowchart TD
     CLICK["工具栏派发预览 thunk"] --> PENDING["createAsyncThunk 先派发 pending"]
     PENDING --> SAVE["reducer 记录<br/>preview.currentRequestId = meta.requestId"]
     SAVE --> POST["payload creator 再发 POST<br/>body 只有 rowIds 快照"]
     POST --> DONE["fulfilled / rejected<br/>meta.requestId 随 action 回来"]
-    DONE --> CHECK{"与 preview.currentRequestId<br/>相等？"}
+    DONE --> CHECK{"与 currentRequestId<br/>相等？"}
     CHECK -->|是| APPLY["fulfilled → ready<br/>rejected → error 或 idle"]
     CHECK -->|否| IGNORE["忽略过期结果"]
 ~~~
@@ -13472,12 +13601,40 @@ URL 不编码选择，所以 Back/Forward 恢复的是地址和查询键，不�
 
 ### 一次只能有一个尝试所有者
 
-“继续”要校验第 1 步，“保存”要校验整份草稿，两者都会为同一收件人行发票据。如果允许它们并行，同一行会同时有两张票据，保存也可能抢在步骤校验之前推进。所以会话里有一个闩锁（下文代码中的 `formAttemptGate`），任一时刻只有一个尝试所有者：
+“继续”要校验第 1 步，“保存”要校验整份草稿，两者都会为同一收件人行发票据。如果允许它们并行，同一行会同时有两张票据，保存也可能抢在步骤校验之前推进。所以会话里有一个闩锁（下文代码中的 `formAttemptGate`），任一时刻只有一个尝试所有者。下图是一个会话里所有者从取得到释放的全部路径，save 的两个阶段在下一节展开：
 
-- 点“继续”时，**同步**取得 `kind="step"`；点“保存”时，同步取得 `kind="save"`。已有所有者时，后来者立即得到 busy，不运行校验也不发请求。同步取得是为了在 React 重渲染之前挡住双击。
+~~~mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
+flowchart TD
+    E["editing<br/>无所有者，两步都可编辑"]
+    subgraph HELD["持有尝试所有者：后来的“继续”或“保存”立即 busy"]
+        direction TB
+        STEP["step 校验<br/>kind=step，只校验第 1 步"]
+        VAL["save · validating<br/>kind=save，只读冻结的快照"]
+        SAVE["save · saving<br/>同一快照、基线和 ETag 发 PATCH"]
+    end
+    BACK["释放所有者<br/>回到 editing"]
+    OK["成功回执<br/>释放所有者，先核对详情缓存"]
+    C412["冲突<br/>释放所有者，重读当前表示、三方比较"]
+    UNK["结果不明<br/>释放所有者，写入结果未确认"]
+
+    E -->|"点“继续”<br/>同步取得 step"| STEP
+    E -->|"点“保存”<br/>同步取得 save"| VAL
+    VAL -->|"全部 valid<br/>所有者与会话仍匹配"| SAVE
+    STEP -->|"valid：进入第 2 步<br/>invalid / unavailable：<br/>留在第 1 步"| BACK
+    VAL -->|"取消本次保存<br/>invalid：跳到出错步骤<br/>unavailable：<br/>不发 PATCH"| BACK
+    SAVE -->|"422<br/>字段错误放回控件"| BACK
+    SAVE -->|200| OK
+    SAVE -->|412| C412
+    SAVE -->|"网络中断<br/>5xx<br/>正文无法验证"| UNK
+~~~
+
+闩锁还要守住四条规则；关闭抽屉的收尾不在图中，见其后一段：
+
+- 所有者在点击处理器里**同步**取得，后来者立即得到 busy，不运行校验也不发请求。同步取得是为了在 React 重渲染之前挡住双击。
 - 持有期间，界面禁用两步内的输入、继续/返回、保存、校验重试、切换记录和关闭；同时，这些入口的事件处理器自己也要检查闩锁，不能只依赖按钮的 `disabled`。
 - 所有者一直持有到结果已提交到界面状态（步骤已推进或错误已显示）才释放。`await` 之后再次核对所有者、会话和快照，只有仍归属的结果能推进步骤或显示错误。
-- 步骤校验出错时留在第 1 步，把错误关联到字段并聚焦第一个错误控件（错误提示的写法见[可访问的表单](#10.%20%E8%A1%A8%E5%8D%95%E6%8E%A7%E4%BB%B6%E6%80%8E%E6%A0%B7%E5%91%BD%E5%90%8D%E3%80%81%E6%8F%90%E4%BA%A4%E5%92%8C%E6%A0%A1%E9%AA%8C%EF%BC%8C%E6%89%8D%E5%AF%B9%E6%89%80%E6%9C%89%E4%BA%BA%E5%8F%AF%E7%94%A8%EF%BC%9F)）。
+- 步骤校验出错时，把错误关联到字段并聚焦第一个错误控件（错误提示的写法见[可访问的表单](#10.%20%E8%A1%A8%E5%8D%95%E6%8E%A7%E4%BB%B6%E6%80%8E%E6%A0%B7%E5%91%BD%E5%90%8D%E3%80%81%E6%8F%90%E4%BA%A4%E5%92%8C%E6%A0%A1%E9%AA%8C%EF%BC%8C%E6%89%8D%E5%AF%B9%E6%89%80%E6%9C%89%E4%BA%BA%E5%8F%AF%E7%94%A8%EF%BC%9F)）。
 
 关闭抽屉不一定经过关闭按钮：浏览器历史变化、切换账户、父组件卸载都可能直接拆掉它。关闭处理器因此必须按所有者类型收尾：取消 step 尝试，或在 save 仍处于 validating 时取消它并作废它的票据；然后作废打开意图和当前 `sessionId`。处于 saving 时不能释放写入所有者去启动别的尝试，只能断开旧会话的界面归属，这不是回滚。
 
@@ -13485,8 +13642,8 @@ URL 不编码选择，所以 Back/Forward 恢复的是地址和查询键，不�
 
 保存分两个阶段，共用同一个所有者：
 
-1. **validating。** 取得 save 所有者后，立即冻结一份不可变快照：`sessionId`、`submitId`、`accountId`、`reportId`、基线、ETag、`organizationId` 和草稿。此时还没有 mutation，TanStack 的 `isPending` 仍为 false，由表单自己的 validating 状态负责显示和锁定。异步校验只读这份快照，不再读可编辑的表单。用户可以点“取消本次保存”：它同步清除所有者、作废票据、恢复编辑，之后返回的校验只能是 stale，不会触发 PATCH；它不承诺取消网络请求。
-2. **saving。** 全部校验通过后，再核对一次所有者、`sessionId`、`submitId`。仍属于当前会话，才从**同一份快照、同一份基线**生成补丁，以同一个 ETag 发 PATCH。之后 mutation 的 pending 状态驱动“正在保存…”。invalid 时跳到第一个错误所在的步骤；unavailable 时不发 PATCH，保留输入并提示重试。
+1. **validating。** 取得 save 所有者后，立即冻结一份不可变快照：`sessionId`、`submitId`、`accountId`、`reportId`、基线、ETag、`organizationId` 和草稿。此时还没有 mutation，TanStack 的 `isPending` 仍为 false，由表单自己的 validating 状态负责显示和锁定。异步校验只读这份快照，不再读可编辑的表单；校验 unavailable 时不发 PATCH，保留输入并提示重试。用户可以点“取消本次保存”：它同步清除所有者、作废票据、恢复编辑，之后返回的校验只能是 stale，不会触发 PATCH；它不承诺取消网络请求。
+2. **saving。** 全部校验通过后，再核对一次所有者、`sessionId`、`submitId`。仍属于当前会话，才从**同一份快照、同一份基线**生成补丁，以同一个 ETag 发 PATCH。之后 mutation 的 pending 状态驱动“正在保存…”。
 
 #### 补丁只写改过的字段
 
@@ -13545,19 +13702,36 @@ ETag 是不透明的标签，只比较相等，不按字符串推断新旧；图
 
 ### 412：三份值比较后由用户确认
 
-这是与上一节并列的另一条分支。编辑器读的是 v7，用户新增收件人 A、把备注改成 “Send after review”。与此同时，另一位管理员先把 title 改成 “Monthly summary — May”、note 改成 “Reviewed”，服务器版本变成 v8。我们的 PATCH 带 `If-Match: "report-42-v7"`，收到 412，服务器没有应用这次补丁。
+这是与上一节并列的另一条分支。编辑器读的是 v7，收件人只有 R（reader@example.test）；用户新增收件人 A（analyst@example.test）、把备注改成 “Send after review”。与此同时，另一位管理员先把 title 改成 “Monthly summary — May”、note 改成 “Reviewed”，服务器版本变成 v8。我们的 PATCH 带 `If-Match: "report-42-v7"`，收到 412，服务器没有应用这次补丁。从 412 到下一次成功写入的往返如下：
 
-客户端等 mutation 结算后，取消并等待同一详情键的旧 GET，再以 `cache: "no-cache"` 发新 GET，读到 v8 的表示和 ETag。它不把缓存里的 v7、也不把更早开始的读取当成冲突基线。下表用 R 表示 reader@example.test，A 表示 analyst@example.test：
+~~~mermaid
+%%{init: {"sequence": {"mirrorActors": false}}}%%
+sequenceDiagram
+    participant E as 我的编辑器
+    participant S as 服务器
+    participant O as 另一位管理员
+    E->>S: GET 报表 42
+    S-->>E: 基线 v7，ETag "report-42-v7"
+    O->>S: 改 title 与 note
+    Note over S: 当前版本 v8
+    E->>S: PATCH，If-Match "report-42-v7"<br/>（新增收件人 A、改 note）
+    S-->>E: 412，补丁未应用
+    Note over E: 等 mutation 结算，取消同键旧 GET
+    E->>S: GET，cache: "no-cache"
+    S-->>E: v8 表示，ETag "report-42-v8"
+    Note over E: 三方比较，用户逐组确认，以 v8 为新基线
+    E->>S: PATCH，If-Match "report-42-v8"<br/>（只有 recipients）
+    S-->>E: 200，ETag "report-42-v9"
+    Note over E: 按成功回执的三种情况核对缓存
+~~~
 
-| 字段 | v7 基线 / 本地草稿 / v8 当前值 | 用户确认 |
-|---|---|---|
-| title | Monthly summary / 未改 / Monthly summary — May | 采用服务端标题 |
-| delivery 组 | email + [R] / email + [R, A] / email + [R] | 保留 email 模式和本地新增的 A；该组重新校验收件人 |
-| note | Draft / Send after review / Reviewed | 用户选择服务端的 Reviewed |
+先等旧 GET 结束再发要求重新验证的新 GET，是为了让冲突基线只能是这次读到的 v8，不能是缓存里的 v7，也不能是更早开始的读取。读到 v8 后，编辑器按字段并排三份值，让用户逐组确认：
+
+![按字段比较 v7 基线、本地草稿与 v8 当前值，用户确认后以 v8 为新基线，新补丁只含收件人数组](../../frontend/ui-state/resources/conflict-three-way-rebase.svg)
 
 `delivery.channel` 和 `recipients` 是联动字段组，不能无条件逐字段拼接。若 v8 已改成 download 并移除了 recipients，而本地新增了 A，逐字段套用会把地址隐藏或丢掉。这时把整个 delivery 组标为冲突，同时展示服务端的下载模式和本地的邮件草稿，让用户明确选择：保留 download 并丢弃收件人，或切回 email 并保留收件人。确认后按最终模式重新跑同步和异步校验，再生成条件补丁。
 
-按上表的选择，以 v8 为新基线构造新草稿：title 和 note 用服务端值，delivery 保留 email 与 [R, A]。与 v8 比较后，唯一的差异是收件人数组，所以补丁里没有 title 和 note：
+图中的选择让新草稿与 v8 只差收件人数组，所以新补丁里没有 title 和 note：
 
 ~~~http
 PATCH /api/accounts/acct-a/reports/42 HTTP/1.1
@@ -13567,7 +13741,7 @@ If-Match: "report-42-v8"
 {"delivery":{"recipients":["reader@example.test","analyst@example.test"]}}
 ~~~
 
-若 v8 期间没有再变化，服务器返回 v9：
+v8 期间没有再变化时，服务器返回 v9：
 
 ~~~http
 HTTP/1.1 200 OK
@@ -13851,16 +14025,11 @@ React 能中断的只是组件和组件之间的 render 工作。一个组件内
 
 搜索框的 `query` 是紧急状态，直接由 `onChange` 更新。`useDeferredValue(query)` 返回一个“落后一步”的副本 `deferredQuery`，把它而不是 `query` 交给结果列表。`isStale = query !== deferredQuery` 表示列表还没跟上输入，用来显示陈旧提示。
 
-假设初始搜索词为空，列表显示 May、April。用户一次把搜索框填成 `apr`（例如粘贴）：
+假设初始搜索词为空，列表显示 May、April。用户一次把搜索框填成 `apr`（例如粘贴），React 分两轮处理这次输入：
 
-| 次序 | 发生什么 |
-| --- | --- |
-| 1. 输入事件 | 处理器排入 `query="apr"`。 |
-| 2. 紧急 render 与 commit | render 得到 `query="apr"`、`deferredQuery=""`、`isStale=true`。提交后输入框显示 `apr`，陈旧提示出现；`ReportResults` 的 props 没变，这一轮跳过它，列表 DOM 仍是 May、April。 |
-| 3. 后台 render | React 用 `deferredQuery="apr"` 计算新列表，屏幕上仍是已提交的旧列表。期间若用户又输入，这轮可被放弃，按最新值重来。 |
-| 4. 后台 commit | 采用这一轮后，列表提交为 April，`isStale` 变回 `false`，提示消失。 |
+![useDeferredValue 先在紧急轮提交输入框与陈旧提示并跳过结果列表，再在可被放弃的后台轮提交 April](../../frontend/ui-state/resources/react-deferred-value-lanes.svg)
 
-这是 React 的提交次序，不承诺每一步都单独绘制成一帧；后台工作很快完成时，用户可能只看到最终列表。
+图中是 React 的提交次序，不承诺每一步都单独绘制成一帧；第 ② 步为什么能跳过列表，见下文 memo 一节。
 
 > [!example]- 完整示例：输入状态与结果列表
 >
@@ -13913,7 +14082,7 @@ React 能中断的只是组件和组件之间的 render 工作。一个组件内
 
 ### memo 边界决定能否跳过旧列表
 
-第 2 步能跳过 `ReportResults`，靠的是 `memo` (记忆化组件)：它按浅比较检查 props，`reports` 和 `query` 都没变就跳过这次 render。没有这道边界，紧急 render 会用旧的 `deferredQuery` 把整个列表重算一遍，输入照样变慢。
+图中第 ② 步能跳过 `ReportResults`，靠的是 `memo` (记忆化组件)：它按浅比较检查 props，`reports` 和 `query` 都没变就跳过这次 render。没有这道边界，紧急 render 会用旧的 `deferredQuery` 把整个列表重算一遍，输入照样变慢。
 
 浅比较比的是引用。`reports` 必须在输入期间保持同一个数组、也不被原地修改；父组件若每次 render 都传一个新数组，`memo` 就会认为 props 变了。`memo` 是性能优化，不是正确性保证。项目配置了 React Compiler (React 编译器)并核对过编译结果时，编译器可能自动建立同样的跳过边界；本例显式写 `memo`，让因果关系在没有编译器时也看得见。怎样测量和建立 memo 边界，见[React 渲染慢时，先改什么？](#57.%20React%20%E6%B8%B2%E6%9F%93%E6%85%A2%E6%97%B6%EF%BC%8C%E5%85%88%E6%94%B9%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
@@ -17485,19 +17654,11 @@ Beacon 与 keepalive Fetch 的请求共享同一个 fetch group（Fetch 组）�
 
 ### 每个阶段能证明什么？
 
-把事件交给浏览器不等于服务器已记录。从入队到落库，每一步观察到的信号证明范围不同：
+把事件交给浏览器不等于服务器已记录。下图沿案例的这一批事件走完从入队到落库的链路，右列是每一步观察到的信号能证明什么，以及链路上会丢在哪里：
 
-| 观察到的阶段 | 能证明什么 | 不能证明什么 |
-|---|---|---|
-| 事件进入 JavaScript 内存队列 | 本页面暂存了事件 | 页面销毁后还能恢复 |
-| `sendBeacon()` 返回 `true` | 浏览器接受了排队 | 网络请求完成，或服务器已处理 |
-| 服务端日志出现请求 | 请求到达了这个服务端入口 | 事件已写入耐久存储或业务事务已提交 |
-| 服务端按事件 ID 去重并提交 | 服务端按自己的事务契约记录了事件 | 浏览器知道这个结果（Beacon 没有响应回调） |
+![离页分析事件从内存队列经 hidden、takeBatchBody、Beacon 或 keepalive Fetch 到服务端入口和去重提交，每步能证明与不能证明的内容及可能丢失的位置](../../frontend/delivery/resources/analytics-exit-delivery-chain.svg)
 
-两次实测把表里的两条缝隙变得具体：
-
-- **排队之后仍会丢。** `sendBeacon()` 返回 `true` 后，测试拦截并中止了网络请求，服务端没有收到任何记录。样例在发送前已把这批事件移出队列，所以 Beacon 返回 `false` 而 Fetch 又因额度或网络失败被拒时，事件也不会回到队列。
-- **重复要靠服务端去重。** 应用代码主动调用两次 Beacon，浏览器接受了两次，服务端看到两个请求和两行原始事件；按事件 ID 去重后，唯一事件数才是 1。浏览器不会按正文里的 ID 替应用去重。这个实验说明重复提交需要服务端处理，不表示一次调用会被浏览器自动重发。
+图中两处来自实测：红框“排队之后仍会丢”里的拦截实验，以及最后两步的重复提交——应用主动调用两次 Beacon，浏览器接受两次，服务端看到两行原始事件，按事件 ID 去重后唯一事件数才是 1。浏览器不会按正文里的 ID 替应用去重；这个实验说明重复提交要由服务端处理，不表示一次调用会被浏览器自动重发。
 
 当前样例不重试：它可能丢失事件，但不会自己制造无限重试流。`setCollectionEnabled(false)` 只能清空本地队列，撤不回已经交给浏览器的批次。
 

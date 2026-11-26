@@ -4,7 +4,7 @@
 <g font-family="Arial, PingFang SC, sans-serif" fill="#24364c">
 <text x="450" y="36" text-anchor="middle" font-size="23">同一运行：run-r42-7</text>
 <rect x="30" y="65" width="405" height="180" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
-<text x="232.5" y="100" text-anchor="middle" font-size="25" font-weight="600">完整投影 · lastSeq=3</text>
+<text x="232.5" y="100" text-anchor="middle" font-size="25" font-weight="600">快照投影 · lastSeq=3</text>
 <text x="232.5" y="138" text-anchor="middle" font-size="23">文本（来自 seq=2）</text>
 <text x="232.5" y="170" text-anchor="middle" font-size="23">正在读取 build 42 日志</text>
 <text x="232.5" y="202" text-anchor="middle" font-size="23">c1：running（来自 seq=3）</text>
@@ -20,7 +20,7 @@
 <text x="450.0" y="385" text-anchor="middle" font-size="25" font-weight="600">校验后更新现有 c1 卡</text>
 <text x="450.0" y="423" text-anchor="middle" font-size="23">c1 → completed，附工具摘要</text>
 <text x="450.0" y="455" text-anchor="middle" font-size="23">文本不变；lastSeq → 4</text>
-<text x="450.0" y="487" text-anchor="middle" font-size="23">投影与游标一起替换</text>
+<text x="450.0" y="487" text-anchor="middle" font-size="23">投影与 lastSeq 一起更新</text>
 <path d="M450,532 L450,585" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
 <rect x="120" y="600" width="660" height="105" rx="12" fill="#eef5ff" stroke="#cbddf4" stroke-width="2"/>
 <text x="450.0" y="635" text-anchor="middle" font-size="25" font-weight="600">继续接收：先校验身份与结构</text>

@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="682" viewBox="0 0 800 682" role="img" aria-labelledby="title desc">
+  <title id="title">负剩余空间按收缩权重分摊，遇到最小尺寸时冻结再分配</title>
+  <desc id="desc">容器内宽 256px，间距 16px。两项基础尺寸 200px 和 100px，flex-shrink 都为 1，合计 316px，多出 60px。收缩权重等于 flex-shrink 乘基础尺寸，为 2 比 1，暂定 160px 和 80px。第一项最小尺寸 180px，160 低于下限，冻结在 180px。剩余 240 减 180 等于 60px 给第二项。最终 180 加 16 加 60 等于 256px。</desc>
+  <defs>
+    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#fee2e2"/><line x1="0" y1="0" x2="0" y2="8" stroke="#dc2626" stroke-width="2.5"/></pattern>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .h{font-size:16px;font-weight:700}
+      .b{font-size:15px;fill:#334155}
+      .v{font-size:16px;font-weight:700}
+      .s{font-size:14px;fill:#475569}
+      .base{fill:#dbeafe;stroke:#1769aa;stroke-width:1.5}
+      .bad{fill:#fee2e2;stroke:#dc2626;stroke-width:1.5}
+      .frozen{fill:#e2e8f0;stroke:#334155;stroke-width:2.5}
+      .done{fill:#dcfce7;stroke:#15803d;stroke-width:1.5}
+      .slot{fill:#f8fafc;stroke:#1769aa;stroke-width:1.5;stroke-dasharray:6 4}
+      .gap{fill:#ffffff;stroke:#94a3b8;stroke-width:1;stroke-dasharray:3 3}
+    </style>
+  </defs>
+  <rect width="800" height="682" rx="12" fill="#ffffff"/>
+  <text class="h" x="24" y="34" style="font-size:18px">.shrink-demo：容器内宽 256px，gap 16px，两项可用 240px</text>
+  <text class="b" x="24" y="60">收缩权重 = flex-shrink × 基础尺寸 = 1 × 200 : 1 × 100 = 2 : 1</text>
+  <line x1="60" y1="90" x2="60" y2="662" stroke="#334155" stroke-width="2"/>
+  <line x1="572" y1="90" x2="572" y2="662" stroke="#334155" stroke-width="2" stroke-dasharray="7 5"/>
+  <text class="s" x="572" y="84" text-anchor="middle">容器边界 256px</text>
+  <text class="s" x="60" y="84" text-anchor="middle">0</text>
+
+<text class="h" x="68" y="118">① 基础尺寸：合计 200 + 16 + 100 = 316px，比 256px 多出 60px</text>
+<rect class="base" x="60" y="134" width="400" height="48"/>
+<text class="v" x="260.0" y="164" text-anchor="middle">200</text>
+<rect class="gap" x="460" y="134" width="32" height="48"/>
+<rect class="base" x="492" y="134" width="200" height="48"/>
+<rect x="572" y="134" width="120" height="48" fill="url(#hatch)" opacity="0.55"/>
+<text class="v" x="532" y="164" text-anchor="middle">100</text>
+<text class="s" x="700" y="164" style="fill:#b91c1c;font-weight:700">超出 60px</text>
+<text class="h" x="68" y="256">② 按收缩权重 2 : 1 分摊 60px：第一项 −40，第二项 −20</text>
+<rect class="bad" x="60" y="272" width="320" height="48"/>
+<text class="v" x="220.0" y="302" text-anchor="middle">160</text>
+<rect class="gap" x="380" y="272" width="32" height="48"/>
+<rect class="base" x="412" y="272" width="160" height="48"/>
+<text class="v" x="492.0" y="302" text-anchor="middle">80</text>
+<line x1="420" y1="266" x2="420" y2="328" stroke="#dc2626" stroke-width="2.5" stroke-dasharray="5 4"/>
+<text class="s" x="420" y="344" text-anchor="middle" style="fill:#b91c1c;font-weight:700">第一项 min 180px</text>
+<text class="s" x="582" y="302">合计 256px，</text>
+<text class="s" x="582" y="322">但第一项违反下限</text>
+<text class="h" x="68" y="394">③ 160 &lt; min 180 → 第一项冻结在 180px；剩余 240 − 180 = 60px</text>
+<rect class="frozen" x="60" y="410" width="360" height="48"/>
+<text class="v" x="240.0" y="440" text-anchor="middle">180 冻结</text>
+<rect class="gap" x="420" y="410" width="32" height="48"/>
+<rect class="slot" x="452" y="410" width="120" height="48"/>
+<text class="v" x="512.0" y="440" text-anchor="middle">剩 60</text>
+<text class="s" x="582" y="440">第二项从基础尺寸 100</text>
+<text class="s" x="582" y="460">重新收缩到剩余空间</text>
+<text class="h" x="68" y="532">④ 第二项分得 60px：180 + 16 + 60 = 256px，正好填满容器</text>
+<rect class="frozen" x="60" y="548" width="360" height="48"/>
+<text class="v" x="240.0" y="578" text-anchor="middle">180</text>
+<rect class="gap" x="420" y="548" width="32" height="48"/>
+<rect class="done" x="452" y="548" width="120" height="48"/>
+<text class="v" x="512.0" y="578" text-anchor="middle">60</text>
+<text class="s" x="582" y="578" style="fill:#15803d;font-weight:700">与 Chromium 探针一致</text>
+</svg>

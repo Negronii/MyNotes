@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="500" viewBox="0 0 760 500" role="img" aria-labelledby="title desc">
+  <title id="title">sticky 工具条只能在自己的包含块里移动</title>
+  <desc id="desc">工具条高 32px，设 top: 0，是 300px 包裹层的第一个子元素，窗口是滚动容器。图中 y 是相对视口顶边的坐标。滚动 100px 时包裹层顶边在 y=−100，工具条贴在 y=0；滚动 268px 时包裹层底边在 y=32，工具条仍在 y=0 并与底边齐平；滚动 290px 时包裹层底边在 y=10，工具条不能越出包裹层，停在 y=−22 并随之滚走。反例中包裹层也只有 32px，滚动 100px 后两者都在 y=−100，已滚出视口。</desc>
+  <defs>
+    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#f1f5f9"/><line x1="0" y1="0" x2="0" y2="8" stroke="#cbd5e1" stroke-width="3"/></pattern>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L10 5L0 10z" fill="#b7443e"/></marker>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .h{font-size:16px;font-weight:700}
+      .m{font-size:13px;fill:#b7443e}
+      .b{font-size:14px;fill:#334155}
+      .s{font-size:13px;fill:#475569}
+      .tb{font-size:13px;font-weight:700;fill:#7c2d12}
+    </style>
+  </defs>
+    <rect width="760" height="500" rx="12" fill="#ffffff"/>
+  <text class="h" x="20" y="32" style="font-size:17px">工具条 32px、top: 0；y 是相对视口顶边的坐标，比例 1:1</text>
+  <text class="h" x="20" y="66">滚动 100px</text>
+  <text class="m" x="20" y="88">包裹层顶边 y=−100</text>
+  <clipPath id="cp0"><rect x="20" y="110" width="120" height="270"/></clipPath>
+  <rect x="20" y="110" width="120" height="60" fill="url(#hatch)"/>
+  <rect x="20" y="170" width="120" height="210" fill="#ffffff" stroke="#64748b" stroke-width="2"/>
+  <g clip-path="url(#cp0)"><rect x="30" y="70" width="100" height="300" fill="#e8f1ff" fill-opacity="0.75" stroke="#1769aa" stroke-width="2"/><rect x="36" y="170" width="88" height="32" fill="#fdba74" stroke="#c2410c" stroke-width="2"/></g>
+  <text class="s" x="80" y="128" text-anchor="middle">已滚出视口</text>
+  <text class="tb" x="80" y="191" text-anchor="middle">工具条</text>
+  <text class="s" x="80" y="160" text-anchor="middle" style="fill:#1769aa">300px 包裹层</text>
+  <line x1="16" y1="170" x2="146" y2="170" stroke="#b42318" stroke-width="2"/>
+  <text class="s" x="150" y="175" style="fill:#b42318;font-weight:700">y=0</text>
+  <text class="s" x="150" y="280">视口</text>
+  <path d="M154 154V118" stroke="#b7443e" stroke-width="2" marker-end="url(#ar)"/>
+  <text class="b" x="20" y="408">包裹层底边 y=200</text>
+  <text class="b" x="20" y="428">工具条贴在 y=0</text>
+  <text class="h" x="205" y="66">滚动 268px</text>
+  <text class="m" x="205" y="88">包裹层顶边 y=−268</text>
+  <clipPath id="cp1"><rect x="205" y="110" width="120" height="270"/></clipPath>
+  <rect x="205" y="110" width="120" height="60" fill="url(#hatch)"/>
+  <rect x="205" y="170" width="120" height="210" fill="#ffffff" stroke="#64748b" stroke-width="2"/>
+  <g clip-path="url(#cp1)"><rect x="215" y="-98" width="100" height="300" fill="#e8f1ff" fill-opacity="0.75" stroke="#1769aa" stroke-width="2"/><rect x="221" y="170" width="88" height="32" fill="#fdba74" stroke="#c2410c" stroke-width="2"/></g>
+  <text class="s" x="265" y="128" text-anchor="middle">已滚出视口</text>
+  <text class="tb" x="265" y="191" text-anchor="middle">工具条</text>
+  <text class="s" x="265" y="160" text-anchor="middle" style="fill:#1769aa">300px 包裹层</text>
+  <line x1="201" y1="170" x2="331" y2="170" stroke="#b42318" stroke-width="2"/>
+  <text class="s" x="335" y="175" style="fill:#b42318;font-weight:700">y=0</text>
+  <text class="s" x="335" y="280">视口</text>
+  <path d="M339 154V118" stroke="#b7443e" stroke-width="2" marker-end="url(#ar)"/>
+  <text class="b" x="205" y="408">包裹层底边 y=32</text>
+  <text class="b" x="205" y="428">工具条仍在 y=0，</text>
+  <text class="b" x="205" y="448">底边与包裹层齐平</text>
+  <text class="h" x="390" y="66">滚动 290px</text>
+  <text class="m" x="390" y="88">包裹层顶边 y=−290</text>
+  <clipPath id="cp2"><rect x="390" y="110" width="120" height="270"/></clipPath>
+  <rect x="390" y="110" width="120" height="60" fill="url(#hatch)"/>
+  <rect x="390" y="170" width="120" height="210" fill="#ffffff" stroke="#64748b" stroke-width="2"/>
+  <g clip-path="url(#cp2)"><rect x="400" y="-120" width="100" height="300" fill="#e8f1ff" fill-opacity="0.75" stroke="#1769aa" stroke-width="2"/><rect x="406" y="148" width="88" height="32" fill="#fdba74" stroke="#c2410c" stroke-width="2"/></g>
+  <text class="s" x="450" y="128" text-anchor="middle">已滚出视口</text>
+  <text class="tb" x="450" y="169" text-anchor="middle">工具条</text>
+  <line x1="386" y1="170" x2="516" y2="170" stroke="#b42318" stroke-width="2"/>
+  <text class="s" x="520" y="175" style="fill:#b42318;font-weight:700">y=0</text>
+  <text class="s" x="520" y="280">视口</text>
+  <path d="M524 154V118" stroke="#b7443e" stroke-width="2" marker-end="url(#ar)"/>
+  <text class="b" x="390" y="408">包裹层底边 y=10</text>
+  <text class="b" x="390" y="428">工具条 y=10−32=−22，</text>
+  <text class="b" x="390" y="448">随包裹层滚走</text>
+  <text class="h" x="575" y="66">反例：包裹层 32px</text>
+  <text class="m" x="575" y="88">滚动 100px；两者 y=−100</text>
+  <clipPath id="cp3"><rect x="575" y="110" width="120" height="270"/></clipPath>
+  <rect x="575" y="110" width="120" height="60" fill="url(#hatch)"/>
+  <rect x="575" y="170" width="120" height="210" fill="#ffffff" stroke="#64748b" stroke-width="2"/>
+  <g clip-path="url(#cp3)"><rect x="585" y="70" width="100" height="32" fill="#e8f1ff" fill-opacity="0.75" stroke="#1769aa" stroke-width="2"/><rect x="591" y="70" width="88" height="32" fill="#fdba74" stroke="#c2410c" stroke-width="2"/></g>
+  <text class="s" x="635" y="128" text-anchor="middle">两者已滚出视口</text>
+  <line x1="571" y1="170" x2="701" y2="170" stroke="#b42318" stroke-width="2"/>
+  <text class="s" x="705" y="175" style="fill:#b42318;font-weight:700">y=0</text>
+  <text class="s" x="705" y="280">视口</text>
+  <path d="M709 154V118" stroke="#b7443e" stroke-width="2" marker-end="url(#ar)"/>
+  <text class="b" x="575" y="408">包裹层与工具条</text>
+  <text class="b" x="575" y="428">都在 y=−100：</text>
+  <text class="b" x="575" y="448">没有移动空间，</text>
+  <text class="b" x="575" y="468">看起来没粘住</text>
+</svg>

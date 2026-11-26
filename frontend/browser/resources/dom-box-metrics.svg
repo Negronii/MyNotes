@@ -35,17 +35,17 @@
   <text class="small left" x="44" y="329">offsetWidth 不含 margin。</text>
 
   <rect class="panel" x="324" y="52" width="352" height="294" rx="14"/>
-  <rect x="344" y="70" width="312" height="117" rx="10" fill="#eef4fb" stroke="#c8d9ed" stroke-width="2"/>
+  <rect x="344" y="70" width="312" height="126" rx="10" fill="#eef4fb" stroke="#c8d9ed" stroke-width="2"/>
   <text class="heading left" x="360" y="97">content-box：声明宽 320px</text>
-  <text class="body left" x="360" y="125">content 320 + padding 32</text>
-  <text class="body left" x="360" y="151">+ border 2 = offsetWidth 354px</text>
-  <text class="body left" x="360" y="176">clientWidth = 352px</text>
+  <text class="body left" x="360" y="125">content = 320px</text>
+  <text class="body left" x="360" y="151">clientWidth = 320 + 32 = 352px</text>
+  <text class="body left" x="360" y="177">offsetWidth = 352 + 2 = 354px</text>
 
-  <rect x="344" y="201" width="312" height="125" rx="10" fill="#f3effa" stroke="#d1c2e9" stroke-width="2"/>
-  <text class="heading left" x="360" y="228">border-box：声明宽 320px</text>
-  <text class="body left" x="360" y="256">320 − padding 32 − border 2</text>
-  <text class="body left" x="360" y="282">= content 286px；clientWidth 318px</text>
-  <text class="body left" x="360" y="308">offsetWidth = 320px</text>
+  <rect x="344" y="210" width="312" height="126" rx="10" fill="#f3effa" stroke="#d1c2e9" stroke-width="2"/>
+  <text class="heading left" x="360" y="237">border-box：声明宽 320px</text>
+  <text class="body left" x="360" y="265">offsetWidth = 320px</text>
+  <text class="body left" x="360" y="291">clientWidth = 320 − 2 = 318px</text>
+  <text class="body left" x="360" y="317">content = 318 − 32 = 286px</text>
 
   <text class="small" text-anchor="middle" x="350" y="369">教学条件：左右 padding 各 16px、border 各 1px；无占空间滚动条。</text>
 </svg>

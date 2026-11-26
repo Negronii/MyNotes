@@ -47,7 +47,7 @@ print(len(report.rows))         # 1
 
 `self.rows = rows` 只保存了对列表的引用，所以 `source_rows`、`report.rows`、`rows_alias` 是同一个列表。`copy()` 新建了一个行列表，但 `copied_rows[0]` 和 `report.rows[0]` 仍是同一个事件字典，字典里的 `tags` 也是同一个列表，所以通过副本修改嵌套标签，原报表也能看到。最后把 `rows_alias` 改绑到新列表，`report.rows` 不受影响。这些普通属性保存在实例的 `__dict__` 里。
 
-![Report 实例、行列表、事件字典与标签列表的对象引用关系](resources/python-object-aliases.svg)
+![Report 实例、共享的行列表、copy() 新建的外层列表、事件字典与标签列表的对象引用关系](resources/python-object-aliases.svg)
 
 可变默认参数的累积：
 

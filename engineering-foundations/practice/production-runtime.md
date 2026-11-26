@@ -71,7 +71,7 @@ liveness 不要依赖每个短暂的下游故障。数据库抖动一下，所�
 进程收到停止信号后，每个服务立即在自己的控制面开始关闭，不等入口路由更新传播完，也不等其他服务先结束：
 
 - **API**：收到通知就关闭本地业务门闩，拒绝开始新的业务操作，开始排空在途请求；同时让 readiness 返回未就绪，让平台异步更新路由目标。路由摘除传播期间仍可能有请求到达，所以本地门闩不能依赖探针传播。已开始的请求在宽限期内完成或按应用契约安全中止，然后关闭连接池、线程、临时文件和 telemetry exporter (遥测导出器)。
-- **worker**：独立停止领取新的 delivery (消息投递)，再分两类处理。运行中的 attempt 能在截止前完成，就先持久提交业务结果、再 ACK；不能完成就不 ACK，让 broker 重新投递，由租约恢复器按租约规则接管。已预取但还没启动的投递，按 broker 的关闭与归还契约放回队列（各 broker 的做法见[队列确认章](../services/queue-delivery-and-acknowledgement.md)）。readiness 不会替 worker 暂停队列消费。
+- **worker**：独立停止领取新的 delivery (消息投递)，再分两类处理。运行中的 attempt 能在截止前完成，就先持久提交业务结果、再 ACK；不能完成就不 ACK，让 broker 重新投递，由租约恢复器按租约规则接管。已预取但还没启动的投递，按 broker 的关闭与归还契约放回队列：本例的 RabbitMQ 由关闭 channel 把它们自动重新入队，`basic.cancel` 本身不会让它们回队（细节见[队列确认章的 prefetch 一节](../services/queue-delivery-and-acknowledgement.md#prefetch%20限制的是什么？)）。readiness 不会替 worker 暂停队列消费。
 - **outbox relay**：停止认领新的待发意图，宽限期内等待已开始的发布得出可判定的结果。只有 broker 的确认、路由和持久性条件都满足、且数据库里的 `published` 更新成功，才把意图标为完成；缺确认或更新未提交时不伪记成功，释放认领（或等认领租约过期），由新的 relay 重试。重复发布同一个 job ID 是允许的，worker 的持久条件领取负责去重。
 
 ![API 收到通知即关本地门闩、不等路由传播；worker 独立停止领取，归还未启动的预取投递，运行中的 attempt 完成后先持久提交再 ACK，否则不 ACK，由重投与租约恢复器接手。](resources/runtime-api-and-worker-shutdown.svg)

@@ -33,10 +33,11 @@ ORM 会话是可变的事务状态，不能被并发的执行者共用：并发�
 `Engine` 在每个进程里创建一次，长期保存方言、建连方式和这个进程的连接池。会话创建时并不占连接；它第一次真正需要和数据库通信时才向池借一条——通常是执行第一条 SELECT，调用 `Session.connection()` 也会在业务 SQL 之前借出。事务结束时连接归还池。
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
     Start[创建局部会话并开始事务] --> Need[第一次需要与数据库通信]
-    Need --> Pool{在 pool_timeout 内借到连接？}
-    Pool -->|是：取空闲连接、按需新建或等到归还| Q[执行 SQL，在事务内取完结果]
+    Need --> Pool{"在 pool_timeout 内<br/>借到连接？"}
+    Pool -->|"是：取空闲连接、<br/>按需新建或等到归还"| Q[执行 SQL，在事务内取完结果]
     Pool -->|否：等待超时| Timeout[本次访问失败<br/>业务 SQL 未发出，没有连接可归还]
     Q -->|成功| C[COMMIT]
     Q -->|异常| R[ROLLBACK]

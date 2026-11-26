@@ -32,7 +32,7 @@
 <text x="113" y="247" text-anchor="middle" class="small">user-17 200；user-29 404</text>
 
 <rect x="255" y="173" width="190" height="92" rx="10" class="hold"/>
-<text x="350" y="201" text-anchor="middle" class="body">样本或遥测不足</text>
+<text x="350" y="201" text-anchor="middle" class="body">样本或遥测不足，或</text>
 <text x="350" y="222" text-anchor="middle" class="body">SLI 未达加流门槛</text>
 <text x="350" y="247" text-anchor="middle" class="small">未触发止损；保持</text>
 
@@ -63,22 +63,22 @@
 <polygon points="587,428 675,463 587,498 499,463" class="hold"/>
 <text x="587" y="467" text-anchor="middle" class="small">有安全且兼容的候选？</text>
 
-<path d="M499 463 H343 V529" class="line"/>
-<text x="413" y="453" text-anchor="middle" class="small">是</text>
+<path d="M499 463 H350 V529" class="line"/>
+<text x="420" y="453" text-anchor="middle" class="small">是</text>
 <path d="M587 498 V529" class="line"/>
-<text x="635" y="526" class="small">否</text>
+<text x="597" y="522" class="small">否</text>
 
-<rect x="188" y="535" width="310" height="70" rx="10" class="check"/>
-<text x="343" y="562" text-anchor="middle" class="body">恢复候选到就绪并备足容量，再切回</text>
-<text x="343" y="588" text-anchor="middle" class="small">HTTP 入口切流；worker 消费另行控制</text>
+<rect x="195" y="535" width="310" height="70" rx="10" class="check"/>
+<text x="350" y="562" text-anchor="middle" class="body">候选就绪且容量足够后再切回</text>
+<text x="350" y="588" text-anchor="middle" class="small">HTTP 入口切流；worker 消费另行控制</text>
 
-<rect x="514" y="535" width="168" height="70" rx="10" class="stop"/>
-<text x="598" y="560" text-anchor="middle" class="body">隔离受影响入口</text>
-<text x="598" y="581" text-anchor="middle" class="small">并前向修复</text>
-<text x="598" y="599" text-anchor="middle" class="small">不恢复已知漏洞版</text>
+<rect x="520" y="535" width="162" height="70" rx="10" class="stop"/>
+<text x="601" y="560" text-anchor="middle" class="body">隔离受影响入口</text>
+<text x="601" y="581" text-anchor="middle" class="small">并前向修复</text>
+<text x="601" y="599" text-anchor="middle" class="small">不恢复已知漏洞版</text>
 
-<path d="M343 605 V644 H350 V660" class="line"/>
-<path d="M598 605 V644 H350" fill="none" stroke="#36546f" stroke-width="2"/>
+<path d="M350 605 V658" class="line"/>
+<path d="M601 605 V632 H350" fill="none" stroke="#36546f" stroke-width="2"/>
 <rect x="84" y="660" width="532" height="68" rx="9" class="box"/>
 <text x="350" y="686" text-anchor="middle" class="body">切回或前向修复后复验</text>
 <text x="350" y="710" text-anchor="middle" class="small">实际摘要与配置符合预期；两个身份命中预期摘要且结果正确；worker 任务恢复</text>

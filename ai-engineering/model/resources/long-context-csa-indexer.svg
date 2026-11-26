@@ -79,29 +79,29 @@
 <text x="565.0" y="1045.92" text-anchor="middle" font-size="26px" font-weight="normal">4</text>
 <rect x="620" y="1005" width="110" height="62" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
 <text x="675.0" y="1045.92" text-anchor="middle" font-size="26px" font-weight="normal">1</text>
-<text x="100.0" y="1138.28" text-anchor="middle" font-size="21px" font-weight="normal"><tspan>w</tspan><tspan baseline-shift="super" font-size="15px">I</tspan><tspan baseline-shift="sub" font-size="15px">t</tspan></text>
+<text x="100.0" y="1138.28" text-anchor="middle" font-size="21px" font-weight="normal"><tspan>w</tspan><tspan baseline-shift="super" font-size="17px">I</tspan><tspan baseline-shift="sub" font-size="17px">t</tspan></text>
 <rect x="155" y="1100" width="88" height="58" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.8"/>
 <text x="199.0" y="1138.28" text-anchor="middle" font-size="26px" font-weight="normal">2</text>
 <rect x="243" y="1100" width="88" height="58" rx="0" fill="#e4f1ff" stroke="#9fb1c3" stroke-width="1.8"/>
 <text x="287.0" y="1138.28" text-anchor="middle" font-size="26px" font-weight="normal">1</text>
-<text x="790" y="1183" text-anchor="middle" font-size="22px" font-weight="bold">沿索引头轴加权求和</text>
+<text x="545" y="1198" text-anchor="start" font-size="22px" font-weight="bold">沿索引头轴加权求和</text>
 <path d="M500,1067 L500,1162" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
 <path d="M331,1129 L465,1162" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
 <circle cx="500" cy="1190" r="28" fill="#fff2d5" stroke="#617f99" stroke-width="3"/>
 <text x="500" y="1199" text-anchor="middle" font-size="28px" font-weight="bold">Σ</text>
 <path d="M500,1218 L500,1250" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
-<text x="820" y="1238" text-anchor="middle" font-size="22px" font-weight="bold">I[s] 分数</text>
+
 <text x="395.0" y="1291" text-anchor="middle" font-size="20px" font-weight="normal">块 0</text>
 <text x="525.0" y="1291" text-anchor="middle" font-size="20px" font-weight="normal">块 1</text>
 <text x="655.0" y="1291" text-anchor="middle" font-size="20px" font-weight="normal">块 2</text>
-<text x="280.0" y="1347.6" text-anchor="middle" font-size="20px" font-weight="normal"><tspan>I</tspan><tspan baseline-shift="sub" font-size="14px">s</tspan></text>
+<text x="280.0" y="1347.6" text-anchor="middle" font-size="20px" font-weight="normal"><tspan>I</tspan><tspan baseline-shift="sub" font-size="16px">t</tspan><tspan>[s]</tspan></text>
 <rect x="330" y="1308" width="130" height="60" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
 <text x="395.0" y="1347.6" text-anchor="middle" font-size="28px" font-weight="normal">6</text>
 <rect x="460" y="1308" width="130" height="60" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
 <text x="525.0" y="1347.6" text-anchor="middle" font-size="28px" font-weight="normal">4</text>
 <rect x="590" y="1308" width="130" height="60" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
 <text x="655.0" y="1347.6" text-anchor="middle" font-size="28px" font-weight="normal">3</text>
-<text x="800" y="1418" text-anchor="start" font-size="24px" font-weight="bold">TopK · k = 2</text>
+<text x="525" y="1412" text-anchor="start" font-size="24px" font-weight="bold">TopK · k = 2</text>
 <path d="M500,1368 L500,1440" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
 <text x="350.0" y="1500.92" text-anchor="middle" font-size="21px" font-weight="normal">选中 ID</text>
 <rect x="425" y="1460" width="160" height="62" rx="0" fill="#e7f4de" stroke="#9fb1c3" stroke-width="1.8"/>

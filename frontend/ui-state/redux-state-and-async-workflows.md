@@ -55,12 +55,13 @@ DevTools 能看到所有派发过的 action 和 state，所以不要把凭证放
 这是“按身份归属”的单槽版本。身份是 `createAsyncThunk` 为每次调用在客户端生成的 `requestId`，随生命周期 action 的 `meta` 传给 reducer；它不进 HTTP 请求，也不需要服务器回传。
 
 ~~~mermaid
+%%{init: {"flowchart": {"wrappingWidth": 400}}}%%
 flowchart TD
     CLICK["工具栏派发预览 thunk"] --> PENDING["createAsyncThunk 先派发 pending"]
     PENDING --> SAVE["reducer 记录<br/>preview.currentRequestId = meta.requestId"]
     SAVE --> POST["payload creator 再发 POST<br/>body 只有 rowIds 快照"]
     POST --> DONE["fulfilled / rejected<br/>meta.requestId 随 action 回来"]
-    DONE --> CHECK{"与 preview.currentRequestId<br/>相等？"}
+    DONE --> CHECK{"与 currentRequestId<br/>相等？"}
     CHECK -->|是| APPLY["fulfilled → ready<br/>rejected → error 或 idle"]
     CHECK -->|否| IGNORE["忽略过期结果"]
 ~~~

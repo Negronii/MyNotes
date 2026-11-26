@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="630" viewBox="0 0 1000 630" role="img" aria-labelledby="title desc">
+  <title id="title">写入时 receiver 决定 setter 的 this 和值的落点</title>
+  <desc id="desc">第 1 步 observed.prefix = "Ops" 把 service.prefix 改为 Ops。第 2 步 observedChild.label = "Branch"：赋值沿原型进入 observed 的 set trap，Reflect.set 带上 receiver observedChild，在 service 上没有自有 label，沿原型找到 setter，setter 的 this 是 observedChild；setter 执行 this.prefix = 值，再经代理转发，最终在 receiver observedChild 上新建自有 prefix = "Branch"，service.prefix 仍为 Ops。第 3 步 directChild.label = "West"：direct 的 set trap 省略 receiver，默认用 target，setter 的 this 是 service，this.prefix 直接把 service.prefix 改为 West，directChild 没有新建 prefix。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#526176"/>
+    </marker>
+    <marker id="arrow-write" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c2410c"/>
+    </marker>
+    <style>
+      .panel { fill:#ffffff; stroke:#cbd5e1; stroke-width:1.5; }
+      .head { font:700 18px sans-serif; fill:#172033; }
+      .label { font:17px sans-serif; fill:#253247; }
+      .small { font:16px sans-serif; fill:#536176; }
+      .write-text { font:16px sans-serif; fill:#9a3412; }
+      .node { fill:#f1f5f9; stroke:#94a3b8; stroke-width:1.2; }
+      .proxy { fill:#e0f2fe; stroke:#38bdf8; stroke-width:1.4; }
+      .getter { fill:#fef3c7; stroke:#f59e0b; stroke-width:1.4; }
+      .landing { fill:#ffedd5; stroke:#ea580c; stroke-width:1.6; }
+      .line { fill:none; stroke:#526176; stroke-width:1.8; marker-end:url(#arrow); }
+      .write { fill:none; stroke:#c2410c; stroke-width:1.8; stroke-dasharray:6 4; marker-end:url(#arrow-write); }
+    </style>
+  </defs>
+  <rect width="1000" height="630" fill="#ffffff"/>
+
+  <rect class="panel" x="8" y="8" width="984" height="66" rx="12"/>
+  <text class="head" x="26" y="34">第 1 步 observed.prefix = "Ops"</text>
+  <text class="small" x="26" y="60">receiver 是代理本身；查描述符和定义属性两步都没有 trap，转发给 service → service.prefix = "Ops"，作为后两步的起点</text>
+
+  <!-- left panel -->
+  <rect class="panel" x="8" y="84" width="486" height="536" rx="12"/>
+  <text class="head" x="26" y="114">第 2 步 observedChild.label = "Branch"</text>
+  <rect class="node" x="24" y="134" width="250" height="56" rx="8"/>
+  <text class="label" x="40" y="158">observedChild（receiver）</text>
+  <text class="small" x="40" y="180">自身没有 label</text>
+  <path class="line" d="M149 190 V222"/>
+  <text class="small" x="160" y="212">沿原型</text>
+  <rect class="proxy" x="24" y="226" width="250" height="80" rx="8"/>
+  <text class="label" x="40" y="250">observed 的 set trap</text>
+  <text class="small" x="40" y="273">Reflect.set(…, receiver)</text>
+  <text class="small" x="40" y="295">receiver = observedChild</text>
+  <path class="line" d="M149 306 V334"/>
+  <text class="small" x="160" y="326">转发给 target</text>
+  <rect class="node" x="24" y="338" width="250" height="66" rx="8"/>
+  <text class="label" x="40" y="362">service（target）</text>
+  <text class="small" x="40" y="386">无自有 label，prefix = "Ops"</text>
+  <path class="line" d="M149 404 V432"/>
+  <text class="small" x="160" y="424">沿原型</text>
+  <rect class="getter" x="24" y="436" width="250" height="66" rx="8"/>
+  <text class="label" x="40" y="460">原型上的 label setter</text>
+  <text class="small" x="40" y="484">this = observedChild</text>
+
+  <rect class="landing" x="296" y="134" width="184" height="56" rx="8"/>
+  <text class="write-text" x="310" y="158">★ 新建自有 prefix</text>
+  <text class="write-text" x="310" y="180">= "Branch"</text>
+  <path class="write" d="M276 469 H460 V194"/>
+  <text class="write-text" x="300" y="290">this.prefix = 值</text>
+  <text class="write-text" x="300" y="314">从子对象再经代理</text>
+  <text class="write-text" x="300" y="338">receiver 仍是子对象</text>
+  <text class="write-text" x="300" y="362">定义在 receiver 上</text>
+
+  <text class="small" x="26" y="540">service.prefix 仍是 "Ops"</text>
+  <text class="small" x="26" y="566">读 observedChild.label → "Branch reports"</text>
+  <text class="small" x="26" y="592">（命中自有 prefix，不再经过代理）</text>
+
+  <!-- right panel -->
+  <rect class="panel" x="506" y="84" width="486" height="536" rx="12"/>
+  <text class="head" x="524" y="114">第 3 步 directChild.label = "West"</text>
+  <rect class="node" x="522" y="134" width="250" height="56" rx="8"/>
+  <text class="label" x="538" y="158">directChild（receiver）</text>
+  <text class="small" x="538" y="180">自身没有 label</text>
+  <path class="line" d="M647 190 V222"/>
+  <text class="small" x="658" y="212">沿原型</text>
+  <rect class="proxy" x="522" y="226" width="250" height="80" rx="8"/>
+  <text class="label" x="538" y="250">direct 的 set trap</text>
+  <text class="small" x="538" y="273">Reflect.set(…) 省略 receiver</text>
+  <text class="small" x="538" y="295">receiver 默认 = target</text>
+  <path class="line" d="M647 306 V334"/>
+  <text class="small" x="658" y="326">转发给 target</text>
+  <rect class="node" x="522" y="338" width="250" height="66" rx="8"/>
+  <text class="label" x="538" y="362">service（target）</text>
+  <text class="small" x="538" y="386">无自有 label，prefix = "Ops"</text>
+  <path class="line" d="M647 404 V432"/>
+  <text class="small" x="658" y="424">沿原型</text>
+  <rect class="getter" x="522" y="436" width="250" height="66" rx="8"/>
+  <text class="label" x="538" y="460">原型上的 label setter</text>
+  <text class="small" x="538" y="484">this = service</text>
+
+  <rect class="landing" x="794" y="338" width="184" height="66" rx="8"/>
+  <text class="write-text" x="808" y="362">★ service.prefix</text>
+  <text class="write-text" x="808" y="386">改为 "West"</text>
+  <path class="write" d="M774 469 H886 V408"/>
+  <text class="write-text" x="790" y="494">this.prefix = 值</text>
+  <text class="write-text" x="790" y="518">this 是 service，不经代理</text>
+
+  <text class="small" x="524" y="566">directChild 没有新建 prefix</text>
+  <text class="small" x="524" y="592">读 directChild.label → "West reports"</text>
+</svg>

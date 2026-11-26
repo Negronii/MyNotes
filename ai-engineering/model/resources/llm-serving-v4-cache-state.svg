@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="900" viewBox="0 0 1000 900" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="940" viewBox="0 0 1000 940" role="img" aria-labelledby="title desc">
   <title id="title">DeepSeek-V4 的 CSA、HCA 与滑动窗口缓存状态</title>
   <desc id="desc">V4-Pro 的 CSA 层保存按 4 个位置生成的主 C4 KV 与独立 indexer key，维度分别为 512 与 128；除最近 128 个原始 KV 外，主 KV 压缩器和 indexer 压缩器各自保留当前尾组与上一完整组的投影和分数。HCA 层保存按 128 个位置生成的 C128 KV、最近 128 个原始 KV 和未完成输入。单列纯 SWA 行只表示 V4-Flash 的前两层。图中条目与状态槽不按载荷比例绘制，精度和字节需按实际实现核算。</desc>
   <defs>
@@ -17,13 +17,13 @@
       .tail { fill: #fff4e5; stroke: #efd2a8; stroke-width: 2; }
     </style>
   </defs>
-  <rect width="1000" height="900" fill="#fbfcff"/>
+  <rect width="1000" height="940" fill="#fbfcff"/>
   <text x="40" y="50" class="small muted">DeepSeek-V4 v1：V4-Pro 的 CSA/HCA；纯 SWA 行仅属 V4-Flash</text>
   <text x="43" y="104" class="colhead">层型</text>
   <text x="230" y="104" class="colhead">随历史增长的压缩条目</text>
   <text x="690" y="104" class="colhead">每请求局部与运行状态</text>
 
-  <rect x="32" y="125" width="936" height="280" rx="16" class="row"/>
+  <rect x="32" y="125" width="936" height="320" rx="16" class="row"/>
   <text x="55" y="172" class="type">CSA</text>
   <text x="55" y="211" class="small muted">每 4 位置</text>
   <text x="55" y="246" class="small muted">稀疏选择</text>
@@ -37,38 +37,38 @@
   <text x="698" y="168" class="small muted">原始局部窗口</text>
   <rect x="698" y="178" width="240" height="42" rx="8" class="state"/>
   <text x="818" y="207" text-anchor="middle" class="body">最近 ≤128 个 KV</text>
-  <text x="698" y="244" class="tiny muted">压缩器状态：各一份</text>
-  <rect x="698" y="252" width="240" height="70" rx="8" class="tail"/>
-  <text x="818" y="274" text-anchor="middle" class="tiny">主 KV 压缩器</text>
-  <text x="818" y="297" text-anchor="middle" class="tiny muted">当前尾组 + 上一完整组</text>
-  <text x="818" y="320" text-anchor="middle" class="tiny muted">投影 / 分数</text>
-  <rect x="698" y="330" width="240" height="70" rx="8" class="idx"/>
-  <text x="818" y="352" text-anchor="middle" class="tiny">索引压缩器</text>
-  <text x="818" y="375" text-anchor="middle" class="tiny muted">当前尾组 + 上一完整组</text>
-  <text x="818" y="398" text-anchor="middle" class="tiny muted">投影 / 分数</text>
+  <text x="698" y="244" class="tiny muted">压缩器状态（两套各一份）</text>
+  <rect x="692" y="254" width="252" height="82" rx="8" class="tail"/>
+  <text x="818" y="278" text-anchor="middle" class="tiny">主 KV 压缩器</text>
+  <text x="818" y="303" text-anchor="middle" class="tiny muted">当前尾组 + 上一完整组</text>
+  <text x="818" y="326" text-anchor="middle" class="tiny muted">投影 / 分数</text>
+  <rect x="692" y="346" width="252" height="82" rx="8" class="idx"/>
+  <text x="818" y="370" text-anchor="middle" class="tiny">索引压缩器</text>
+  <text x="818" y="395" text-anchor="middle" class="tiny muted">当前尾组 + 上一完整组</text>
+  <text x="818" y="418" text-anchor="middle" class="tiny muted">投影 / 分数</text>
 
-  <rect x="32" y="420" width="936" height="170" rx="16" class="row"/>
-  <text x="55" y="469" class="type">HCA</text>
-  <text x="55" y="508" class="small muted">每 128 位置</text>
-  <text x="55" y="543" class="small muted">密集读取</text>
-  <text x="230" y="459" class="small muted">主 KV</text>
-  <rect x="230" y="472" width="78" height="50" rx="7" class="main"/><rect x="316" y="472" width="78" height="50" rx="7" class="main"/><rect x="402" y="472" width="78" height="50" rx="7" class="main"/>
-  <text x="269" y="505" text-anchor="middle" class="body">C128</text><text x="355" y="505" text-anchor="middle" class="body">C128</text><text x="441" y="505" text-anchor="middle" class="body">C128</text>
-  <text x="501" y="505" class="body muted">…</text>
-  <text x="698" y="462" class="small muted">原始局部窗口</text>
-  <rect x="698" y="472" width="240" height="42" rx="8" class="state"/>
-  <text x="818" y="501" text-anchor="middle" class="body">最近 ≤128 个 KV</text>
-  <rect x="698" y="522" width="240" height="46" rx="8" class="tail"/>
-  <text x="818" y="552" text-anchor="middle" class="body">未完成输入 &lt;128</text>
+  <rect x="32" y="460" width="936" height="170" rx="16" class="row"/>
+  <text x="55" y="509" class="type">HCA</text>
+  <text x="55" y="548" class="small muted">每 128 位置</text>
+  <text x="55" y="583" class="small muted">密集读取</text>
+  <text x="230" y="499" class="small muted">主 KV · 512 维</text>
+  <rect x="230" y="512" width="78" height="50" rx="7" class="main"/><rect x="316" y="512" width="78" height="50" rx="7" class="main"/><rect x="402" y="512" width="78" height="50" rx="7" class="main"/>
+  <text x="269" y="545" text-anchor="middle" class="body">C128</text><text x="355" y="545" text-anchor="middle" class="body">C128</text><text x="441" y="545" text-anchor="middle" class="body">C128</text>
+  <text x="501" y="545" class="body muted">…</text>
+  <text x="698" y="502" class="small muted">原始局部窗口</text>
+  <rect x="698" y="512" width="240" height="42" rx="8" class="state"/>
+  <text x="818" y="541" text-anchor="middle" class="body">最近 ≤128 个 KV</text>
+  <rect x="698" y="562" width="240" height="46" rx="8" class="tail"/>
+  <text x="818" y="592" text-anchor="middle" class="body">未完成输入 &lt;128</text>
 
-  <rect x="32" y="603" width="936" height="116" rx="16" class="row"/>
-  <text x="55" y="654" class="type">V4-Flash</text>
-  <text x="55" y="689" class="small muted">前两层纯 SWA</text>
-  <text x="230" y="664" class="body muted">没有压缩主 KV</text>
-  <rect x="698" y="637" width="240" height="52" rx="8" class="state"/>
-  <text x="818" y="671" text-anchor="middle" class="body">最近 ≤128 个 KV</text>
+  <rect x="32" y="643" width="936" height="116" rx="16" class="row"/>
+  <text x="55" y="694" class="type">V4-Flash</text>
+  <text x="55" y="729" class="small muted">前两层纯 SWA</text>
+  <text x="230" y="704" class="body muted">没有压缩主 KV</text>
+  <rect x="698" y="677" width="240" height="52" rx="8" class="state"/>
+  <text x="818" y="711" text-anchor="middle" class="body">最近 ≤128 个 KV</text>
 
-  <line x1="32" y1="737" x2="968" y2="737" stroke="#d8e1ed" stroke-width="2"/>
-  <text x="500" y="780" text-anchor="middle" class="body">完成的压缩历史按需增长；状态槽按活动请求分配</text>
-  <text x="500" y="816" text-anchor="middle" class="small muted">向量维度不等于字节数；精度与布局依实际实现核算</text>
+  <line x1="32" y1="777" x2="968" y2="777" stroke="#d8e1ed" stroke-width="2"/>
+  <text x="500" y="820" text-anchor="middle" class="body">完成的压缩历史按需增长；状态槽按活动请求分配</text>
+  <text x="500" y="856" text-anchor="middle" class="small muted">向量维度不等于字节数；精度与布局依实际实现核算</text>
 </svg>

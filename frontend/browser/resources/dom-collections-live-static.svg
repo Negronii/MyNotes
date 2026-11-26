@@ -53,5 +53,5 @@
   <text class="heading left" x="60" y="383">删除前查询的 queriedRows 仍引用 [r1, r2, r3]</text>
 
   <rect x="24" y="431" width="652" height="52" rx="12" fill="#ffffff" stroke="#d6dfeb" stroke-width="2"/>
-  <text class="small left" x="43" y="463">成员列表不变，但节点连接状态可变：r1、r3 为 false；r2 为 true。</text>
+  <text class="small left" x="43" y="463">成员名单不变，isConnected 会变：r1、r3 为 false；r2 为 true。</text>
 </svg>

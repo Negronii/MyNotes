@@ -23,7 +23,7 @@
   <rect class="badge" x="20" y="48" width="48" height="48" />
   <rect x="68" y="48" width="8" height="48" fill="url(#marginHatch)" stroke="#7f8f9d" stroke-width="0.7" />
   <text class="white" x="25" y="78">徽标</text>
-  <text class="body" x="76" y="66">12 条记录等待复核</text>
+  <text class="body" x="80" y="66">12 条记录等待复核</text>
   <text class="note" x="410" y="57">卡片内容高 20px</text>
   <text class="note" x="410" y="80">48px 浮动徽标露出 28px</text>
   <text class="note" x="410" y="103">段落盒宽 360px，附近行框宽 304px</text>
@@ -33,7 +33,7 @@
   <rect class="badge" x="20" y="173" width="48" height="48" />
   <rect x="68" y="173" width="8" height="48" fill="url(#marginHatch)" stroke="#7f8f9d" stroke-width="0.7" />
   <text class="white" x="25" y="203">徽标</text>
-  <text class="body" x="76" y="191">12 条记录等待复核</text>
+  <text class="body" x="80" y="191">12 条记录等待复核</text>
   <path d="M20 221 H380" stroke="#55758e" stroke-width="1.5" stroke-dasharray="5 4" />
   <text class="note" x="410" y="182">卡片内容高 48px，正好纳入徽标</text>
   <text class="note" x="410" y="205">行仍绕徽标排；右侧窄斜线为 8px margin</text>

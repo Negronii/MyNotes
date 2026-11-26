@@ -45,7 +45,7 @@
   <rect class="box pass" x="55" y="395" width="590" height="125"/>
   <text class="head" x="350" y="422" text-anchor="middle">通过 · 返回有来源的回答</text>
   <text class="body" x="350" y="449" text-anchor="middle">① HTTP-CONTRACT-v1：空名称预期 HTTP 400；</text>
-  <text class="body" x="350" y="475" text-anchor="middle">c1 记录本次实际 HTTP 200。</text>
+  <text class="body" x="350" y="475" text-anchor="middle">c1 记录构建 42 实际返回 HTTP 200。</text>
   <text class="body" x="350" y="501" text-anchor="middle">② CI-RETRY-v3：断言失败先调查，不自动重跑。</text>
 
   <rect class="box fail" x="55" y="548" width="590" height="76"/>

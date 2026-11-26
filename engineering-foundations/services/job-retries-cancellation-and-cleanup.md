@@ -16,14 +16,26 @@
 
 ## 重试与恢复按什么顺序决定？
 
-worker 遇到可重试的暂时错误并停止当前工作之后，或者恢复器发现租约过期之后，都按**同一个顺序**判断，第一条成立就停下：
+worker 遇到错误并停止当前工作之后，或者恢复器发现租约过期之后，都按**同一个顺序**判断，第一条成立就停下。取消优先于任何重试；入口处的代次核对不成立，说明别人已经做了决定。
 
-1. **核对当前 attempt。** 锁住 job 行，确认它仍是 `running`，attempt 仍是自己看到的那一代（恢复器还要用 `clock_timestamp()` 确认租约确实已过期）。不是，就说明别人已经做了决定，自己什么都不写，重读后按新状态处理手上的消息。
-2. **有取消请求，落 `cancelled`。** 取消优先于任何重试。同时提交对已上传对象的清理或保留决定（见本章最后一节）。
-3. **永久错误或 attempt 已到上限，落 `failed`。** 不可重试的业务错误写对应的有限错误码；`attempt >= max_attempts` 写 `attempts_exhausted`。
-4. **否则，只有预留到等待槽才能重排。** 在同一个事务里：占一个等待槽，把 job 改回 `queued`，写入退避后的 `available_at`，清掉旧租约，插入一条新的 `pending` outbox 意图。等待槽已满，就落 `failed` 加 `capacity_exhausted`。
+~~~mermaid
+flowchart TD
+    W["worker 遇到错误<br/>并已停下当前工作"] --> L
+    R["恢复器发现租约过期<br/>（按 clock_timestamp()）"] --> L
+    L{{"锁住 job 行：仍是 running，<br/>attempt 仍是我看到的那一代？"}}
+    L -- 否 --> N["什么都不写<br/>重读，按新状态<br/>处理手上的消息"]
+    L -- 是 --> C{{"cancel_requested？"}}
+    C -- 是 --> CX["① cancelled<br/>同时提交对象<br/>清理或保留决定<br/>不占等待槽"]
+    C -- 否 --> P{{"永久错误，或<br/>attempt ≥ max_attempts？"}}
+    P -- 是 --> F1["② failed<br/>对应错误码或<br/>attempts_exhausted<br/>不占槽、不写 outbox"]
+    P -- 否 --> S{{"能预留到等待槽？<br/>（240 个未满）"}}
+    S -- 否 --> F2["③ failed<br/>capacity_exhausted<br/>不占槽、不写 outbox"]
+    S -- 是 --> Q["④ queued<br/>新 available_at = 退避到期<br/>清除旧租约<br/>占一个等待槽<br/>新 pending outbox 意图"]
+~~~
 
-第 4 步的事务如下（第 1 步已在同一事务里 `SELECT ... FOR UPDATE` 锁住 job 行并完成前三项判断）：
+四个落点都要等事务提交成功之后，才可以 ACK 旧投递。
+
+重排分支 ④ 的事务如下（入口处已在同一事务里 `SELECT ... FOR UPDATE` 锁住 job 行并完成前面的判断）：
 
 ~~~sql
 -- 占一个等待槽；返回零行说明 240 个槽已满，改走 capacity_exhausted
@@ -45,13 +57,9 @@ COMMIT;
 
 `:backoff` 用带上限的指数退避加全抖动计算，公式和参数含义见[重试要等多久、最多试几次](deadlines-retries-and-unknown-outcomes.md#重试要等多久、最多试几次？)。重排只占等待槽，不消耗新 job 的速率令牌：令牌限制的是新逻辑 job 的到达速度，重排不是新 job。等待槽怎样计数见[容量章](capacity-admission-and-backpressure.md)。
 
-提交之后，才可以 ACK 旧的那条投递：新的可执行时间、槽位和唤醒意图都已持久，新一轮有了自己的唤醒。relay (中继) 按 `available_at` 到期再发布新意图；如果旧消息或别的重复消息提前到达，领取条件 `available_at <= clock_timestamp()` 会拦住它。只有到期唤醒已持久安排好，早到的重复消息才可以被确认。
+④ 提交之后旧投递可以 ACK，因为新的可执行时间、槽位和唤醒意图都已持久，新一轮有了自己的唤醒。relay (中继) 按 `available_at` 到期再发布新意图；如果旧消息或别的重复消息提前到达，领取条件 `available_at <= clock_timestamp()` 会拦住它。只有到期唤醒已持久安排好，早到的重复消息才可以被确认。
 
-用三个具体走向检查这个顺序：
-
-- attempt 1 遇到暂时错误，停下业务操作，预留到槽并写退避唤醒；attempt 2 成功。job 最终 `succeeded`。
-- attempt 1、2、3 依次失败或失联。第三次之后的判断走到第 3 步，写 `failed / attempts_exhausted`，不再预留第四次。
-- attempt 1 失联时 240 个槽恰好占满。恢复器走到第 4 步拿不到槽，写 `failed / capacity_exhausted`。这是一个持久终态，可以查询，而不是靠 broker 无限重投把压力变成看不见的积压。
+沿图走三个例子：attempt 1 遇到暂时错误，走 ④，attempt 2 成功，job 最终 `succeeded`；attempt 1、2、3 依次失败或失联，第三次之后走 ②，不再预留第四次；attempt 1 失联时 240 个槽恰好占满，恢复器走 ③，这是一个可以查询的持久终态，而不是靠 broker 无限重投把压力变成看不见的积压。
 
 “最多 3 次”限制的是**启动**次数，不保证旧 attempt 立刻停下。被栅栏的 attempt 仍可能占着资源运行一段时间；限制这种重叠持续多久的，是每页读取和上传的 deadline 以及可观察的停止路径。
 
@@ -74,16 +82,9 @@ COMMIT;
 
 ## 恢复器先提交时会走哪条分支？
 
-租约到期之后，恢复器和原 worker 可能同时动作。如果原 worker 的成功事务先提交，job 就是 `succeeded`，恢复器读到终态后什么都不做。如果恢复器先提交，按上面的决策顺序，`job-demo-731` 会落进下面某一行：
+租约到期之后，恢复器和原 worker 可能同时动作。如果原 worker 的成功事务先提交，job 就是 `succeeded`，恢复器锁行后读到的已不是 `running`，走上图的“否”分支，什么都不做。如果恢复器先提交，`job-demo-731` 落进上图 ①–④ 之一。
 
-| 恢复器读到的情况 | 持久状态变化 | 等待槽与 outbox | 旧投递 |
-| --- | --- | --- | --- |
-| 有取消请求 | `running → cancelled`，同时提交对象清理或保留决定 | 不占槽 | 决定提交后可 ACK |
-| attempt 已到 3 | `running → failed`，`error_code = 'attempts_exhausted'` | 不占槽、不写 outbox | 提交后可 ACK |
-| 未取消、还有额度，但 240 个槽已满 | `running → failed`，`error_code = 'capacity_exhausted'` | 不占槽、不写 outbox | 提交后可 ACK |
-| 未取消、还有额度、有空槽 | `running → queued`，清除旧租约，写退避后的 `available_at` | 预留一个槽，插入新的 `pending` outbox | 三者都提交后可 ACK |
-
-最后一种情况之后，新的 worker B 领取 attempt 2；A 若再醒来提交 attempt 1 的结果，会因状态或 attempt 不匹配而更新零行（时序见领取与栅栏一章）。恢复器不需要“杀死” A，也做不到：它只改变 A 能写进数据库的东西。
+走 ④ 之后，新的 worker B 领取 attempt 2；A 若再醒来提交 attempt 1 的结果，会因状态或 attempt 不匹配而更新零行（时序见领取与栅栏一章）。恢复器不需要“杀死” A，也做不到：它只改变 A 能写进数据库的东西。
 
 ## 取消和领取同时发生，谁赢？
 
@@ -119,7 +120,7 @@ WHERE job_id = :job_id AND status = 'running';
 
 **运行中的取消由谁落终态？** 持有当前 attempt 的 worker 在每个有限的工作步骤之间、以及成功提交之前检查取消标志。看到 `cancel_requested = true`，就以 job ID、`status = 'running'`、自己的 attempt 和取消标志为条件提交 `cancelled` 及清理或保留决定。它不归还等待槽（领取时已经还过），只在停止执行后释放自己的物理执行槽。
 
-**worker 在提交取消之前失联了。** 取消请求留在数据库里，租约到期后由恢复器代写 `cancelled` 和同样的清理决定（上表第一行）。恢复器不会为了取消去抢等待槽。在这个决定持久化之前，旧投递不能 ACK：`cancel_requested` 只是请求，不是终态，也不是确认许可。
+**worker 在提交取消之前失联了。** 取消请求留在数据库里，租约到期后由恢复器代写 `cancelled` 和同样的清理决定（决策图的 ①）。恢复器不会为了取消去抢等待槽。在这个决定持久化之前，旧投递不能 ACK：`cancel_requested` 只是请求，不是终态，也不是确认许可。
 
 **取消和成功同时发生。** 仍由提交顺序决定唯一终态。取消标志先写入，成功提交的条件 `cancel_requested = false` 不成立，更新零行，worker 转去提交取消；成功先提交，取消端读到 `succeeded`，返回现有的成功状态，不改写终态。
 

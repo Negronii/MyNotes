@@ -22,7 +22,7 @@
   <line x1="350" y1="304" x2="350" y2="345" stroke="#34495e" stroke-width="3" marker-end="url(#arrow)"/>
 
   <rect x="45" y="352" width="610" height="82" rx="14" fill="#f5f8fa" stroke="#70899b" stroke-width="2"/>
-  <text x="350" y="402" font-size="21" font-weight="700">signingInput = metadata bytes || rawBody</text>
+  <text x="350" y="402" font-size="20" font-weight="700" font-family="Menlo, Consolas, monospace">signingInput = metadata bytes || rawBody</text>
 
   <line x1="350" y1="436" x2="350" y2="477" stroke="#34495e" stroke-width="3" marker-end="url(#arrow)"/>
 

@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="720" viewBox="0 0 900 720" role="img" aria-labelledby="title desc">
+  <title id="title">层叠第 1 步与第 4 步合起来的优先级梯子，以及 revert-layer 略去的区间</title>
+  <desc id="desc">从高到低：过渡、用户代理 !important、用户 !important、作者 !important（reset、components、utilities、未分层，越靠前越强）、动画、作者普通（未分层、utilities、components、reset，越靠后越强）、用户普通、用户代理普通。第二段的 utilities 普通 revert-layer 略去 utilities !important 到 utilities 普通之间的声明，露出 components 普通的棕色。第三段的 components revert-layer !important 略去 components !important 到 components 普通之间的声明，露出 reset 普通的绿色；第四段没有 .has-reset，同一区间之下作者来源没有可用声明，退回用户样式，没有用户样式就露出浏览器默认颜色。</desc>
+  <defs>
+    <marker id="arB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L10 5L0 10z" fill="#1769aa"/></marker>
+    <marker id="arP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L10 5L0 10z" fill="#7c3aed"/></marker>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .h{font-size:20px;font-weight:700}
+      .b{font-size:16px;fill:#172033}
+      .bb{font-size:16px;font-weight:700}
+      .s{font-size:14px;fill:#334155}
+      .sb{font-size:15px;font-weight:700}
+      .c{font-family:Menlo,Consolas,monospace;font-size:14px;fill:#172033}
+      .o{fill:#f1f5f9;stroke:#94a3b8;stroke-width:1.2}
+      .g{fill:#e2e8f0;stroke:#64748b;stroke-width:1.2}
+      .l{fill:#eff6ff;stroke:#1769aa;stroke-width:1.2}
+      .chip{fill:#fff7ed;stroke:#c2410c;stroke-width:1.2}
+      .br{fill:none;stroke-width:3}
+      .blue{fill:#1769aa}
+      .purple{fill:#7c3aed}
+    </style>
+  </defs>
+  <rect width="900" height="720" rx="12" fill="#ffffff"/>
+  <text class="h" x="20" y="36">本例作者样式所在的完整优先级梯子（越上越强）</text>
+  <text class="s" x="20" y="64">橙色标签是本例 CSS 在该位置上的 color 声明；右侧括号是三段 revert-layer 各自略去的区间。</text>
+  <rect class="o" x="20" y="92" width="460" height="32" rx="6"/>
+  <text class="bb" x="32" y="114">过渡中的声明</text>
+  <rect class="o" x="20" y="130" width="460" height="32" rx="6"/>
+  <text class="bb" x="32" y="152">用户代理 !important</text>
+  <rect class="o" x="20" y="168" width="460" height="32" rx="6"/>
+  <text class="bb" x="32" y="190">用户 !important</text>
+  <rect class="g" x="20" y="206" width="460" height="32" rx="6"/>
+  <text class="bb" x="32" y="228">作者 !important　（层序反转：越靠前越强）</text>
+  <rect class="l" x="50" y="244" width="430" height="32" rx="6"/>
+  <text class="b" x="62" y="266">reset !important</text>
+  <rect class="l" x="50" y="282" width="430" height="32" rx="6"/>
+  <text class="b" x="62" y="304">components !important</text>
+  <rect class="chip" x="262" y="286" width="210" height="24" rx="5"/>
+  <text class="c" x="367.0" y="303" text-anchor="middle">revert-layer !important</text>
+  <rect class="l" x="50" y="320" width="430" height="32" rx="6"/>
+  <text class="b" x="62" y="342">utilities !important</text>
+  <rect class="chip" x="329" y="324" width="143" height="24" rx="5"/>
+  <text class="c" x="400.5" y="341" text-anchor="middle">#555 !important</text>
+  <rect class="l" x="50" y="358" width="430" height="32" rx="6"/>
+  <text class="b" x="62" y="380">未分层 !important</text>
+  <rect class="o" x="20" y="396" width="460" height="32" rx="6"/>
+  <text class="bb" x="32" y="418">动画声明</text>
+  <rect class="g" x="20" y="434" width="460" height="32" rx="6"/>
+  <text class="bb" x="32" y="456">作者普通　（越靠后的层越强，未分层最强）</text>
+  <rect class="l" x="50" y="472" width="430" height="32" rx="6"/>
+  <text class="b" x="62" y="494">未分层</text>
+  <rect class="l" x="50" y="510" width="430" height="32" rx="6"/>
+  <text class="b" x="62" y="532">utilities</text>
+  <rect class="chip" x="295" y="514" width="177" height="24" rx="5"/>
+  <text class="c" x="383.5" y="531" text-anchor="middle">#555 · revert-layer</text>
+  <rect class="l" x="50" y="548" width="430" height="32" rx="6"/>
+  <text class="b" x="62" y="570">components</text>
+  <rect class="chip" x="397" y="552" width="75" height="24" rx="5"/>
+  <text class="c" x="434.5" y="569" text-anchor="middle">#8a3b00</text>
+  <rect class="l" x="50" y="586" width="430" height="32" rx="6"/>
+  <text class="b" x="62" y="608">reset</text>
+  <rect class="chip" x="301" y="590" width="171" height="24" rx="5"/>
+  <text class="c" x="386.5" y="607" text-anchor="middle">green（.has-reset）</text>
+  <rect class="o" x="20" y="624" width="460" height="32" rx="6"/>
+  <text class="bb" x="32" y="646">用户普通声明</text>
+  <rect class="l" x="20" y="662" width="460" height="32" rx="6"/>
+  <text class="bb" x="32" y="684">用户代理普通声明</text>
+  <rect class="chip" x="358" y="666" width="114" height="24" rx="5"/>
+  <text class="c" x="415.0" y="683" text-anchor="middle">浏览器默认颜色</text>
+  <path class="br" stroke="#1769aa" d="M486 320H496V542H486"/>
+  <text class="sb blue" x="510" y="342">第二段</text>
+  <text class="sb blue" x="510" y="362">.revert-normal</text>
+  <text class="s" x="510" y="390">utilities 普通的</text>
+  <text class="s" x="510" y="410">revert-layer 胜出，</text>
+  <text class="s" x="510" y="430">略去 utilities 层</text>
+  <text class="s" x="510" y="450">!important 到普通</text>
+  <text class="s" x="510" y="470">之间的声明</text>
+  <path d="M496 542V564H484" fill="none" stroke="#1769aa" stroke-width="2.2" marker-end="url(#arB)"/>
+  <text class="s blue" x="510" y="569" style="font-weight:700">露出 components：棕色</text>
+
+  <path class="br" stroke="#7c3aed" d="M686 282H696V580H686"/>
+  <text class="sb purple" x="710" y="304">第三、四段</text>
+  <text class="sb purple" x="710" y="324">.revert-important</text>
+  <text class="s" x="710" y="352">components 层的</text>
+  <text class="s" x="710" y="372">revert-layer !important</text>
+  <text class="s" x="710" y="392">胜出，略去 components</text>
+  <text class="s" x="710" y="412">!important 到普通之间</text>
+  <text class="s" x="710" y="432">的声明，含 utilities 的</text>
+  <text class="s" x="710" y="452">#555 !important</text>
+  <path d="M696 580V602H484" fill="none" stroke="#7c3aed" stroke-width="2.2" marker-end="url(#arP)"/>
+  <text class="s purple" x="710" y="607" style="font-weight:700">有 .has-reset：绿色</text>
+  <path d="M696 602V678H484" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-dasharray="6 4" marker-end="url(#arP)"/>
+  <text class="s purple" x="710" y="634">无 .has-reset：作者来源</text>
+  <text class="s purple" x="710" y="654">已无可用声明，也没有</text>
+  <text class="s purple" x="710" y="674">用户样式，露出</text>
+  <text class="s purple" x="710" y="696" style="font-weight:700">浏览器默认颜色</text>
+</svg>

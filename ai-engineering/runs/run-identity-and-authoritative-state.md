@@ -23,12 +23,7 @@
 
 ## 谁持有运行的权威状态？
 
-答案是应用自己。一次运行会经过很多参与者：客户端到服务的 HTTP 请求、推送进度的事件流、执行步骤的 worker (工作进程)、唤醒 worker 的队列消息、模型的上下文，以及供应商侧的会话或线程。它们都可能单独消失，而且消失本身不说明任何事：
-
-- 浏览器断线，不说明运行停止了，也不说明客户想取消；
-- worker 崩溃，不说明它登记意图后的请求没有发出；
-- HTTP 客户端读超时，不说明提供方没有创建退款；
-- 队列消息被重投，不说明任务需要从头再做一遍。
+答案是应用自己。一次运行会经过很多参与者：客户端到服务的 HTTP 请求、推送进度的事件流、执行步骤的 worker (工作进程)、唤醒 worker 的队列消息、模型的上下文，以及供应商侧的会话或线程。它们都可能单独消失，而且消失本身不说明任何事：浏览器断线不说明运行停止或客户想取消，worker 崩溃不说明它登记意图后的请求没有发出，读超时不说明提供方没有创建退款，消息重投不说明任务要从头再做。
 
 所以，能回答“任务到哪一步、外部动作发生了什么”的，只能是应用在自己的数据库里用条件事务提交的记录。恢复的顺序也随之固定：先读持久状态，再按外部接口的契约去查询、去重或对账。不要让一轮新的模型生成来决定“要不要再退一次”：重新调用模型可能给出不同的输出，而外部结果是一个已经发生或尚未发生的事实，只能查。
 
@@ -77,37 +72,37 @@
 
 ```mermaid
 stateDiagram-v2
-    [*] --> accepted: 持久化运行记录与 outbox
-    accepted --> queued: 发布器投递唤醒
-    queued --> running: worker 领取 attempt 与 lease
-    running --> queued: lease 过期且没有发送意图
-    running --> awaiting_input: 向客户提问后挂起
-    awaiting_input --> queued: 答复或到期，同事务写唤醒
-    running --> awaiting_approval: 保存方案 Q-204
-    awaiting_approval --> queued: 客户确认，同事务建 R-204
+    [*] --> accepted: 持久化运行记录<br/>与 outbox
+    accepted --> queued: 投递唤醒
+    queued --> running: 领取 attempt<br/>与 lease
+    running --> queued: lease 过期<br/>且无发送意图
+    running --> awaiting_input: 提问后挂起
+    awaiting_input --> queued: 答复或到期
+    running --> awaiting_approval: 保存 Q-204
+    awaiting_approval --> queued: 确认，建 R-204
     awaiting_approval --> rejected: 客户拒绝
-    running --> effect_in_flight: 发送闸门登记意图
-    running --> failed: 无意图的不可恢复错误
-    effect_in_flight --> completed: 回执为 succeeded
-    effect_in_flight --> provider_pending: 回执为 pending
-    effect_in_flight --> failed: 契约证明未产生退款
-    effect_in_flight --> effect_unknown: 超时、500 或 lease 过期
-    effect_unknown --> effect_unknown: 对账无结论或同键重放
-    effect_unknown --> provider_pending: 找到 pending 对象
-    effect_unknown --> completed: 找到 succeeded 对象
-    effect_unknown --> failed: 找到 failed 或 canceled 对象
-    provider_pending --> completed: 读到 succeeded
-    provider_pending --> failed: 读到 failed 或 canceled
-    effect_in_flight --> cancel_requested: 已有意图时取消
-    effect_unknown --> cancel_requested: 已有意图时取消
-    cancel_requested --> completed: 对账确认已退款
-    cancel_requested --> failed: 对账读到 failed 或 canceled 对象
-    cancel_requested --> canceled: 证实没有也不会有退款
-    accepted --> canceled: 无意图时取消
-    queued --> canceled: 无意图时取消
-    running --> canceled: 无意图时取消
-    awaiting_input --> canceled: 无意图时取消
-    awaiting_approval --> canceled: 无意图时取消
+    running --> effect_in_flight: 发送闸门<br/>登记意图
+    running --> failed: 无意图的<br/>不可恢复错误
+    effect_in_flight --> completed
+    effect_in_flight --> provider_pending
+    effect_in_flight --> failed: 契约证明<br/>未产生退款
+    effect_in_flight --> effect_unknown: 超时、500<br/>或 lease 过期
+    effect_unknown --> effect_unknown: 对账无结论<br/>或同键重放
+    effect_unknown --> provider_pending
+    effect_unknown --> completed
+    effect_unknown --> failed
+    provider_pending --> completed
+    provider_pending --> failed
+    effect_in_flight --> cancel_requested: 取消
+    effect_unknown --> cancel_requested: 取消
+    cancel_requested --> completed
+    cancel_requested --> failed
+    cancel_requested --> canceled: 证实没有<br/>也不会有退款
+    accepted --> canceled
+    queued --> canceled
+    running --> canceled
+    awaiting_input --> canceled
+    awaiting_approval --> canceled
 ```
 
 | 状态 | 含义 | 谁能推进它 | 详见 |
@@ -117,24 +112,67 @@ stateDiagram-v2
 | `running` | 某个 attempt 持有有效 lease，执行读订单、调模型、拟方案等不产生外部写入的步骤 | 当前 attempt；lease 过期后由扫描器放回 `queued` | 同上；模型调用的边界见[有界的模型 API 调用](bounded-model-api-calls.md) |
 | `awaiting_input` | 向客户提的问题已保存在待答记录里，不依赖答案的步骤已做完，等答复或截止时刻；期间没有执行 lease | 只消费这条待答记录的答复、超时或取消事务 | [断线、取消与用户输入](disconnect-cancel-and-user-input.md) |
 | `awaiting_approval` | 不可变方案 `Q-204` 已保存，等客户确认；期间没有执行 lease | 只消费当前待审版本的确认、拒绝或取消事务 | [外部写入与对账](external-writes-and-reconciliation.md) |
-| `effect_in_flight` | 当前 attempt 已登记发送意图，请求可能正在发送或处理 | 当前 attempt 写回回执；lease 过期后由扫描器转 `effect_unknown` | 同上 |
-| `effect_unknown` | 已登记意图，但没有可判定的结果 | 对账 worker；满足全部前提时才可同键重放 | 同上 |
-| `provider_pending` | 已找到并核实提供方的退款对象，它仍是 `pending` 或 `requires_action` | 读取提供方对象的 worker 或已验签事件 | 同上 |
-| `cancel_requested` | 已有发送意图时收到取消；停止新动作，只读对账 | 对账 worker | [断线、取消与用户输入](disconnect-cancel-and-user-input.md) |
+| `effect_in_flight` | 当前 attempt 已登记发送意图，请求可能正在发送或处理 | 当前 attempt 按回执推进：`succeeded` 转 `completed`，`pending` 或 `requires_action` 转 `provider_pending`；lease 过期后由扫描器转 `effect_unknown` | 同上 |
+| `effect_unknown` | 已登记意图，但没有可判定的结果 | 对账 worker：找到 `pending`、`succeeded` 对象分别转 `provider_pending`、`completed`，找到 `failed` 或 `canceled` 对象转 `failed`；满足全部前提时才可同键重放 | 同上 |
+| `provider_pending` | 回执或对账给出的提供方退款对象已核实，仍是 `pending` 或 `requires_action` | 读取提供方对象的 worker 或已验签事件：读到 `succeeded` 转 `completed`，读到 `failed` 或 `canceled` 转 `failed` | 同上 |
+| `cancel_requested` | 已有发送意图时收到取消；停止新动作，只读对账 | 对账 worker：确认已退款转 `completed`，读到 `failed` 或 `canceled` 对象转 `failed` | [断线、取消与用户输入](disconnect-cancel-and-user-input.md) |
 | `completed` | 终态：提供方确认退款 `succeeded`，答复已保存 | 不再变化 | — |
 | `rejected` | 终态：客户拒绝方案，未产生发送意图 | 不再变化 | — |
-| `canceled` | 终态：证实没有退款，也不会再有退款被提交 | 不再变化 | 取消的完整条件见[断线、取消与用户输入](disconnect-cancel-and-user-input.md) |
+| `canceled` | 终态：证实没有退款，也不会再有退款被提交。尚未登记发送意图的 `accepted`、`queued`、`running`、`awaiting_input`、`awaiting_approval` 收到取消时直接进入 | 不再变化 | 取消的完整条件见[断线、取消与用户输入](disconnect-cancel-and-user-input.md) |
 | `failed` | 终态：确定没有未知外部效果的失败，例如无意图的不可恢复错误，或提供方明确返回 `failed`、`canceled` | 不再变化 | — |
 
-本主线跟踪的是其中一条路径：
+本主线跟踪的是其中一条路径。下图把它分成 7 步展开：每一步由谁发起、写下哪条记录、带着哪个标识符，以及运行此刻处在哪个状态。
 
-1. 客户提交请求，`run-o73-1` 进入 `accepted`，发布器投递唤醒后进入 `queued`。
-2. attempt 1 领取后进入 `running`，经 `call-r1`、`call-r2` 生成 `Q-204`，进入 `awaiting_approval` 并结束 lease。
-3. 客户确认 `Q-204`，同一事务保存 `R-204` 与 `K-R204`，运行回到 `queued`。
-4. attempt 2 领取并通过发送闸门，登记意图后进入 `effect_in_flight`，发出退款请求。
-5. 请求读超时，attempt 2 用一笔条件事务把运行转为 `effect_unknown`。
-6. attempt 3 只读对账，找到并核实退款对象 `re_demo_204`，状态为 `pending`，运行进入 `provider_pending`。
-7. 稍后读到 `succeeded`，运行进入 `completed`，客户重连后读到保存的答复。
+```mermaid
+%%{init: {"sequence": {"actorMargin": 30, "width": 100, "noteMargin": 6}}}%%
+sequenceDiagram
+    participant C as 客户端
+    participant API as 服务与<br/>运行记录
+    participant W as worker
+    participant M as 模型 API
+    participant L as 操作账本
+    participant P as 支付提供方
+    Note over C,P: 第 1 步：受理
+    C->>API: POST /runs<br/>Idempotency-Key:<br/>cli-o73-1
+    API-->>C: 202<br/>runId=run-o73-1
+    Note over API: accepted<br/>→ 投递唤醒后<br/>queued
+    Note over C,P: 第 2 步：attempt 1 拟出方案
+    API->>W: attempt 1<br/>条件领取<br/>取得 lease
+    Note over API: running
+    W->>M: 模型请求
+    M-->>W: 工具调用 call-r1：<br/>读订单与<br/>退款资格
+    Note over W: 应用执行 call-r1：<br/>P-73 已扣款，<br/>可退 2000 美分
+    W->>M: 带上 call-r1 的<br/>结果再请求
+    M-->>W: 工具调用 call-r2：<br/>为 O-73 退款<br/>20.00 USD
+    W->>API: 应用核验后保存<br/>不可变方案 Q-204<br/>与 plan_digest，<br/>结束 lease
+    Note over API: awaiting_approval
+    Note over C,P: 第 3 步：客户确认
+    C->>API: cust-55 确认<br/>Q-204（针对<br/>plan_digest）
+    API->>L: 同一事务保存 R-204：<br/>完整参数、K-R204，<br/>发送意图为空
+    Note over API: queued
+    Note over C,P: 第 4 步：attempt 2 过发送闸门
+    API->>W: attempt 2<br/>条件领取
+    W->>L: 登记发送意图：<br/>attempt 2、K-R204、<br/>plan_digest、grantRef=g-58
+    Note over API: effect_in_flight
+    W->>P: POST /v1/refunds，Idempotency-Key: K-R204<br/>charge=P-73、amount=2000、<br/>metadata[operation_id]=R-204
+    Note over C,P: 第 5 步：结果未知
+    Note over W,P: 读超时，没有回执
+    Note over C: 几乎同时<br/>浏览器断线
+    W->>API: 条件事务转<br/>effect_unknown，<br/>结束 lease
+    Note over API: effect_unknown：<br/>保留 R-204、K-R204<br/>和发送意图
+    Note over C,P: 第 6 步：attempt 3 只读对账
+    API->>W: attempt 3<br/>条件领取
+    W->>P: 按候选 ID 读取 re_demo_204
+    P-->>W: pending；账户、P-73、2000、<br/>usd、R-204 关联都相符
+    W->>L: 把 re_demo_204<br/>绑定到 R-204
+    Note over API: provider_pending
+    Note over C,P: 第 7 步：完成
+    W->>P: 再次读取 re_demo_204
+    P-->>W: succeeded
+    W->>API: 同一事务保存<br/>对象、最终答复<br/>和 completed
+    C->>API: 重连：GET<br/>/runs/run-o73-1
+    API-->>C: 已保存的答复<br/>不重跑模型
+```
 
 第 1–2 步的受理、领取和崩溃恢复见[受理与领取](accepting-queuing-and-claiming-runs.md)；第 3–7 步的写入、对账和重放条件见[外部写入与对账](external-writes-and-reconciliation.md)；断线、取消和中途向客户提问见[断线、取消与用户输入](disconnect-cancel-and-user-input.md)；商户在第 4–6 步之间撤销 `g-58` 的情形见[撤权与重新授权](revocation-and-reauthorization.md)。
 

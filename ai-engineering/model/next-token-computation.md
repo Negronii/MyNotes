@@ -21,13 +21,14 @@
 整个计算可以先看成一个循环：
 
 ~~~mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
     Text["输入文本 ababca"] --> Tok["分词<br/>[257, 99, 97]"]
     Tok --> E["embedding 查表<br/>X₀：3 × 8"]
     E --> Layers["L 层 Transformer<br/>每层：Norm → Attention → 残差<br/>Norm → SwiGLU → 残差"]
     Layers --> Head["最终 Norm → 取最后一行<br/>LM head：1×8 · 8×258"]
     Head --> Select["logits → 贪心或采样<br/>选出一个 ID"]
-    Select --> Stop{"应当停止？<br/>结束词元、停止序列、长度上限、取消"}
+    Select --> Stop{"应当停止？<br/>结束词元、停止序列<br/>长度上限、取消"}
     Stop -->|是| Out["把生成的 ID 解码为文本"]
     Stop -->|否| Next["把这个 ID 放到下一位置<br/>只算新位置，复用各层 K/V"]
     Next --> Layers

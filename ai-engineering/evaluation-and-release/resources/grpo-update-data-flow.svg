@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="1488" viewBox="0 0 920 1488" role="img" aria-label="一次 GRPO 更新的数据流：旧策略快照为螺丝题采样四条回答，检查器打分 0、1、1、2，组内标准化得到优势，优势广播到每个词元；当前策略在同一前缀上重算概率，算概率比、裁剪并减去相对参考策略的 KL，聚合成目标后梯度上升更新参数，更新后的参数成为下一批采样的旧策略">
+<defs><marker id="ag" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#7086a3"/></marker><marker id="ar" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#c0504d"/></marker><marker id="an" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#3f8f6b"/></marker><marker id="ab" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#4a7bbf"/></marker><marker id="ap" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1,1 L11,6 L1,11 Z" fill="#8a63c2"/></marker><pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="10" height="10" fill="#f1f3f6"/><line x1="0" y1="0" x2="0" y2="10" stroke="#c9d0da" stroke-width="4"/></pattern></defs>
+<rect width="920" height="1488" rx="14" fill="#f7f9fc"/>
+<g font-family="Arial, PingFang SC, Noto Sans CJK SC, sans-serif" fill="#24364c">
+<rect x="30" y="20" width="26" height="22" rx="5" fill="#f4effb" stroke="#8a63c2" stroke-width="2"/>
+<text x="66" y="38" font-size="18" text-anchor="start">策略与参数</text>
+<rect x="450" y="20" width="26" height="22" rx="5" fill="#fff5e9" stroke="#c98a2e" stroke-width="2"/>
+<text x="486" y="38" font-size="18" text-anchor="start">采样后固定的数值</text>
+<rect x="30" y="54" width="26" height="22" rx="5" fill="#eef5ff" stroke="#4a7bbf" stroke-width="2"/>
+<text x="66" y="72" font-size="18" text-anchor="start">随当前参数 θ 重算的量</text>
+<rect x="450" y="54" width="26" height="22" rx="5" fill="#ffffff" stroke="#7086a3" stroke-width="2"/>
+<text x="486" y="72" font-size="18" text-anchor="start">题目与程序：梯度不穿过</text>
+<rect x="30" y="100" width="560" height="118" rx="12" fill="#ffffff" stroke="#7086a3" stroke-width="2"/>
+<text xml:space="preserve" x="50" y="140" font-size="20" text-anchor="start" font-weight="600"><tspan dy="0">题目 q：螺丝题，参考答案 14</tspan></text>
+<text xml:space="preserve" x="50" y="168" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0">4 盒各装 3 个螺丝，另有 2 个散装，一共多少个？</tspan></text>
+<text xml:space="preserve" x="50" y="196" font-size="16" text-anchor="start" fill="#40546e"><tspan dy="0">提示要求 &lt;think&gt;…&lt;/think&gt;&lt;answer&gt;…&lt;/answer&gt;</tspan></text>
+<line x1="310.0" y1="218" x2="310.0" y2="246" stroke="#7086a3" stroke-width="3" marker-end="url(#ag)" stroke-linecap="round"/>
+<rect x="30" y="250" width="560" height="146" rx="12" fill="#fff5e9" stroke="#c98a2e" stroke-width="2"/>
+<text xml:space="preserve" x="50" y="290" font-size="20" text-anchor="start" font-weight="600"><tspan dy="0">G = 4 条 rollout，由 </tspan><tspan dy="0">π</tspan><tspan dy="6" font-size="0.72em">θ</tspan><tspan dy="3" font-size="0.60em">old</tspan><tspan dy="-9"> 独立采样</tspan></text>
+<text xml:space="preserve" x="50" y="318" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0"> </tspan></text>
+<text xml:space="preserve" x="50" y="346" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0"> </tspan></text>
+<text xml:space="preserve" x="50" y="374" font-size="17" text-anchor="start" fill="#40546e"><tspan dy="0">同时保存前缀、选中的词元和旧概率 p</tspan><tspan dy="6" font-size="0.72em">old</tspan></text>
+<text x="50" y="318" font-size="18" text-anchor="start">A：15，无标记</text>
+<text x="320" y="318" font-size="18" text-anchor="start">B：14，无标记</text>
+<text x="50" y="346" font-size="18" text-anchor="start">C：&lt;answer&gt;12&lt;/answer&gt;</text>
+<text x="320" y="346" font-size="18" text-anchor="start">D：&lt;answer&gt;14&lt;/answer&gt;</text>
+<line x1="310.0" y1="396" x2="310.0" y2="424" stroke="#7086a3" stroke-width="3" marker-end="url(#ag)" stroke-linecap="round"/>
+<rect x="30" y="428" width="560" height="90" rx="12" fill="#ffffff" stroke="#7086a3" stroke-width="2"/>
+<text xml:space="preserve" x="50" y="468" font-size="20" text-anchor="start" font-weight="600"><tspan dy="0">规则检查器：r = r</tspan><tspan dy="6" font-size="0.72em">acc</tspan><tspan dy="-6"> + r</tspan><tspan dy="6" font-size="0.72em">format</tspan></text>
+<text xml:space="preserve" x="50" y="496" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0">只核对末尾数值和标记；奖励 A、B、C、D = 0、1、1、2</tspan></text>
+<line x1="310.0" y1="518" x2="310.0" y2="546" stroke="#7086a3" stroke-width="3" marker-end="url(#ag)" stroke-linecap="round"/>
+<rect x="30" y="550" width="560" height="146" rx="12" fill="#fff5e9" stroke="#c98a2e" stroke-width="2"/>
+<text xml:space="preserve" x="50" y="590" font-size="20" text-anchor="start" font-weight="600"><tspan dy="0">组内标准化：均值 1，总体标准差 ≈ 0.707</tspan></text>
+<text xml:space="preserve" x="50" y="618" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0"> </tspan></text>
+<text xml:space="preserve" x="50" y="646" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0"> </tspan></text>
+<text xml:space="preserve" x="50" y="674" font-size="17" text-anchor="start" fill="#9a6a1c"><tspan dy="0">奖励和优势是常数：梯度不穿过检查器</tspan></text>
+<rect x="50" y="604" width="120" height="40" rx="8" fill="#ffffff" stroke="#c98a2e" stroke-width="2"/>
+<text xml:space="preserve" x="110" y="630" font-size="18" text-anchor="middle"><tspan dy="0">Â</tspan><tspan dy="6" font-size="0.72em">A</tspan><tspan dy="-6"> = −1.414</tspan></text>
+<rect x="180" y="604" width="120" height="40" rx="8" fill="#ffffff" stroke="#c98a2e" stroke-width="2"/>
+<text xml:space="preserve" x="240" y="630" font-size="18" text-anchor="middle"><tspan dy="0">Â</tspan><tspan dy="6" font-size="0.72em">B</tspan><tspan dy="-6"> = 0</tspan></text>
+<rect x="310" y="604" width="120" height="40" rx="8" fill="#ffffff" stroke="#c98a2e" stroke-width="2"/>
+<text xml:space="preserve" x="370" y="630" font-size="18" text-anchor="middle"><tspan dy="0">Â</tspan><tspan dy="6" font-size="0.72em">C</tspan><tspan dy="-6"> = 0</tspan></text>
+<rect x="440" y="604" width="120" height="40" rx="8" fill="#ffffff" stroke="#c98a2e" stroke-width="2"/>
+<text xml:space="preserve" x="500" y="630" font-size="18" text-anchor="middle"><tspan dy="0">Â</tspan><tspan dy="6" font-size="0.72em">D</tspan><tspan dy="-6"> = +1.414</tspan></text>
+<line x1="310.0" y1="696" x2="310.0" y2="724" stroke="#7086a3" stroke-width="3" marker-end="url(#ag)" stroke-linecap="round"/>
+<rect x="30" y="728" width="560" height="118" rx="12" fill="#fff5e9" stroke="#c98a2e" stroke-width="2"/>
+<text xml:space="preserve" x="50" y="768" font-size="19" text-anchor="start" font-weight="600"><tspan dy="0">结果监督：Â</tspan><tspan dy="6" font-size="0.72em">D,t</tspan><tspan dy="-6"> = Â</tspan><tspan dy="6" font-size="0.72em">D</tspan><tspan dy="-6">，同一标量分给 D 的每个词元</tspan></text>
+<text xml:space="preserve" x="50" y="796" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0"> </tspan></text>
+<text xml:space="preserve" x="50" y="824" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0"> </tspan></text>
+<rect x="50" y="780" width="81" height="46" rx="6" fill="#ffffff" stroke="#c98a2e" stroke-width="2"/>
+<text x="90.5" y="800" font-size="15" text-anchor="middle">&lt;think&gt;</text>
+<text x="90.5" y="819" font-size="14" text-anchor="middle" fill="#9a6a1c">+1.414</text>
+<rect x="139" y="780" width="58" height="46" rx="6" fill="#ffffff" stroke="#c98a2e" stroke-width="2"/>
+<text x="168.0" y="800" font-size="15" text-anchor="middle">…</text>
+<text x="168.0" y="819" font-size="14" text-anchor="middle" fill="#9a6a1c">+1.414</text>
+<rect x="205" y="780" width="81" height="46" rx="6" fill="#ffffff" stroke="#c98a2e" stroke-width="2"/>
+<text x="245.5" y="800" font-size="15" text-anchor="middle">12+2=14</text>
+<text x="245.5" y="819" font-size="14" text-anchor="middle" fill="#9a6a1c">+1.414</text>
+<rect x="294" y="780" width="90" height="46" rx="6" fill="#ffffff" stroke="#c98a2e" stroke-width="2"/>
+<text x="339.0" y="800" font-size="15" text-anchor="middle">&lt;answer&gt;</text>
+<text x="339.0" y="819" font-size="14" text-anchor="middle" fill="#9a6a1c">+1.414</text>
+<rect x="392" y="780" width="58" height="46" rx="6" fill="#ffffff" stroke="#4a7bbf" stroke-width="3"/>
+<text x="421.0" y="800" font-size="15" text-anchor="middle">14</text>
+<text x="421.0" y="819" font-size="14" text-anchor="middle" fill="#9a6a1c">+1.414</text>
+<rect x="458" y="780" width="99" height="46" rx="6" fill="#ffffff" stroke="#c98a2e" stroke-width="2"/>
+<text x="507.5" y="800" font-size="15" text-anchor="middle">&lt;/answer&gt;</text>
+<text x="507.5" y="819" font-size="14" text-anchor="middle" fill="#9a6a1c">+1.414</text>
+<line x1="421.0" y1="846" x2="421.0" y2="874" stroke="#7086a3" stroke-width="3" marker-end="url(#ag)" stroke-linecap="round"/>
+<text x="433.0" y="866" font-size="16" text-anchor="start" fill="#5a6b82">以词元 14 为例</text>
+<rect x="30" y="878" width="560" height="314" rx="12" fill="#eef5ff" stroke="#4a7bbf" stroke-width="2"/>
+<text xml:space="preserve" x="50" y="918" font-size="20" text-anchor="start" font-weight="600"><tspan dy="0">这个词元的收益 g（同一前缀上计算）</tspan></text>
+<text xml:space="preserve" x="50" y="946" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0">p</tspan><tspan dy="6" font-size="0.72em">old</tspan><tspan dy="-6"> = 0.20：采样时保存</tspan></text>
+<text xml:space="preserve" x="50" y="974" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0">p</tspan><tspan dy="6" font-size="0.72em">θ</tspan><tspan dy="-6"> = 0.26：假设已更新几次后的当前值</tspan></text>
+<text xml:space="preserve" x="50" y="1002" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0">概率比 ρ = p</tspan><tspan dy="6" font-size="0.72em">θ</tspan><tspan dy="-6"> / p</tspan><tspan dy="6" font-size="0.72em">old</tspan><tspan dy="-6"> = 1.30</tspan></text>
+<text xml:space="preserve" x="50" y="1030" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0">裁剪到 [0.8, 1.2]：1.20 × 1.414 ≈ 1.697</tspan></text>
+<text xml:space="preserve" x="50" y="1058" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0">取 min(1.838, 1.697) = 1.697：该项进入平台，</tspan></text>
+<text xml:space="preserve" x="50" y="1086" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0">这一项对参数的梯度为 0</tspan></text>
+<text xml:space="preserve" x="50" y="1114" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0">再减去 β · D̂</tspan><tspan dy="6" font-size="0.72em">KL</tspan><tspan dy="-6">：由 </tspan><tspan dy="0">π</tspan><tspan dy="6" font-size="0.72em">θ</tspan><tspan dy="-6"> 与 </tspan><tspan dy="0">π</tspan><tspan dy="6" font-size="0.72em">ref</tspan><tspan dy="-6"> 在这个词元上</tspan></text>
+<text xml:space="preserve" x="50" y="1142" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0">的对数概率估计</tspan></text>
+<text xml:space="preserve" x="50" y="1170" font-size="17" text-anchor="start" fill="#2f5d99"><tspan dy="0">ρ 与 KL 都随 θ 变化，每次更新都要重算</tspan></text>
+<line x1="310.0" y1="1192" x2="310.0" y2="1220" stroke="#7086a3" stroke-width="3" marker-end="url(#ag)" stroke-linecap="round"/>
+<rect x="30" y="1224" width="560" height="118" rx="12" fill="#eef5ff" stroke="#4a7bbf" stroke-width="2"/>
+<text xml:space="preserve" x="50" y="1264" font-size="20" text-anchor="start" font-weight="600"><tspan dy="0">聚合：先在每条回答内对词元取平均，</tspan></text>
+<text xml:space="preserve" x="50" y="1292" font-size="20" text-anchor="start" font-weight="600"><tspan dy="0">再对 G 条回答取平均，得到目标 J(θ)</tspan></text>
+<text xml:space="preserve" x="50" y="1320" font-size="16" text-anchor="start" fill="#5a6b82"><tspan dy="0">其他实现的归约方式不同，按所用版本核对</tspan></text>
+<line x1="310.0" y1="1342" x2="310.0" y2="1370" stroke="#7086a3" stroke-width="3" marker-end="url(#ag)" stroke-linecap="round"/>
+<rect x="30" y="1374" width="560" height="90" rx="12" fill="#f4effb" stroke="#8a63c2" stroke-width="2"/>
+<text xml:space="preserve" x="50" y="1414" font-size="20" text-anchor="start" font-weight="600"><tspan dy="0">梯度上升：θ ← θ + η ∇J(θ)</tspan></text>
+<text xml:space="preserve" x="50" y="1442" font-size="18" text-anchor="start" fill="#24364c"><tspan dy="0">由优化器更新共享参数</tspan></text>
+<rect x="620" y="260" width="250" height="124" rx="12" fill="#f4effb" stroke="#8a63c2" stroke-width="2"/>
+<text xml:space="preserve" x="745.0" y="296" font-size="22" text-anchor="middle" font-weight="600"><tspan dy="0">π</tspan><tspan dy="6" font-size="0.72em">θ</tspan><tspan dy="3" font-size="0.60em">old</tspan><tspan dy="-9">：旧策略</tspan></text>
+<text xml:space="preserve" x="745.0" y="326" font-size="17" text-anchor="middle" fill="#40546e"><tspan dy="0">采样那一刻的参数快照</tspan></text>
+<text xml:space="preserve" x="745.0" y="352" font-size="17" text-anchor="middle" fill="#40546e"><tspan dy="0">只用于采样和 ρ 的分母</tspan></text>
+<line x1="620" y1="322" x2="596" y2="322" stroke="#8a63c2" stroke-width="3" marker-end="url(#ap)" stroke-linecap="round"/>
+<rect x="620" y="550" width="250" height="160" rx="12" fill="#ffffff" stroke="#daccf1" stroke-width="2" stroke-dasharray="6 5"/>
+<text x="745.0" y="582" font-size="17" text-anchor="middle" fill="#5b3f8f">同一批可做多次更新，</text>
+<text x="745.0" y="609" font-size="17" text-anchor="middle" fill="#5b3f8f">每次重算 ρ 与 KL；</text>
+<text x="745.0" y="636" font-size="17" text-anchor="middle" fill="#5b3f8f">下一批采样前，</text>
+<text x="745.0" y="663" font-size="17" text-anchor="middle" fill="#5b3f8f">更新后的 θ 成为</text>
+<text x="745.0" y="690" font-size="17" text-anchor="middle" fill="#5b3f8f">新的旧策略快照</text>
+<rect x="620" y="898" width="250" height="124" rx="12" fill="#f4effb" stroke="#8a63c2" stroke-width="2"/>
+<text xml:space="preserve" x="745.0" y="934" font-size="22" text-anchor="middle" font-weight="600"><tspan dy="0">π</tspan><tspan dy="6" font-size="0.72em">ref</tspan><tspan dy="-6">：参考策略</tspan></text>
+<text xml:space="preserve" x="745.0" y="964" font-size="17" text-anchor="middle" fill="#40546e"><tspan dy="0">一段更新期间固定</tspan></text>
+<text xml:space="preserve" x="745.0" y="990" font-size="17" text-anchor="middle" fill="#40546e"><tspan dy="0">可定期刷新，R1 报告</tspan></text>
+<text xml:space="preserve" x="745.0" y="1016" font-size="17" text-anchor="middle" fill="#40546e"><tspan dy="0">每 400 步刷新一次</tspan></text>
+
+<line x1="620" y1="960" x2="596" y2="960" stroke="#8a63c2" stroke-width="3" marker-end="url(#ap)" stroke-linecap="round"/>
+<rect x="620" y="1052" width="250" height="104" rx="12" fill="#f4effb" stroke="#8a63c2" stroke-width="2"/>
+<text xml:space="preserve" x="745.0" y="1088" font-size="22" text-anchor="middle" font-weight="600"><tspan dy="0">π</tspan><tspan dy="6" font-size="0.72em">θ</tspan><tspan dy="-6">：当前策略</tspan></text>
+<text x="745.0" y="1116" font-size="17" text-anchor="middle" fill="#40546e">被训练的参数 θ</text>
+<text xml:space="preserve" x="745.0" y="1142" font-size="17" text-anchor="middle" fill="#40546e"><tspan dy="0">在同一前缀上重算 p</tspan><tspan dy="6" font-size="0.72em">θ</tspan></text>
+<line x1="620" y1="1104" x2="596" y2="1104" stroke="#8a63c2" stroke-width="3" marker-end="url(#ap)" stroke-linecap="round"/>
+<path d="M590,1419.0 L745.0,1419.0 L745.0,1164" fill="none" stroke="#8a63c2" stroke-width="3" marker-end="url(#ap)" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="757.0" y="1407.0" font-size="17" text-anchor="start" fill="#5b3f8f">更新 θ</text>
+<path d="M870,1104 L890,1104 L890,300 L876,300" fill="none" stroke="#8a63c2" stroke-width="3" marker-end="url(#ap)" stroke-dasharray="7 6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M890,630 L876,630" fill="none" stroke="#8a63c2" stroke-width="2" stroke-dasharray="3 4" stroke-linejoin="round" stroke-linecap="round"/>
+</g>
+</svg>

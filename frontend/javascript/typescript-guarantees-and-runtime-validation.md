@@ -25,13 +25,13 @@ TypeScript 的类型注解、接口和类型别名在输出 JavaScript 时全部
 
 ```mermaid
 flowchart TB
-  A[接口或存储中的文本] --> B{第 1 步 解析：JSON.parse}
+  A["接口或存储<br/>中的文本"] --> B{"第 1 步 解析<br/>JSON.parse"}
   B -- 语法错误 --> E[返回 syntax]
-  B -- 成功 --> C[类型为 unknown 的运行时值]
-  C --> D{第 2 步 检查：逐项判断字段和值}
+  B -- 成功 --> C["类型为 unknown<br/>的运行时值"]
+  C --> D{"第 2 步 检查<br/>逐项判断字段和值"}
   D -- 不符 --> F[返回 shape]
-  D -- 通过 --> G[第 3 步 重建：只取已检查字段]
-  G --> H[业务代码使用 ReportData]
+  D -- 通过 --> G["第 3 步 重建<br/>只取已检查字段"]
+  G --> H["业务代码使用<br/>ReportData"]
 ```
 
 图里的 `syntax` 和 `shape` 是解析函数返回的失败原因。文本来自浏览器存储时还有第三种：`getItem` 返回 `null`（从没存过），在进入流程之前就返回 `missing`。

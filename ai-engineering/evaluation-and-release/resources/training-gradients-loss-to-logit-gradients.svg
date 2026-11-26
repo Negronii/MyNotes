@@ -28,6 +28,6 @@
 <line x1="420" y1="115" x2="452" y2="115" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
 <line x1="640" y1="115" x2="672" y2="115" stroke="#879AB5" stroke-width="3" stroke-linecap="round" marker-end="url(#arrow)"/>
 <rect x="150" y="235" width="600" height="95" rx="12" fill="#EAF2FB" stroke="#79A7D5" stroke-width="2"/>
-<text x="450" y="267" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553"><tspan>D</tspan><tspan> = (P − onehot([c, a])) / 2</tspan></text>
-<text x="450" y="310" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="22px" font-weight="600" fill="#233553"><tspan>D = </tspan><tspan>[+1/3, −1/3; −1/4, +1/4]</tspan></text>
+<text x="450" y="267" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="20px" font-weight="600" fill="#233553"><tspan>D</tspan><tspan> = (P − onehot([c, a])) / 2</tspan></text>
+<text x="450" y="310" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="22px" font-weight="600" fill="#233553"><tspan>D = </tspan><tspan>[+1/3, −1/3; −1/4, +1/4]</tspan></text>
 </svg>

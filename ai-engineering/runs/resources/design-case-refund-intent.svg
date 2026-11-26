@@ -16,11 +16,11 @@
 <path d="M450,422 L450,467" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
 <rect x="80" y="482" width="740" height="175" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
 <text x="450.0" y="517" text-anchor="middle" font-size="25" font-weight="600">同一事务：保存 R-204 与请求身份，运行入队</text>
-<text x="450.0" y="555" text-anchor="middle" font-size="23">账户 + charge=P-73 + amount=2000</text>
+<text x="450.0" y="555" text-anchor="middle" font-size="23">acct-M9 + charge=P-73 + amount=2000</text>
 <text x="450.0" y="587" text-anchor="middle" font-size="23">metadata: operation_id=R-204 · Key=K-R204</text>
 <text x="450.0" y="619" text-anchor="middle" font-size="23">本地方案币种 usd 用于确认与结果核对</text>
 <path d="M450,669 L450,714" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
-<text x="470" y="697" text-anchor="start" font-size="22">事务提交成功后</text>
+<text x="470" y="697" text-anchor="start" font-size="22">事务提交后，attempt 2 领取</text>
 <rect x="80" y="730" width="740" height="176" rx="12" fill="#fff5e9" stroke="#e8cda7" stroke-width="2"/>
 <text x="450.0" y="765" text-anchor="middle" font-size="25" font-weight="600">发送闸门：条件核验后记 effect_in_flight</text>
 <text x="450.0" y="803" text-anchor="middle" font-size="23">持久化首次发送意图时间 → 提交 → 发请求</text>

@@ -10,9 +10,6 @@
 
 之后进入 decode (增量解码)。每一步只把上一步选出的词元作为一个新位置送入模型：算出它的 query、key、value，把新 K/V 追加进各层缓存，再让新 query 读全部历史 K/V。因果掩码保证旧位置从不读取后来的位置，所以旧位置的 K/V 算一次就能一直沿用。
 
-> [!example] 第一个输出词元什么时候进入缓存？
-> 7 个提示词元占位置 1–7。Prefill 计算并缓存这 7 个位置的 K/V，从位置 7 的 logits 选出首个输出 `y₁`。此时 `y₁` 已经可以返回给用户，但缓存仍只到位置 7。下一次 decode 才把 `y₁` 当作位置 8 的输入，写入位置 8 的 K/V，并给出选 `y₂` 的分布。所以已生成的词元数总比已缓存的输出位置多 1。
-
 两个阶段的瓶颈不同。原因在于每读一次权重能做多少计算：
 
 - **Prefill** 一次送入 `T` 个位置。每个权重矩阵从显存读出一次，要和 `T` 行输入相乘；注意力还要算 `T` 个 query 与因果掩码允许的 key 之间的所有分数。计算量大，读写相对少，通常受算力限制。
@@ -25,7 +22,11 @@
 
 `C` 是这一步之前已缓存的词元数。KV 缓存省掉的是旧位置的重复前向；对普通 dense attention (稠密注意力)，新 query 仍要读全部历史，所以每步 decode 的读取量随历史长度线性增长。实际瓶颈还取决于模型、并发、长度、精度和硬件，要测。
 
-用户看到的两个时延分别对应这两个阶段：TTFT (time to first token，首词元时延)主要由排队和 prefill 决定；ITL (inter-token latency，词元间隔)由每步 decode 决定。
+用户看到的两个时延分别对应这两个阶段：TTFT (time to first token，首词元时延)主要由排队和 prefill 决定；ITL (inter-token latency，词元间隔)由每步 decode 决定。下图用 7 个提示词元的请求把这两段排在一条时间线上：
+
+![一条请求的时间线：排队和 prefill 之后 y₁ 返回，TTFT 结束；之后每步 decode 把上一步的输出作为新位置写入缓存并给出下一个词元，相邻输出之间是 ITL](resources/kv-serving-request-timeline.svg)
+
+Prefill 从位置 7 的 logits 选出 `y₁`，它可以立即返回，但缓存仍只到位置 7；下一次 decode 才把 `y₁` 当作位置 8 的输入，写入它的 K/V 并给出 `y₂` 的分布。所以已生成的词元数总比已缓存的输出位置多 1。
 
 ## 一条请求的 KV 占多少显存？
 
@@ -112,7 +113,11 @@ $$
 | 短请求吞吐低，GPU 利用不足 | continuous batching (连续批处理)：每个 decode 步之间补入新请求、移出已完成请求 | 排队时间和 p95 首词元时延；批越大，单条请求可能等得越久 |
 | Decode 词元间隔长 | 按输出长度和活跃数分桶测显存带宽，再比较量化或[推测解码](speculative-decoding.md) | 推测解码要测每轮平均接受的候选数、每轮目标计算、草稿成本、峰值暂存 KV 和拒绝比例 |
 
-Continuous batching 的思想来自 Orca 的迭代级调度：批的组成在每个生成步之间都可以变，不必等整批请求全部结束。
+表中 chunked prefill 和 continuous batching 两个杠杆改的都是多条请求怎样分享同一串 GPU 步。Continuous batching 的思想来自 Orca 的迭代级调度；chunked prefill 把一个长 prefill 拆进多个步。下图用三条示意请求对比：
+
+![上：静态批处理等整批结束才补入 R3，连续批处理在 R1 结束后的下一步就补入；下：不分块时 24 个提示词元占一个长步，拉长 R1、R2 的词元间隔，按每步 8 个词元分块后 decode 每个短步都出词元，R3 的首词元更晚](resources/kv-serving-batching-chunked-prefill.svg)
+
+分块没有减少 R3 的 prefill 计算，只是把它拆成几段，与正在进行的 decode 交错：正在 decode 的请求不再被一个长步卡住，长提示自己的首词元则来得更晚。
 
 > [!info] 实例：vLLM 的 chunked prefill（核对于 2026-11-12）
 > vLLM V1 把大型 prefill 切成小块，与 decode 混合调度，并优先安排排队中的 decode。每步的词元预算决定 TTFT 与 ITL 之间的取舍，应按自己的流量测试。

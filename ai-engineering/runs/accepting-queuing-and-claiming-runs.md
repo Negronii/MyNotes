@@ -35,7 +35,7 @@ RFC 9110 中的 `202` 只表示请求已被接受处理，不表示处理完成�
 
 ## worker 怎样领取运行，旧 worker 怎样被挡在外面？
 
-队列消息只负责唤醒，执行权由数据库里的条件领取、lease (租约) 和只增不减的代次决定。worker A 收到唤醒后，用一笔条件事务领取运行：只有运行仍是 `queued`、代次等于消息预期的值、且没有有效 lease 时，才把它改为 `running`，代次加一成为 attempt 1，并写入 lease 持有者和到期时间；两个 worker 同时收到重复消息，只有一个能成功。代次就是 fencing token (栅栏令牌)：之后每次写入都以它为条件，新代次一旦被领取，旧 worker 就写不进运行记录。lease 到期不会杀死旧进程，lease 是否有效要在取得行锁之后按数据库的实际时间判断（PostgreSQL 中是 `clock_timestamp()`，不是事务开始时刻的 `CURRENT_TIMESTAMP`）；这些通用规则见[怎样保证一个任务同一时刻只由一个 worker 推进？](../../engineering-foundations/services/job-claims-leases-and-fencing.md)。
+队列消息只负责唤醒，执行权由数据库里的条件领取、lease (租约) 和只增不减的代次决定。worker A 收到唤醒后，用一笔条件事务领取运行：只有运行仍是 `queued`、代次等于消息预期的值、且没有有效 lease 时，才把它改为 `running`，代次加一成为 attempt 1，并写入 lease 持有者和到期时间；重复消息只会让一个 worker 领取成功。代次就是 fencing token (栅栏令牌)：之后每次写入都以它为条件，旧 worker 怎样因此被挡在外面，见[扫描器一节的时序图](#扫描器怎样处理租约过期的运行？)。lease 到期不会杀死旧进程，lease 是否有效要在取得行锁之后按数据库的实际时间判断（PostgreSQL 中是 `clock_timestamp()`，不是事务开始时刻的 `CURRENT_TIMESTAMP`）；这些通用规则见[怎样保证一个任务同一时刻只由一个 worker 推进？](../../engineering-foundations/services/job-claims-leases-and-fencing.md)。
 
 运行在这套规则上多了两点。第一，attempt 1 每推进一次本地状态（保存观察、保存检查点、改状态），都要在一笔短事务里重新核验四件事：运行处在预期状态、当前代次仍是 1、lease 尚未过期、运行没有被取消。核验失败就回滚并停止，不再写任何记录。事务要短小，不能在持锁期间等模型或网络。第二，栅栏只挡本地写入，撤不回旧进程已经发出的远端请求，例如一次已经发出的退款；这类效果靠操作账本和对账收尾，见下文扫描器一节。
 
@@ -47,8 +47,7 @@ RFC 9110 中的 `202` 只表示请求已被接受处理，不表示处理完成�
 
 `awaiting_approval` 只能由针对当前待审版本的决定唤醒：客户确认时，同一事务写入确认记录、把运行改回 `queued` 并写一条 outbox 唤醒；拒绝写 `rejected`，取消写 `canceled`，都不入队；迟到、重复或针对旧版本的确认不能让运行重新入队。确认事务里还要锁订单、消费 `Q-204` 并保存退款操作 `R-204`，这些写入细节见[退款请求超时后，怎样查清结果而不重复扣款](external-writes-and-reconciliation.md)。
 
-> [!example] 变体：attempt 1 在保存方案前崩溃
-> 设 worker A 保存了 `call-r1` 的观察后进程消失，还没来得及保存 `Q-204`。消息未被确认，lease 到期后，扫描器发现这个运行处在 `running`、操作账本里没有任何发送意图，于是条件地把它改回 `queued` 并写一条普通 outbox 唤醒。worker B 收到唤醒，领取 attempt 2，从检查点读到已有的订单观察，接着调用模型生成方案。如果 worker A 之后醒来，它的代次 1 已经过时，任何写入都会被条件事务拒绝。本主线的主路径假设没有这次崩溃，所以发送由 attempt 2 负责。
+attempt 1 若在保存方案之前停顿或崩溃，由扫描器把运行放回队列、另一个 worker 从检查点接着做，见[扫描器一节的时序图](#扫描器怎样处理租约过期的运行？)。
 
 ## 扫描器怎样处理租约过期的运行？
 
@@ -61,7 +60,34 @@ worker 确认消息后才崩溃，就不会再有重投，这时要靠扫描器�
 | `effect_unknown`、`provider_pending` 或 `cancel_requested` 中，对账 attempt 的 lease 过期 | 保持原状态，写一条新的对账 outbox | 下一个对账 worker；沿用原键和累计的全部发送意图 |
 | `awaiting_input`、`awaiting_approval` | 不处理：这两个挂起状态本来就没有执行 lease | 前者只由答复、超时或取消事务推进，后者只由确认、拒绝或取消事务推进 |
 
-扫描器只做条件状态变更和 outbox 写入。它不领取 lease、不增加代次，也不查询远端；领取永远由收到唤醒的 worker 完成。这样，若原 attempt 恰好在扫描前成功提交，扫描器读到的就是新状态；若扫描和唤醒之后新 worker 先领取，旧 attempt 就会因代次不符而失效。
+扫描器只做条件状态变更和 outbox 写入。它不领取 lease、不增加代次，也不查询远端；领取永远由收到唤醒的 worker 完成。若原 attempt 恰好在扫描前成功提交，扫描器的条件不成立，读到的就是新状态。下图是另一种结局：worker A 保存了 `call-r1` 的观察之后、保存 `Q-204` 之前停顿，lease 到期，扫描器把运行放回队列，新 worker 领取了下一代。
+
+```mermaid
+%%{init: {"sequence": {"actorMargin": 30, "width": 110, "noteMargin": 6}}}%%
+sequenceDiagram
+    participant MQ as 队列消息
+    participant A as worker A
+    participant DB as 运行记录<br/>run-o73-1
+    participant S as 扫描器
+    participant B as worker B
+    MQ->>A: 唤醒 run-o73-1
+    A->>DB: 条件领取：仍为 queued、<br/>代次为 0、无有效 lease
+    Note over DB: running<br/>attempt 1<br/>lease 归 A
+    A->>DB: 保存 call-r1 观察与检查点<br/>同一事务复核：running、<br/>代次 1、lease 有效、未取消
+    Note over A: 停顿或失联<br/>lease 到期<br/>不会让 A 停下
+    S->>DB: 条件变更：<br/>仍为 running、<br/>lease 已过期、<br/>没有发送意图
+    Note over DB: queued<br/>代次仍为 1<br/>无 lease<br/>写普通 outbox
+    Note over S: 不领取<br/>不加代次<br/>不查远端
+    MQ->>B: outbox 投递的唤醒
+    B->>DB: 条件领取：仍为 queued、<br/>代次为 1、无有效 lease
+    Note over DB: running<br/>attempt 2<br/>lease 归 B
+    DB-->>B: 检查点里的 call-r1 观察<br/>接着拟方案
+    A->>DB: 醒来后继续写入<br/>条件含“代次 = 1”
+    DB-->>A: 条件不成立<br/>回滚并停止
+    Note over A,DB: 本例 A 尚未登记发送意图。<br/>若已登记，扫描器改走 effect_unknown，<br/>A 已发出的远端请求只能靠操作账本对账
+```
+
+在这个变体里，生成方案的是 attempt 2；本主线的主路径假设没有这次停顿，所以后文由 attempt 2 负责发送。
 
 对账 worker 收到重复唤醒时，只有在运行仍处于该分支、消息预期的代次相符、且按数据库实际时间确认现有 lease 已过期或为空时，才能领取下一代；并发的重复消息只有一条能成功。对账一轮查不出结论时，worker 在确认消息之前，必须持久安排下一次只读处理，或指定一位人工责任人。转人工的项目永远不自动重放。
 

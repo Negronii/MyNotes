@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="790" height="760" viewBox="0 0 790 760" role="img" aria-labelledby="title desc">
+  <title id="title">useDeferredValue 的紧急轮与后台轮</title>
+  <desc id="desc">用户把搜索框填成 apr。第 1 步输入事件排入 query=&quot;apr&quot;。第 2 步紧急 render 得到 query=&quot;apr&quot;、deferredQuery=&quot;&quot;、isStale=true，memo 跳过 ReportResults，提交后输入框显示 apr、出现陈旧提示，列表仍是 May、April。第 3 步后台用 deferredQuery=&quot;apr&quot; render 新列表，屏幕仍显示旧列表；期间若有新输入，这一轮被放弃并按最新值重来。第 4 步后台 commit，列表变为 April，isStale 变回 false，提示消失。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#263b52"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#b03a3a"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; fill: #172b3f; }
+      .head { font-size: 19px; font-weight: 700; }
+      .sub { font-size: 17px; font-weight: 600; }
+      .body { font-size: 16px; }
+      .small { font-size: 15px; fill: #44566a; }
+      .code { font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 15px; }
+      .red { fill: #9e2f2f; }
+      .arrow { fill: none; stroke: #263b52; stroke-width: 2.2; marker-end: url(#arrow); }
+      .arrow-red { fill: none; stroke: #b03a3a; stroke-width: 2.2; marker-end: url(#arrow-red); }
+      .dash { stroke-dasharray: 7 5; }
+    </style>
+  </defs>
+  <rect x="6" y="6" width="778" height="748" rx="18" fill="#ffffff" stroke="#d7e0e8" stroke-width="2"/>
+  <text x="395.0" y="40" class="head" text-anchor="middle">输入先提交，列表在后台跟上</text>
+  <rect x="22" y="60" width="234" height="46" rx="12" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="139.0" y="89" class="sub" text-anchor="middle">紧急更新</text>
+  <rect x="278" y="60" width="234" height="46" rx="12" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="395.0" y="89" class="sub" text-anchor="middle">后台（延后）更新</text>
+  <rect x="534" y="60" width="234" height="46" rx="12" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="651.0" y="89" class="sub" text-anchor="middle">屏幕上已提交的内容</text>
+  <rect x="534" y="122" width="234" height="72" rx="10" fill="#f1f3f5" stroke="#8a97a5" stroke-width="2"/>
+  <text x="548" y="150" class="body">初始</text>
+  <text x="548" y="173" class="small">输入框为空；列表 May、April</text>
+  <rect x="22" y="210" width="234" height="72" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="36" y="238" class="sub">① 输入事件</text>
+  <text x="36" y="261" class="small">处理器排入 query=&quot;apr&quot;</text>
+  <rect x="22" y="300" width="234" height="168" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="36" y="328" class="sub">② 紧急 render 与 commit</text>
+  <text x="36" y="351" class="code">query=&quot;apr&quot;</text>
+  <text x="36" y="374" class="code">deferredQuery=&quot;&quot;</text>
+  <text x="36" y="397" class="code">isStale=true</text>
+  <text x="36" y="420" class="small">ReportResults props 未变，</text>
+  <text x="36" y="443" class="small">memo 跳过它</text>
+  <path class="arrow" d="M139.0 282 V296"/>
+  <rect x="534" y="344" width="234" height="96" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="548" y="372" class="body">输入框显示 apr</text>
+  <text x="548" y="395" class="small">出现陈旧提示</text>
+  <text x="548" y="418" class="small">列表仍是 May、April</text>
+  <path class="arrow" d="M256 392 H530"/>
+  <text x="395.0" y="384" class="small" text-anchor="middle">commit</text>
+  <rect x="278" y="500" width="234" height="96" rx="10" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2"/>
+  <text x="292" y="528" class="sub">③ 后台 render</text>
+  <text x="292" y="551" class="code">deferredQuery=&quot;apr&quot;</text>
+  <text x="292" y="574" class="small">ReportResults 计算新列表</text>
+  <path class="arrow" d="M139.0 468 V490 H395.0 V496"/>
+  <rect x="534" y="500" width="234" height="96" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="548" y="528" class="body">不变</text>
+  <text x="548" y="551" class="small">屏幕仍是②提交的内容</text>
+  <rect x="22" y="500" width="234" height="96" rx="10" fill="#ffffff" stroke="#b85c5c" stroke-width="2" stroke-dasharray="7 5"/>
+  <text x="36" y="528" class="sub">若此时又有输入</text>
+  <text x="36" y="551" class="small">放弃这一轮，先处理紧急</text>
+  <text x="36" y="574" class="small">更新，再按最新值重来</text>
+  <path class="arrow-red dash" d="M256 548 H274"/>
+  <rect x="278" y="620" width="234" height="72" rx="10" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2"/>
+  <text x="292" y="648" class="sub">④ 后台 commit</text>
+  <text x="292" y="671" class="small">采用这一轮的结果</text>
+  <path class="arrow" d="M395.0 596 V616"/>
+  <rect x="534" y="620" width="234" height="72" rx="10" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2"/>
+  <text x="548" y="648" class="body">列表 April</text>
+  <text x="548" y="671" class="small">isStale=false，提示消失</text>
+  <path class="arrow" d="M512 656 H530"/>
+  <text x="22" y="730" class="small">橙色：紧急轮；蓝色：后台轮。这是提交次序，后台很快完成时用户可能只看到最终列表。</text>
+</svg>

@@ -51,7 +51,7 @@
   <text x="410" y="738" class="headline" text-anchor="middle">宿主负责健康检查 · 总限时 15 秒</text>
   <text x="410" y="772" class="body" text-anchor="middle">文档/资源/API 有效；原生无副作用探测通过</text>
   <text x="410" y="804" class="small" text-anchor="middle">hello 回复保持等待，直到晋升成功才报告 ready</text>
-  <text x="410" y="834" class="small" text-anchor="middle">晋升提交前发生错误或超时，才回退</text>
+  <text x="410" y="834" class="small" text-anchor="middle">15 秒自 pending 写入起算；提交前出错或超时才回退</text>
 
   <path class="arrow" d="M365 858 V883 H215 V908"/>
   <path class="failure" d="M455 858 V883 H605 V908"/>
@@ -78,6 +78,7 @@
   <text x="410" y="1247" class="small" text-anchor="middle">pending 写入后、晋升前若进程退出也走此恢复</text>
   <text x="410" y="1277" class="small" text-anchor="middle">下次启动先处理 pending，再创建 WebView</text>
 
-  <path class="failure" d="M720 210 H800 V1200 H681"/>
-  <path class="failure" d="M720 456 H790 V950 H784"/>
+  <path class="failure" d="M720 210 H802 V1200 H679"/>
+  <path fill="none" stroke="#a14b46" stroke-width="3" d="M720 420 H760 M720 595 H760"/>
+  <path class="failure" d="M760 420 V908"/>
 </svg>

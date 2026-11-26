@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="1466" viewBox="0 0 980 1466" role="img" aria-labelledby="title desc">
+  <title id="title">导出交接链：每段的证据、观测信号与四个崩溃点</title>
+  <desc id="desc">API acceptance transaction, relay publish, broker queue, worker claim, success commit and per-delivery ACK in order. Each stage lists the evidence that proves only that stage and the signals that observe it. Crash points 1 to 3 sit between relay and broker, between claim and commit, and between commit and ACK; point 4 is the wrong order of acknowledging before committing.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#49627D"/></marker>
+    <marker id="arrowr" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="9" markerHeight="9" orient="auto"><path d="M1 1L11 6L1 11Z" fill="#C0392B"/></marker>
+    <style>
+      text { font-family: "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif; fill: #24364B; }
+      .main { font-size: 20px; font-weight: 650; }
+      .sub { font-size: 17px; }
+      .ev { font-size: 17px; fill: #2E7D4F; font-weight: 600; }
+      .none { font-size: 17px; fill: #6B7785; font-style: italic; }
+      .sig { font-size: 16px; fill: #33557A; }
+      .head { font-size: 18px; font-weight: 650; fill: #526B85; }
+      .crash { font-size: 18px; font-weight: 700; fill: #C0392B; }
+      .leg { font-size: 16px; }
+      .arrow { fill: none; stroke: #49627D; stroke-width: 3; stroke-linecap: round; marker-end: url(#arrow); }
+      .dot { fill: none; stroke: #8BA3BD; stroke-width: 1.5; stroke-dasharray: 3 4; }
+    </style>
+  </defs>
+  <rect width="980" height="1466" fill="#FFFFFF"/>
+  <text x="80" y="50" class="head">交接链：每段的动作；绿字是只证明这一段的证据</text>
+  <text x="616" y="50" class="head">观测这一段的信号</text>
+  <rect x="60" y="90" width="500" height="128" rx="14" fill="#EAF2FB" stroke="#526B85" stroke-width="2"/>
+  <text x="80" y="122" class="main">1. API 受理事务</text>
+  <text x="80" y="152" class="sub">job + 等待槽 + pending outbox 意图</text>
+  <text x="80" y="188" class="ev">事实一 · 受理事务 COMMIT 成功</text>
+  <rect x="600" y="90" width="350" height="128" rx="10" fill="#F5F8FC" stroke="#8BA3BD" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="616" y="147.0" class="sig">受理时延</text>
+  <text x="616" y="173.0" class="sig">429 / 503 拒绝数（拒绝不产生 job）</text>
+  <path d="M564 154.0H594" class="dot"/>
+  <path d="M310.0 220V270" class="arrow"/>
+  <rect x="60" y="274" width="500" height="128" rx="14" fill="#E8F5EF" stroke="#526B85" stroke-width="2"/>
+  <text x="80" y="306" class="main">2. relay 发布</text>
+  <text x="80" y="336" class="sub">读 pending 意图，发布只带 job ID 的消息</text>
+  <text x="80" y="366" class="ev">事实二 · 本次 confirm ACK、无 return，</text>
+  <text x="80" y="389" class="ev">拓扑与持久性已核验 → published</text>
+  <rect x="600" y="274" width="350" height="128" rx="10" fill="#F5F8FC" stroke="#8BA3BD" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="616" y="318.0" class="sig">最老 pending 意图的年龄</text>
+  <text x="616" y="344.0" class="sig">发布尝试次数</text>
+  <text x="616" y="370.0" class="sig">confirm / NACK / return 计数</text>
+  <path d="M564 338.0H594" class="dot"/>
+  <path d="M310.0 404V454" class="arrow"/>
+  <rect x="60" y="458" width="500" height="128" rx="14" fill="#E8F5EF" stroke="#526B85" stroke-width="2"/>
+  <text x="80" y="490" class="main">3. broker 队列</text>
+  <text x="80" y="520" class="sub">路由进队列，投递给某个 worker</text>
+  <text x="80" y="556" class="none">投递只是唤醒线索，不证明业务事实</text>
+  <rect x="600" y="458" width="350" height="128" rx="10" fill="#F5F8FC" stroke="#8BA3BD" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="616" y="515.0" class="sig">队列深度、最老消息年龄</text>
+  <text x="616" y="541.0" class="sig">未确认数、重投数、DLQ 数量</text>
+  <path d="M564 522.0H594" class="dot"/>
+  <path d="M310.0 588V638" class="arrow"/>
+  <rect x="60" y="642" width="500" height="128" rx="14" fill="#F2EDFA" stroke="#526B85" stroke-width="2"/>
+  <text x="80" y="674" class="main">4. worker 领取</text>
+  <text x="80" y="704" class="sub">先取物理执行槽，再条件领取</text>
+  <text x="80" y="740" class="ev">领取 UPDATE 返回 1 行：running / attempt + 1</text>
+  <rect x="600" y="642" width="350" height="128" rx="10" fill="#F5F8FC" stroke="#8BA3BD" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="616" y="673.0" class="sig">最老 queued job 的年龄、等待槽占用</text>
+  <text x="616" y="699.0" class="sig">活跃物理执行槽</text>
+  <text x="616" y="725.0" class="sig">被栅栏但仍在运行的 attempt</text>
+  <text x="616" y="751.0" class="sig">连接池等待与 SQL 时长</text>
+  <path d="M564 706.0H594" class="dot"/>
+  <path d="M310.0 772V822" class="arrow"/>
+  <rect x="60" y="826" width="500" height="128" rx="14" fill="#EAF2FB" stroke="#526B85" stroke-width="2"/>
+  <text x="80" y="858" class="main">5. 成功提交</text>
+  <text x="80" y="888" class="sub">succeeded + 对象键 + report.ready 意图同事务</text>
+  <text x="80" y="924" class="ev">事实三 · CTE 返回 1 行，且 COMMIT 确认</text>
+  <rect x="600" y="826" width="350" height="128" rx="10" fill="#F5F8FC" stroke="#8BA3BD" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="616" y="870.0" class="sig">终态计数：succeeded / failed /</text>
+  <text x="616" y="896.0" class="sig">cancelled，以及错误码</text>
+  <text x="616" y="922.0" class="sig">对象引用提交、完成时延分位数</text>
+  <path d="M564 890.0H594" class="dot"/>
+  <path d="M310.0 956V1006" class="arrow"/>
+  <rect x="60" y="1010" width="500" height="128" rx="14" fill="#E7F3EA" stroke="#526B85" stroke-width="2"/>
+  <text x="80" y="1042" class="main">6. ACK 这次投递</text>
+  <text x="80" y="1072" class="sub">用这次投递自己的标识，逐条确认</text>
+  <text x="80" y="1108" class="none">无回执：只结束这一次投递的待确认</text>
+  <rect x="600" y="1010" width="350" height="128" rx="10" fill="#F5F8FC" stroke="#8BA3BD" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <text x="616" y="1080.0" class="sig">看第 3 格的未确认数</text>
+  <path d="M564 1074.0H594" class="dot"/>
+  <circle cx="350.0" cy="430.0" r="15" fill="#FDECEC" stroke="#C0392B" stroke-width="2"/>
+  <text x="350.0" y="436.0" text-anchor="middle" class="crash">①</text>
+  <circle cx="350.0" cy="798.0" r="15" fill="#FDECEC" stroke="#C0392B" stroke-width="2"/>
+  <text x="350.0" y="804.0" text-anchor="middle" class="crash">②</text>
+  <circle cx="350.0" cy="982.0" r="15" fill="#FDECEC" stroke="#C0392B" stroke-width="2"/>
+  <text x="350.0" y="988.0" text-anchor="middle" class="crash">③</text>
+  <path d="M58 706.0H38V1074.0H52" fill="none" stroke="#C0392B" stroke-width="2.5" stroke-dasharray="7 5" marker-end="url(#arrowr)"/>
+  <circle cx="38" cy="890.0" r="15" fill="#FDECEC" stroke="#C0392B" stroke-width="2"/>
+  <text x="38" y="896.0" text-anchor="middle" class="crash">④</text>
+  <text x="38" y="1178" class="main">崩溃点落在哪里</text>
+  <text x="38" y="1218" class="crash">①</text>
+  <text x="66" y="1218" class="leg">broker 已接受发布，relay 没收到 confirm：relay 按 outbox 重发，同一 job ID 出现多条消息；</text>
+  <text x="66" y="1243" class="leg">每条意图按自己的 intent_id 回写，worker 靠条件领取和终态更新去重</text>
+  <text x="38" y="1280" class="crash">②</text>
+  <text x="66" y="1280" class="leg">worker 在持久化结果前崩溃、尚未 ACK：连接或 channel 关闭后重新投递；</text>
+  <text x="66" y="1305" class="leg">重投只触发读取 job，有效 attempt 不并行，租约过期也要等恢复器接管</text>
+  <text x="38" y="1342" class="crash">③</text>
+  <text x="66" y="1342" class="leg">succeeded 已提交，ACK 是否到达未知：消息可能再次投递；</text>
+  <text x="66" y="1367" class="leg">后来的 worker 读到终态，直接 ACK，不重复生成、不覆盖结果</text>
+  <text x="38" y="1404" class="crash">④</text>
+  <text x="66" y="1404" class="leg">红色虚线是错误顺序：先 ACK、再在提交结果前崩溃，broker 已删除消息；</text>
+  <text x="66" y="1429" class="leg">job 能否恢复只取决于独立的租约扫描与重排，没有它就永远停在 running</text>
+</svg>

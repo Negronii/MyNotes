@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="270" viewBox="0 0 700 270" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="290" viewBox="0 0 700 290" role="img" aria-labelledby="title desc">
   <title id="title">相邻兄弟的垂直 margin 如何折叠</title>
-  <desc id="desc">同一 BFC 中两组普通流块级兄弟。第一组前块下 margin 24 像素、后块上 margin 16 像素，合并后的间距是24像素。第二组前块下 margin 24 像素、后块上 margin负16像素，合并后间距是8像素。</desc>
+  <desc id="desc">按 1.5 倍绘制同一 BFC 中两组高20像素的普通流块级兄弟。左组前块下 margin 24 像素、后块上 margin 16 像素，两个正值取较大者，间距24像素。右组前块下 margin 24 像素、后块上 margin 负16像素，最大正值加最负值，间距8像素。</desc>
   <defs>
     <pattern id="marginHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <rect width="8" height="8" fill="#f4f6f8" />
@@ -9,33 +9,37 @@
     <style>
       text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans CJK SC", sans-serif; fill: #243548; }
       .heading { font-size: 19px; font-weight: 700; }
-      .body { font-size: 17px; }
+      .sub { font-size: 17px; font-weight: 700; }
+      .body { font-size: 16px; }
       .note { font-size: 15px; fill: #42566b; }
-      .card { fill: #dcefe6; }
-      .measure { stroke: #55758e; stroke-width: 1.5; stroke-dasharray: 5 4; fill: none; }
+      .card { fill: #dcefe6; stroke: #628a75; stroke-width: 1.2; }
+      .measure { stroke: #55758e; stroke-width: 1.5; fill: none; }
     </style>
   </defs>
-  <rect width="700" height="270" fill="#fff" />
+  <rect width="700" height="290" fill="#fff" />
 
   <text class="heading" x="25" y="32">同一 BFC 内、边缘相接的普通流块级兄弟</text>
-  <text class="body" x="25" y="67">24px + 16px → 24px</text>
-  <rect class="card" x="35" y="88" width="200" height="24" />
-  <text class="body" x="46" y="106">状态卡 A</text>
-  <rect x="35" y="112" width="200" height="24" fill="url(#marginHatch)" />
-  <path class="measure" d="M244 112 V136 M238 112 H250 M238 136 H250" />
-  <rect class="card" x="35" y="136" width="200" height="24" />
-  <text class="body" x="46" y="154">状态卡 B</text>
-  <text class="note" x="270" y="104">A 下 margin 24px</text>
-  <text class="note" x="270" y="128">B 上 margin 16px</text>
-  <text class="note" x="270" y="152">图示间距为 24px</text>
 
-  <text class="body" x="390" y="67">24px + (−16px) → 8px</text>
-  <rect class="card" x="390" y="88" width="200" height="24" />
-  <text class="body" x="401" y="106">状态卡 A</text>
-  <rect x="390" y="112" width="200" height="8" fill="url(#marginHatch)" />
-  <path class="measure" d="M599 112 V120 M593 112 H605 M593 120 H605" />
-  <rect class="card" x="390" y="120" width="200" height="24" />
-  <text class="body" x="401" y="138">状态卡 B</text>
-  <text class="note" x="390" y="178">24px + (−16px) = 8px</text>
-  <text class="note" x="25" y="228">斜线只标合并后透明的间距。两个负 margin 合并时取更负者，例如 −24px 与 −16px 合为 −24px。</text>
+  <text class="sub" x="25" y="70">两个正值：取较大者</text>
+  <text class="note" x="25" y="94">A 下 24px，B 上 16px → 24px</text>
+  <rect class="card" x="35" y="112" width="200" height="30" />
+  <text class="body" x="47" y="133">状态卡 A</text>
+  <rect x="35" y="142" width="200" height="36" fill="url(#marginHatch)" />
+  <rect class="card" x="35" y="178" width="200" height="30" />
+  <text class="body" x="47" y="199">状态卡 B</text>
+  <path class="measure" d="M248 142 V178 M242 142 H254 M242 178 H254" />
+  <text class="body" x="262" y="166">间距 24px</text>
+
+  <text class="sub" x="375" y="70">一正一负：最大正值 + 最负值</text>
+  <text class="note" x="375" y="94">A 下 24px，B 上 −16px → 8px</text>
+  <rect class="card" x="385" y="112" width="200" height="30" />
+  <text class="body" x="397" y="133">状态卡 A</text>
+  <rect x="385" y="142" width="200" height="12" fill="url(#marginHatch)" />
+  <rect class="card" x="385" y="154" width="200" height="30" />
+  <text class="body" x="397" y="175">状态卡 B</text>
+  <path class="measure" d="M598 142 V154 M592 142 H604 M592 154 H604" />
+  <text class="body" x="612" y="153">间距 8px</text>
+
+  <text class="note" x="25" y="242">按 1.5× 绘制，卡片高 20px；斜线只标合并后透明的间距。</text>
+  <text class="note" x="25" y="266">两个负 margin 合并时取更负者，例如 −24px 与 −16px 合为 −24px。</text>
 </svg>

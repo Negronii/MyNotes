@@ -230,7 +230,7 @@ for (const image of imageBatch.querySelectorAll("img[data-src]")) {
 一次回调可能带来多个条目，所以要逐个处理：
 
 1. `isIntersecting` 为 `false` 的条目跳过，继续观察。
-2. 为 `true` 时，把真实地址赋给标准的 `src`。这一步才让浏览器开始加载。
+2. 为 `true` 时，把真实地址赋给标准的 `src`。这一步才让浏览器开始加载；该地址已在缓存里时，可能不发网络请求就直接拿到图片。
 3. 之后移除 `data-src`、调用 `unobserve`，只是清理属性和观察关系，不会触发加载。
 
 **图：目标进入上下预加载区后，`src` 赋值触发加载；随后清理属性并停止观察**

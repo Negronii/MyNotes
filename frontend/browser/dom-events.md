@@ -1,6 +1,6 @@
 # 一次点击怎样传播到处理器，处理器该怎样注册和清理？
 
-用户点的是“最早优先”按钮里的文字或箭头，处理器却要拿到按钮本身和它的 `data-sort`。本章回答浏览器怎样把一次输入派发给监听器、监听器该挂在哪里、怎样注册和移除，以及键盘、指针、尺寸和滚动各自的事件契约。沿用主线一的报表页，读者手上已有上一章[怎样查询和修改 DOM？](./dom-queries-and-updates.md)里的 HTML 片段（`#sort-controls`、`data-sort`、`#reports`）和能把行重排成 April、May 的 `applySort(intent, activeButton)`；本章要让一次点击调用它。
+用户点的是“最早优先”按钮里的文字或箭头，处理器却要拿到按钮本身和它的 `data-sort`。本章回答浏览器怎样把一次输入派发给监听器、监听器该挂在哪里、怎样注册和移除，以及键盘、指针、尺寸和滚动各自的事件契约。沿用主线一的报表页，读者手上已有上一章[怎样查询和修改 DOM？](./dom-queries-and-updates.md)里的 HTML 片段（`#sort-controls`、`data-sort`、`#reports`，以及那一章给按钮文字 `span` 加上的 `class="sort-label"`）和能把行重排成 April、May 的 `applySort(intent, activeButton)`；本章要让一次点击调用它。
 
 ## 注册和移除监听器
 

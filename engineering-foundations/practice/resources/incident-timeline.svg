@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="830" height="616" viewBox="0 0 830 616" role="img" aria-labelledby="title desc">
+  <title id="title">事故案例的时间线：12:00–12:35</title>
+  <desc id="desc">横轴是 12:00 到 12:35。隔离预检在开放金丝雀前已生效，覆盖交给 d-old 的读取路由，贯穿全程。读取：d-new 承担 10% 流量，12:10 起变慢或出现 5xx；12:10–12:20 窗口 d-new 为 98/100，d-old 为 900/900；12:15 到 12:20 的六个每分钟评价点都满足至少 100 次且低于 99%，满足持续止损条件，12:20 把 10% 切回 d-old。复验：切换后第一个完整的滚动 10 分钟窗口在 12:30 结束，1,000 个合格读请求全部为好且都归到 d-old。job-demo-731：12:00 受理确认，期限 12:02，12:16 查询仍为 queued、attempt=0，12:26 才观察到成功确认，超过期限，在完成 SLI 中仍是坏事件。job-demo-732：12:31 受理确认并返回 202，12:32 观察到成功确认，60 秒在 2 分钟期限内。</desc>
+  <defs>
+    <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+  </defs>
+  <style>
+    text { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #172033; font-size: 15px; }
+    .lane { font-size: 15px; font-weight: 700; }
+    .tick { font-size: 14px; fill: #475569; }
+    .faint { fill: #64748b; }
+    .bad { fill: #b91c1c; font-weight: 700; }
+    .good { fill: #15803d; font-weight: 700; }
+    .grid { stroke: #e2e8f0; stroke-width: 1; }
+    .iso { fill: #ede9fe; stroke: #7c3aed; stroke-width: 1.5; }
+    .new { fill: #fee2e2; stroke: #dc2626; stroke-width: 1.5; }
+    .old { fill: #dcfce7; stroke: #15803d; stroke-width: 1.5; }
+    .queued { fill: #fef3c7; stroke: #b45309; stroke-width: 1.5; }
+    .brk { fill: none; stroke: #334155; stroke-width: 2; }
+    .vline { stroke: #334155; stroke-width: 2; stroke-dasharray: 6 4; }
+    .arrow { fill: none; stroke: #334155; stroke-width: 2; marker-end: url(#arrow); }
+  </style>
+  <rect width="830" height="616" fill="#fff"/>
+<line x1="160.0" y1="50" x2="160.0" y2="576" class="grid"/>
+<text x="160.0" y="598" class="tick" text-anchor="middle">12:00</text>
+<text x="160.0" y="42" class="tick" text-anchor="middle">12:00</text>
+<line x1="250.0" y1="50" x2="250.0" y2="576" class="grid"/>
+<text x="250.0" y="598" class="tick" text-anchor="middle">12:05</text>
+<text x="250.0" y="42" class="tick" text-anchor="middle">12:05</text>
+<line x1="340.0" y1="50" x2="340.0" y2="576" class="grid"/>
+<text x="340.0" y="598" class="tick" text-anchor="middle">12:10</text>
+<text x="340.0" y="42" class="tick" text-anchor="middle">12:10</text>
+<line x1="430.0" y1="50" x2="430.0" y2="576" class="grid"/>
+<text x="430.0" y="598" class="tick" text-anchor="middle">12:15</text>
+<text x="430.0" y="42" class="tick" text-anchor="middle">12:15</text>
+<line x1="520.0" y1="50" x2="520.0" y2="576" class="grid"/>
+<text x="520.0" y="598" class="tick" text-anchor="middle">12:20</text>
+<text x="520.0" y="42" class="tick" text-anchor="middle">12:20</text>
+<line x1="610.0" y1="50" x2="610.0" y2="576" class="grid"/>
+<text x="610.0" y="598" class="tick" text-anchor="middle">12:25</text>
+<text x="610.0" y="42" class="tick" text-anchor="middle">12:25</text>
+<line x1="700.0" y1="50" x2="700.0" y2="576" class="grid"/>
+<text x="700.0" y="598" class="tick" text-anchor="middle">12:30</text>
+<text x="700.0" y="42" class="tick" text-anchor="middle">12:30</text>
+<line x1="790.0" y1="50" x2="790.0" y2="576" class="grid"/>
+<text x="790.0" y="598" class="tick" text-anchor="middle">12:35</text>
+<text x="790.0" y="42" class="tick" text-anchor="middle">12:35</text>
+<line x1="160" y1="576" x2="790.0" y2="576" stroke="#475569" stroke-width="1.5"/>
+<text x="15.0" y="96.0" class="lane">隔离预检</text>
+<line x1="10" y1="126" x2="820" y2="126" stroke="#cbd5e1" stroke-width="1"/>
+<text x="15.0" y="196.0" class="lane">读取：d-new</text>
+<line x1="10" y1="256" x2="820" y2="256" stroke="#cbd5e1" stroke-width="1"/>
+<text x="15.0" y="316.0" class="lane">读取：d-old 复验</text>
+<line x1="10" y1="366" x2="820" y2="366" stroke="#cbd5e1" stroke-width="1"/>
+<text x="15.0" y="431.0" class="lane">job-demo-731</text>
+<line x1="10" y1="486" x2="820" y2="486" stroke="#cbd5e1" stroke-width="1"/>
+<text x="15.0" y="536.0" class="lane">job-demo-732</text>
+<rect x="148" y="72" width="642.0" height="34" rx="6" class="iso"/>
+<path d="M170 89 H152" class="arrow"/>
+<text x="180.0" y="95">开放金丝雀前已生效：交给 d-old 的读取路由上的临时归属预检，全程覆盖</text>
+<rect x="160" y="184" width="360.0" height="26" rx="5" class="new"/>
+<text x="168.0" y="203">d-new 承担 10%</text>
+<text x="340.0" y="148" class="bad">12:10 起变慢或 5xx</text>
+<line x1="340.0" y1="156" x2="340.0" y2="182" stroke="#b91c1c" stroke-width="2"/>
+<circle cx="430.0" cy="197" r="5.5" fill="#b91c1c" stroke="#fff" stroke-width="1.5"/>
+<circle cx="448.0" cy="197" r="5.5" fill="#b91c1c" stroke="#fff" stroke-width="1.5"/>
+<circle cx="466.0" cy="197" r="5.5" fill="#b91c1c" stroke="#fff" stroke-width="1.5"/>
+<circle cx="484.0" cy="197" r="5.5" fill="#b91c1c" stroke="#fff" stroke-width="1.5"/>
+<circle cx="502.0" cy="197" r="5.5" fill="#b91c1c" stroke="#fff" stroke-width="1.5"/>
+<circle cx="520.0" cy="197" r="5.5" fill="#b91c1c" stroke="#fff" stroke-width="1.5"/>
+<path d="M340.0 216 V222 H520.0 V216" class="brk"/>
+<text x="340.0" y="242">12:10–12:20：d-new 98/100，d-old 900/900</text>
+<text x="534.0" y="178">12:15–12:20 每分钟评价：</text>
+<text x="534.0" y="200">六个点都 ≥100 次且 &lt;99%</text>
+<text x="534.0" y="222" class="bad">→ 持续止损，12:20 切回 d-old</text>
+<rect x="520.0" y="300" width="180.0" height="26" rx="5" class="old"/>
+<text x="610.0" y="319" text-anchor="middle">d-old 的复验窗口</text>
+<text x="520.0" y="286">切换后第一个完整的滚动 10 分钟窗口</text>
+<text x="790.0" y="350" class="good" text-anchor="end">12:30 结束：1,000/1,000 好，均归到 d-old</text>
+<rect x="160.0" y="410" width="288.0" height="26" rx="5" class="queued"/>
+<rect x="448.0" y="410" width="180.0" height="26" rx="5" fill="#fff" stroke="#b45309" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="538.0" y="429" class="faint" text-anchor="middle">中间状态本例未记录</text>
+<circle cx="160.0" cy="423" r="6" fill="#334155"/>
+<text x="160.0" y="396">12:00 受理确认</text>
+<line x1="196.0" y1="404" x2="196.0" y2="442" stroke="#b91c1c" stroke-width="3"/>
+<text x="202.0" y="460" class="bad">12:02 期限</text>
+<text x="238.0" y="429">queued，没有成功领取</text>
+<line x1="448.0" y1="404" x2="448.0" y2="442" class="vline"/>
+<text x="448.0" y="396" text-anchor="middle">12:16 查询：仍 queued、attempt=0</text>
+<circle cx="628.0" cy="423" r="6" fill="#15803d"/>
+<text x="640.0" y="421">12:26 成功确认</text>
+<text x="640.0" y="443" class="bad">已过期限：仍计坏</text>
+<rect x="718.0" y="520" width="18.0" height="22" rx="4" class="old"/>
+<circle cx="718.0" cy="531" r="5" fill="#334155"/><circle cx="736.0" cy="531" r="5" fill="#15803d"/>
+<text x="702.0" y="526" text-anchor="end">新幂等键 export-demo-416：12:31 受理确认并返回 202，</text>
+<text x="702.0" y="548" class="good" text-anchor="end">12:32 成功确认，间隔 60 s，在 2 分钟期限内：好</text>
+</svg>

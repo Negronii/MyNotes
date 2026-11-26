@@ -1,57 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="720" height="720" viewBox="0 0 720 720">
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="700" viewBox="0 0 720 700">
 <defs>
-  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#7187a8"/></marker>
+  <marker id="arrow" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#7187a8"/></marker>
+  <marker id="arrow-hit" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" refX="9" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#3f8f72"/></marker>
   <style>
     text { font-family: "Noto Sans CJK SC", "Noto Sans", sans-serif; fill: #24344d; }
-    .title { font-size: 25px; font-weight: 700; }
     .head { font-size: 18px; font-weight: 700; }
-    .label { font-size: 15px; }
     .small { font-size: 13px; fill: #526681; }
-    .mono { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 15px; }
+    .hit { font-size: 13px; fill: #3f8f72; font-weight: 700; }
+    .mono { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 15px; text-anchor: middle; }
+    .mid { text-anchor: middle; }
     .panel { fill: #fff; stroke: #d5dfeb; stroke-width: 2; }
     .slot { fill: #edf4fb; stroke: #91a8c4; stroke-width: 1.5; }
     .active { fill: #e7f5ef; stroke: #58a88a; stroke-width: 2; }
     .node { fill: #f0eafa; stroke: #9376bc; stroke-width: 2; }
     .line { stroke: #7187a8; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
-    .plain { stroke: #7187a8; stroke-width: 2.5; fill: none; }
+    .path-hit { stroke: #3f8f72; stroke-width: 3; fill: none; marker-end: url(#arrow-hit); }
+    .plain { stroke: #a3b3c8; stroke-width: 2; fill: none; }
   </style>
 </defs>
-<rect x="0" y="0" width="720" height="720" fill="#fbfcfe"/>
-<text class="small" x="30" y="64">合成事件按 (occurred_at, event_id) 排序：e07 → e03 → e11 → e18。</text>
-<rect class="panel" x="22" y="82" width="676" height="168" rx="12"/>
-<text class="head" x="40" y="111">数组：下标已知时直接到槽位</text>
-<text class="small" x="40" y="135">按报表页顺序连续放置；index 3 可直接读到 e18。</text>
+<rect x="0" y="0" width="720" height="700" fill="#fbfcfe"/>
+<text class="small" x="30" y="32">合成事件按 (occurred_at, event_id) 排序：e07 → e03 → e11 → e18。</text>
+<rect class="panel" x="22" y="50" width="676" height="168" rx="12"/>
+<text class="head" x="40" y="79">数组：下标已知时直接到槽位</text>
+<text class="small" x="40" y="103">按报表页顺序连续放置；index 3 可直接读到 e18。</text>
 <g>
-  <text class="small" x="94" y="162">0</text><text class="small" x="229" y="162">1</text><text class="small" x="364" y="162">2</text><text class="small" x="499" y="162">3</text>
-  <rect class="slot" x="52" y="170" width="118" height="43" rx="6"/><text class="mono" x="81" y="197">e07</text>
-  <rect class="slot" x="187" y="170" width="118" height="43" rx="6"/><text class="mono" x="216" y="197">e03</text>
-  <rect class="slot" x="322" y="170" width="118" height="43" rx="6"/><text class="mono" x="351" y="197">e11</text>
-  <rect class="active" x="457" y="170" width="118" height="43" rx="6"/><text class="mono" x="486" y="197">e18</text>
-  <path class="line" d="M637 191 L580 191"/><text class="small" x="585" y="163">index = 3</text>
+  <text class="small mid" x="111" y="130">0</text><text class="small mid" x="246" y="130">1</text><text class="small mid" x="381" y="130">2</text><text class="small mid" x="516" y="130">3</text>
+  <rect class="slot" x="52" y="138" width="118" height="43" rx="6"/><text class="mono" x="111" y="165">e07</text>
+  <rect class="slot" x="187" y="138" width="118" height="43" rx="6"/><text class="mono" x="246" y="165">e03</text>
+  <rect class="slot" x="322" y="138" width="118" height="43" rx="6"/><text class="mono" x="381" y="165">e11</text>
+  <rect class="active" x="457" y="138" width="118" height="43" rx="6"/><text class="mono" x="516" y="165">e18</text>
+  <path class="path-hit" d="M660 159 L580 159"/><text class="hit mid" x="626" y="145">index = 3</text>
 </g>
-<rect class="panel" x="22" y="264" width="676" height="178" rx="12"/>
-<text class="head" x="40" y="293">单链表：按值找目标要沿 next 逐项前进</text>
-<text class="small" x="40" y="317">head 指向首节点；要找到 e18，须经过 3 条 next 链接。</text>
+<rect class="panel" x="22" y="232" width="676" height="178" rx="12"/>
+<text class="head" x="40" y="261">单链表：按值找目标要沿 next 逐项前进</text>
+<text class="small" x="40" y="285">head 指向首节点；要找到 e18，须经过 3 条 next 链接。</text>
 <g>
-  <text class="small" x="43" y="368">head</text><path class="line" d="M82 363 L108 363"/>
-  <rect class="node" x="112" y="340" width="102" height="48" rx="8"/><text class="mono" x="135" y="370">e07</text>
-  <path class="line" d="M214 364 L258 364"/><text class="small" x="220" y="349">next</text>
-  <rect class="node" x="262" y="340" width="102" height="48" rx="8"/><text class="mono" x="285" y="370">e03</text>
-  <path class="line" d="M364 364 L408 364"/><text class="small" x="370" y="349">next</text>
-  <rect class="node" x="412" y="340" width="102" height="48" rx="8"/><text class="mono" x="435" y="370">e11</text>
-  <path class="line" d="M514 364 L558 364"/><text class="small" x="520" y="349">next</text>
-  <rect class="active" x="562" y="340" width="102" height="48" rx="8"/><text class="mono" x="585" y="370">e18</text>
-  <text class="small" x="40" y="421">若已经拿到前驱节点，插入或删除只改相邻链接；先找前驱仍需遍历。</text>
+  <text class="small" x="40" y="336">head</text><path class="line" d="M78 332 L108 332"/>
+  <rect class="node" x="112" y="308" width="102" height="48" rx="8"/><text class="mono" x="163" y="338">e07</text>
+  <path class="line" d="M214 332 L258 332"/><text class="small mid" x="236" y="320">next</text>
+  <rect class="node" x="262" y="308" width="102" height="48" rx="8"/><text class="mono" x="313" y="338">e03</text>
+  <path class="line" d="M364 332 L408 332"/><text class="small mid" x="386" y="320">next</text>
+  <rect class="node" x="412" y="308" width="102" height="48" rx="8"/><text class="mono" x="463" y="338">e11</text>
+  <path class="line" d="M514 332 L558 332"/><text class="small mid" x="536" y="320">next</text>
+  <rect class="active" x="562" y="308" width="102" height="48" rx="8"/><text class="mono" x="613" y="338">e18</text>
+  <text class="small" x="40" y="389">若已经拿到前驱节点，插入或删除只改相邻链接；先找前驱仍需遍历。</text>
 </g>
-<rect class="panel" x="22" y="456" width="676" height="250" rx="12"/>
-<text class="head" x="40" y="485">平衡搜索树：按同一复合键比较，选择一侧子树</text>
-<text class="small" x="40" y="509">目标 (09:05,e18)：与根 e11 比较后向右命中；树高 h 决定操作成本。</text>
+<rect class="panel" x="22" y="424" width="676" height="262" rx="12"/>
+<text class="head" x="40" y="453">平衡搜索树：按同一复合键比较，选择一侧子树</text>
+<text class="small" x="40" y="477">目标 (09:05,e18)：与根 e11 比较后向右命中；树高 h 决定操作成本。</text>
 <g>
-  <path class="plain" d="M360 557 L220 601 M360 557 L500 601"/>
-  <path class="line" d="M220 635 L150 650"/>
-  <rect class="node" x="306" y="528" width="108" height="45" rx="9"/><text class="mono" x="327" y="556">e11</text>
-  <rect class="node" x="166" y="590" width="108" height="45" rx="9"/><text class="mono" x="187" y="618">e03</text>
-  <rect class="active" x="446" y="590" width="108" height="45" rx="9"/><text class="mono" x="467" y="618">e18</text>
-  <rect class="node" x="96" y="650" width="108" height="34" rx="8"/><text class="mono" x="117" y="673">e07</text>
+  <path class="plain" d="M334 536 L246 568"/>
+  <path class="plain" d="M196 610 L150 638"/>
+  <path class="path-hit" d="M386 536 L470 566"/>
+  <text class="hit" x="482" y="556">大于 e11 → 右</text>
+  <rect class="node" x="306" y="492" width="108" height="44" rx="9"/><text class="mono" x="360" y="519">e11</text>
+  <rect class="node" x="166" y="568" width="108" height="42" rx="9"/><text class="mono" x="220" y="594">e03</text>
+  <rect class="active" x="446" y="568" width="108" height="42" rx="9"/><text class="mono" x="500" y="594">e18</text>
+  <rect class="node" x="76" y="638" width="108" height="38" rx="8"/><text class="mono" x="130" y="662">e07</text>
 </g>
 </svg>

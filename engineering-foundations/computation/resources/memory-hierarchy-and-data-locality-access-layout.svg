@@ -11,11 +11,11 @@
       .subtitle { font-size: 13px; fill: #52657c; }
       .head { font-size: 16px; font-weight: 700; }
       .label { font-size: 13px; }
-      .small { font-size: 12px; fill: #52657c; }
-      .addr { font-size: 12px; fill: #53667f; }
+      .small { font-size: 13px; fill: #52657c; }
+      .addr { font-size: 13px; fill: #53667f; }
       .value { font-size: 18px; font-weight: 700; }
       .nodeHead { font-size: 13px; font-weight: 700; }
-      .field { font-size: 12px; }
+      .field { font-size: 13px; }
       .note { font-size: 13px; fill: #334a64; }
     </style>
   </defs>
@@ -54,8 +54,6 @@
   <rect x="34" y="358" width="300" height="25" rx="5" fill="#f2f5f8" stroke="#aab9ca"/>
   <rect x="34" y="358" width="75" height="25" rx="5" fill="#fff1dc" stroke="#d6a462"/>
   <line x1="109" y1="358" x2="109" y2="383" stroke="#aab9ca"/>
-  <line x1="184" y1="358" x2="184" y2="383" stroke="#c4d0dc"/>
-  <line x1="259" y1="358" x2="259" y2="383" stroke="#c4d0dc"/>
   <text class="small" x="71.5" y="375" text-anchor="middle">A · 16B</text>
   <text class="small" x="221.5" y="375" text-anchor="middle">节点外 48B</text>
   <rect x="350" y="335" width="360" height="54" rx="8" fill="#fffaf2" stroke="#e3c99d"/>
@@ -72,8 +70,6 @@
   <rect x="34" y="447" width="300" height="25" rx="5" fill="#f2f5f8" stroke="#aab9ca"/>
   <rect x="34" y="447" width="75" height="25" rx="5" fill="#fff1dc" stroke="#d6a462"/>
   <line x1="109" y1="447" x2="109" y2="472" stroke="#aab9ca"/>
-  <line x1="184" y1="447" x2="184" y2="472" stroke="#c4d0dc"/>
-  <line x1="259" y1="447" x2="259" y2="472" stroke="#c4d0dc"/>
   <text class="small" x="71.5" y="464" text-anchor="middle">B · 16B</text>
   <text class="small" x="221.5" y="464" text-anchor="middle">节点外 48B</text>
   <rect x="350" y="424" width="360" height="54" rx="8" fill="#fffaf2" stroke="#e3c99d"/>
@@ -90,8 +86,6 @@
   <rect x="34" y="536" width="300" height="25" rx="5" fill="#f2f5f8" stroke="#aab9ca"/>
   <rect x="34" y="536" width="75" height="25" rx="5" fill="#fff1dc" stroke="#d6a462"/>
   <line x1="109" y1="536" x2="109" y2="561" stroke="#aab9ca"/>
-  <line x1="184" y1="536" x2="184" y2="561" stroke="#c4d0dc"/>
-  <line x1="259" y1="536" x2="259" y2="561" stroke="#c4d0dc"/>
   <text class="small" x="71.5" y="553" text-anchor="middle">C · 16B</text>
   <text class="small" x="221.5" y="553" text-anchor="middle">节点外 48B</text>
   <rect x="350" y="513" width="360" height="54" rx="8" fill="#fffaf2" stroke="#e3c99d"/>
@@ -108,8 +102,6 @@
   <rect x="34" y="625" width="300" height="25" rx="5" fill="#f2f5f8" stroke="#aab9ca"/>
   <rect x="34" y="625" width="75" height="25" rx="5" fill="#fff1dc" stroke="#d6a462"/>
   <line x1="109" y1="625" x2="109" y2="650" stroke="#aab9ca"/>
-  <line x1="184" y1="625" x2="184" y2="650" stroke="#c4d0dc"/>
-  <line x1="259" y1="625" x2="259" y2="650" stroke="#c4d0dc"/>
   <text class="small" x="71.5" y="642" text-anchor="middle">D · 16B</text>
   <text class="small" x="221.5" y="642" text-anchor="middle">节点外 48B</text>
   <rect x="350" y="602" width="360" height="54" rx="8" fill="#fffaf2" stroke="#e3c99d"/>

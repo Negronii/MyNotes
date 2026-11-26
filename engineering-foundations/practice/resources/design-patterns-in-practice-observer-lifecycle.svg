@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="640" viewBox="0 0 1120 640" role="img" aria-labelledby="title desc">
   <title id="title">文档修订通知及视图订阅生命周期</title>
-  <desc id="desc">状态所有者提交修订 r17 后交给文档通知器。通知器把同一修订传给画布和检查器。视图挂载时注册监听，卸载时调用取消函数。</desc>
+  <desc id="desc">状态所有者提交并冻结修订 r17 后交给文档通知器。通知器把同一个不可变的 r17 传给画布和检查器。视图挂载时注册监听，卸载时调用取消函数。</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="11" refY="6" orient="auto" markerUnits="userSpaceOnUse">
       <path d="M1,1 L11,6 L1,11 z" fill="#29435c"/>
@@ -24,7 +24,7 @@
 
   <rect class="box" x="383" y="83" width="354" height="126" fill="#e8f4ec"/>
   <text class="head" x="560" y="128" text-anchor="middle">文档状态所有者</text>
-  <text class="body" x="560" y="166" text-anchor="middle">持有当前修订：16 → 17</text>
+  <text class="body" x="560" y="166" text-anchor="middle">持有当前修订：r16 → r17</text>
   <path class="solid" d="M560 214 V259"/>
   <text x="586" y="243" font-size="19" font-weight="600" fill="#29435c">提交后发送</text>
 
@@ -35,6 +35,8 @@
 
   <path class="solid" d="M492 403 C440 443 337 454 257 486"/>
   <path class="solid" d="M628 403 C680 443 783 454 863 486"/>
+  <text x="372" y="428" text-anchor="end" font-size="19" fill="#29435c">冻结的 r17</text>
+  <text x="748" y="428" font-size="19" fill="#29435c">冻结的 r17</text>
 
   <rect class="box" x="68" y="493" width="300" height="92" fill="#f0ecfa"/>
   <text class="head" x="218" y="532" text-anchor="middle">画布视图</text>

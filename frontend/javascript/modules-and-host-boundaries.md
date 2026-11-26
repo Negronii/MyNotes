@@ -87,14 +87,11 @@ export function message() {
 }
 ```
 
-浏览器处理这张模块图分四步：
+下图把这张模块图、每条边的地址基准，以及浏览器处理静态模块图的三个阶段画在一起：
 
-| 步骤 | 输入与操作 | 输出 |
-| --- | --- | --- |
-| 定位入口 | HTML 解析到模块脚本，按文档 base URL (基准 URL)解析 `src`，取回 `report-page.js` | 入口模块源码 |
-| 解析并取回依赖 | 读出入口的静态 `import`：`./report-api.js` 相对导入者解析；`@reports/` 经 import map 映射。再递归处理每个依赖的静态导入。已发现的模块并行取回，但浏览器只能边取边发现，事先并不知道整张图 | `report-api.js`、`report-format.js` 的源码；跨源模块还必须通过 Cross-Origin Resource Sharing (跨源资源共享，CORS) |
-| 链接 | 把每个导入名连到目标模块的导出绑定，检查名字是否存在 | 绑定连好；有名字对不上时，任何模块代码都不会开始执行 |
-| 求值 | 先执行依赖，再执行入口；入口的顶层 `await` 等待接口响应 | 检查通过后，入口把 `1,200` 写进 `output` |
+![报表页模块图：三种地址基准与取回、链接、求值三阶段](./resources/module-graph-browser-loading.svg)
+
+浏览器事先并不知道整张图：取回一个模块、读出它的静态 `import`，才知道下一批要取什么，所以依赖链越深，往返越多；跨源模块还必须通过 Cross-Origin Resource Sharing (跨源资源共享，CORS)。链接在任何模块代码执行之前完成，只要有一个导入名在目标模块里找不到，整张图都不会开始求值。
 
 链接只是把名字连起来，不等于变量已经有值。如果导出方的 `let` 或 `const` 还没执行到初始化语句，提前读取仍抛 `ReferenceError`。这条边界和[作用域里的暂时性死区](./scope-closures-and-this.md)相同，通常在循环依赖里才会碰到；本例没有循环，依赖总是先求值完毕。
 
@@ -104,11 +101,7 @@ export function message() {
 
 `@reports/report-format.js` 不以 `/`、`./`、`../` 开头，也不是完整 URL，属于 bare module specifier (裸模块说明符)。浏览器不会像 Node.js 那样去包目录里找它；没有 import map 提供映射，这条导入直接失败。
 
-页面里有三类地址，基准各不相同：
-
-- 模块里的相对导入 `./report-api.js`，相对**导入它的模块**的 URL 解析。
-- HTML 里入口脚本的 `src`，相对**文档的 base URL** 解析。
-- `fetch("/api/reports/42")` 是数据请求，不是模块加载。它按当前窗口的 API base URL 解析，通常就是文档 base URL。如果文档有跨源的 `<base href>`，根相对路径会指向那个源，请求也要受 CORS 约束。本例没有 `<base>`，请求发往提供页面的站点。
+图中各条边的基准不同：模块里的相对导入 `./report-api.js` 相对**导入它的模块**的 URL 解析；入口脚本的 `src` 和内联脚本里的 `import()` 相对**文档的 base URL (基准 URL)** 解析。`fetch("/api/reports/42")` 是数据请求，按当前窗口的 API base URL 解析，通常就是文档 base URL；如果文档有跨源的 `<base href>`，根相对路径会指向那个源，请求也要受 CORS 约束。本例没有 `<base>`，请求发往提供页面的站点。
 
 Node.js 的 `fetch()` 没有文档可作基准，直接传 `"/api/reports/42"` 会因缺少绝对 URL 而失败；要传完整地址，或用 `new URL("/api/reports/42", base)` 拼出来。
 

@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="420" viewBox="0 0 700 420" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="434" viewBox="0 0 700 434" role="img" aria-labelledby="title desc">
   <title id="title">getBoundingClientRect 的 left 是布局视口坐标，不是宽度</title>
   <desc id="desc">布局视口坐标原点为左上角。一个 100 乘 40 CSS 像素内容盒、2 像素边框的元素以 left 100、top 100 定位，边框盒为 104 乘 44。以左上为 transform 原点，平移 20、12 并放大 1.5 倍后，返回矩形 left 120、top 112、width 156、height 66。图中水平量线从布局视口 x=0 到边框矩形左缘，长度对应 rect.left=120 CSS 像素。</desc>
   <defs>
@@ -19,14 +19,15 @@
       .left { text-anchor: start; }
     </style>
   </defs>
-  <rect width="700" height="420" fill="#f7f9fc"/>
+  <rect width="700" height="434" fill="#f7f9fc"/>
   <text class="heading left" x="30" y="30">布局边框盒经 transform 后，rect 描述布局视口中的矩形</text>
+  <g transform="translate(0 14)">
   <rect class="viewport" x="40" y="48" width="620" height="264" rx="8"/>
   <text class="small left" x="54" y="72">布局视口局部坐标：CSS px；(0, 0) 在左上角</text>
 
   <line class="axis" x1="40" y1="48" x2="112" y2="48" marker-end="url(#axisArrow)"/>
   <line class="axis" x1="40" y1="48" x2="40" y2="105" marker-end="url(#axisArrow)"/>
-  <text class="small left" x="117" y="54">x 向右</text>
+  <text class="small left" x="117" y="44">x 向右</text>
   <text class="small left" x="46" y="124">y 向下</text>
 
   <rect class="layout" x="140" y="148" width="104" height="44" rx="2"/>
@@ -38,11 +39,12 @@
   <text class="body left" x="330" y="232">rect.height = 66px</text>
   <text class="body left" x="330" y="257">offsetWidth 仍为 104px</text>
 
-  <line x1="160" y1="226" x2="160" y2="292" stroke="#9a8abe" stroke-width="1.5" stroke-dasharray="5 5"/>
-  <line class="measure" x1="40" y1="292" x2="160" y2="292" marker-end="url(#axisArrow)"/>
-  <text class="heading left" x="45" y="283">从视口 x=0 量到左边缘：rect.left = 120px</text>
+  <line x1="160" y1="226" x2="160" y2="270" stroke="#9a8abe" stroke-width="1.5" stroke-dasharray="5 5"/>
+  <line class="measure" x1="40" y1="270" x2="160" y2="270" marker-end="url(#axisArrow)"/>
+  <text class="heading left" x="46" y="296">从视口 x=0 量到左边缘：rect.left = 120px</text>
 
   <text class="mono left" x="46" y="340">布局：left/top 100px；content 100 × 40px；border 2px</text>
   <text class="mono left" x="46" y="365">变换：origin 0 0；translate(20px, 12px) scale(1.5)</text>
   <text class="small left" x="40" y="397">虚线为布局盒，实线为变换后矩形；教学坐标按 1 CSS px 对应 1 SVG 坐标绘制。</text>
+  </g>
 </svg>

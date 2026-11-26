@@ -284,15 +284,41 @@ compareForAwaitValues().then(console.log); // [true, "x", "x"]
 
 下面用一组合成数据走一遍：页 1 按 `sort=recent` 返回主线一的 May 行和 April 行，`items: [r-104, r-103]`，以及 `nextCursor: "c2"`；页 2 返回更早的 `items: [r-102]` 和 `nextCursor: null`。消费者的目标行是 April 行 `r-103`。
 
-| 消费者做什么 | 生成器推进到哪里 | 本次结果 / 是否请求下一页 |
-|---|---|---|
-| 第一次 `next()` | 请求并校验页 1，暂停在 `yield r-104` | 交付 `r-104`；页 1 留在内存里 |
-| 追加完 `r-104` 后再 `next()` | 恢复页内循环，暂停在 `yield r-103` | 交付 `r-103`；还没更新游标 |
-| `r-103` 是目标，追加后 `break` | 一次 `return()` 进入 `finally` | 关闭；不请求 `c2` |
-| 若不停止，追加完 `r-103` 后再 `next()` | 把游标更新为 `c2`，请求并校验页 2 | 交付 `r-102` |
-| 追加完 `r-102` 后再 `next()` | 读到 `nextCursor: null`，结束并清理 | `done: true`；没有下一页 |
+下图画出消费者、生成器和接口之间的往来，`alt` 的两支分别是在目标行停止和一直读到末页：
 
-`break` 会调用一次异步迭代器的 `return()`，并等待生成器的 `finally` 完成；生成器没走到更新游标那一步，所以不请求 `c2`。两类坏数据在不同时点暴露：结构错误的页在 `validateReportPage` 里、该页第一次 `yield` 之前就拒绝；重复游标要等当前页的行都交付后才检查。
+~~~mermaid
+sequenceDiagram
+  participant C as 消费者 for await
+  participant G as 生成器 reportRows
+  participant A as 行接口
+  C->>G: next()
+  G->>A: GET rows?sort=recent
+  A-->>G: 页 1：items [r-104, r-103]，nextCursor "c2"
+  Note over G: validateReportPage：结构错误在此拒绝，早于本页第一次 yield
+  G-->>C: yield r-104
+  Note over G: 暂停在页内循环，页 1 留在内存
+  Note over C: await appendRow(r-104)
+  C->>G: next()
+  G-->>C: yield r-103（游标仍未更新）
+  Note over C: await appendRow(r-103)，r-103 是目标
+  alt 到达目标：break
+    C->>G: return()
+    Note over G: 进入 finally，记录“报表行迭代已关闭”
+    G-->>C: 完成（循环等待 return() 结束）
+    Note over A: 不请求 c2
+  else 若不停止
+    C->>G: next()
+    Note over G: 本页行已交付完：查重复游标，cursor = "c2"
+    G->>A: GET rows?sort=recent&cursor=c2
+    A-->>G: 页 2：items [r-102]，nextCursor null
+    G-->>C: yield r-102
+    C->>G: next()
+    Note over G: nextCursor 为 null：return，进入 finally
+    G-->>C: done: true
+  end
+~~~
+
+不请求 `c2` 的原因是 `break` 时生成器还停在页内循环，没走到更新游标那一步。两类坏数据按图中两条注记的位置暴露：结构错误的页在交付任何一行之前就拒绝，重复游标要等本页的行都交付后才检查。
 
 > [!example]- 分页生成器与逐行消费者的完整实现
 > `appendRow` 返回“当前行追加完成”的 Promise，写入本次筛选自己的报表列表；`currentSort`、`selectedRowId`、取消按钮和错误展示函数由页面提供。`appendReportRows` 的两次信号检查分别守住“开始追加”和“再次拉取”两个边界。

@@ -1,32 +1,55 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="540" viewBox="0 0 700 540" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="430" viewBox="0 0 700 430" role="img" aria-labelledby="title desc">
   <title id="title">同一筛选范围内的跨页选择</title>
-  <desc id="desc">同账户 acct-a 与已发布筛选下，第 1 页显示 17、42 并由用户点选 42；翻到第 2 页后显示 61，Redux 共享选择仍为 42。</desc>
+  <desc id="desc">选择范围是账户 acct-a 与 status=published。第 1 页的列表键显示 17、42，用户点选 42，派发 reportToggled("42")；翻到第 2 页只换列表键，显示 61。Redux 的 reportSelection.selectedIds 仍是 ["42"]，工具栏仍显示已选 1 项。</desc>
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#263b52"/>
     </marker>
     <style>
-      .node{fill:#f3efff;stroke:#7e61b3;stroke-width:2}
-      .edge{fill:none;stroke:#334155;stroke-width:2;stroke-linecap:round;marker-end:url(#arrow)}
-      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:18px;fill:#1f2937;text-anchor:middle}
-      .strong{font-weight:700}
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; fill: #172b3f; }
+      .sub { font-size: 17px; font-weight: 600; }
+      .body { font-size: 16px; }
+      .small { font-size: 15px; fill: #44566a; }
+      .scope { font-size: 16px; font-weight: 600; fill: #5b3f91; }
+      .code { font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 15px; }
+      .arrow { fill: none; stroke: #263b52; stroke-width: 2.2; marker-end: url(#arrow); }
     </style>
   </defs>
-  <rect width="700" height="540" fill="#ffffff"/>
+  <rect width="700" height="430" fill="#ffffff"/>
 
-  <rect class="node" x="50" y="20" width="600" height="74" rx="7"/>
-  <text x="350" y="65" class="strong">共同范围：accountId = acct-a · status = published</text>
+  <rect x="16" y="14" width="668" height="246" rx="14" fill="#faf8fe" stroke="#7e61b3" stroke-width="1.8" stroke-dasharray="7 5"/>
+  <text x="36" y="42" class="scope">选择范围：acct-a · status=published</text>
 
-  <rect class="node" x="30" y="145" width="282" height="190" rx="7"/>
-  <text x="171" y="190" class="strong"><tspan x="171">第 1 页 · query key page=1</tspan><tspan x="171" dy="30">列表显示 [17, 42]</tspan><tspan x="171" dy="30">用户点选 42</tspan></text>
+  <rect x="40" y="60" width="260" height="180" rx="10" fill="#ffffff" stroke="#4c78a8" stroke-width="2"/>
+  <text x="170" y="88" class="sub" text-anchor="middle">第 1 页</text>
+  <text x="170" y="112" class="code" text-anchor="middle">page=1 的列表键</text>
+  <rect x="64" y="126" width="212" height="34" rx="6" fill="#f5f7fa" stroke="#d7e0e8"/>
+  <rect x="76" y="135" width="16" height="16" rx="3" fill="#ffffff" stroke="#8796a8" stroke-width="1.5"/>
+  <text x="104" y="149" class="body">报表 17</text>
+  <rect x="64" y="168" width="212" height="34" rx="6" fill="#eaf2fb" stroke="#4c78a8" stroke-width="1.5"/>
+  <rect x="76" y="177" width="16" height="16" rx="3" fill="#4c78a8"/>
+  <path d="M79.5 185 L83 189 L89 181" fill="none" stroke="#ffffff" stroke-width="2"/>
+  <text x="104" y="191" class="body">报表 42</text>
+  <text x="170" y="226" class="small" text-anchor="middle">用户点选 42</text>
 
-  <text x="350" y="220" class="strong">翻页</text>
-  <path class="edge" d="M 316 245 L 381 245"/>
+  <path d="M300 150 H392" class="arrow"/>
+  <text x="346" y="138" class="small" text-anchor="middle">翻页</text>
 
-  <rect class="node" x="388" y="145" width="282" height="190" rx="7"/>
-  <text x="529" y="190" class="strong"><tspan x="529">第 2 页 · 新 query key</tspan><tspan x="529" dy="30">列表显示 [61]</tspan><tspan x="529" dy="30">同一账户/status 范围</tspan></text>
+  <rect x="400" y="60" width="260" height="180" rx="10" fill="#ffffff" stroke="#4c78a8" stroke-width="2"/>
+  <text x="530" y="88" class="sub" text-anchor="middle">第 2 页</text>
+  <text x="530" y="112" class="code" text-anchor="middle">page=2 的列表键</text>
+  <rect x="424" y="126" width="212" height="34" rx="6" fill="#f5f7fa" stroke="#d7e0e8"/>
+  <rect x="436" y="135" width="16" height="16" rx="3" fill="#ffffff" stroke="#8796a8" stroke-width="1.5"/>
+  <text x="464" y="149" class="body">报表 61</text>
+  <text x="530" y="226" class="small" text-anchor="middle">只换列表键，42 不在这一页</text>
 
-  <path class="edge" d="M 529 335 L 529 394"/>
-  <rect class="node" x="70" y="397" width="560" height="116" rx="7"/>
-  <text x="350" y="440" class="strong"><tspan x="350">Redux reportSelection.selectedIds = ["42"]</tspan><tspan x="350" dy="30">换页只换列表 key；当前选择保持不变</tspan></text>
+  <path d="M170 240 V316" class="arrow"/>
+  <text x="182" y="290" class="code">reportToggled("42")</text>
+  <path d="M530 320 V244" class="arrow"/>
+  <text x="542" y="290" class="small">工具栏读取同一选择</text>
+
+  <rect x="40" y="320" width="620" height="92" rx="10" fill="#eef6f0" stroke="#4f8a62" stroke-width="2"/>
+  <text x="350" y="350" class="sub" text-anchor="middle">Redux 选择不随页面变化</text>
+  <text x="350" y="376" class="code" text-anchor="middle">reportSelection.selectedIds = ["42"]</text>
+  <text x="350" y="400" class="small" text-anchor="middle">第 2 页工具栏仍显示“已选 1 项”</text>
 </svg>

@@ -53,16 +53,11 @@ Reflect (反射 API)有 13 个函数，名字和参数与 13 个 trap 一一对�
 
 赋值有对称的路径：`obj[key] = value` 从 `obj.[[Set]](key, value, obj)` 开始，`set` trap 收到 target、键、值和 receiver。沿原型找到 setter 时，setter 的 `this` 是 receiver；找到可写数据属性时，赋值在 **receiver** 上更新或新建自有属性（前提是 receiver 已有的描述符和可扩展性允许）。所以 trap 收到的 `target` 参数不能说明值最终写到哪个对象。
 
-按顺序做三次写入：
+下面按顺序做三次写入，其中 `observedChild = Object.create(observed)`、`directChild = Object.create(direct)`。图中实线是赋值沿原型和转发走的路，虚线是 setter 内部 `this.prefix = value` 的写入，★ 标出值最终落在哪里：
 
-1. **`observed.prefix = "Ops"`。** receiver 是代理本身。`Reflect.set` 在 target 上找到可写的 `prefix`，接着查询 receiver 的自有描述符、在 receiver 上定义属性；handler 没有 `getOwnPropertyDescriptor` 和 `defineProperty` trap，这两步又被转发给 `service`，所以最终改的是 `service.prefix`。
-2. **`observedChild.label = "Branch"`，其中 `observedChild = Object.create(observed)`。** 子对象自己没有 `label`，赋值沿原型进入代理，receiver 是子对象。`Reflect.set` 转发后，继承来的 setter 以子对象为 `this`；setter 里的 `this.prefix = value` 也沿原型经过代理，最终由 `Reflect.set` 在子对象上新建自有 `prefix`，target 仍是 `"Ops"`。之后读子对象的 `label`，getter 的 `this` 仍是子对象，但 `this.prefix` 命中它自己的键，不再经过代理。
-3. **`directChild.label = "West"`，其中 `directChild = Object.create(direct)`。** `direct` 的 `set` trap 省略了 receiver，默认用 target：setter 把 target 的 `prefix` 改成 `"West"`，子对象没有新建这个键。
+![三次写入中 receiver 决定 setter 的 this 和 prefix 的落点](./resources/proxy-receiver-write.svg)
 
-| 按顺序操作 | 子对象有自己的 `prefix` 吗 | 此时 `service.prefix` | 读子对象的 `label` |
-|---|---|---|---|
-| `observedChild.label = "Branch"` | 有，`"Branch"` | `"Ops"` | `"Branch reports"` |
-| `directChild.label = "West"` | 没有 | `"West"` | `"West reports"` |
+第 1 步里 receiver 就是代理本身，看不出它的作用，只为后两步定下 `service.prefix = "Ops"`。差别出在第 2、3 步 setter 里的 `this.prefix = value`：它是一次新赋值，从 setter 的 `this` 出发。第 2 步的 `this` 是子对象，新键建在子对象上，之后读子对象的 `label` 命中它自己的键；第 3 步的 trap 没传 receiver，`this` 成了 `service`，写入直接改掉了共享实例的 `prefix`。
 
 ### 方法调用，以及绕过代理的引用
 
@@ -75,7 +70,7 @@ Reflect (反射 API)有 13 个函数，名字和参数与 13 个 trap 一一对�
 - Proxy 是运行时特性，TypeScript 的类型系统看不到这些拦截。
 
 > [!example]- 完整代码：对照属性读取、子对象写入和方法日志
-> 从 `Sales` 开始：先调用报表方法得到 `Sales/daily: May #1`，改成 `Ops` 后再调用得到 `Ops/daily: May #2`，最后依次做上表两次子对象写入。全部代码共用同一个实例，按顺序运行。
+> 从 `Sales` 开始：先调用报表方法得到 `Sales/daily: May #1`，改成 `Ops` 后再调用得到 `Ops/daily: May #2`，最后依次做上图第 2、3 步的子对象写入。全部代码共用同一个实例，按顺序运行。
 >
 > ~~~javascript
 > function makeReportHandler(tag) {

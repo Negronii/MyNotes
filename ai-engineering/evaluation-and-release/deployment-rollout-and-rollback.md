@@ -68,7 +68,7 @@ TCO 是一期的总账。把它按[每份成功报告的完整成本](model-sele
 ~~~mermaid
 %%{init: {"flowchart": {"nodeSpacing": 12, "rankSpacing": 30}}}%%
 flowchart LR
-  A["① 本地 mock<br/>合成准备"] --> G["② 冻结候选组合<br/>真实端点<br/>合成测试"] --> C["③ 冻结版实际输出<br/>独立最终验收"] --> D["④ 上线前容量回放<br/>代表性峰值负载"]
+  A["① 本地 mock<br/>合成准备"] --> G["② 真实端点<br/>合成测试"] --> C["③ 冻结候选<br/>实际输出<br/>独立最终验收"] --> D["④ 上线前容量回放<br/>代表性峰值负载"]
 ~~~
 
 独立验收和容量回放都通过、生产条件也就绪后，才进入第二段的三个阶段：
@@ -117,7 +117,7 @@ flowchart LR
 ~~~mermaid
 %%{init: {"flowchart": {"wrappingWidth": 280}}}%%
 flowchart TD
-    Freeze[冻结 B 与验收协议<br/>预先设定门槛] --> Offline{离线验收通过？}
+    Freeze[冻结 B 与验收协议<br/>预先设定门槛] --> Offline{{"离线验收通过？"}}
     Offline -->|否| Keep[B 停止<br/>A 继续服务]
     Offline -->|是| Canary[B 小流量试运行<br/>A 作为回滚目标]
 ~~~

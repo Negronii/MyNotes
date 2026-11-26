@@ -59,17 +59,28 @@ worker 可能卡住：进程停顿、网络分区、机器失联。为了让 job
 1. **单调递增的代次。** 每次领取都让 attempt 加一。代次只增不减，新执行者的编号一定大于旧的。
 2. **在提交处检查。** 每一次写入（成功、失败、取消、续租）都把“我是第几代”写进条件里：`WHERE status = 'running' AND attempt = :my_attempt`。不匹配，就更新零行。
 
-于是栅栏生效的时刻是**恢复器的接管事务提交的那一刻**，而不是时钟到达租约时刻。以 `job-demo-731` 为例：
+于是栅栏生效的时刻是**恢复器的接管事务提交的那一刻**，而不是时钟到达租约时刻。下图以 `job-demo-731` 为例，画出恢复器先提交时 A 怎样被挡住：
 
-| 时点 | 数据库里的行 | 结果 |
-| --- | --- | --- |
-| A 领取 | `running / attempt = 1`，写入租约 | A 开始执行 |
-| A 停顿，租约到期 | 仍是 `running / attempt = 1` | 恢复器取得竞争资格；A 若此时醒来提交成功，仍然有效 |
-| 恢复器先提交接管 | 改回 `queued`，等待槽和新 outbox 一起提交 | 栅栏从这一刻生效 |
-| B 领取新一轮 | `running / attempt = 2` | B 开始执行 |
-| A 醒来，尝试提交 `attempt = 1` 的成功 | 条件 `status = 'running' AND attempt = 1` 不成立 | 更新零行，A 的结果不生效 |
+~~~mermaid
+sequenceDiagram
+    participant A as worker A
+    participant DB as job-demo-731 行
+    participant R as 恢复器
+    participant B as worker B
+    A->>DB: 条件领取
+    DB-->>A: running / attempt = 1，写入租约
+    Note over A: 停顿
+    Note over DB: 租约到期：行仍是 running / attempt = 1<br/>A 若此刻醒来提交成功，仍然有效
+    R->>DB: 接管：锁行，仍是 running / attempt = 1 且租约已过期
+    DB-->>R: 提交 queued + 等待槽 + 新 outbox 意图
+    Note over DB: 栅栏从这一刻生效
+    B->>DB: 条件领取新一轮
+    DB-->>B: running / attempt = 2
+    A->>DB: 醒来提交成功，条件<br/>status = 'running' AND attempt = 1
+    DB-->>A: 更新零行，A 的结果不生效
+~~~
 
-反过来，如果 A 的成功事务先于恢复器提交，job 就是 `succeeded`；恢复器随后看到终态，不会重排。两种顺序都只有一个赢家，赢家由行锁和提交顺序决定。恢复器在接管时怎样在取消、失败和重排之间选择，见[任务失败、被取消或 worker 失联后怎样收尾](job-retries-cancellation-and-cleanup.md)。
+反过来，如果 A 的成功事务先于恢复器提交，job 就是 `succeeded`；恢复器随后看到终态，不会重排。两种顺序都只有一个赢家，赢家由行锁和提交顺序决定。恢复器在接管时怎样在取消、失败和重排之间选择，见[收尾一章的决策图](job-retries-cancellation-and-cleanup.md#重试与恢复按什么顺序决定？)。
 
 栅栏挡住的是**写入**，不是**进程**。A 在被栅栏之后仍可能继续读数据、上传对象、占着它的物理执行槽，直到它自己停下。所以对象键要按 attempt 区分，物理槽要等 A 真正释放资源后才归还；这两件事在收尾一章展开。
 
@@ -170,15 +181,25 @@ worker 每次处理完一条消息，都要回答“这条消息还需要保留�
 
 这个变体常和另一种租约约定一起出现，必须先说清楚。本主线的案例采用**宽松约定**：租约到期只给恢复器竞争资格，旧 worker 在接管提交之前仍可能先完成。另一种是**严格租期**：每次写入都额外要求 `lease_expires_at > clock_timestamp()`，租约一到期就拒绝旧 worker，即使恢复器还没接管。两种都成立，但**同一种 job 只能选一种**，不能有的写入检查租期、有的不检查。
 
-下面用一个与 `job-demo-731` 无关的独立任务 `pg-job-demo-42` 展示严格租期变体（30 秒租约是演示值）：
+下面用一个与 `job-demo-731` 无关的独立任务 `pg-job-demo-42` 展示严格租期变体（30 秒租约是演示值）。和上一张栅栏图对照，区别在于 A 在租约到期、B 还没接管时就已被拒绝：
 
-| 时点 | 状态与结果 |
-| --- | --- |
-| A 领取 | `running / attempt = 1`，租约 30 秒 |
-| A 的租约到期，B 尚未接管 | A 尝试完成：严格租期条件不成立，更新零行 |
-| B 用 `SKIP LOCKED` 接管 | `running / attempt = 2`，写入新租约 |
-| B 正常完成 | 同一事务写 `succeeded`、`reports/42/attempt-2` 和唯一的 `report.ready` 意图 |
-| A 迟到 | attempt 与状态都不匹配，更新零行，不覆盖 B 的结果 |
+~~~mermaid
+sequenceDiagram
+    participant A as worker A
+    participant DB as pg-job-demo-42 行
+    participant B as worker B
+    A->>DB: SKIP LOCKED 领取
+    DB-->>A: running / attempt = 1，租约 30 秒
+    Note over DB: A 的租约到期，B 尚未接管
+    A->>DB: 醒来尝试完成，条件含<br/>lease_expires_at > clock_timestamp()
+    DB-->>A: 更新零行（严格租期拒绝）
+    B->>DB: SKIP LOCKED 接管过期行
+    DB-->>B: running / attempt = 2，新租约
+    B->>DB: 同一事务：succeeded、<br/>reports/42/attempt-2、report.ready 意图
+    DB-->>B: 1 行，提交
+    A->>DB: 迟到完成 attempt = 1
+    DB-->>A: 状态与 attempt 都不匹配，更新零行，不覆盖 B
+~~~
 
 这个例子还演示了另一种情况：在最终结果之前允许发出的“处理中”通知 `report.processing`。它同样只能由当前 attempt 登记，用单条语句同时完成“有没有写权”和“插入或比对已有意图”。结果有四列，含义如下：
 

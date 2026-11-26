@@ -69,13 +69,15 @@ JavaScript 里最省事的队列是普通数组，`push` 入队、`shift` 出队
 
 - **出队**：先读 `items[head]`，再把这个槽设为 `undefined` 以释放它对对象的引用，最后 `head++`。一次读、一次写、一次加法，O(1)。
 - **判空看下标，不看槽值。** 把槽设为 `undefined` 不会删除这个下标，只说明它已在有效区间之外；存进去的 `undefined` 仍在区间之内，照样能出队。
-- **长期运行要压缩。** 只增加 `head` 时，底层数组只增不减。下面的实现在已消费的部分达到数组长度一半时，把剩余的 `items[head..)` 复制到新数组并把 `head` 归零。每次压缩复制的项数不超过自上次压缩以来出队的项数，所以压缩成本摊到每次出队上仍是 O(1)。
+- **长期运行要压缩。** 只增加 `head` 时，底层数组只增不减。下面的实现在已消费的部分既达到数组长度一半、又不少于 `COMPACT_MIN = 1024` 项时，把剩余的 `items[head..)` 复制到新数组并把 `head` 归零；下限让小队列不必反复复制，代价是已清空的槽可能保留下来：它们要么少于 `COMPACT_MIN` 个，要么不超过剩余项数。每次压缩复制的项数 `items.length − head` 不超过 `head`，也就是自上次压缩以来出队的项数，所以压缩成本摊到每次出队上仍是 O(1)。
 
 ![head 从 index 0 推到 1、再推到长度 2；第二个存储值即使是 undefined 仍可出队](resources/queue-and-stack-representations-head-index-queue.svg)
 
-图中边界输入是 `[null, undefined]`：`head` 从 0 推到 1、再到 2，两个值都正常出队，最后 `head` 等于长度，队列为空。
+图中边界输入是 `[null, undefined]`：`head` 远低于压缩下限，所以不会压缩，从 0 推到 1、再到 2，两个值都正常出队，最后 `head` 等于长度，队列为空。
 
 ```javascript
+const COMPACT_MIN = 1024;
+
 class ArrayQueue {
   constructor() {
     this.items = [];
@@ -88,7 +90,7 @@ class ArrayQueue {
     const value = this.items[this.head];
     this.items[this.head] = undefined;
     this.head++;
-    if (this.head * 2 >= this.items.length) {
+    if (this.head >= COMPACT_MIN && this.head * 2 >= this.items.length) {
       this.items = this.items.slice(this.head);
       this.head = 0;
     }

@@ -39,8 +39,8 @@
 
 ~~~mermaid
 flowchart TD
-    P["ReportsPage<br/>持有 sort<br/>派生有序 rows"] -->|"sort 与回调"| T["ReportToolbar<br/>显示选中按钮"]
-    P -->|"有序 reports"| L["ReportList<br/>按顺序显示行"]
+    P["ReportsPage<br/>持有 sort<br/>派生有序 rows"] -->|"sort、onSortChange"| T["ReportToolbar<br/>显示选中按钮"]
+    P -->|"reports（有序 rows）"| L["ReportList<br/>按顺序显示行"]
     T -->|"点击调用 onSortChange"| P
 ~~~
 

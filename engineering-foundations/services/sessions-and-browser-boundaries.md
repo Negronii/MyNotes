@@ -68,14 +68,38 @@ BFF 让令牌留在服务端。它用会话 Cookie 找到该用户的令牌集�
 
 OAuth 2.0 是授权框架；只有请求 `openid` scope 并按 OIDC 规则验证 ID Token，客户端才得到身份断言。本例的 BFF 是 confidential client (机密客户端)，API 是资源服务器，IdP 是固定的信任方。
 
-| 步骤 | BFF 做什么 | 防的是什么 |
-| --- | --- | --- |
-| 1. 开始事务 | 从受信配置选定 issuer、各端点、client ID 和精确登记的回调 `https://reports.example.test/oidc/callback`。在服务端建短期事务记录：一次性随机 `state`、`nonce`、PKCE `code_verifier`、预期 `iss`、回调地址、创建时间、未使用标记。用 `__Host-oidc-tx` Cookie（`Path=/; Secure; HttpOnly; SameSite=Lax`）把匿名浏览器上下文与事务关联 | 不让请求参数决定 IdP 或回调地址；把回调绑定到发起登录的那个浏览器 |
-| 2. 发起授权 | 用 32 个新随机字节生成无填充 Base64URL 的 `code_verifier`（43 个字符），计算 `code_challenge = BASE64URL(SHA-256(ASCII(code_verifier)))`，并显式发送 `code_challenge_method=S256`。浏览器被重定向到 IdP，参数含 `response_type=code`、`client_id`、精确 `redirect_uri`、`scope=openid reports.read`、`state`、`nonce` 和 challenge | 省略方法字段时 RFC 7636 的默认值是 `plain`，不会自动用 SHA-256。`reports.read` 只是向 API 请求的权限范围，不证明 `user-17` 属于 `acct-17` |
-| 3. 回调校验 | IdP 认证用户后带 code、`state`、`iss` 回到回调地址。BFF 要求 `iss` 存在且与事务的预期值精确相等（本例 IdP 元数据声明支持 RFC 9207，错误响应也要带 `iss`）；要求 `__Host-oidc-tx` 存在，用它找到事务，再用一条原子条件更新同时核对 `state`、未过期、未消费，并标为已消费 | `iss` 防多授权服务器的 mix-up 攻击；原子消费防并发回调重复兑换。任一项失败就停止，不兑换 code，不建会话 |
-| 4. 兑换 code | 经已验证的 TLS 连接调用 Token Endpoint，发送 `grant_type=authorization_code`、code、相同的 `redirect_uri`、`code_verifier` 和机密客户端认证。IdP 核对 code 未用过、绑定本 client 和回调、PKCE 匹配后，返回 ID Token、Access Token，可能还有 Refresh Token | 截获 code 的人没有 verifier，兑换不了 |
-| 5. 验证身份并绑定账户 | 见下一小节 | ID Token 被替换或重放 |
-| 6. 建立新会话 | 在服务端保存身份、会话 ID、有效期与 API grant 的关联；销毁匿名上下文和任何登录前的会话 ID，签发全新的 `__Host-session` | 会话固定 |
+下图是登录的完整往返，编号与下面的要点对应：
+
+```mermaid
+%%{init: {"sequence": {"width": 170, "actorMargin": 30, "mirrorActors": false}}}%%
+sequenceDiagram
+    participant B as 浏览器
+    participant F as BFF
+    participant A as IdP 授权端点
+    participant T as IdP Token Endpoint
+    B->>F: 访问登录入口
+    Note over F: ① 建事务记录：<br/>state、nonce、<br/>code_verifier、预期 iss、<br/>精确回调地址、未使用标记
+    F-->>B: ② 302 到 IdP<br/>Set-Cookie: __Host-oidc-tx<br/>参数：code_challenge（S256）、<br/>state、nonce、redirect_uri
+    B->>A: 授权请求
+    Note over B,A: 用户在 IdP 完成认证
+    A-->>B: 302 到回调：code、state、iss
+    B->>F: ③ GET /oidc/callback<br/>（code、state、iss）<br/>带 __Host-oidc-tx
+    Note over F: iss 精确等于预期；<br/>凭 Cookie 找到事务；<br/>原子条件更新：state 匹配、<br/>未过期、未消费 → 已消费
+    F->>T: ④ code、code_verifier、<br/>相同 redirect_uri、<br/>客户端认证
+    Note over T: code 未用过，<br/>绑定本 client 与回调，<br/>PKCE 匹配
+    T-->>F: ID Token、Access Token<br/>（可能还有 Refresh Token）
+    Note over F: ⑤ 验证 ID Token（含 nonce），<br/>按 (iss, sub) 绑定 user-17
+    F-->>B: ⑥ Set-Cookie: __Host-session<br/>（全新 ID）<br/>销毁匿名上下文<br/>与登录前的会话 ID
+```
+
+图上没写出的条件，以及每一步防的是什么：
+
+1. **开始事务。** issuer、各端点、client ID 和回调 `https://reports.example.test/oidc/callback` 都取自受信配置并精确登记；事务记录短期有效，`__Host-oidc-tx` 的属性是 `Path=/; Secure; HttpOnly; SameSite=Lax`。防的是让请求参数决定 IdP 或回调地址，并把回调绑定到发起登录的那个浏览器。
+2. **发起授权。** `code_verifier` 由 32 个新随机字节生成，无填充 Base64URL 编码后是 43 个字符；`code_challenge = BASE64URL(SHA-256(ASCII(code_verifier)))`。授权请求还带 `response_type=code`、`client_id` 和 `scope=openid reports.read`。必须显式发送 `code_challenge_method=S256`：省略时 RFC 7636 的默认值是 `plain`，不会自动用 SHA-256。`reports.read` 只是向 API 请求的权限范围，不证明 `user-17` 属于 `acct-17`。
+3. **回调校验。** `iss` 必须存在（本例 IdP 元数据声明支持 RFC 9207，错误响应也要带 `iss`），`__Host-oidc-tx` 必须存在。`iss` 防多授权服务器的 mix-up 攻击；原子消费防并发回调重复兑换。任一项失败就停止，不兑换 code，不建会话。
+4. **兑换 code。** 经已验证的 TLS 连接调用 Token Endpoint，发送 `grant_type=authorization_code`。截获 code 的人没有 verifier，兑换不了。
+5. **验证身份并绑定账户。** 逐项规则见下一小节；防的是 ID Token 被替换或重放。
+6. **建立新会话。** 服务端保存身份、会话 ID、有效期与 API grant 的关联；全新的会话 ID 防会话固定。
 
 三个随机值各管一件事，不能互相代替：PKCE 把 code 的兑换绑定到这次事务；`state` 把浏览器回调绑回发起它的事务；`nonce` 把 ID Token 绑回这次认证。RFC 9700 允许在确认授权服务器支持 PKCE 时只靠 PKCE 防护回调的 CSRF；本例仍显式检查 Cookie、`state` 和 `nonce`。这些协议端点的保护，也不能代替报表业务变更请求的 CSRF 检查。
 

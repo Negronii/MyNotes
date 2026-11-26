@@ -12,12 +12,12 @@
 
 ~~~mermaid
 flowchart TD
-    Input["1 应用组装输入<br/>指令 + 问题 + 工具定义"]
+    Input["1 应用组装输入<br/>指令 + 问题<br/>+ 工具定义"]
     Model["2 模型生成输出"]
     Choice{"输出是什么？"}
-    Tool["3 应用检查并执行 c1<br/>核对权限后读取 build 42 日志"]
-    Next["4 结果回到下一次输入<br/>追加调用与结果"]
-    Answer["5 应用保存终态并返回"]
+    Tool["3 应用检查 c1<br/>核对权限后执行<br/>读 build 42 日志"]
+    Next["4 结果回到<br/>下一次输入<br/>追加调用与结果"]
+    Answer["5 应用保存终态<br/>并返回"]
     Input --> Model --> Choice
     Choice -->|工具请求| Tool
     Tool -->|日志或错误结果| Next

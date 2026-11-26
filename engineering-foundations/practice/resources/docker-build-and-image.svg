@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="380" viewBox="0 0 700 380" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="420" viewBox="0 0 700 420" role="img" aria-labelledby="title desc">
 <title id="title">从受控提交分成本地检查与 registry 发布</title>
-<desc id="desc">固定提交和依赖锁文件进入干净构建上下文，由 BuildKit 按层构建。每次构建分别选择本地 --load 路径或 CI --push 路径：本地输出摘要供 Engine inspect/history 检查，不证明 registry 收到镜像；远端路径读取本次 push metadata，以 repo@digest 通过 imagetools inspect 核对，再把完整 registry 引用交给 Compose。两条路径的摘要不能假定相同；多平台还要按实际平台核对子摘要。</desc>
+<desc id="desc">固定提交和依赖锁文件进入干净构建上下文，由 BuildKit 按层构建。每次构建分别选择本地 --load 路径或 CI --push 路径：本地输出摘要供 Engine inspect/history 检查，不证明 registry 收到镜像；远端路径读取本次 push metadata，以 repo@digest 通过 imagetools inspect 核对，再把完整 registry 引用作为 REPORT_IMAGE（d-new）交给后续步骤。两条路径的摘要不能假定相同；多平台还要按实际平台核对子摘要。</desc>
 <defs>
   <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#36546f"/></marker>
   <style>
@@ -13,10 +13,11 @@
     .remote { fill: #eef6f1; stroke: #4d806c; stroke-width: 1.6; }
     .footer { fill: #f7f9fb; stroke: #c6d4de; stroke-width: 1.2; }
     .line { fill: none; stroke: #36546f; stroke-width: 2; marker-end: url(#arrow); }
+    .code { font-family: Menlo, "SF Mono", Consolas, monospace; }
     .plain { fill: none; stroke: #36546f; stroke-width: 2; }
   </style>
 </defs>
-<rect x="1" y="1" width="698" height="378" rx="14" fill="#fff" stroke="#d4e0e8"/>
+<rect x="1" y="1" width="698" height="418" rx="14" fill="#fff" stroke="#d4e0e8"/>
 
 <rect x="18" y="48" width="200" height="68" rx="10" class="box"/>
 <text x="118" y="76" text-anchor="middle" class="body">固定提交 c4f2a91</text>
@@ -28,23 +29,24 @@
 <path d="M450 82 H478" class="line"/>
 <rect x="482" y="48" width="200" height="68" rx="10" class="box"/>
 <text x="582" y="76" text-anchor="middle" class="body">BuildKit 分层构建</text>
-<text x="582" y="99" text-anchor="middle" class="small">每次选一种输出路径</text>
+<text x="582" y="99" text-anchor="middle" class="small">本地与 CI 各构建一次</text>
 
 <path d="M582 116 V155" class="plain"/>
 <path d="M582 155 H180 V186" class="line"/>
 <path d="M582 155 V186" class="line"/>
 <rect x="18" y="194" width="324" height="166" rx="11" class="local"/>
 <text x="180" y="220" text-anchor="middle" class="body">本机验证（Engine）</text>
-<text x="180" y="248" text-anchor="middle" class="small">--load → 本机镜像存储</text>
+<text x="180" y="248" text-anchor="middle" class="small"><tspan class="code">--load</tspan> → 本机镜像存储</text>
 <text x="180" y="275" text-anchor="middle" class="small">inspect / history 查看配置与层</text>
 <text x="180" y="302" text-anchor="middle" class="small">记录本地输出摘要</text>
 <text x="180" y="330" text-anchor="middle" class="small">不证明 registry 已收到镜像</text>
 
 <rect x="358" y="194" width="324" height="166" rx="11" class="remote"/>
 <text x="520" y="220" text-anchor="middle" class="body">CI 发布（registry）</text>
-<text x="520" y="248" text-anchor="middle" class="small">--push → 镜像仓库</text>
+<text x="520" y="248" text-anchor="middle" class="small"><tspan class="code">--push</tspan> → 镜像仓库</text>
 <text x="520" y="275" text-anchor="middle" class="small">读取本次 push 的 metadata digest</text>
 <text x="520" y="302" text-anchor="middle" class="small">imagetools inspect repo@digest</text>
-<text x="520" y="330" text-anchor="middle" class="small">核验后把完整摘要引用传给 Compose</text>
-
+<text x="520" y="330" text-anchor="middle" class="small">核验后作为 REPORT_IMAGE（d-new）交出</text>
+<rect x="18" y="370" width="664" height="34" rx="8" class="footer"/>
+<text x="350" y="392" text-anchor="middle" class="small">两次构建的摘要不能假定相同；交给运行环境的只有 registry 核验过的引用</text>
 </svg>

@@ -18,15 +18,16 @@ grant、审批和登录会话为什么是三种不同的记录，见[模型提�
 接下来的处理只取决于一个问题：撤权时，`R-204` 有没有已登记的发送意图。
 
 ```mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
-    A[撤权或 invalid_grant] --> B{R-204 有发送意图吗？}
-    B -- 没有，当前 worker 已停，<br/>也没有更早的未结清 attempt --> C[不构成 effect_unknown]
-    C --> C1{运行已取消？}
+    A[撤权或 invalid_grant] --> B{{"R-204 有发送意图吗？"}}
+    B -- "没有，当前 worker 已停，<br/>也没有更早的未结清 attempt" --> C[不构成 effect_unknown]
+    C --> C1{{"运行已取消？"}}
     C1 -- 是 --> C2[直接停止，不补发]
     C1 -- 否 --> C3[等商户重新授权，<br/>再完整核验]
-    B -- 有，持有意图的 attempt 失联 --> D[按 effect_unknown 处理]
+    B -- "有，持有意图的<br/>attempt 失联" --> D[按 effect_unknown 处理]
     D --> D1[只做合法查询和<br/>不产生新效果的对账]
-    B -- 有，已发请求回来明确成功 --> E[当前 attempt 照常写回；<br/>旧 worker 交给当前恢复流程]
+    B -- "有，已发请求<br/>回来明确成功" --> E[当前 attempt 照常写回；<br/>旧 worker 交给当前恢复流程]
 ```
 
 - **没有发送意图。** 当前 worker 已明确停止，也没有更早的未结清 attempt，那就不存在要核对的远端副作用，运行不进入 `effect_unknown`。运行未取消时，等待商户重新授权并重新核验；运行已取消时直接停止。重新授权之后，也不能按原键“补发”一个从来没发出过的效果来收尾一个已取消的运行。

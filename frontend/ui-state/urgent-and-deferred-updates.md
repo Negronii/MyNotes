@@ -16,16 +16,11 @@ React 能中断的只是组件和组件之间的 render 工作。一个组件内
 
 搜索框的 `query` 是紧急状态，直接由 `onChange` 更新。`useDeferredValue(query)` 返回一个“落后一步”的副本 `deferredQuery`，把它而不是 `query` 交给结果列表。`isStale = query !== deferredQuery` 表示列表还没跟上输入，用来显示陈旧提示。
 
-假设初始搜索词为空，列表显示 May、April。用户一次把搜索框填成 `apr`（例如粘贴）：
+假设初始搜索词为空，列表显示 May、April。用户一次把搜索框填成 `apr`（例如粘贴），React 分两轮处理这次输入：
 
-| 次序 | 发生什么 |
-| --- | --- |
-| 1. 输入事件 | 处理器排入 `query="apr"`。 |
-| 2. 紧急 render 与 commit | render 得到 `query="apr"`、`deferredQuery=""`、`isStale=true`。提交后输入框显示 `apr`，陈旧提示出现；`ReportResults` 的 props 没变，这一轮跳过它，列表 DOM 仍是 May、April。 |
-| 3. 后台 render | React 用 `deferredQuery="apr"` 计算新列表，屏幕上仍是已提交的旧列表。期间若用户又输入，这轮可被放弃，按最新值重来。 |
-| 4. 后台 commit | 采用这一轮后，列表提交为 April，`isStale` 变回 `false`，提示消失。 |
+![useDeferredValue 先在紧急轮提交输入框与陈旧提示并跳过结果列表，再在可被放弃的后台轮提交 April](resources/react-deferred-value-lanes.svg)
 
-这是 React 的提交次序，不承诺每一步都单独绘制成一帧；后台工作很快完成时，用户可能只看到最终列表。
+图中是 React 的提交次序，不承诺每一步都单独绘制成一帧；第 ② 步为什么能跳过列表，见下文 memo 一节。
 
 > [!example]- 完整示例：输入状态与结果列表
 >
@@ -78,7 +73,7 @@ React 能中断的只是组件和组件之间的 render 工作。一个组件内
 
 ## memo 边界决定能否跳过旧列表
 
-第 2 步能跳过 `ReportResults`，靠的是 `memo` (记忆化组件)：它按浅比较检查 props，`reports` 和 `query` 都没变就跳过这次 render。没有这道边界，紧急 render 会用旧的 `deferredQuery` 把整个列表重算一遍，输入照样变慢。
+图中第 ② 步能跳过 `ReportResults`，靠的是 `memo` (记忆化组件)：它按浅比较检查 props，`reports` 和 `query` 都没变就跳过这次 render。没有这道边界，紧急 render 会用旧的 `deferredQuery` 把整个列表重算一遍，输入照样变慢。
 
 浅比较比的是引用。`reports` 必须在输入期间保持同一个数组、也不被原地修改；父组件若每次 render 都传一个新数组，`memo` 就会认为 props 变了。`memo` 是性能优化，不是正确性保证。项目配置了 React Compiler (React 编译器)并核对过编译结果时，编译器可能自动建立同样的跳过边界；本例显式写 `memo`，让因果关系在没有编译器时也看得见。怎样测量和建立 memo 边界，见[React 渲染慢时，先改什么？](../delivery/react-rendering-optimization.md)。
 

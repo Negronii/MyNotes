@@ -7,6 +7,7 @@
 <text x="450.0" y="98" text-anchor="middle" font-size="23">已保存：仓库、标题、正文、证据摘要、payloadHash</text>
 <text x="450.0" y="130" text-anchor="middle" font-size="23">界面展示这一版本；此时还没有创建工单</text>
 <path d="M450,177 L450,222" fill="none" stroke="#7086a3" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" marker-end="url(#arrow)"/>
+<text x="470" y="207" font-size="22" fill="#566d87">审核人批准：提交 runId 与 payloadHash</text>
 <rect x="60" y="237" width="780" height="180" rx="12" fill="#f4effb" stroke="#daccf1" stroke-width="2"/>
 <text x="450.0" y="272" text-anchor="middle" font-size="25" font-weight="600">服务端核对状态、草稿与当前权限</text>
 <text x="450.0" y="310" text-anchor="middle" font-size="23">仍为 awaiting_approval；目标与草稿 hash 匹配</text>

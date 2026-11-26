@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="796" height="546" viewBox="0 0 796 546" role="img" aria-labelledby="title desc">
+  <title id="title">迟到结果的两种落点</title>
+  <desc id="desc">同一组事件：① 发起 recent 读取，② 切到 oldest 并发起读取，③ oldest 响应先到，④ recent 响应迟到。左栏是按身份分格的查询缓存：两份结果各写进自己的格，只有当前键 oldest 的格被显示，迟到的 recent 结果保留在 recent 格里。右栏是只有一个槽位的 Effect、Redux 预览或编辑抽屉：结果到达时与当前所有者比较，oldest 匹配后写入，recent 不匹配被丢弃。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#263b52"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#b03a3a"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; fill: #172b3f; }
+      .head { font-size: 19px; font-weight: 700; }
+      .sub { font-size: 17px; font-weight: 600; }
+      .body { font-size: 16px; }
+      .small { font-size: 15px; fill: #44566a; }
+      .code { font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 15px; }
+      .red { fill: #9e2f2f; }
+      .arrow { fill: none; stroke: #263b52; stroke-width: 2.2; marker-end: url(#arrow); }
+      .arrow-red { fill: none; stroke: #b03a3a; stroke-width: 2.2; marker-end: url(#arrow-red); }
+      .dash { stroke-dasharray: 7 5; }
+    </style>
+  </defs>
+  <rect x="6" y="6" width="784" height="534" rx="18" fill="#ffffff" stroke="#d7e0e8" stroke-width="2"/>
+  <text x="398.0" y="40" class="head" text-anchor="middle">同一次迟到：分格存储与单槽各怎样落点</text>
+  <rect x="22" y="62" width="228" height="56" rx="12" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="136.0" y="96" class="sub" text-anchor="middle">事件次序</text>
+  <rect x="264" y="62" width="250" height="56" rx="12" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="389.0" y="85" class="sub" text-anchor="middle">按身份分格</text>
+  <text x="389.0" y="107" class="small" text-anchor="middle">查询缓存</text>
+  <rect x="526" y="62" width="250" height="56" rx="12" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="651.0" y="85" class="sub" text-anchor="middle">只有一个槽位</text>
+  <text x="651.0" y="107" class="small" text-anchor="middle">Effect、Redux 预览、编辑抽屉</text>
+  <rect x="22" y="132" width="228" height="70" rx="10" fill="#e9edf2" stroke="#e9edf2" stroke-width="0"/>
+  <text x="36" y="160" class="head">①</text>
+  <text x="70" y="160" class="sub">发起 recent 读取</text>
+  <text x="70" y="184" class="small">身份：acct-a / recent</text>
+  <rect x="264" y="132" width="250" height="70" rx="10" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2"/>
+  <text x="389.0" y="173" class="sub" text-anchor="middle">recent 格：等待</text>
+  <rect x="526" y="132" width="250" height="70" rx="10" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2"/>
+  <text x="651.0" y="173" class="sub" text-anchor="middle">当前所有者：recent</text>
+  <rect x="22" y="216" width="228" height="70" rx="10" fill="#e9edf2" stroke="#e9edf2" stroke-width="0"/>
+  <text x="36" y="244" class="head">②</text>
+  <text x="70" y="244" class="sub">切到 oldest 再读取</text>
+  <text x="70" y="268" class="small">身份：acct-a / oldest</text>
+  <rect x="264" y="216" width="250" height="70" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="389.0" y="245" class="sub" text-anchor="middle">oldest 格：等待</text>
+  <text x="389.0" y="269" class="small" text-anchor="middle">当前键 → oldest</text>
+  <rect x="526" y="216" width="250" height="70" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="651.0" y="257" class="sub" text-anchor="middle">当前所有者：oldest</text>
+  <rect x="22" y="300" width="228" height="70" rx="10" fill="#e9edf2" stroke="#e9edf2" stroke-width="0"/>
+  <text x="36" y="328" class="head">③</text>
+  <text x="70" y="328" class="sub">oldest 响应先到</text>
+  <rect x="264" y="300" width="250" height="70" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="389.0" y="329" class="sub" text-anchor="middle">写进 oldest 格</text>
+  <text x="389.0" y="353" class="small" text-anchor="middle">是当前键：显示 April、May</text>
+  <rect x="526" y="300" width="250" height="70" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="651.0" y="329" class="sub" text-anchor="middle">身份 = 当前所有者</text>
+  <text x="651.0" y="353" class="small" text-anchor="middle">写进槽并显示</text>
+  <rect x="22" y="384" width="228" height="70" rx="10" fill="#e9edf2" stroke="#e9edf2" stroke-width="0"/>
+  <text x="36" y="412" class="head">④</text>
+  <text x="70" y="412" class="sub">recent 响应迟到</text>
+  <rect x="264" y="384" width="250" height="70" rx="10" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2"/>
+  <text x="389.0" y="413" class="sub" text-anchor="middle">写进 recent 格，保留</text>
+  <text x="389.0" y="437" class="small" text-anchor="middle">不是当前键：不显示</text>
+  <rect x="526" y="384" width="250" height="70" rx="10" fill="#fbebeb" stroke="#b85c5c" stroke-width="2"/>
+  <text x="651.0" y="413" class="sub" text-anchor="middle">身份 ≠ 当前所有者</text>
+  <text x="651.0" y="437" class="small" text-anchor="middle">丢弃，槽里仍是 oldest</text>
+  <text x="22" y="484" class="body">两栏的判断依据相同：结果的身份是否仍是当前身份，与到达先后无关。</text>
+  <text x="22" y="512" class="small">蓝色为 recent，橙色为 oldest，红色为被丢弃的结果。</text>
+</svg>

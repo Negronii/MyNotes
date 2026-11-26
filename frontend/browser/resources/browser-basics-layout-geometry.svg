@@ -24,7 +24,6 @@
   <!-- content edges: x=24 and x=696 -->
   <path class="guide" d="M124 119 V467 M796 119 V467"/>
   <path class="guide" d="M124 119 H796"/>
-  <text class="small muted" x="126" y="137">内容区 · x=24 … 696 · 宽 672</text>
 
   <!-- h1: x24 y24 w672 h30 -->
   <rect class="blue" x="124" y="119" width="672" height="30"/>
@@ -43,10 +42,12 @@
   <text class="small" x="269" y="377">Oldest first</text>
   <text class="small muted" x="410" y="376">#sort-controls · y=258–294</text>
 
+  <text class="small muted" x="470" y="240">虚线：内容区 x=24 … 696 · 宽 672</text>
+
   <!-- ol and both list items -->
   <rect class="row" x="124" y="401" width="672" height="68"/>
   <line x1="124" y1="435" x2="796" y2="435" stroke="#8797a8" stroke-width="2"/>
   <text class="body" x="145" y="426">May report · y=306–340</text>
   <text class="body" x="145" y="460">April report · y=340–374</text>
-
+  <text class="small muted" x="110" y="517">main 底边 y=398 · 视口底边 y=433</text>
 </svg>

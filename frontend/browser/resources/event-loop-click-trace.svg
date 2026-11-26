@@ -23,26 +23,26 @@
   <rect x="8" y="8" width="1084" height="1664" rx="24" fill="#fff" stroke="#d7e0e8" stroke-width="2"/>
   <text class="head" x="46" y="58">一次报表点击：handler 改状态，微任务检查点再续跑</text>
 
-  <rect class="state" x="40" y="82" width="300" height="192" rx="18"/>
-  <text class="label" x="66" y="121">listener A 运行前</text>
-  <text class="body" x="66" y="160">URL：?sort=recent#summary</text>
-  <text class="body" x="66" y="199">aria：recent true / oldest false</text>
-  <text class="body" x="66" y="238">行：May → April</text>
+  <rect class="state" x="36" y="82" width="320" height="192" rx="18"/>
+  <text class="label" x="60" y="121">listener A 运行前</text>
+  <text class="body" x="60" y="160">URL：?sort=recent#summary</text>
+  <text class="body" x="60" y="199">aria：recent true / oldest false</text>
+  <text class="body" x="60" y="238">行：May → April</text>
 
-  <rect class="task" x="400" y="82" width="300" height="192" rx="18"/>
-  <text class="label" x="426" y="121">物理 click · listener A</text>
-  <text class="body" x="426" y="160">pushState 更新 URL</text>
-  <text class="body" x="426" y="199">改 aria-pressed</text>
-  <text class="body" x="426" y="238">重排 DOM 行</text>
+  <rect class="task" x="390" y="82" width="320" height="192" rx="18"/>
+  <text class="label" x="414" y="121">物理 click · listener A</text>
+  <text class="body" x="414" y="160">pushState 更新 URL</text>
+  <text class="body" x="414" y="199">改 aria-pressed</text>
+  <text class="body" x="414" y="238">重排 DOM 行</text>
 
-  <rect class="state" x="760" y="82" width="300" height="192" rx="18"/>
-  <text class="label" x="786" y="121">listener A 返回时</text>
-  <text class="body" x="786" y="160">URL：?sort=oldest#summary</text>
-  <text class="body" x="786" y="199">aria：recent false / oldest true</text>
-  <text class="body" x="786" y="238">行：April → May</text>
+  <rect class="state" x="744" y="82" width="320" height="192" rx="18"/>
+  <text class="label" x="768" y="121">listener A 返回时</text>
+  <text class="body" x="768" y="160">URL：?sort=oldest#summary</text>
+  <text class="body" x="768" y="199">aria：recent false / oldest true</text>
+  <text class="body" x="768" y="238">行：April → May</text>
 
-  <path class="flow" d="M340 177 H400"/>
-  <path class="flow" d="M700 177 H760"/>
+  <path class="flow" d="M356 177 H390"/>
+  <path class="flow" d="M710 177 H744"/>
   <path class="flow" d="M910 274 V323"/>
 
   <rect class="micro" x="72" y="323" width="956" height="153" rx="18"/>
@@ -55,14 +55,14 @@
 
   <rect class="micro" x="60" y="584" width="280" height="112" rx="16"/>
   <text class="body" x="88" y="625">Promise reaction</text>
-  <text class="small muted" x="88" y="664">新增 µnested 到队尾</text>
+  <text class="small muted" x="88" y="664">把嵌套微任务排到队尾</text>
 
   <rect class="micro" x="410" y="584" width="280" height="112" rx="16"/>
   <text class="body" x="440" y="625">queueMicrotask</text>
-  <text class="small muted" x="440" y="664">在 reaction 前已入队</text>
+  <text class="small muted" x="440" y="664">A 中排入，早于嵌套项</text>
 
   <rect class="micro" x="760" y="584" width="280" height="112" rx="16"/>
-  <text class="body" x="792" y="625">µnested</text>
+  <text class="body" x="792" y="625">嵌套微任务</text>
   <text class="small muted" x="792" y="664">第三项后队列为空</text>
   <path class="flow-purple" d="M340 640 H410"/>
   <path class="flow-purple" d="M690 640 H760"/>
@@ -83,13 +83,13 @@
   <text class="body" x="108" y="1147">用户代理选择 task queue；若两者共用一队列，取其中较早的 runnable task</text>
   <text class="small muted" x="108" y="1179">还有其他可运行队列时，也可能先选它们</text>
 
-  <path class="flow" d="M310 1192 V1228 H292 V1252"/>
-  <path class="flow" d="M790 1192 V1228 H808 V1252"/>
+  <path class="flow" d="M293 1192 V1252"/>
+  <path class="flow" d="M807 1192 V1252"/>
 
   <rect class="render" x="48" y="1252" width="490" height="334" rx="18"/>
   <text class="label" x="78" y="1296">可能：更新渲染 task 先运行</text>
   <text class="body" x="78" y="1342">rAF A 返回后：清理 callback，再清理 script</text>
-  <text class="body" x="78" y="1386">栈空时排空 µrAF</text>
+  <text class="body" x="78" y="1386">栈空时排空 rAF A 排入的微任务</text>
   <text class="body" x="78" y="1430">恢复当前渲染 task，继续 rAF B</text>
   <text class="body" x="78" y="1474">再做常规样式与布局步骤</text>
   <text class="body" x="78" y="1518">渲染 task 结束，执行 task 边界检查点</text>

@@ -44,9 +44,8 @@
   <text class="small" x="750" y="566">确认该候选不可逆落败</text>
   <text class="small" x="750" y="605">先冻结 C8，才能准备更高代次</text>
 
-  <path class="rail" d="M250 628 L250 678 M250 678 L750 678"/>
-  <path class="line" d="M250 678 L250 720"/>
-  <path class="line" d="M750 678 L750 720"/>
+  <path class="line" d="M250 628 L250 720"/>
+  <path class="line" d="M400 628 L400 668 L500 668 L500 813 L524 813"/>
 
   <rect class="box good" x="32" y="728" width="436" height="170"/>
   <text class="t" x="250" y="765">继续本次切换</text>
@@ -60,9 +59,8 @@
   <text class="small" x="750" y="846">与可能迟到的 K8 开门条件竞争</text>
   <text class="small" x="750" y="880">closed | open → frozen</text>
 
-  <path class="rail" d="M750 898 L750 946 M250 946 L750 946"/>
-  <path class="line" d="M250 946 L250 988"/>
-  <path class="line" d="M750 946 L750 988"/>
+  <path class="line" d="M750 898 L750 988"/>
+  <path class="line" d="M600 898 L600 938 L500 938 L500 1087 L476 1087"/>
 
   <rect class="box warn" x="32" y="996" width="436" height="182"/>
   <text class="t" x="250" y="1033">冻结先赢</text>
@@ -93,7 +91,7 @@
   <rect class="box good" x="32" y="1648" width="436" height="142"/>
   <text class="t" x="250" y="1685">账本确定为 0</text>
   <text class="small" x="250" y="1725">准备 B/9；CAS D/8 → B/9</text>
-  <text class="small" x="250" y="1764">K9 获胜后才开放 B/9</text>
+  <text class="small" x="250" y="1764">该 CAS 获胜后才开放 B/9</text>
 
   <rect class="box bad" x="532" y="1648" width="436" height="142"/>
   <text class="t" x="750" y="1685">有提交或结果未知</text>

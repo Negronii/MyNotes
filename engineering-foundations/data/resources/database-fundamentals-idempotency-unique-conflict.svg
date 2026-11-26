@@ -75,6 +75,6 @@
   <text class="note" x="508" y="635">新事务查 A 的行 → 返回同一预留记录</text>
   <path d="M958 614 H1002" class="arrow"/>
   <rect x="1012" y="578" width="160" height="72" rx="15" fill="#eaf0f5" stroke="#91a1b2" stroke-width="2"/>
-  <text class="label" x="1037" y="608">返回 A</text>
-  <text class="note" x="1037" y="635">不再扣减</text>
+  <text class="label" x="1030" y="608">返回 A 的记录</text>
+  <text class="note" x="1030" y="635">不再扣减</text>
 </svg>

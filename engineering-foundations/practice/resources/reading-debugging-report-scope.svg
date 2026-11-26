@@ -1,62 +1,68 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="862" viewBox="0 0 700 862" role="img" aria-labelledby="desc">
-  <desc id="desc">已认证的 user-29 经自己的账户 acct-29 请求报表 42。两列只比较本次都实际发出 SELECT 的情况：Session.get 只按全局编号读取，命中 acct-17 的行并返回 200；显式查询同时绑定 acct-29 与 42，无匹配行，返回通用 404。</desc>
-  <defs>
-    <marker id="arrow-blue" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto">
-      <path d="M0,0 L12,5 L0,10 Z" fill="#35566d"/>
-    </marker>
-    <marker id="arrow-red" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto">
-      <path d="M0,0 L12,5 L0,10 Z" fill="#9d3b38"/>
-    </marker>
-    <marker id="arrow-green" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="10" refX="11" refY="5" orient="auto">
-      <path d="M0,0 L12,5 L0,10 Z" fill="#24694d"/>
-    </marker>
-  </defs>
-  <rect x="0" y="0" width="700" height="862" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="732" viewBox="0 0 700 732" role="img" aria-labelledby="title desc">
+<title id="title">同一请求下 Session.get 与显式查询的取数条件</title>
+<desc id="desc">已认证的 user-29 经自己的账户 acct-29 请求报表 42。两列只比较本次都实际发出 SELECT 的情况：Session.get 只按全局编号读取，命中 acct-17 的行并返回 200；显式查询同时绑定 acct-29 与 42，无匹配行，返回与报表 43 相同的通用 404。</desc>
+<defs>
+  <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#36546f"/></marker>
+  <marker markerUnits="userSpaceOnUse" id="arrow-red" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#a44b40"/></marker>
+  <marker markerUnits="userSpaceOnUse" id="arrow-green" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#3f7360"/></marker>
+  <style>
+    text { font-family: "PingFang SC", "Noto Sans CJK SC", sans-serif; fill: #18324b; }
+    .body { font-size: 16px; }
+    .head { font-size: 16px; font-weight: 700; }
+    .code { font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 14.5px; }
+    .bad { fill: #7d3029; }
+    .good { fill: #285a47; }
+    .box { fill: #f4f8fb; stroke: #557c9a; stroke-width: 1.6; }
+    .stop { fill: #fbefed; stroke: #a44b40; stroke-width: 1.6; }
+    .check { fill: #edf5f1; stroke: #4d806c; stroke-width: 1.6; }
+    .line { fill: none; stroke: #36546f; stroke-width: 2; marker-end: url(#arrow); }
+    .rline { fill: none; stroke: #a44b40; stroke-width: 2; marker-end: url(#arrow-red); }
+    .gline { fill: none; stroke: #3f7360; stroke-width: 2; marker-end: url(#arrow-green); }
+  </style>
+</defs>
+<rect x="1" y="1" width="698" height="730" rx="14" fill="#fff" stroke="#d4e0e8"/>
 
-  <rect x="28" y="16" width="644" height="62" rx="10" fill="#f4f7f9" stroke="#35566d" stroke-width="2"/>
-  <text x="350" y="53" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172b3a">输入：已认证 user-29 请求 GET /v1/accounts/acct-29/reports/42</text>
+<rect x="28" y="20" width="644" height="54" rx="10" class="box"/>
+<text x="350" y="53" text-anchor="middle" class="body">输入：已认证 user-29 请求 <tspan class="code">GET /v1/accounts/acct-29/reports/42</tspan></text>
+<path d="M350 74 V106" class="line"/>
 
-  <rect x="28" y="128" width="644" height="62" rx="10" fill="#f4f7f9" stroke="#35566d" stroke-width="2"/>
-  <text x="350" y="165" text-anchor="middle" font-family="sans-serif" font-size="19" fill="#172b3a">认证与成员检查通过 → 路由：acct-29 + report_id=42</text>
+<rect x="28" y="108" width="644" height="54" rx="10" class="box"/>
+<text x="350" y="141" text-anchor="middle" class="body">认证与成员检查通过 → 路由交给数据层：acct-29 + report_id=42</text>
+<path d="M350 162 V194" class="line"/>
 
-  <rect x="28" y="240" width="644" height="58" rx="10" fill="#f4f7f9" stroke="#35566d" stroke-width="2"/>
-  <text x="350" y="275" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#172b3a">共同前提：本次读取实际发出了 SELECT</text>
+<rect x="28" y="196" width="644" height="54" rx="10" class="box"/>
+<text x="350" y="229" text-anchor="middle" class="body">共同前提：本次读取实际发出了 SELECT</text>
+<path d="M350 250 V282" class="line"/>
 
-  <rect x="70" y="352" width="560" height="58" rx="10" fill="#f4f7f9" stroke="#35566d" stroke-width="2"/>
-  <text x="350" y="388" text-anchor="middle" font-family="sans-serif" font-size="19" font-weight="700" fill="#172b3a">这条 SELECT 使用哪些条件？</text>
+<rect x="70" y="284" width="560" height="54" rx="10" class="box"/>
+<text x="350" y="317" text-anchor="middle" class="head">这条 SELECT 使用哪些条件？</text>
+<path d="M350 338 V362 H182 V392" class="rline"/>
+<path d="M350 362 H518 V392" class="gline"/>
 
-  <rect x="24" y="488" width="320" height="130" rx="10" fill="#fff7f6" stroke="#9d3b38" stroke-width="2"/>
-  <text x="184" y="518" text-anchor="middle" font-family="sans-serif" font-size="19" font-weight="700" fill="#762d2b">Session.get：只按全局编号</text>
-  <text x="184" y="550" text-anchor="middle" font-family="monospace" font-size="17" fill="#172b3a">WHERE report_id=42</text>
-  <text x="184" y="582" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#762d2b">没有 account_id 谓词</text>
+<rect x="28" y="394" width="308" height="120" rx="10" class="stop"/>
+<text x="182" y="424" text-anchor="middle" class="head bad">Session.get：只按全局编号</text>
+<text x="182" y="458" text-anchor="middle" class="code">WHERE report_id=42</text>
+<text x="182" y="490" text-anchor="middle" class="body bad">没有 account_id 谓词</text>
 
-  <rect x="356" y="488" width="320" height="130" rx="10" fill="#f5fbf7" stroke="#24694d" stroke-width="2"/>
-  <text x="516" y="518" text-anchor="middle" font-family="sans-serif" font-size="19" font-weight="700" fill="#19513a">显式查询：账户与编号</text>
-  <text x="516" y="546" text-anchor="middle" font-family="monospace" font-size="17" fill="#172b3a">WHERE account_id=:account_id</text>
-  <text x="516" y="572" text-anchor="middle" font-family="monospace" font-size="17" fill="#172b3a">AND report_id=42</text>
-  <text x="516" y="598" text-anchor="middle" font-family="monospace" font-size="17" fill="#172b3a">:account_id='acct-29'</text>
+<rect x="364" y="394" width="308" height="120" rx="10" class="check"/>
+<text x="518" y="424" text-anchor="middle" class="head good">显式查询：账户与编号</text>
+<text x="518" y="452" text-anchor="middle" class="code">WHERE account_id=:account_id</text>
+<text x="518" y="474" text-anchor="middle" class="code">AND report_id=42</text>
+<text x="518" y="496" text-anchor="middle" class="code">:account_id='acct-29'</text>
 
-  <rect x="24" y="670" width="320" height="62" rx="10" fill="#fff7f6" stroke="#9d3b38" stroke-width="2"/>
-  <text x="184" y="708" text-anchor="middle" font-family="sans-serif" font-size="19" fill="#172b3a">命中唯一行：acct-17 / 42</text>
+<path d="M182 514 V548" class="rline"/>
+<path d="M518 514 V548" class="gline"/>
+<rect x="28" y="550" width="308" height="54" rx="10" class="stop"/>
+<text x="182" y="583" text-anchor="middle" class="body">命中唯一行：acct-17 / 42</text>
+<rect x="364" y="550" width="308" height="54" rx="10" class="check"/>
+<text x="518" y="583" text-anchor="middle" class="body">本表无匹配行</text>
 
-  <rect x="356" y="670" width="320" height="62" rx="10" fill="#f5fbf7" stroke="#24694d" stroke-width="2"/>
-  <text x="516" y="708" text-anchor="middle" font-family="sans-serif" font-size="19" fill="#172b3a">本表无匹配行</text>
-
-  <rect x="24" y="786" width="320" height="62" rx="10" fill="#fff7f6" stroke="#9d3b38" stroke-width="2"/>
-  <text x="184" y="812" text-anchor="middle" font-family="sans-serif" font-size="19" font-weight="700" fill="#762d2b">返回 200</text>
-  <text x="184" y="837" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#762d2b">响应包含 acct-17 的报表</text>
-
-  <rect x="356" y="786" width="320" height="62" rx="10" fill="#f5fbf7" stroke="#24694d" stroke-width="2"/>
-  <text x="516" y="812" text-anchor="middle" font-family="sans-serif" font-size="19" font-weight="700" fill="#19513a">返回通用 404</text>
-  <text x="516" y="837" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#19513a">正文与报表 43 相同</text>
-
-  <path d="M350 78 V128" fill="none" stroke="#35566d" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
-  <path d="M350 190 V240" fill="none" stroke="#35566d" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
-  <path d="M350 298 V352" fill="none" stroke="#35566d" stroke-width="2.5" marker-end="url(#arrow-blue)"/>
-  <path d="M350 410 V442 H184 V488" fill="none" stroke="#9d3b38" stroke-width="2.5" marker-end="url(#arrow-red)"/>
-  <path d="M350 442 H516 V488" fill="none" stroke="#24694d" stroke-width="2.5" marker-end="url(#arrow-green)"/>
-  <path d="M184 618 V670" fill="none" stroke="#9d3b38" stroke-width="2.5" marker-end="url(#arrow-red)"/>
-  <path d="M516 618 V670" fill="none" stroke="#24694d" stroke-width="2.5" marker-end="url(#arrow-green)"/>
-  <path d="M184 732 V786" fill="none" stroke="#9d3b38" stroke-width="2.5" marker-end="url(#arrow-red)"/>
-  <path d="M516 732 V786" fill="none" stroke="#24694d" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+<path d="M182 604 V638" class="rline"/>
+<path d="M518 604 V638" class="gline"/>
+<rect x="28" y="640" width="308" height="72" rx="10" class="stop"/>
+<text x="182" y="670" text-anchor="middle" class="head bad">返回 200</text>
+<text x="182" y="696" text-anchor="middle" class="body bad">响应包含 acct-17 的报表</text>
+<rect x="364" y="640" width="308" height="72" rx="10" class="check"/>
+<text x="518" y="670" text-anchor="middle" class="head good">返回通用 404</text>
+<text x="518" y="696" text-anchor="middle" class="body good">正文与报表 43 相同</text>
 </svg>

@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="1168" viewBox="0 0 820 1168" role="img" aria-labelledby="title desc">
+  <title id="title">expand/contract：旧列换新列的五个阶段</title>
+  <desc id="desc">把 report_name_old 换成 report_name 的五个阶段。1 扩展：添加新列，旧列是读写权威，旧版只写旧列。2 捕获并回填：先启用旧到新的捕获，再分批回填，核对追到水位但还不能授权切换。3 兼容发布并切换权威：新版同一事务写两列，旧版写入经捕获复制到新列；切换时暂停旧侧写入、排空、记最后提交水位，捕获追平且核对无差异后把权威交给新列并开放写入。4 可回退窗口：新列是权威，写入经同事务双写或有序反向捕获同步回旧列；切回旧列要按相同步骤反向执行，并在解冻旧版写入前重新启用旧到新同步。5 收缩：所有进程、在途任务和获准恢复的旧版本都不再读写旧列后，停止同步并删除旧列。右侧标出阶段 1、2 可直接回退到只读旧列的版本；阶段 3 切换后与阶段 4 的回退都要求新到旧同步持续生效。</desc>
+  <defs>
+    <marker markerUnits="userSpaceOnUse" id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="12" markerHeight="12" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker>
+  </defs>
+  <style>
+    text { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #172033; font-size: 16px; }
+    .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 15px; font-weight: 700; }
+    .num { font-size: 20px; font-weight: 700; fill: #2563eb; }
+    .pname { font-size: 17px; font-weight: 700; }
+    .small { font-size: 15px; }
+    .tiny { font-size: 14px; fill: #334155; }
+    .note { font-size: 15px; fill: #334155; }
+    .grey { fill: #94a3b8; }
+    .hd { font-size: 16px; font-weight: 700; fill: #475569; }
+    .phase { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.5; }
+    .col { fill: #ffffff; stroke: #64748b; stroke-width: 2; }
+    .colauth { fill: #fefce8; stroke: #a16207; stroke-width: 2.5; }
+    .colgone { fill: #ffffff; stroke: #94a3b8; stroke-width: 2; stroke-dasharray: 7 5; }
+    .pill { fill: #a16207; }
+    .pillt { font-size: 13px; font-weight: 700; fill: #ffffff; }
+    .arrow { fill: none; stroke: #334155; stroke-width: 2.5; marker-end: url(#arrow); }
+    .step { fill: #eff6ff; stroke: #2563eb; stroke-width: 1.5; }
+    .stept { font-size: 14px; }
+    .band { fill: #15803d; }
+    .bandw { fill: #c2410c; }
+    .bandn { fill: #94a3b8; }
+    .bandt { font-size: 15px; font-weight: 700; fill: #ffffff; }
+  </style>
+  <rect width="820" height="1168" fill="#fff"/>
+<text x="20" y="38" class="hd">把旧列 report_name_old 换成新列 report_name；右上角标出此时能否回退到只读旧列的旧版本</text>
+<rect x="12" y="58" width="796" height="172" rx="12" class="phase"/>
+<text x="28" y="90" class="num">1</text>
+<text x="52" y="90" class="pname">扩展</text>
+<rect x="60" y="104" width="230" height="78" rx="10" class="colauth"/>
+<text x="72" y="130" class="mono">report_name_old</text>
+<rect x="72" y="140" width="78" height="24" rx="12" class="pill"/>
+<text x="111" y="157" class="pillt" text-anchor="middle">读写权威</text>
+<text x="158" y="157" class="small">旧版只写这里</text>
+<rect x="470" y="104" width="230" height="78" rx="10" class="col"/>
+<text x="482" y="130" class="mono">report_name</text>
+<text x="482" y="156" class="small">新增，尚无数据</text>
+<text x="40" y="208" class="note">添加新列；旧版 API 和 worker 照常只读写旧列</text>
+<rect x="693" y="70" width="103" height="28" rx="14" class="band"/>
+<text x="744.5" y="89" class="bandt" text-anchor="middle">旧版可回退</text>
+<rect x="12" y="242" width="796" height="192" rx="12" class="phase"/>
+<text x="28" y="274" class="num">2</text>
+<text x="52" y="274" class="pname">捕获并回填</text>
+<rect x="60" y="288" width="230" height="78" rx="10" class="colauth"/>
+<text x="72" y="314" class="mono">report_name_old</text>
+<rect x="72" y="324" width="78" height="24" rx="12" class="pill"/>
+<text x="111" y="341" class="pillt" text-anchor="middle">读写权威</text>
+<text x="158" y="341" class="small">旧版继续写</text>
+<rect x="470" y="288" width="230" height="78" rx="10" class="col"/>
+<text x="482" y="314" class="mono">report_name</text>
+<text x="482" y="340" class="small">回填数据 + 捕获的变更</text>
+<path d="M294 327 H466" class="arrow"/>
+<text x="380.0" y="317" class="tiny" text-anchor="middle">① 先启用捕获</text>
+<text x="380.0" y="349" class="tiny" text-anchor="middle">② 再分批回填</text>
+<text x="40" y="392" class="note">回填用行版本或更新时间防止旧快照覆盖新更新；持续核对两列追到水位，</text>
+<text x="40" y="413" class="note">但这次核对不授权切换：旧写入仍可能在核对之后提交</text>
+<rect x="693" y="254" width="103" height="28" rx="14" class="band"/>
+<text x="744.5" y="273" class="bandt" text-anchor="middle">旧版可回退</text>
+<rect x="12" y="446" width="796" height="296" rx="12" class="phase"/>
+<text x="28" y="478" class="num">3</text>
+<text x="52" y="478" class="pname">兼容发布并切换权威</text>
+<rect x="60" y="492" width="230" height="78" rx="10" class="colauth"/>
+<text x="72" y="518" class="mono">report_name_old</text>
+<rect x="72" y="528" width="78" height="24" rx="12" class="pill"/>
+<text x="111" y="545" class="pillt" text-anchor="middle">读写权威</text>
+<text x="158" y="545" class="small">切换前</text>
+<rect x="470" y="492" width="230" height="78" rx="10" class="colauth"/>
+<text x="482" y="518" class="mono">report_name</text>
+<rect x="482" y="528" width="78" height="24" rx="12" class="pill"/>
+<text x="521" y="545" class="pillt" text-anchor="middle">读写权威</text>
+<text x="568" y="545" class="small">切换后</text>
+<path d="M294 531 H466" class="arrow"/>
+<text x="380.0" y="521" class="tiny" text-anchor="middle">旧版写入经捕获</text>
+<text x="380.0" y="553" class="tiny" text-anchor="middle">复制到新列</text>
+<text x="40" y="596" class="note">新版代码兼容两种结构，在同一事务里写两列；切换前旧列仍是读写权威</text>
+<text x="40" y="628" class="small">用异步捕获时，切换点按这个顺序：</text>
+<rect x="40" y="640" width="100" height="44" rx="8" class="step"/>
+<text x="90.0" y="667" class="stept" text-anchor="middle">暂停旧侧新写</text>
+<path d="M143 662 H172" class="arrow" stroke-width="2"/>
+<rect x="175" y="640" width="100" height="44" rx="8" class="step"/>
+<text x="225.0" y="667" class="stept" text-anchor="middle">排空在途任务</text>
+<path d="M278 662 H307" class="arrow" stroke-width="2"/>
+<rect x="310" y="640" width="112" height="44" rx="8" class="step"/>
+<text x="366.0" y="667" class="stept" text-anchor="middle">记最后提交水位</text>
+<path d="M425 662 H454" class="arrow" stroke-width="2"/>
+<rect x="457" y="640" width="112" height="44" rx="8" class="step"/>
+<text x="513.0" y="667" class="stept" text-anchor="middle">捕获追平且核对</text>
+<path d="M572 662 H601" class="arrow" stroke-width="2"/>
+<rect x="604" y="640" width="176" height="44" rx="8" class="step"/>
+<text x="692.0" y="667" class="stept" text-anchor="middle">权威切到新列，开放写入</text>
+<text x="40" y="708" class="note">事务能原子维护两种表示、原子选择权威，且没有绕过事务的写入者时，</text>
+<text x="40" y="729" class="note">可以在事务边界切换，不必停写</text>
+<rect x="628" y="458" width="168" height="28" rx="14" class="bandw"/>
+<text x="712.0" y="477" class="bandt" text-anchor="middle">切换后需反向同步</text>
+<rect x="12" y="754" width="796" height="214" rx="12" class="phase"/>
+<text x="28" y="786" class="num">4</text>
+<text x="52" y="786" class="pname">保留可回退窗口</text>
+<rect x="60" y="800" width="230" height="78" rx="10" class="col"/>
+<text x="72" y="826" class="mono">report_name_old</text>
+<text x="72" y="852" class="small">仍保持最新，</text>
+<text x="72" y="872" class="small">供旧版回退时读</text>
+<rect x="470" y="800" width="230" height="78" rx="10" class="colauth"/>
+<text x="482" y="826" class="mono">report_name</text>
+<rect x="482" y="836" width="78" height="24" rx="12" class="pill"/>
+<text x="521" y="853" class="pillt" text-anchor="middle">读写权威</text>
+<text x="568" y="853" class="small">新版读写</text>
+<path d="M466 839 H294" class="arrow"/>
+<text x="380.0" y="829" class="tiny" text-anchor="middle">同事务双写，或</text>
+<text x="380.0" y="861" class="tiny" text-anchor="middle">有序反向捕获</text>
+<text x="40" y="904" class="note">切回旧列：暂停新侧写入、排空、记水位，冻结新侧写入直到反向捕获追平</text>
+<text x="40" y="925" class="note">并核对，再把权威交回旧列；解冻旧版写入前，先重新启用旧→新同步。</text>
+<text x="40" y="946" class="note">维持不了同步就冻结或隔离新写；数据已不兼容只能隔离或前向修复</text>
+<rect x="588" y="766" width="208" height="28" rx="14" class="bandw"/>
+<text x="692.0" y="785" class="bandt" text-anchor="middle">回退需新→旧同步一直生效</text>
+<rect x="12" y="980" width="796" height="172" rx="12" class="phase"/>
+<text x="28" y="1012" class="num">5</text>
+<text x="52" y="1012" class="pname">收缩</text>
+<rect x="60" y="1026" width="230" height="78" rx="10" class="colgone"/>
+<text x="72" y="1052" class="mono grey">report_name_old</text>
+<text x="72" y="1078" class="small grey">停止同步，删除</text>
+<path d="M68 1034 L282 1096 M282 1034 L68 1066" stroke="#94a3b8" stroke-width="2"/>
+<rect x="470" y="1026" width="230" height="78" rx="10" class="colauth"/>
+<text x="482" y="1052" class="mono">report_name</text>
+<rect x="482" y="1062" width="78" height="24" rx="12" class="pill"/>
+<text x="521" y="1079" class="pillt" text-anchor="middle">读写权威</text>
+<text x="568" y="1079" class="small">唯一来源</text>
+<text x="40" y="1130" class="note">前提：所有现行进程、在途任务和获准恢复的旧版本都不再读写旧列</text>
+<rect x="663" y="992" width="133" height="28" rx="14" class="bandn"/>
+<text x="729.5" y="1011" class="bandt" text-anchor="middle">不能再回到旧版</text>
+</svg>

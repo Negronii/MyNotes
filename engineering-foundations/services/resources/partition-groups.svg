@@ -24,22 +24,22 @@
   <text class="body" x="58" y="132">key = report-42</text>
   <text class="small" x="58" y="166">seq 1 → 2 → 3</text>
   <path class="arrow" d="M 315 123 H 386"/>
-  <text class="small" x="322" y="95">键路由</text>
+  <text class="small" x="352" y="105" text-anchor="middle">键路由</text>
 
   <rect class="blue" x="401" y="35" width="615" height="230"/>
   <text class="head" x="425" y="77">report-events / P0</text>
   <text class="small" x="425" y="112">同一份日志；两个 group 各自读取</text>
-  <rect class="box" x="425" y="135" width="150" height="92"/>
-  <text class="body" x="442" y="174">40 queued</text>
-  <text class="small" x="442" y="210">seq 1</text>
-  <path class="arrow" d="M 582 181 H 628"/>
-  <rect class="box" x="637" y="135" width="150" height="92"/>
-  <text class="body" x="648" y="174">41 rendered</text>
-  <text class="small" x="655" y="210">seq 2</text>
-  <path class="arrow" d="M 794 181 H 840"/>
-  <rect class="box" x="849" y="135" width="150" height="92"/>
-  <text class="body" x="863" y="174">42 ready</text>
-  <text class="small" x="867" y="210">seq 3</text>
+  <rect class="box" x="420" y="135" width="165" height="92"/>
+  <text class="body" x="502" y="174" text-anchor="middle">40 queued</text>
+  <text class="small" x="502" y="210" text-anchor="middle">seq 1</text>
+  <path class="arrow" d="M 590 181 H 619"/>
+  <rect class="box" x="627" y="135" width="165" height="92"/>
+  <text class="body" x="709" y="174" text-anchor="middle" style="font-size:25px">41 rendered</text>
+  <text class="small" x="709" y="210" text-anchor="middle">seq 2</text>
+  <path class="arrow" d="M 797 181 H 826"/>
+  <rect class="box" x="834" y="135" width="165" height="92"/>
+  <text class="body" x="916" y="174" text-anchor="middle">42 ready</text>
+  <text class="small" x="916" y="210" text-anchor="middle">seq 3</text>
 
   <path class="branch" d="M 708 267 V 299"/>
   <path class="arrow" d="M 708 299 H 270 V 351"/>

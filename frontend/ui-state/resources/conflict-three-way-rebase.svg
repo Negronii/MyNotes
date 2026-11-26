@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="818" height="664" viewBox="0 0 818 664" role="img" aria-labelledby="title desc">
+  <title id="title">412 之后的三方比较与新补丁</title>
+  <desc id="desc">按字段比较 v7 基线、本地草稿与 v8 当前值。本地草稿新增收件人 A 并改了 note；另一位管理员在 v8 改了 title 和 note。用户确认采用服务端标题、保留 email 与 A、选择服务端的 Reviewed。新草稿以 v8 为基线，与 v8 只差收件人数组，所以新补丁只含 delivery.recipients。</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#263b52"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#b03a3a"/>
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; fill: #172b3f; }
+      .head { font-size: 19px; font-weight: 700; }
+      .sub { font-size: 17px; font-weight: 600; }
+      .body { font-size: 16px; }
+      .small { font-size: 15px; fill: #44566a; }
+      .code { font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 15px; }
+      .red { fill: #9e2f2f; }
+      .arrow { fill: none; stroke: #263b52; stroke-width: 2.2; marker-end: url(#arrow); }
+      .arrow-red { fill: none; stroke: #b03a3a; stroke-width: 2.2; marker-end: url(#arrow-red); }
+      .dash { stroke-dasharray: 7 5; }
+    </style>
+  </defs>
+  <rect x="6" y="6" width="806" height="652" rx="18" fill="#ffffff" stroke="#d7e0e8" stroke-width="2"/>
+  <text x="409.0" y="40" class="head" text-anchor="middle">412 之后：按字段比较三份值，再从 v8 算新补丁</text>
+  <rect x="164" y="60" width="204" height="48" rx="12" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="266.0" y="90" class="sub" text-anchor="middle">title（只读）</text>
+  <rect x="378" y="60" width="204" height="48" rx="12" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="480.0" y="90" class="sub" text-anchor="middle">delivery 组</text>
+  <rect x="592" y="60" width="204" height="48" rx="12" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="694.0" y="90" class="sub" text-anchor="middle">note</text>
+  <rect x="22" y="122" width="130" height="62" rx="10" fill="#e9edf2" stroke="#e9edf2" stroke-width="0"/>
+  <text x="34" y="160" class="sub">v7 基线</text>
+  <rect x="164" y="122" width="204" height="62" rx="10" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="266.0" y="160" class="body" text-anchor="middle">Monthly summary</text>
+  <rect x="378" y="122" width="204" height="62" rx="10" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="480.0" y="160" class="body" text-anchor="middle">email + [R]</text>
+  <rect x="592" y="122" width="204" height="62" rx="10" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="694.0" y="160" class="body" text-anchor="middle">Draft</text>
+  <rect x="22" y="196" width="130" height="62" rx="10" fill="#e9edf2" stroke="#e9edf2" stroke-width="0"/>
+  <text x="34" y="223" class="sub">本地草稿</text>
+  <text x="34" y="246" class="small">基于 v7</text>
+  <rect x="164" y="196" width="204" height="62" rx="10" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="266.0" y="234" class="body" text-anchor="middle">未改</text>
+  <rect x="378" y="196" width="204" height="62" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="480.0" y="223" class="body" text-anchor="middle">email + [R, A]</text>
+  <text x="480.0" y="246" class="small" text-anchor="middle">本地新增 A</text>
+  <rect x="592" y="196" width="204" height="62" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="694.0" y="234" class="body" text-anchor="middle">Send after review</text>
+  <rect x="22" y="270" width="130" height="62" rx="10" fill="#e9edf2" stroke="#e9edf2" stroke-width="0"/>
+  <text x="34" y="297" class="sub">v8 当前值</text>
+  <text x="34" y="320" class="small">另一管理员写入</text>
+  <rect x="164" y="270" width="204" height="62" rx="10" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2"/>
+  <text x="266.0" y="308" class="body" style="font-size:15px" text-anchor="middle">Monthly summary — May</text>
+  <rect x="378" y="270" width="204" height="62" rx="10" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="480.0" y="308" class="body" text-anchor="middle">email + [R]</text>
+  <rect x="592" y="270" width="204" height="62" rx="10" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2"/>
+  <text x="694.0" y="308" class="body" text-anchor="middle">Reviewed</text>
+  <rect x="22" y="344" width="130" height="62" rx="10" fill="#e9edf2" stroke="#e9edf2" stroke-width="0"/>
+  <text x="34" y="382" class="sub">用户确认</text>
+  <rect x="164" y="344" width="204" height="62" rx="10" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="266.0" y="382" class="body" text-anchor="middle">采用服务端标题</text>
+  <rect x="378" y="344" width="204" height="62" rx="10" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="480.0" y="371" class="body" text-anchor="middle">保留 email 与 A</text>
+  <text x="480.0" y="394" class="small" text-anchor="middle">整组重新校验</text>
+  <rect x="592" y="344" width="204" height="62" rx="10" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="694.0" y="382" class="body" text-anchor="middle">选择服务端的 Reviewed</text>
+  <rect x="22" y="418" width="130" height="62" rx="10" fill="#e9edf2" stroke="#e9edf2" stroke-width="0"/>
+  <text x="34" y="445" class="sub">新草稿</text>
+  <text x="34" y="468" class="small">以 v8 为新基线</text>
+  <rect x="164" y="418" width="204" height="62" rx="10" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="266.0" y="456" class="body" style="font-size:15px" text-anchor="middle">Monthly summary — May</text>
+  <rect x="378" y="418" width="204" height="62" rx="10" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="480.0" y="456" class="body" text-anchor="middle">email + [R, A]</text>
+  <rect x="592" y="418" width="204" height="62" rx="10" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="694.0" y="456" class="body" text-anchor="middle">Reviewed</text>
+  <rect x="22" y="492" width="130" height="62" rx="10" fill="#e9edf2" stroke="#e9edf2" stroke-width="0"/>
+  <text x="34" y="519" class="sub">新补丁</text>
+  <text x="34" y="542" class="small">新草稿 − v8</text>
+  <rect x="164" y="492" width="204" height="62" rx="10" fill="#f1f3f5" stroke="#8a97a5" stroke-width="2"/>
+  <text x="266.0" y="530" class="body" text-anchor="middle">省略：与 v8 相同</text>
+  <rect x="378" y="492" width="204" height="62" rx="10" fill="#e8f5ee" stroke="#4b8a68" stroke-width="2"/>
+  <text x="480.0" y="530" class="body" text-anchor="middle">recipients: [R, A]</text>
+  <rect x="592" y="492" width="204" height="62" rx="10" fill="#f1f3f5" stroke="#8a97a5" stroke-width="2"/>
+  <text x="694.0" y="530" class="body" text-anchor="middle">省略：与 v8 相同</text>
+  <rect x="22" y="576" width="22" height="18" rx="4" fill="#fff4df" stroke="#bf8627" stroke-width="2"/>
+  <text x="52" y="591" class="small">本地改动</text>
+  <rect x="132" y="576" width="22" height="18" rx="4" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2"/>
+  <text x="162" y="591" class="small">服务端在 v8 的改动</text>
+  <rect x="318" y="576" width="22" height="18" rx="4" fill="#e8f5ee" stroke="#4b8a68" stroke-width="2"/>
+  <text x="348" y="591" class="small">进入新补丁</text>
+  <rect x="443" y="576" width="22" height="18" rx="4" fill="#f1f3f5" stroke="#8a97a5" stroke-width="2"/>
+  <text x="473" y="591" class="small">不进补丁</text>
+  <text x="22" y="624" class="small">R = reader@example.test，A = analyst@example.test</text>
+</svg>

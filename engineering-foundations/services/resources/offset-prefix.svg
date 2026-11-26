@@ -19,17 +19,17 @@
   <rect x="1" y="1" width="1048" height="558" fill="#ffffff" stroke="#d2dbe0" stroke-width="2" rx="18"/>
 
   <text class="head" x="38" y="55">P0 已交付给应用：40 → 41 → 42</text>
-  <rect class="box" x="40" y="82" width="255" height="85"/>
-  <text class="body" x="68" y="119">40 · queued</text>
-  <text class="small" x="68" y="151">seq 1</text>
-  <path class="arrow" d="M 301 124 H 358"/>
-  <rect class="box" x="369" y="82" width="255" height="85"/>
-  <text class="body" x="392" y="119">41 · rendered</text>
-  <text class="small" x="402" y="151">seq 2</text>
-  <path class="arrow" d="M 630 124 H 687"/>
-  <rect class="box" x="698" y="82" width="310" height="85"/>
-  <text class="body" x="731" y="119">42 · ready</text>
-  <text class="small" x="741" y="151">seq 3</text>
+  <rect class="box" x="40" y="82" width="273" height="85"/>
+  <text class="body" x="176" y="119" text-anchor="middle">40 · queued</text>
+  <text class="small" x="176" y="151" text-anchor="middle">seq 1</text>
+  <path class="arrow" d="M 319 124 H 376"/>
+  <rect class="box" x="387" y="82" width="273" height="85"/>
+  <text class="body" x="523" y="119" text-anchor="middle">41 · rendered</text>
+  <text class="small" x="523" y="151" text-anchor="middle">seq 2</text>
+  <path class="arrow" d="M 666 124 H 723"/>
+  <rect class="box" x="735" y="82" width="273" height="85"/>
+  <text class="body" x="871" y="119" text-anchor="middle">42 · ready</text>
+  <text class="small" x="871" y="151" text-anchor="middle">seq 3</text>
 
   <text class="small" x="38" y="214">poll 已交付到 42 → 本地 position = 43</text>
   <path class="arrow" d="M 492 205 H 581"/>

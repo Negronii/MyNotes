@@ -12,19 +12,19 @@ attempt 2 发出 `POST /v1/refunds` 后读超时，此时有三种可能：请�
 
 ```mermaid
 stateDiagram-v2
-    awaiting_approval --> queued: 确认事务：消费 Q-204，保存 R-204 与 K-R204
+    awaiting_approval --> queued: 确认事务：消费 Q-204<br/>保存 R-204 与 K-R204
     queued --> running: attempt 2 领取
-    running --> effect_in_flight: 发送闸门：条件核验并登记意图
-    effect_in_flight --> completed: 回执核实为 succeeded
-    effect_in_flight --> provider_pending: 回执核实为 pending 或 requires_action
-    effect_in_flight --> failed: 契约证明未产生退款
-    effect_in_flight --> effect_unknown: 超时、结果不明的 500、lease 过期
-    effect_unknown --> effect_unknown: 对账无结论；或满足全部前提的同键重放
-    effect_unknown --> provider_pending: 找到并核实 pending 对象
-    effect_unknown --> completed: 找到并核实 succeeded 对象
-    effect_unknown --> failed: 找到并核实 failed 或 canceled 对象
+    running --> effect_in_flight: 发送闸门：条件核验<br/>并登记意图
+    effect_in_flight --> completed: 回执核实为<br/>succeeded
+    effect_in_flight --> provider_pending: 回执核实为 pending<br/>或 requires_action
+    effect_in_flight --> effect_unknown: 超时、结果不明的 500<br/>lease 过期
+    effect_in_flight --> failed: 契约证明<br/>未产生退款
+    effect_unknown --> effect_unknown: 对账无结论；<br/>或满足全部前提的<br/>同键重放
+    effect_unknown --> provider_pending: 找到并核实<br/>pending 对象
+    effect_unknown --> completed: 找到并核实<br/>succeeded 对象
+    effect_unknown --> failed: 找到并核实 failed<br/>或 canceled 对象
     provider_pending --> completed: 读到 succeeded
-    provider_pending --> failed: 读到 failed 或 canceled
+    provider_pending --> failed: 读到 failed<br/>或 canceled
 ```
 
 已有发送意图时收到取消，运行转入 `cancel_requested`，同样只能只读对账；取消的完整规则见[用户断线、取消或要回答一个问题时，同一次运行怎样继续](disconnect-cancel-and-user-input.md)。
@@ -142,7 +142,7 @@ attempt 2 领取运行后，重新读取 `Q-204`、确认记录和 `R-204`。真
 3. **闸门条件与首次发送相同。** 确认仍有效、写权限仍在、当前 attempt 与 lease 有效、未取消，并在同一笔条件事务里登记这次的发送意图。新的意图不会清除已有的未知结果；结果一旦确认，就不再重放。
 4. **旧发送者都已停下或必然落在窗口内。** 发送端要能约束暂停后恢复的旧 worker、SDK 内部重试和传输延迟。单查一次数据库或发一个取消信号，证明不了已在途的请求会按时停止。
 
-第 2 条最容易被忽视：原请求若卡在网络里，等重放建立的去重记录过期后才到达，接收方会把它当成新请求再退一次款。所以暂时“查无记录”也不能证明旧请求以后不会提交；去重窗口为什么必须覆盖在途和晚到的副本、窗口外为什么要留墓碑，见[写请求超时后，怎样查清结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md#去重要覆盖多长时间？)。
+第 2 条最容易被忽视：原请求若卡在网络里，到去重记录过期后才到达，就会被当成新请求再退一次款，所以暂时“查无记录”不能证明旧请求以后不会提交（下文 Stripe 实例的时间轴画出了暂停的旧发送者晚到的同类情形）；去重窗口为什么必须覆盖在途和晚到的副本、窗口外为什么要留墓碑，见[写请求超时后，怎样查清结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md#去重要覆盖多长时间？)。
 
 即使所有前提都在，重放也可能一直拿回缓存的同一个 `500`，这不算查清了结果，仍要对账。
 
@@ -152,7 +152,11 @@ attempt 2 领取运行后，重新读取 `Q-204`、确认记录和 `R-204`。真
 
 本例因此用本地持久化的首次发送意图时间作保守起点，不因重试重新计时。首次发送、恢复接管和 SDK 自动重试都经过同一道发送边界：每次真正发出 POST 前，重查操作仍允许写入，并核验仍在保守的 24 小时窗口内，调度、退避和网络传输的耗时都要从余量里扣除；通过后才按原键原参有界发送。已经得到可信结论、窗口将尽或时间不明时，一律转为只读核对，不能拿旧的发送许可继续写。
 
-举例：首个发送者登记意图后暂停；恢复器在第 1 小时已经查清并完成了退款；旧发送者在第 26 小时恢复，它必须停止，而不是继续它之前那次 POST。此时键可能已被清理，这次 POST 就可能被当成一笔新退款。
+下图把这条规则放进一个场景：首个发送者登记意图后暂停，恢复器在第 1 小时已经查清并完成了退款，旧发送者第 26 小时才醒来。
+
+![K-R204 的时间轴：本地保守窗口从首次意图时间起 24 小时，提供方键记录至少保留 24 小时；第 26 小时醒来的旧发送者若继续 POST 可能产生第二笔退款，在发送边界重查则停止](resources/refund-idempotency-window.svg)
+
+旧发送者手里那份发送许可已经失效：它必须在发送边界重查并停下，而不是继续之前那次 POST。
 
 API v2 的失败重试语义不同，不能把 v1 的规则推广到所有 Stripe API，更不能推广到其他提供方。
 

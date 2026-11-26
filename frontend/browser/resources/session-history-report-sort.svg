@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="930" viewBox="0 0 760 930" role="img" aria-labelledby="title desc">
+  <title id="title">报表页的会话历史：哪些写法新增历史项、是否换文档、派发哪些事件</title>
+  <desc id="desc">同一个 Document 内有三项历史：sort=recent#summary（true/false，May 在前）、sort=oldest#summary（false/true，April 在前）、sort=oldest#reports。pushState 从第一项新增第二项，不发请求也不派发事件；后退和前进在前两项间移动当前项并派发 popstate，fragment 没变所以没有 hashchange；在第二项上设置 location.hash 为 #reports 新增第三项并滚动到列表，先同步派发 popstate，再排队派发 hashchange；replaceState 就地改写当前项。从第一项 location.assign 到 sort=oldest#summary 时 query 变了，会加载新的 Document。</desc>
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0 0L10 5L0 10z" fill="#3f5871"/></marker>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0 0L10 5L0 10z" fill="#b7443e"/></marker>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .h{font-size:19px;font-weight:700}
+      .b{font-size:17px;fill:#334155}
+      .s{font-size:15px;fill:#52657b}
+      .c{font-family:Menlo,Consolas,monospace;font-size:17px;fill:#172033}
+      .cs{font-family:Menlo,Consolas,monospace;font-size:16px;fill:#172033}
+      .e{fill:#eff6ff;stroke:#1769aa;stroke-width:2}
+      .t{font-size:16px;fill:#334155}
+      .new{fill:#fff1f0;stroke:#b7443e;stroke-width:2}
+      .doc{fill:#f8fafc;stroke:#64748b;stroke-width:2;stroke-dasharray:8 5}
+      .ed{fill:none;stroke:#3f5871;stroke-width:2.5}
+      .edr{fill:none;stroke:#b7443e;stroke-width:2.5}
+    </style>
+  </defs>
+  <rect width="760" height="930" rx="12" fill="#ffffff"/>
+  <rect class="doc" x="16" y="16" width="728" height="634" rx="12"/>
+  <text class="h" x="40" y="50">同一个 Document：path 始终是 /reports/42</text>
+  <text class="s" x="40" y="76">初次打开时由服务器返回的 HTML 创建；各历史项共用同一份 DOM 与 JS 状态</text>
+  <rect class="e" x="40" y="96" width="680" height="96" rx="10"/>
+  <text class="h" x="60" y="128" style="font-size:17px">历史项 1（初次打开）</text>
+  <text class="cs" x="60" y="158">?sort=recent#summary</text>
+  <text class="s" x="340" y="128">aria-pressed</text>
+  <text class="c" x="340" y="158">true / false</text>
+  <text class="s" x="530" y="128">行序</text>
+  <text class="b" x="530" y="158">May → April</text>
+
+  <path class="ed" d="M100 192 V300" marker-end="url(#ar)"/>
+  <text class="c" x="120" y="222">pushState()</text>
+  <text class="t" x="120" y="248">新增一项，不发请求，不派发事件</text>
+  <text class="t" x="120" y="272">处理器自己重建列表</text>
+  <path class="ed" d="M430 198 V296" marker-start="url(#ar)" marker-end="url(#ar)"/>
+  <text class="b" x="450" y="222">后退 / 前进</text>
+  <text class="t" x="450" y="248">移动当前项，派发 popstate</text>
+  <text class="t" x="450" y="272">#summary 未变：无 hashchange</text>
+  <rect class="e" x="40" y="302" width="680" height="96" rx="10"/>
+  <text class="h" x="60" y="334" style="font-size:17px">历史项 2</text>
+  <text class="cs" x="60" y="364">?sort=oldest#summary</text>
+  <text class="s" x="340" y="334">aria-pressed</text>
+  <text class="c" x="340" y="364">false / true</text>
+  <text class="s" x="530" y="334">行序</text>
+  <text class="b" x="530" y="364">April → May</text>
+
+  <path class="ed" d="M100 398 V506" marker-end="url(#ar)"/>
+  <text class="c" x="120" y="428">location.hash = "#reports"</text>
+  <text class="t" x="120" y="454">新增一项，滚动到 ol#reports</text>
+  <text class="t" x="120" y="478">① 同步派发 popstate　② 排队派发 hashchange</text>
+  <rect class="e" x="40" y="508" width="680" height="96" rx="10"/>
+  <text class="h" x="60" y="540" style="font-size:17px">历史项 3</text>
+  <text class="cs" x="60" y="570">?sort=oldest#reports</text>
+  <text class="s" x="340" y="540">aria-pressed</text>
+  <text class="c" x="340" y="570">false / true</text>
+  <text class="s" x="530" y="540">行序</text>
+  <text class="b" x="530" y="570">April → May</text>
+  <text class="s" x="530" y="594">重建后顺序不变</text>
+
+  <text class="t" x="40" y="634">replaceState()：就地改写当前项的 URL，不新增项，不派发事件</text>
+
+  <path class="edr" d="M100 650 V722" marker-end="url(#arr)"/>
+  <text class="cs" x="120" y="676">location.assign("?sort=oldest#summary")</text>
+  <text class="t" x="120" y="702">从历史项 1 调用：query 变了，即使保留 #summary 也加载新文档</text>
+  <rect class="new" x="40" y="726" width="680" height="124" rx="10"/>
+  <text class="h" x="60" y="758" style="font-size:17px">新的 Document（向服务器请求新 HTML）</text>
+  <text class="cs" x="60" y="786">/reports/42?sort=oldest#summary</text>
+  <text class="t" x="60" y="812">历史新增一项；旧文档的 popstate 监听器不再参与</text>
+  <text class="t" x="60" y="836">location.replace() 同样换文档，但替换当前项而不新增</text>
+
+  <text class="s" x="40" y="882">aria-pressed 依次是“最近优先”“最早优先”两个按钮；蓝框是历史项，虚线框是共用的文档。</text>
+  <text class="s" x="40" y="908">pushState 与 replaceState 只改历史与地址，界面要由应用代码自己更新。</text>
+</svg>

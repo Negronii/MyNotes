@@ -46,9 +46,9 @@
 <path d="M553 272 H541 V228 H526" fill="none" stroke="#A88BD1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowP)"/>
 <path d="M553 272 V316 H526" fill="none" stroke="#A88BD1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrowP)"/>
 <rect x="390" y="205" width="134" height="46" rx="9" fill="#F2EDFA" stroke="#A88BD1" stroke-width="2"/>
-<text x="457" y="224" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="17px" font-weight="600" fill="#233553"><tspan x="457" dy="0px">⊙ A_u</tspan><tspan x="457" dy="18.700000000000003px">⊙ SiLU′(A_g)</tspan></text>
+<text x="457" y="224" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="17px" font-weight="600" fill="#233553"><tspan x="457" dy="0px">⊙ A<tspan baseline-shift="sub" font-size="13px">u</tspan></tspan><tspan x="457" dy="18.700000000000003px">⊙ SiLU′(A<tspan baseline-shift="sub" font-size="13px">g</tspan>)</tspan></text>
 <rect x="390" y="293" width="134" height="46" rx="9" fill="#F2EDFA" stroke="#A88BD1" stroke-width="2"/>
-<text x="457" y="322" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="17px" font-weight="600" fill="#233553" >⊙ SiLU(A_g)</text>
+<text x="457" y="322" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="17px" font-weight="600" fill="#233553" >⊙ SiLU(A<tspan baseline-shift="sub" font-size="13px">g</tspan>)</text>
 <line x1="390" y1="228" x2="376" y2="228" stroke="#A88BD1" stroke-width="3" stroke-linecap="round" marker-end="url(#arrowP)"/>
 <rect x="298" y="205" width="76" height="46" rx="9" fill="#EAF2FB" stroke="#79A7D5" stroke-width="2"/>
 <text x="336" y="234" text-anchor="middle" font-family="Noto Sans CJK SC, Arial, sans-serif" font-size="18px" font-weight="600" fill="#233553"><tspan>G</tspan><tspan baseline-shift="sub" font-size="14.4px">Ag</tspan></text>

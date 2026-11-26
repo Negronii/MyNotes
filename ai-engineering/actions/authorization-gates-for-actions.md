@@ -19,14 +19,15 @@ create_issue(
 应用要把这条请求变成一次真实写入，必须依次通过五道关。每一关回答不同的问题，过了前一关不代表后一关自动成立：
 
 ~~~mermaid
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
 flowchart TD
     Req["c2：create_issue 请求<br/>参数形状已校验"]
-    G1{"第一关<br/>create_issue 对本轮可见？"}
-    G2{"第二关<br/>user-17 对 build-service 有权建单？"}
-    G3{"第三关<br/>有面向工单 API、scope 足够的凭据？"}
-    G4{"第四关<br/>用户批准的正是这一份草稿？"}
-    G5{"第五关<br/>由谁在什么环境里执行？"}
-    Recheck["发送前刷新凭据<br/>并复核第二到第四关"]
+    G1{{"第一关<br/>create_issue 对本轮可见？"}}
+    G2{{"第二关<br/>user-17 对 build-service 有权建单？"}}
+    G3{{"第三关<br/>有面向工单 API、scope 足够的凭据？"}}
+    G4{{"第四关<br/>用户批准的正是这一份草稿？"}}
+    G5["第五关<br/>确定由谁在什么环境里执行"]
+    Recheck{{"发送前刷新凭据<br/>第二到第四关仍成立？"}}
     Out["持久化放行记录<br/>交给主线四"]
     Stop["拒绝：按 c2 记录原因<br/>不发出任何写请求"]
     Req --> G1 -->|是| G2 -->|是| G3 -->|是| G4 -->|是| G5 --> Recheck -->|仍成立| Out

@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="752" viewBox="0 0 980 752" role="img" aria-labelledby="title desc">
+  <title id="title">报表页模块图：地址基准与取回、链接、求值三阶段</title>
+  <desc id="desc">index.html 的模块脚本 src 相对文档 base URL 指向入口 reports/report-page.js；入口的 ./report-api.js 相对导入者 URL 解析，@reports/report-format.js 经 import map 映射为 /reports/report-format.js；report-api.js 运行时的 fetch 是数据请求，不是模块。内联经典脚本用 import() 在运行时请求 lazy-tip.js，形成独立的模块图。下方三阶段：取回时边取边发现，链接时把导入名连到导出绑定，求值时先依赖后入口。</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#526176"/>
+    </marker>
+    <marker id="arrow-data" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c2410c"/>
+    </marker>
+    <style>
+      .panel { fill:#ffffff; stroke:#cbd5e1; stroke-width:1.5; }
+      .head { font:700 18px sans-serif; fill:#172033; }
+      .label { font:700 16px sans-serif; fill:#253247; }
+      .small { font:16px sans-serif; fill:#536176; }
+      .data-text { font:16px sans-serif; fill:#9a3412; }
+      .doc { fill:#f1f5f9; stroke:#94a3b8; stroke-width:1.2; }
+      .module { fill:#e0f2fe; stroke:#38bdf8; stroke-width:1.4; }
+      .map { fill:#fef3c7; stroke:#f59e0b; stroke-width:1.4; }
+      .data { fill:#ffedd5; stroke:#ea580c; stroke-width:1.4; }
+      .phase { fill:#f8fafc; stroke:#94a3b8; stroke-width:1.2; }
+      .line { fill:none; stroke:#526176; stroke-width:1.8; marker-end:url(#arrow); }
+      .dyn { fill:none; stroke:#526176; stroke-width:1.8; stroke-dasharray:7 5; marker-end:url(#arrow); }
+      .fetch { fill:none; stroke:#c2410c; stroke-width:1.8; stroke-dasharray:3 4; marker-end:url(#arrow-data); }
+    </style>
+  </defs>
+  <rect width="980" height="752" fill="#ffffff"/>
+
+  <rect class="panel" x="8" y="8" width="964" height="522" rx="12"/>
+  <text class="head" x="26" y="38">模块图与三种地址基准</text>
+
+  <!-- document -->
+  <rect class="doc" x="40" y="58" width="240" height="64" rx="8"/>
+  <text class="label" x="56" y="84">index.html</text>
+  <text class="small" x="56" y="108">提供文档 base URL</text>
+
+  <!-- lazy tip -->
+  <rect class="module" x="680" y="58" width="260" height="64" rx="8"/>
+  <text class="label" x="696" y="84">lazy-tip.js</text>
+  <text class="small" x="696" y="108">独立的模块图，单独加载</text>
+  <path class="dyn" d="M282 90 H676"/>
+  <text class="small" x="300" y="80">内联经典脚本调用 import()</text>
+  <text class="small" x="300" y="112">运行时请求，相对文档 base URL</text>
+
+  <!-- entry -->
+  <path class="line" d="M160 124 V198"/>
+  <text class="small" x="172" y="152">type="module" 的 src</text>
+  <text class="small" x="172" y="176">相对文档 base URL</text>
+  <rect class="module" x="40" y="202" width="240" height="64" rx="8"/>
+  <text class="label" x="56" y="228">reports/report-page.js</text>
+  <text class="small" x="56" y="252">入口 · 求值顺序 ③</text>
+
+  <!-- import map -->
+  <path class="line" d="M282 234 H406"/>
+  <text class="small" x="300" y="224">裸说明符</text>
+  <rect class="map" x="410" y="196" width="350" height="80" rx="8"/>
+  <text class="label" x="426" y="222">import map："@reports/" → "./reports/"</text>
+  <text class="small" x="426" y="246">@reports/report-format.js</text>
+  <text class="small" x="426" y="268">→ /reports/report-format.js</text>
+
+  <!-- api -->
+  <path class="line" d="M160 268 V352"/>
+  <text class="small" x="172" y="300">"./report-api.js"</text>
+  <text class="small" x="172" y="324">相对导入者 URL</text>
+  <rect class="module" x="40" y="356" width="240" height="64" rx="8"/>
+  <text class="label" x="56" y="382">reports/report-api.js</text>
+  <text class="small" x="56" y="406">依赖 · 求值顺序 ①</text>
+
+  <!-- format -->
+  <path class="line" d="M570 278 V352"/>
+  <rect class="module" x="450" y="356" width="240" height="64" rx="8"/>
+  <text class="label" x="466" y="382">reports/report-format.js</text>
+  <text class="small" x="466" y="406">依赖 · 求值顺序 ②</text>
+
+  <!-- fetch -->
+  <path class="fetch" d="M160 422 V450"/>
+  <rect class="data" x="40" y="454" width="420" height="64" rx="8"/>
+  <text class="data-text" x="56" y="480">fetch("/api/reports/42")：数据请求，不是模块</text>
+  <text class="data-text" x="56" y="504">按 API base URL 解析，本例即文档 base URL</text>
+
+  <!-- legend -->
+  <path class="line" d="M740 400 H790"/>
+  <text class="small" x="800" y="406">静态 import / src</text>
+  <path class="dyn" d="M740 432 H790"/>
+  <text class="small" x="800" y="438">运行时 import()</text>
+  <path class="fetch" d="M740 464 H790"/>
+  <text class="small" x="800" y="470">运行时数据请求</text>
+
+  <!-- phases -->
+  <rect class="panel" x="8" y="544" width="964" height="198" rx="12"/>
+  <text class="head" x="26" y="574">静态模块图依次经过三个阶段</text>
+  <rect class="phase" x="30" y="594" width="280" height="130" rx="8"/>
+  <text class="label" x="46" y="620">取回</text>
+  <text class="small" x="46" y="646">读出静态 import 才发现依赖，</text>
+  <text class="small" x="46" y="670">已发现的模块并行取回</text>
+  <text class="small" x="46" y="694">跨源模块还须通过 CORS</text>
+  <path class="line" d="M312 659 H346"/>
+  <rect class="phase" x="350" y="594" width="280" height="130" rx="8"/>
+  <text class="label" x="366" y="620">链接</text>
+  <text class="small" x="366" y="646">每个导入名连到导出绑定</text>
+  <text class="small" x="366" y="670">有名字对不上：</text>
+  <text class="small" x="366" y="694">任何模块代码都不执行</text>
+  <path class="line" d="M632 659 H666"/>
+  <rect class="phase" x="670" y="594" width="280" height="130" rx="8"/>
+  <text class="label" x="686" y="620">求值</text>
+  <text class="small" x="686" y="646">先依赖后入口：① → ② → ③</text>
+  <text class="small" x="686" y="670">入口顶层 await 等 fetch，</text>
+  <text class="small" x="686" y="694">检查后把 1,200 写进 output</text>
+</svg>

@@ -1,38 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="700" height="760" viewBox="0 0 700 760" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="580" viewBox="0 0 700 580" role="img" aria-labelledby="title desc">
   <title id="title">列表查询到当前行</title>
-  <desc id="desc">已提交的排序、筛选、页码与账户上下文合成列表查询键；GET 响应进入当前键缓存，然后按 report.id 渲染行。</desc>
+  <desc id="desc">已提交 URL 中的 sort=recent、status=published、page=1 与账户 acct-a 合成列表查询键 ["reports", "acct-a", "list", { sort, status, page }]；GET 第 1 页的响应写进这个键的缓存，行为 17、42；表格按 report.id 渲染，React key 不用页内下标。</desc>
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M1 1 L11 6 L1 11 Z" fill="#263b52"/>
     </marker>
     <style>
-      .node{fill:#f3efff;stroke:#7e61b3;stroke-width:2}
-      .edge{fill:none;stroke:#334155;stroke-width:2;stroke-linecap:round;marker-end:url(#arrow)}
-      text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:18px;fill:#1f2937;text-anchor:middle}
-      .strong{font-weight:700}
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; fill: #172b3f; }
+      .sub { font-size: 17px; font-weight: 600; }
+      .body { font-size: 16px; }
+      .small { font-size: 15px; fill: #44566a; }
+      .code { font-family: Menlo, "SF Mono", Consolas, monospace; font-size: 15px; }
+      .arrow { fill: none; stroke: #263b52; stroke-width: 2.2; marker-end: url(#arrow); }
     </style>
   </defs>
-  <rect width="700" height="760" fill="#ffffff"/>
+  <rect width="700" height="580" fill="#ffffff"/>
 
-  <rect class="node" x="20" y="24" width="320" height="118" rx="7"/>
-  <text x="180" y="56" class="strong"><tspan x="180">已提交 URL</tspan><tspan x="180" dy="27">sort=recent</tspan><tspan x="180" dy="27">status=published · page=1</tspan></text>
-  <rect class="node" x="360" y="24" width="320" height="118" rx="7"/>
-  <text x="520" y="66" class="strong"><tspan x="520">当前账户上下文</tspan><tspan x="520" dy="28">accountId = acct-a</tspan></text>
+  <rect x="24" y="20" width="400" height="76" rx="10" fill="#eaf2fb" stroke="#4c78a8" stroke-width="2"/>
+  <text x="224" y="49" class="sub" text-anchor="middle">已提交 URL</text>
+  <text x="224" y="77" class="code" text-anchor="middle">sort=recent&amp;status=published&amp;page=1</text>
+  <rect x="444" y="20" width="232" height="76" rx="10" fill="#fff4e0" stroke="#c98a1b" stroke-width="2"/>
+  <text x="560" y="49" class="sub" text-anchor="middle">当前账户</text>
+  <text x="560" y="77" class="code" text-anchor="middle">accountId = "acct-a"</text>
 
-  <path class="edge" d="M 180 144 L 284 194"/>
-  <path class="edge" d="M 520 144 L 416 194"/>
-  <rect class="node" x="80" y="205" width="540" height="90" rx="7"/>
-  <text x="350" y="241" class="strong"><tspan x="350">列表查询 key</tspan><tspan x="350" dy="27">accountId + sort + status + page</tspan></text>
+  <path d="M224 96 V118 H330 V138" class="arrow"/>
+  <path d="M560 96 V118 H370 V138" class="arrow"/>
 
-  <path class="edge" d="M 350 295 L 350 343"/>
-  <rect class="node" x="110" y="345" width="480" height="88" rx="7"/>
-  <text x="350" y="380" class="strong"><tspan x="350">GET 当前页</tspan><tspan x="350" dy="27">queryFn 消费 signal</tspan></text>
+  <rect x="74" y="142" width="552" height="98" rx="10" fill="#f4f1fb" stroke="#7e61b3" stroke-width="2"/>
+  <text x="350" y="170" class="sub" text-anchor="middle">列表查询键</text>
+  <text x="350" y="197" class="code" text-anchor="middle">["reports", "acct-a", "list",</text>
+  <text x="350" y="221" class="code" text-anchor="middle">{ sort: "recent", status: "published", page: 1 }]</text>
 
-  <path class="edge" d="M 350 433 L 350 481"/>
-  <rect class="node" x="110" y="483" width="480" height="90" rx="7"/>
-  <text x="350" y="519" class="strong"><tspan x="350">当前 key 的缓存</tspan><tspan x="350" dy="27">items = [17, 42]</tspan></text>
+  <path d="M350 240 V280" class="arrow"/>
+  <text x="362" y="266" class="small">GET 第 1 页，响应只写这个键</text>
 
-  <path class="edge" d="M 350 573 L 350 619"/>
-  <rect class="node" x="110" y="621" width="480" height="90" rx="7"/>
-  <text x="350" y="657" class="strong"><tspan x="350">按 report.id 渲染行</tspan><tspan x="350" dy="27">React key 只标识行身份</tspan></text>
+  <rect x="174" y="284" width="352" height="78" rx="10" fill="#eef6f0" stroke="#4f8a62" stroke-width="2"/>
+  <text x="350" y="314" class="sub" text-anchor="middle">该键的缓存</text>
+  <text x="350" y="342" class="body" text-anchor="middle">当前页的行：17、42</text>
+
+  <path d="M350 362 V402" class="arrow"/>
+
+  <rect x="124" y="406" width="452" height="150" rx="10" fill="#ffffff" stroke="#c6d0da" stroke-width="2"/>
+  <text x="350" y="436" class="sub" text-anchor="middle">表格按 report.id 渲染行</text>
+  <rect x="164" y="452" width="372" height="30" rx="6" fill="#f5f7fa" stroke="#d7e0e8"/>
+  <text x="180" y="473" class="code">key="17"</text>
+  <text x="300" y="473" class="body">报表 17</text>
+  <rect x="164" y="488" width="372" height="30" rx="6" fill="#f5f7fa" stroke="#d7e0e8"/>
+  <text x="180" y="509" class="code">key="42"</text>
+  <text x="300" y="509" class="body">报表 42</text>
+  <text x="350" y="541" class="small" text-anchor="middle">React key 用 report.id，不用页内下标</text>
 </svg>

@@ -72,7 +72,7 @@
 <text x="829.5" y="445.68" text-anchor="middle" font-size="23px" font-weight="normal">z</text>
 <rect x="872" y="414" width="85" height="48" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
 <text x="914.5" y="445.68" text-anchor="middle" font-size="23px" font-weight="normal">…</text>
-<text x="500" y="505" text-anchor="middle" font-size="22px" font-weight="bold">每列沿 128 行 softmax</text>
+<text x="780" y="512" text-anchor="end" font-size="22px" font-weight="bold">每列沿 128 行 softmax</text>
 <path d="M795,462 L795,545" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
 <text x="800" y="578" text-anchor="middle" font-size="22px" font-weight="bold">权重 Aᵢ  ·  128 × 512</text>
 <text x="744.5" y="621" text-anchor="middle" font-size="19px" font-weight="normal">坐标 1</text>
@@ -80,16 +80,16 @@
 <text x="914.5" y="621" text-anchor="middle" font-size="19px" font-weight="normal">… 512</text>
 <text x="676.0" y="664.7" text-anchor="middle" font-size="19px" font-weight="normal">1</text>
 <rect x="702" y="635" width="85" height="45" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="744.5" y="664.7" text-anchor="middle" font-size="22px" font-weight="normal">s</text>
+<text x="744.5" y="664.7" text-anchor="middle" font-size="22px" font-weight="normal">a</text>
 <rect x="787" y="635" width="85" height="45" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="829.5" y="664.7" text-anchor="middle" font-size="22px" font-weight="normal">s</text>
+<text x="829.5" y="664.7" text-anchor="middle" font-size="22px" font-weight="normal">a</text>
 <rect x="872" y="635" width="85" height="45" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
 <text x="914.5" y="664.7" text-anchor="middle" font-size="22px" font-weight="normal">…</text>
 <text x="676.0" y="709.7" text-anchor="middle" font-size="19px" font-weight="normal">2</text>
 <rect x="702" y="680" width="85" height="45" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="744.5" y="709.7" text-anchor="middle" font-size="22px" font-weight="normal">s</text>
+<text x="744.5" y="709.7" text-anchor="middle" font-size="22px" font-weight="normal">a</text>
 <rect x="787" y="680" width="85" height="45" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="829.5" y="709.7" text-anchor="middle" font-size="22px" font-weight="normal">s</text>
+<text x="829.5" y="709.7" text-anchor="middle" font-size="22px" font-weight="normal">a</text>
 <rect x="872" y="680" width="85" height="45" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
 <text x="914.5" y="709.7" text-anchor="middle" font-size="22px" font-weight="normal">…</text>
 <text x="676.0" y="754.7" text-anchor="middle" font-size="19px" font-weight="normal">⋮</text>
@@ -101,32 +101,32 @@
 <text x="914.5" y="754.7" text-anchor="middle" font-size="22px" font-weight="normal">⋮</text>
 <text x="676.0" y="799.7" text-anchor="middle" font-size="19px" font-weight="normal">128</text>
 <rect x="702" y="770" width="85" height="45" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="744.5" y="799.7" text-anchor="middle" font-size="22px" font-weight="normal">s</text>
+<text x="744.5" y="799.7" text-anchor="middle" font-size="22px" font-weight="normal">a</text>
 <rect x="787" y="770" width="85" height="45" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="829.5" y="799.7" text-anchor="middle" font-size="22px" font-weight="normal">s</text>
+<text x="829.5" y="799.7" text-anchor="middle" font-size="22px" font-weight="normal">a</text>
 <rect x="872" y="770" width="85" height="45" rx="0" fill="#fff2d5" stroke="#9fb1c3" stroke-width="1.7"/>
 <text x="914.5" y="799.7" text-anchor="middle" font-size="22px" font-weight="normal">…</text>
 <path d="M203.5,462 L24,462 L24,820 L465,820" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arr)"/>
 <path d="M800,815 L800,820 L535,820" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arr)"/>
 <circle cx="500" cy="820" r="28" fill="#e3f5f0" stroke="#617f99" stroke-width="3"/>
 <text x="500" y="829" text-anchor="middle" font-size="30px" font-weight="bold">⊙</text>
-<text x="820" y="878" text-anchor="middle" font-size="23px" font-weight="bold">Aᵢ ⊙ Uᵢ</text>
+<text x="520" y="888" text-anchor="start" font-size="23px" font-weight="bold">Aᵢ ⊙ Uᵢ（逐元素相乘）</text>
 <path d="M500,850 L500,910" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
 <text x="452.0" y="956" text-anchor="middle" font-size="19px" font-weight="normal">坐标 1</text>
 <text x="552.0" y="956" text-anchor="middle" font-size="19px" font-weight="normal">坐标 2</text>
 <text x="652.0" y="956" text-anchor="middle" font-size="19px" font-weight="normal">… 512</text>
 <text x="376.0" y="1001.02" text-anchor="middle" font-size="19px" font-weight="normal">1</text>
 <rect x="402" y="970" width="100" height="47" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="452.0" y="1001.02" text-anchor="middle" font-size="21px" font-weight="normal">s·u</text>
+<text x="452.0" y="1001.02" text-anchor="middle" font-size="21px" font-weight="normal">a·u</text>
 <rect x="502" y="970" width="100" height="47" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="552.0" y="1001.02" text-anchor="middle" font-size="21px" font-weight="normal">s·u</text>
+<text x="552.0" y="1001.02" text-anchor="middle" font-size="21px" font-weight="normal">a·u</text>
 <rect x="602" y="970" width="100" height="47" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
 <text x="652.0" y="1001.02" text-anchor="middle" font-size="21px" font-weight="normal">…</text>
 <text x="376.0" y="1048.02" text-anchor="middle" font-size="19px" font-weight="normal">2</text>
 <rect x="402" y="1017" width="100" height="47" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="452.0" y="1048.02" text-anchor="middle" font-size="21px" font-weight="normal">s·u</text>
+<text x="452.0" y="1048.02" text-anchor="middle" font-size="21px" font-weight="normal">a·u</text>
 <rect x="502" y="1017" width="100" height="47" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="552.0" y="1048.02" text-anchor="middle" font-size="21px" font-weight="normal">s·u</text>
+<text x="552.0" y="1048.02" text-anchor="middle" font-size="21px" font-weight="normal">a·u</text>
 <rect x="602" y="1017" width="100" height="47" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
 <text x="652.0" y="1048.02" text-anchor="middle" font-size="21px" font-weight="normal">…</text>
 <text x="376.0" y="1095.02" text-anchor="middle" font-size="19px" font-weight="normal">⋮</text>
@@ -138,12 +138,12 @@
 <text x="652.0" y="1095.02" text-anchor="middle" font-size="21px" font-weight="normal">⋮</text>
 <text x="376.0" y="1142.02" text-anchor="middle" font-size="19px" font-weight="normal">128</text>
 <rect x="402" y="1111" width="100" height="47" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="452.0" y="1142.02" text-anchor="middle" font-size="21px" font-weight="normal">s·u</text>
+<text x="452.0" y="1142.02" text-anchor="middle" font-size="21px" font-weight="normal">a·u</text>
 <rect x="502" y="1111" width="100" height="47" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
-<text x="552.0" y="1142.02" text-anchor="middle" font-size="21px" font-weight="normal">s·u</text>
+<text x="552.0" y="1142.02" text-anchor="middle" font-size="21px" font-weight="normal">a·u</text>
 <rect x="602" y="1111" width="100" height="47" rx="0" fill="#e3f5f0" stroke="#9fb1c3" stroke-width="1.7"/>
 <text x="652.0" y="1142.02" text-anchor="middle" font-size="21px" font-weight="normal">…</text>
-<text x="820" y="1190" text-anchor="middle" font-size="23px" font-weight="bold">沿 128 个位置求和</text>
+<text x="520" y="1217" text-anchor="start" font-size="23px" font-weight="bold">沿 128 个位置求和</text>
 <path d="M500,1158 L500,1260" fill="none" stroke="#617f99" stroke-width="4" stroke-linecap="round" marker-end="url(#arr)"/>
 <text x="500" y="1305" text-anchor="middle" font-size="24px" font-weight="bold">Cᵢ · 1 × 512</text>
 <text x="360.0" y="1365.92" text-anchor="middle" font-size="19px" font-weight="normal"></text>

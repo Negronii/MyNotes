@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="1072" viewBox="0 0 980 1072" role="img" aria-labelledby="title desc">
+  <title id="title">解析器遇到的六种 script 怎样与 HTML 解析和 DOMContentLoaded 排在一条时间线上</title>
+  <desc id="desc">示意时间线。每行上方灰条是 HTML 解析，斜纹表示解析暂停；下方细条是下载，橙色块是执行；红色竖线是 DOMContentLoaded。外部经典脚本和内联经典脚本让解析停下直到执行完；defer 与模块脚本与解析并行下载，在解析结束后、DOMContentLoaded 之前按文档顺序执行；async 与 async 模块下载完立即执行，可能打断解析，顺序不保证。最下方是本例：/reports.css 晚于解析结束才到，模块已下载完也要等它，模块执行和 DOMContentLoaded 随之推迟。</desc>
+  <defs>
+    <pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#f1f5f9"/><line x1="0" y1="0" x2="0" y2="8" stroke="#94a3b8" stroke-width="3"/></pattern>
+    <style>
+      text{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC",sans-serif;fill:#172033}
+      .h{font-size:21px;font-weight:700}
+      .name{font-size:18px;font-weight:700}
+      .code{font-family:Menlo,Consolas,monospace;font-size:15px;fill:#475569}
+      .note{font-size:16px;fill:#334155}
+      .small{font-size:15px;fill:#334155}
+      .dcl{font-size:15px;font-weight:700;fill:#b42318}
+      .parse{fill:#94a3b8}
+      .dl{fill:#60a5fa}
+      .ex{fill:#ea8a2e}
+      .css{fill:#a78bfa}
+      .wait{fill:none;stroke:#ea8a2e;stroke-width:2;stroke-dasharray:5 4}
+      .dclline{stroke:#b42318;stroke-width:2.5}
+    </style>
+  </defs>
+  <rect width="980" height="1072" rx="12" fill="#ffffff"/>
+  <text class="h" x="24" y="40">解析器遇到 &lt;script&gt; 时：下载、执行与 DOMContentLoaded（DCL）</text>
+
+<rect class="parse" x="24" y="67" width="44" height="14" rx="3"/><text class="small" x="76" y="78">HTML 解析</text>
+<rect fill="url(#hatch)" x="170" y="67" width="44" height="14" rx="3" stroke="#94a3b8"/><text class="small" x="222" y="78">解析暂停</text>
+<rect class="dl" x="310" y="71" width="44" height="7" rx="3"/><text class="small" x="362" y="78">下载</text>
+<rect class="ex" x="420" y="66" width="44" height="16" rx="3"/><text class="small" x="472" y="78">执行</text>
+<line class="dclline" x1="530" y1="64" x2="530" y2="82"/><text class="small" x="540" y="78">DOMContentLoaded</text>
+<text class="small" x="24" y="106">横轴为示意时间，不是实测；每行假设解析器在同一位置（竖虚线）遇到该 &lt;script&gt;。</text>
+<text class="small" x="417.0" y="130" text-anchor="middle">遇到 &lt;script&gt;</text>
+<rect x="12" y="144" width="956" height="108" rx="8" fill="#f8fafc"/>
+<text class="name" x="24" y="170">外部经典脚本</text>
+<text class="code" x="24" y="192">&lt;script src&gt;</text>
+<line x1="417.0" y1="136" x2="417.0" y2="210" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect class="parse" x="330" y="158" width="87.0" height="16" rx="3"/>
+<rect class="parse" x="620" y="158" width="261.0" height="16" rx="3"/>
+<rect fill="url(#hatch)" stroke="#94a3b8" x="417.0" y="158" width="203.0" height="16" rx="3"/>
+<rect class="dl" x="417.0" y="190" width="143.0" height="8" rx="3"/>
+<text class="small" x="489.5" y="187" text-anchor="middle">下载</text>
+<rect class="ex" x="562" y="184" width="58" height="20" rx="3"/>
+<text class="small" x="591.0" y="199" text-anchor="middle" style="fill:#fff;font-weight:700">执行</text>
+<line class="dclline" x1="884.0" y1="154" x2="884.0" y2="208"/>
+<text class="dcl" x="890.0" y="170">DCL</text>
+<text class="note" x="330" y="232">解析器停下，等脚本下载并执行；若阻塞脚本的样式表还在加载，执行再往后推</text>
+<text class="name" x="24" y="282">defer 经典脚本</text>
+<text class="code" x="24" y="304">&lt;script defer src&gt;</text>
+<line x1="417.0" y1="256" x2="417.0" y2="322" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect class="parse" x="330" y="270" width="348" height="16" rx="3"/>
+<rect class="dl" x="417.0" y="302" width="143.0" height="8" rx="3"/>
+<text class="small" x="489.5" y="299" text-anchor="middle">下载</text>
+<rect class="ex" x="678" y="296" width="58" height="20" rx="3"/>
+<text class="small" x="707.0" y="311" text-anchor="middle" style="fill:#fff;font-weight:700">执行</text>
+<line class="dclline" x1="739" y1="266" x2="739" y2="320"/>
+<text class="dcl" x="745" y="282">DCL</text>
+<text class="note" x="330" y="344">解析不停；解析结束后按文档顺序执行，然后才派发 DCL</text>
+<rect x="12" y="368" width="956" height="108" rx="8" fill="#f8fafc"/>
+<text class="name" x="24" y="394">async 经典脚本</text>
+<text class="code" x="24" y="416">&lt;script async src&gt;</text>
+<line x1="417.0" y1="368" x2="417.0" y2="434" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect class="parse" x="330" y="382" width="232" height="16" rx="3"/>
+<rect class="parse" x="620" y="382" width="116" height="16" rx="3"/>
+<rect fill="url(#hatch)" stroke="#94a3b8" x="562" y="382" width="58" height="16" rx="3"/>
+<rect class="dl" x="417.0" y="414" width="143.0" height="8" rx="3"/>
+<text class="small" x="489.5" y="411" text-anchor="middle">下载</text>
+<rect class="ex" x="562" y="408" width="58" height="20" rx="3"/>
+<text class="small" x="591.0" y="423" text-anchor="middle" style="fill:#fff;font-weight:700">执行</text>
+<line class="dclline" x1="739" y1="378" x2="739" y2="432"/>
+<text class="dcl" x="745" y="394">DCL</text>
+<text class="note" x="330" y="456">下载完立即执行，若解析未结束就打断它；多个 async 之间不保证顺序</text>
+<text class="name" x="24" y="506">模块脚本</text>
+<text class="code" x="24" y="528">&lt;script type=module&gt;</text>
+<line x1="417.0" y1="480" x2="417.0" y2="546" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect class="parse" x="330" y="494" width="348" height="16" rx="3"/>
+<rect class="dl" x="417.0" y="526" width="114.0" height="8" rx="3"/>
+<text class="small" x="475.0" y="523" text-anchor="middle">模块</text>
+<rect class="dl" x="533.0" y="526" width="61.79999999999998" height="8" rx="3"/>
+<text class="small" x="564.9" y="523" text-anchor="middle">依赖</text>
+<rect class="ex" x="678" y="520" width="58" height="20" rx="3"/>
+<text class="small" x="707.0" y="535" text-anchor="middle" style="fill:#fff;font-weight:700">执行</text>
+<line class="dclline" x1="739" y1="490" x2="739" y2="544"/>
+<text class="dcl" x="745" y="506">DCL</text>
+<text class="note" x="330" y="568">与 defer 同一时机：解析结束后按文档顺序求值；内联模块同样延后</text>
+<rect x="12" y="592" width="956" height="108" rx="8" fill="#f8fafc"/>
+<text class="name" x="24" y="618">async 模块脚本</text>
+<text class="code" x="24" y="640">&lt;script type=module async&gt;</text>
+<line x1="417.0" y1="592" x2="417.0" y2="658" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect class="parse" x="330" y="606" width="266.79999999999995" height="16" rx="3"/>
+<rect class="parse" x="654.8" y="606" width="81.20000000000002" height="16" rx="3"/>
+<rect fill="url(#hatch)" stroke="#94a3b8" x="596.8" y="606" width="58.0" height="16" rx="3"/>
+<rect class="dl" x="417.0" y="638" width="114.0" height="8" rx="3"/>
+<text class="small" x="475.0" y="635" text-anchor="middle">模块</text>
+<rect class="dl" x="533.0" y="638" width="61.79999999999998" height="8" rx="3"/>
+<text class="small" x="564.9" y="635" text-anchor="middle">依赖</text>
+<rect class="ex" x="596.8" y="632" width="58.0" height="20" rx="3"/>
+<text class="small" x="625.8" y="647" text-anchor="middle" style="fill:#fff;font-weight:700">执行</text>
+<line class="dclline" x1="739" y1="602" x2="739" y2="656"/>
+<text class="dcl" x="745" y="618">DCL</text>
+<text class="note" x="330" y="680">模块及依赖就绪后立即执行，可能打断解析；顺序不保证</text>
+<text class="name" x="24" y="730">内联经典脚本</text>
+<text class="code" x="24" y="752">&lt;script&gt;…&lt;/script&gt;</text>
+<line x1="417.0" y1="704" x2="417.0" y2="770" stroke="#64748b" stroke-width="1.2" stroke-dasharray="3 4"/>
+<rect class="parse" x="330" y="718" width="87.0" height="16" rx="3"/>
+<rect class="parse" x="475.0" y="718" width="261.0" height="16" rx="3"/>
+<rect fill="url(#hatch)" stroke="#94a3b8" x="417.0" y="718" width="58.0" height="16" rx="3"/>
+<rect class="ex" x="417.0" y="744" width="58.0" height="20" rx="3"/>
+<text class="small" x="446.0" y="759" text-anchor="middle" style="fill:#fff;font-weight:700">执行</text>
+<line class="dclline" x1="739" y1="714" x2="739" y2="768"/>
+<text class="dcl" x="745" y="730">DCL</text>
+<text class="note" x="330" y="792">无下载；解析器到达即执行（defer 无效），仍要先等阻塞脚本的样式表</text>
+<rect x="12" y="834" width="956" height="210" rx="10" fill="#faf5ff" stroke="#c4b5fd"/>
+<text class="h" x="24" y="864" style="font-size:19px">本例：/reports.css 在解析结束后才到</text>
+<text class="name" x="24" y="906">HTML 解析</text>
+<rect class="parse" x="330" y="892" width="348" height="16" rx="3"/>
+<text class="small" x="684" y="905">解析结束 (interactive)</text>
+<text class="name" x="24" y="944">/reports.css</text>
+<rect class="css" x="376.4" y="934" width="415.6" height="8" rx="3"/>
+<text class="small" x="585.2" y="929" text-anchor="middle">下载中：阻塞脚本的样式表</text>
+<text class="name" x="24" y="984">/reports.js（模块）</text>
+<rect class="dl" x="388" y="976" width="143.0" height="8" rx="3"/>
+<text class="small" x="460.5" y="970" text-anchor="middle">模块与依赖</text>
+<rect class="wait" x="533.0" y="970" width="261.0" height="20" rx="3"/>
+<text class="small" x="663.5" y="985" text-anchor="middle">已下载，等解析结束和 CSS</text>
+<rect class="ex" x="794" y="970" width="58" height="20" rx="3"/>
+<text class="small" x="823.0" y="985" text-anchor="middle" style="fill:#fff;font-weight:700">执行</text>
+<line class="dclline" x1="855" y1="886" x2="855" y2="996"/>
+<text class="dcl" x="861" y="902">DCL</text>
+<text class="note" x="24" y="1026">CSS 一到，模块才求值、注册处理器并启用按钮；DCL 等模块同步部分跑完。CSS 先到时，模块在解析结束后就能执行。</text>
+</svg>

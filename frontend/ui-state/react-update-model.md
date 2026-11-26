@@ -6,18 +6,34 @@
 
 ## 一次点击走过哪几步
 
-先看点击后没有再次切换的一轮。React 把工作分成几段，每段只做一件事：
+先看点击后没有再次切换的一轮。React 把工作分成几段，每段只做一件事；下图按时间画出每段由谁执行、交给下一段什么：
 
-| 阶段 | 谁在工作 | 本例这一轮做什么 |
-| --- | --- | --- |
-| 事件处理器 | 你的代码 | 排入 `sort="oldest"` 和 `requestId=1` 两个更新；处理器里读到的 `sort` 仍是 `"recent"`。 |
-| render | React 调用组件 | 用新状态算出界面描述：从上次成功的两行派生 April、May，提示“等待请求 #1”。不发请求，不碰 DOM。 |
-| commit | React 写宿主树 | 把按钮的 `aria-pressed`、两行的顺序和提示文字写进 DOM。 |
-| paint | 浏览器 | 在之后的渲染机会里重算样式、布局并绘制，用户才看到新顺序。 |
-| Effect | 你的代码，由 React 在 commit 后调用（不保证在 paint 之后） | 调用 `fetchReports("oldest")`。 |
-| 响应回调 | 你的代码 | 把带编号 `1` 的成功或失败结果排入状态；React 再走一轮 render 和 commit，显示“已确认”或报错。 |
+~~~mermaid
+%%{init: {"sequence": {"mirrorActors": false, "actorMargin": 30, "width": 130}}}%%
+sequenceDiagram
+  participant H as 事件处理器
+  participant R as React render
+  participant C as React commit
+  participant B as 浏览器
+  participant E as Effect
+  Note over H: 用户点“最早优先”
+  H->>R: 同一批排入<br/>sort = "oldest"<br/>requestId = 1
+  Note over H: 处理器里的 sort<br/>仍是 "recent"
+  Note over R: 调用组件<br/>派生 April、May<br/>提示“等待请求 #35;1”<br/>不发请求、不碰 DOM
+  R->>C: 协调出的必要改动
+  Note over C: 写 aria-pressed<br/>移动两行<br/>改提示文字
+  par 浏览器绘制
+    C-)B: DOM 已是新顺序
+    Note over B: 之后的渲染机会<br/>样式、布局、绘制
+  and Effect：与 paint 的先后不保证
+    C->>E: commit 后运行 setup
+    Note over E: fetchReports<br/>("oldest")<br/>等响应或失败
+  end
+  E->>R: 响应回调排入编号 1 的<br/>成功或失败结果
+  Note over R,C: 再走一轮 render 和 commit<br/>显示“已确认”或报错
+~~~
 
-下面各节依次解释：处理器为什么读到旧值，render、commit 和 paint 为什么是三件事，React 靠什么把前后两次的行对上，副作用该放在哪一段，以及迟到的响应怎样不写错界面。
+事件处理器、Effect 和响应回调是你的代码，render 和 commit 由 React 执行，paint 归浏览器。下面各节依次解释：处理器为什么读到旧值，render、commit 和 paint 为什么是三件事，React 靠什么把前后两次的行对上，副作用该放在哪一段，以及迟到的响应怎样不写错界面。
 
 ## 处理器读到的是这一轮的状态快照
 
@@ -51,9 +67,9 @@ React 用 `Object.is` 比较新旧状态。传给 setter 的值与当前状态�
 
 render 时 React 还要做 reconciliation (协调)：把新描述和上一次的描述逐个对应起来，算出哪些宿主节点要新建、移动、更新或删除。对应规则由树中位置、元素类型和 `key` 决定，见下一节。
 
-**commit** 是写入。React 把协调出的必要改动应用到宿主树（浏览器里就是 DOM）。一个 setter 不等于一次 DOM 修改：新旧描述相同，React 就不改 DOM；本例排序改变，React 移动两行并更新按钮属性。
+**commit** 是写入。React 把协调出的必要改动应用到宿主树（浏览器里就是 DOM）。一个 setter 不等于一次 DOM 修改：新旧描述相同，React 就不改 DOM。
 
-**paint** 是浏览器的事。commit 结束时 DOM 已经是新顺序，但用户看到它要等浏览器在之后的渲染机会里重算样式、布局并绘制。React 的 setter、render 次数和浏览器帧之间没有一一对应。浏览器怎样安排渲染机会，见[事件循环怎样安排任务、微任务和渲染？](../browser/event-loop-tasks-and-rendering.md)；DOM 改动后浏览器重做了哪些工作，见[DOM 改动后浏览器重做了什么？](../browser/rendering-pipeline-and-forced-layout.md)。
+**paint** 是浏览器的事。commit 结束时 DOM 已经是新顺序，用户看到它却要等之后的渲染机会。React 的 setter、render 次数和浏览器帧之间没有一一对应。浏览器怎样安排渲染机会，见[事件循环怎样安排任务、微任务和渲染？](../browser/event-loop-tasks-and-rendering.md)；DOM 改动后浏览器重做了哪些工作，见[DOM 改动后浏览器重做了什么？](../browser/rendering-pipeline-and-forced-layout.md)。
 
 ### 批处理：同一批更新只走一轮
 
@@ -185,12 +201,36 @@ React 不保证 Effect 总在浏览器绘制之后运行：由点击等交互引
 
 两道守卫各管一件事。`ignore` 让已被清理的 Effect 不再写状态；结果上附带的编号保证：即使旧回调抢在 cleanup 之前运行，它也只能写入自己的编号，不能把后来的请求标成已确认。
 
-现在走一遍快速反选。请求 `1`（oldest）还没结束，用户又点“最近优先”。处理器排入 `sort="recent"` 和 `requestId=2`；render 从当前 `lastSuccess` 派生 May、April，提示等待 `#2`；commit 写入 DOM；然后 React 先运行请求 `1` 那个 Effect 的 cleanup，再运行新 Effect 发出请求 `2`。请求 `1` 的回调可能在 cleanup 之前或之后运行。这里比较的是回调实际执行的时刻：Promise 早已完成，不代表排队的回调已经在 cleanup 前执行。
+现在走一遍快速反选：请求 `1`（oldest）还没结束，用户又点“最近优先”。commit 之后，React 先运行 Effect 1 的 cleanup，再运行 Effect 2 的 setup；请求 `1` 的回调可能落在 cleanup 之前或之后，下图的 `alt` 画出这两种结局：
 
-| 请求 1 的回调何时执行 | 回调做了什么 | 等待请求 2 时的界面 |
-| --- | --- | --- |
-| cleanup 之前 | `ignore` 还是 `false`，成功回调把响应写进 `lastSuccess`，但标记为 `requestId=1`。 | 用这份刚到的数据按 `recent` 排序显示；`lastSuccess.requestId` 是 1，不等于当前的 2，所以仍显示“等待请求 #2”。 |
-| cleanup 之后 | `ignore` 已是 `true`，回调什么也不写。 | 保留原来的 `lastSuccess`，按 `recent` 排序；仍等待请求 2。 |
+~~~mermaid
+%%{init: {"sequence": {"mirrorActors": false, "actorMargin": 24, "width": 110}}}%%
+sequenceDiagram
+  participant RC as React render<br/>与 commit
+  participant E1 as Effect 1<br/>（oldest）
+  participant E2 as Effect 2<br/>（recent）
+  participant S as 服务端
+  participant L as lastSuccess
+  Note over E1: setup<br/>ignore = false<br/>currentRequestId = 1
+  E1->>S: 请求 1<br/>fetchReports("oldest")
+  Note over RC: 处理器：用户点“最近优先”<br/>排入 sort = "recent"<br/>requestId = 2
+  Note over RC: render 从当前 lastSuccess<br/>派生 May、April<br/>提示等待请求 2<br/>commit 写入 DOM
+  alt 请求 1 的回调在 cleanup 之前执行
+    S-->>E1: 请求 1 成功，回调运行<br/>ignore 仍是 false
+    E1->>L: 写入 requestId = 1<br/>sort = "oldest" 和这批 reports
+    RC->>E1: cleanup：ignore = true
+    RC->>E2: setup：发出请求 2
+    Note over L: 1 ≠ 2<br/>这批数据按 recent<br/>排序显示，仍提示<br/>等待请求 2
+  else 回调在 cleanup 之后执行
+    RC->>E1: cleanup：ignore = true
+    RC->>E2: setup：发出请求 2
+    S-->>E1: 请求 1 的回调运行<br/>ignore 已是 true，什么也不写
+    Note over L: 原 lastSuccess<br/>不变，按 recent<br/>排序，仍提示<br/>等待请求 2
+  end
+  E2->>S: 请求 2<br/>fetchReports("recent")
+~~~
+
+这里比较的是回调实际执行的时刻：Promise 早已完成，不代表排队的回调已经在 cleanup 前执行。两种结局里界面都还在等请求 `2`：前一种 `ignore` 没拦住，但编号让写入只算请求 `1` 的成功。
 
 失败回调同理：cleanup 之前执行时，它只记下编号 `1` 的失败，不改 `lastSuccess`，也不能把请求 `2` 标成失败；cleanup 之后执行则被忽略。
 

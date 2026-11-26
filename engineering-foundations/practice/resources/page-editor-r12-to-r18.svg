@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="758" viewBox="0 0 800 758" role="img" aria-labelledby="title desc">
+  <title id="title">从 r12 到 r18：每一步改了哪份状态</title>
+  <desc id="desc">四条泳道随用户动作自上而下推进。会话与画布：选中标题后 selectedId 一直是 heading-1；拖动未松手时 dragPreview 记录候选顺序，取消后清空，松手后提交移动命令。文档修订：确认标题得到 r13，选择、拖动和取消期间仍是 r13；松手重排得到 r14，撤销得到内容同 r13 的 r15，重做得到内容同 r14 的 r16；插入 alt 为空的图片得到 r17，补上 alt 得到 r18。草稿存储依次保存 r16、r17、r18。公开指针在 r16 发布前一直是 r12，r16 重新校验通过后原子切到 r16；发布 r17 因 alt 为空被拒，指针仍是 r16；r18 通过后切到 r18。</desc>
+  <style>
+    text { font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", sans-serif; fill: #172033; font-size: 16px; }
+    .h { font-size: 16px; font-weight: 700; }
+    .act { font-size: 16px; }
+    .m { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13.5px; }
+    .b { font-weight: 700; }
+    .ms { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12.5px; }
+    .faint { fill: #64748b; }
+    .rev { fill: #f0fdf4; stroke: #15803d; stroke-width: 1.8; }
+    .drag { fill: #fff7ed; stroke: #c2410c; stroke-width: 1.5; }
+    .chip { fill: #f5f3ff; stroke: #7e22ce; stroke-width: 1.5; }
+    .pub { fill: #2563eb; }
+    .sel { stroke: #0f766e; stroke-width: 5; stroke-linecap: round; }
+    .rej { stroke: #b91c1c; stroke-width: 3; stroke-linecap: round; }
+  </style>
+  <rect width="800" height="758" fill="#fff"/>
+<rect x="10" y="112" width="780" height="48" fill="#f8fafc"/>
+<rect x="10" y="208" width="780" height="48" fill="#f8fafc"/>
+<rect x="10" y="304" width="780" height="48" fill="#f8fafc"/>
+<rect x="10" y="400" width="780" height="48" fill="#f8fafc"/>
+<rect x="10" y="496" width="780" height="48" fill="#f8fafc"/>
+<rect x="10" y="592" width="780" height="48" fill="#f8fafc"/>
+<text x="19" y="40" class="h">用户动作</text>
+<text x="179" y="40" class="h">会话与画布</text>
+<text x="364" y="40" class="h">文档修订与撤销历史</text>
+<text x="559" y="40" class="h">草稿存储</text>
+<text x="649" y="40" class="h">公开指针（访客）</text>
+<line x1="10" y1="62" x2="790" y2="62" stroke="#94a3b8" stroke-width="1.5"/>
+<line x1="170" y1="18" x2="170" y2="688" stroke="#cbd5e1" stroke-width="1"/>
+<line x1="355" y1="18" x2="355" y2="688" stroke="#cbd5e1" stroke-width="1"/>
+<line x1="550" y1="18" x2="550" y2="688" stroke="#cbd5e1" stroke-width="1"/>
+<line x1="640" y1="18" x2="640" y2="688" stroke="#cbd5e1" stroke-width="1"/>
+<text x="20" y="93.0" class="act">初始</text>
+<text x="20" y="131.5" class="act">确认标题</text>
+<text x="20" y="150.5" class="act">“欢迎”</text>
+<text x="20" y="189.0" class="act">选中标题</text>
+<text x="20" y="227.5" class="act">拖到按钮后方，</text>
+<text x="20" y="246.5" class="act">未松手</text>
+<text x="20" y="285.0" class="act">取消拖动</text>
+<text x="20" y="333.0" class="act">再拖一次并松手</text>
+<text x="20" y="381.0" class="act">撤销</text>
+<text x="20" y="429.0" class="act">重做</text>
+<text x="20" y="477.0" class="act">保存 r16</text>
+<text x="20" y="525.0" class="act">请求发布 r16</text>
+<text x="20" y="563.5" class="act">插入 image-1，</text>
+<text x="20" y="582.5" class="m">alt=""</text>
+<text x="20" y="611.5" class="act">保存 r17</text>
+<text x="20" y="630.5" class="act">并请求发布</text>
+<text x="20" y="659.5" class="act">补上 alt，</text>
+<text x="20" y="678.5" class="act">保存并发布 r18</text>
+<text x="183" y="83.5" class="m">selectedId=null</text>
+<text x="183" y="102.5" class="m">dragPreview=null</text>
+<text x="183" y="131.5">输入组件提交</text>
+<text x="183" y="150.5">setText 命令</text>
+<line x1="183" y1="170" x2="183" y2="678" class="sel"/>
+<text x="194" y="179.5" class="m">selectedId=</text>
+<text x="194" y="198.5" class="m">'heading-1'</text>
+<rect x="192" y="212" width="154" height="40" rx="6" class="drag"/>
+<text x="198" y="227.5" class="ms">dragPreview 候选</text>
+<text x="198" y="246.5" class="ms">button-1,heading-1</text>
+<text x="194" y="275.5">清空候选，画布</text>
+<text x="194" y="294.5">回到文档顺序</text>
+<text x="194" y="323.5">提交移动命令，</text>
+<text x="194" y="342.5">成功后清空候选</text>
+<text x="194" y="371.5" class="faint">选择仍是</text>
+<text x="194" y="390.5" class="faint">heading-1</text>
+<text x="194" y="563.5">画布显示</text>
+<text x="194" y="582.5" class="m">&lt;img alt=""&gt;</text>
+<rect x="368" y="68" width="170" height="40" rx="6" class="rev"/>
+<text x="376" y="83.5">r12：children 顺序</text>
+<text x="376" y="102.5" class="ms">[heading-1,button-1]</text>
+<rect x="368" y="116" width="170" height="184" rx="6" class="rev"/>
+<text x="376" y="131.5">r13：标题改为“欢迎”</text>
+<text x="376" y="150.5">ID 不变；历史 +1</text>
+<text x="376" y="189.0" class="faint">仍 r13</text>
+<text x="376" y="237.0" class="faint">仍 r13，children 未变</text>
+<text x="376" y="285.0" class="faint">仍 r13</text>
+<rect x="368" y="308" width="170" height="40" rx="6" class="rev"/>
+<text x="376" y="323.5">r14：重排；历史 +1</text>
+<text x="376" y="342.5" class="ms">[button-1,heading-1]</text>
+<rect x="368" y="356" width="170" height="40" rx="6" class="rev"/>
+<text x="376" y="381.0">r15：内容同 r13</text>
+<rect x="368" y="404" width="170" height="136" rx="6" class="rev"/>
+<text x="376" y="429.0">r16：内容同 r14</text>
+<text x="376" y="477.0" class="faint">仍 r16</text>
+<text x="376" y="525.0" class="faint">仍 r16</text>
+<rect x="368" y="548" width="170" height="88" rx="6" class="rev"/>
+<text x="376" y="563.5">r17：加 image-1</text>
+<text x="376" y="582.5">草稿检查通过</text>
+<text x="376" y="621.0" class="faint">r17 草稿仍在</text>
+<rect x="368" y="644" width="170" height="40" rx="6" class="rev"/>
+<text x="376" y="669.0">r18：补上 alt</text>
+<rect x="561" y="458" width="68" height="28" rx="12" class="chip"/>
+<text x="595" y="477.0" text-anchor="middle" class="b">存 r16</text>
+<rect x="561" y="602" width="68" height="28" rx="12" class="chip"/>
+<text x="595" y="621.0" text-anchor="middle" class="b">存 r17</text>
+<rect x="561" y="650" width="68" height="28" rx="12" class="chip"/>
+<text x="595" y="669.0" text-anchor="middle" class="b">存 r18</text>
+<rect x="652" y="70" width="10" height="420" rx="4" class="pub"/>
+<rect x="652" y="502" width="10" height="132" rx="4" class="pub"/>
+<rect x="652" y="646" width="10" height="36" rx="4" class="pub"/>
+<text x="672" y="93.0" class="b">r12</text>
+<text x="672" y="515.5">重新校验通过，</text>
+<text x="672" y="534.5">原子切到 r16</text>
+<text x="692" y="611.5">r17 被拒：</text>
+<text x="692" y="630.5">alt 为空</text>
+<line x1="670" y1="608.0" x2="684" y2="622.0" class="rej"/><line x1="684" y1="608.0" x2="670" y2="622.0" class="rej"/>
+<text x="672" y="573.0" class="faint">仍 r16</text>
+<text x="672" y="669.0">原子切到 r18</text>
+<text x="672" y="285.0" class="faint">仍 r12</text>
+<text x="15" y="718">只有被接受的命令、撤销和重做推进修订；选择、拖动和取消只改会话。</text>
+<text x="15" y="742">保存只往草稿存储添加确切修订；公开指针只在发布校验通过时原子切换。</text>
+</svg>
