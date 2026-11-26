@@ -4,7 +4,7 @@
 
 ## 案例：编辑前先存一份快照
 
-沿用主线一的报表页。用户打开编辑抽屉前，页面要存一份当前报表数据的快照，让编辑过程不影响列表，取消时还能恢复。这份数据是一张 object graph（对象图）：对象是节点，属性引用是边。下面让 May 行 `r-104` 和 April 行 `r-103` 共用同一个负责人对象，页面还用 `focusedOwner` 记着当前查看的负责人，并让根对象的 `self` 指回自己，构成一个循环：
+沿用主线一的报表页。用户打开编辑抽屉前，页面要存一份当前报表数据的快照，让编辑过程不影响列表，取消时还能恢复。这份数据是一张 object graph (对象图)：对象是节点，属性引用是边。下面让 May 行 `r-104` 和 April 行 `r-103` 共用同一个负责人对象，页面还用 `focusedOwner` 记着当前查看的负责人，并让根对象的 `self` 指回自己，构成一个循环：
 
 ~~~javascript
 const sharedOwner = { id: "u-17", name: "Ada" };
@@ -23,8 +23,8 @@ report.self = report;
 “复制”要回答的不止“嵌套对象有没有复制”，而是五个问题：
 
 1. 哪些节点得到新身份，哪些仍与原图共享？
-2. 原图里多处指向同一节点的 shared reference（共享引用），副本里是否仍指向同一个节点？
-3. cyclic reference（循环引用）怎样处理？
+2. 原图里多处指向同一节点的 shared reference (共享引用)，副本里是否仍指向同一个节点？
+3. cyclic reference (循环引用)怎样处理？
 4. 原型、属性描述符、getter、`Map` 条目这类内部状态保留多少？
 5. 二进制缓冲区这类底层资源是复制、共享还是转移？
 
@@ -121,7 +121,7 @@ stringifyErrorName(report);         // "TypeError"：report.self 构成循环
 
 ## structuredClone：复制对象图，保留图内关系
 
-`structuredClone(value)` 是宿主 API：WHATWG HTML 标准规定它执行 structured clone（结构化克隆），ECMAScript 本身不提供这个全局函数，Node.js 等运行时也实现了它。算法先把输入序列化成与 realm（执行环境，每个 realm 有自己一套全局对象和内建对象）无关的记录，再在调用方所在的 realm 中反序列化。序列化过程维护一张记忆表：第一次遇到某个对象时登记它，再次遇到同一对象时直接复用登记项。因此循环引用回指克隆出的对象，原本指向同一子对象的多处引用，在副本里也仍指向同一个克隆对象。
+`structuredClone(value)` 是宿主 API：WHATWG HTML 标准规定它执行 structured clone (结构化克隆)，ECMAScript 本身不提供这个全局函数，Node.js 等运行时也实现了它。算法先把输入序列化成与 realm (执行环境，每个 realm 有自己一套全局对象和内建对象)无关的记录，再在调用方所在的 realm 中反序列化。序列化过程维护一张记忆表：第一次遇到某个对象时登记它，再次遇到同一对象时直接复用登记项。因此循环引用回指克隆出的对象，原本指向同一子对象的多处引用，在副本里也仍指向同一个克隆对象。
 
 把案例的 `report` 交给它：
 
@@ -167,7 +167,7 @@ propertyCopy[metadataKey];  // undefined
 
 不可枚举的 `internal` 虽然是函数，却因为被跳过而没有导致报错。其他类型按各自的规则处理：
 
-- **有序列化步骤的标准对象**：`Date`、`RegExp`、`Map`、`Set`、`ArrayBuffer`、typed array（类型化数组）、`Error` 等，内部槽里的数据按类型复制；额外挂在对象上的属性不一定参与，例如 `Map` 的条目会复制，自己加的 `note` 属性不会。平台对象能否克隆，取决于该接口是否定义了序列化步骤。
+- **有序列化步骤的标准对象**：`Date`、`RegExp`、`Map`、`Set`、`ArrayBuffer`、typed array (类型化数组)、`Error` 等，内部槽里的数据按类型复制；额外挂在对象上的属性不一定参与，例如 `Map` 的条目会复制，自己加的 `note` 属性不会。平台对象能否克隆，取决于该接口是否定义了序列化步骤。
 - **用户自定义类的实例**：当作普通对象处理，自有可枚举数据会复制，但类原型、原型方法和访问器都不随之复制。
 - **拒绝的值**：函数、`WeakMap`、`Symbol` 值、`Proxy` 和普通 DOM `Node` 不能序列化；对象图中任何待复制的位置出现它们，调用就抛 `DataCloneError`。
 - **`BigInt`**：与 JSON 不同，可以克隆。
@@ -207,7 +207,7 @@ cloneErrorName({ format: () => "r-104" });   // "DataCloneError"：嵌套的函�
 
 ## 转移与共享：transfer 和 SharedArrayBuffer
 
-上面讨论的都是复制。`structuredClone` 的 `transfer`（转移）选项则把可转移资源的所有权交给结果，而不是再复制一份。对 `ArrayBuffer`，结果接管原缓冲区的字节，原 `ArrayBuffer` 变为 detached（已分离）状态：对象还在，长度变为 0，不能再读写内容。只有确实要交出所有权时才转移，普通快照不要带 `transfer`。
+上面讨论的都是复制。`structuredClone` 的 `transfer` (转移)选项则把可转移资源的所有权交给结果，而不是再复制一份。对 `ArrayBuffer`，结果接管原缓冲区的字节，原 `ArrayBuffer` 变为 detached (已分离)状态：对象还在，长度变为 0，不能再读写内容。只有确实要交出所有权时才转移，普通快照不要带 `transfer`。
 
 ~~~javascript
 const buffer = new ArrayBuffer(8);
@@ -216,7 +216,7 @@ transferred.buffer.byteLength; // 8
 buffer.byteLength;             // 0：原 buffer 已分离
 ~~~
 
-反过来，得到新的包装对象也不代表底层数据独立了。`SharedArrayBuffer`（共享数组缓冲区）被结构化克隆时，得到一个新的包装对象，但两者仍共享同一块字节；在浏览器中，克隆它还要求页面处于 cross-origin isolated（跨源隔离）状态。要得到独立快照，就把内容复制到普通 `ArrayBuffer`：
+反过来，得到新的包装对象也不代表底层数据独立了。`SharedArrayBuffer` (共享数组缓冲区)被结构化克隆时，得到一个新的包装对象，但两者仍共享同一块字节；在浏览器中，克隆它还要求页面处于 cross-origin isolated (跨源隔离)状态。要得到独立快照，就把内容复制到普通 `ArrayBuffer`：
 
 ~~~javascript
 const sharedBuffer = new SharedArrayBuffer(1);

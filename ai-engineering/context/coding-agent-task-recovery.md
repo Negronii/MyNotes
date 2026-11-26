@@ -36,7 +36,7 @@
 
 Claude Code 把会话持续保存到本地 transcript 文件，可以用 `claude --continue` 打开当前目录最近的会话，用 `claude --resume` 按名称、会话 ID 或 transcript 路径恢复，在会话内用 `/resume` 切换。
 
-上下文改写有两种：清理较早的工具结果，和 compaction（压缩）。运行 `/compact` 时，较早的对话被压成摘要；项目根目录的 `CLAUDE.md` 会在压缩后由 Claude Code 从磁盘重新读取并注入。启用 auto memory 后，会话开始时载入 `MEMORY.md` 的索引部分，之后按需用标准文件工具读取相关主题文件。
+上下文改写有两种：清理较早的工具结果，和 compaction (压缩)。运行 `/compact` 时，较早的对话被压成摘要；项目根目录的 `CLAUDE.md` 会在压缩后由 Claude Code 从磁盘重新读取并注入。启用 auto memory 后，会话开始时载入 `MEMORY.md` 的索引部分，之后按需用标准文件工具读取相关主题文件。
 
 在 API 一侧：
 

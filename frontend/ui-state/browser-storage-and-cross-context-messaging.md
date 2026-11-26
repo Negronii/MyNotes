@@ -42,7 +42,7 @@ Web Storage (网页存储) 指 `localStorage` 和 `sessionStorage`。两者接�
 
 `sessionStorage` 再按顶层浏览上下文隔离。同一标签页里导航到另一个来源，新来源读写自己的存储区；回到原来源或重载后，原来的值还在。另一个标签页则有自己独立的一份。关闭标签页通常结束这份会话存储；浏览器恢复已关闭的标签页时是否连同值一起恢复，取决于用户代理，所以它不能保存需要跨会话保留的数据。用带 `opener` 的方式打开同源新窗口时，新窗口一开始可能拿到一份 `sessionStorage` 副本，之后两边各改各的，这只是初始复制，不是持续共享。
 
-规范建议每个存储端点（`localStorage`、`sessionStorage` 各算一个）配额 5 MiB；这只是建议值，浏览器策略仍可能让读取不可用或写入失败。`navigator.storage.estimate()` 返回的是整个 local storage shelf（本地存储架）的近似用量和配额，不是 `localStorage` 还剩多少空间。
+规范建议每个存储端点（`localStorage`、`sessionStorage` 各算一个）配额 5 MiB；这只是建议值，浏览器策略仍可能让读取不可用或写入失败。`navigator.storage.estimate()` 返回的是整个 local storage shelf (本地存储架)的近似用量和配额，不是 `localStorage` 还剩多少空间。
 
 ### 读写会失败
 
@@ -159,14 +159,9 @@ Web Storage 有两个真实的异常分支：
 
 Web Storage 里的内容，当前页面上任何脚本都能读。页面一旦出现 cross-site scripting (跨站脚本攻击，XSS)，存在那里的 bearer token (持有者令牌) 也可能被读走。服务端设置的 `HttpOnly` Cookie 不向页面脚本开放，这是会话标识通常放在 Cookie 里的原因。代价是浏览器会按规则自动附带它，于是服务端必须防护 Cross-Site Request Forgery (跨站请求伪造，CSRF)。
 
-浏览器决定是否附带 Cookie，看的是这几个属性：
+浏览器是否附带 Cookie，由 host-only 或 `Domain`、`Path`、`Secure`、`SameSite` 决定（Cookie 不按端口隔离），`HttpOnly` 让脚本读不到它；会话 Cookie 该怎样设这些属性、怎样换 ID 和超时，以[服务端会话 Cookie 怎样设计](../../engineering-foundations/services/sessions-and-browser-boundaries.md#服务端会话%20Cookie%20怎样设计)为准，CSRF 与 SameSite 的局限见同章[Cookie 自动发送时，怎样防止伪造变更？](../../engineering-foundations/services/sessions-and-browser-boundaries.md#Cookie%20自动发送时，怎样防止伪造变更？)。
 
-- **host-only 或 `Domain`、`Path`：** 决定哪些主机名和路径能收到它。Cookie 不按端口隔离，同一主机不同端口的服务会收到同一份 Cookie。
-- **`Secure`：** 只在安全连接上发送。
-- **`SameSite`：** 控制跨站请求是否附带；当前 IETF Cookie 文稿要求 `SameSite=None` 必须同时带 `Secure`。
-- **`HttpOnly`：** 不让脚本通过 `document.cookie` 读到。
-
-换一个存储位置本身不完成认证或授权。Cookie、XSS 和 CSRF 的服务端防护见[Web 安全与认证](../../engineering-foundations/services/per-request-authorization.md)。
+换一个存储位置本身不完成认证或授权：每次读写仍要由服务端逐次授权，见[服务怎样逐次确认这个主体能对这份资源做这个动作？](../../engineering-foundations/services/per-request-authorization.md)。
 
 ## 收到通知后，向权威核实
 
@@ -598,7 +593,7 @@ worker 方案和上一节的 `BroadcastChannel` 是二选一的传输方式：�
 | Fetch 响应流 | 响应体是 `ReadableStream`，请求方法、请求头和正文可自定义 | 应用自己读字节、组帧、取消、重试和续读 |
 | WebSocket | 握手后双向发送消息 | 应用协议定义重连、事件 ID、确认、去重和补发 |
 
-WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标签页互相提醒的默认方案。它的握手与 Fetch 流程集成，却使用 WebSocket 专有的握手模式，不是普通 Fetch 的 Cross-Origin Resource Sharing (跨来源资源共享，CORS) 授权。服务端可以用握手请求的 `Origin` 限制浏览器来源，但非浏览器客户端能伪造这个头，所以它不是身份认证；仍要验证用户身份、逐条检查操作权限，并规定断线重放、确认与去重。通道选型的完整比较见[何时选择轮询、SSE、流式 Fetch 或 WebSocket](../../engineering-foundations/services/real-time-channels-and-resume.md)。
+WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标签页互相提醒的默认方案。它的握手不走普通 Fetch 的 Cross-Origin Resource Sharing (跨来源资源共享，CORS) 授权，`Origin` 检查也不是身份认证；握手与逐条授权、重放与限流见[WebSocket 怎样建立连接并持续授权](../../engineering-foundations/services/real-time-channels-and-resume.md#WebSocket%20怎样建立连接并持续授权)。三种通道的完整选型以[按方向、请求形状和恢复责任选通道](../../engineering-foundations/services/real-time-channels-and-resume.md#按方向、请求形状和恢复责任选通道)为准，上表只是页面侧的摘要。
 
 ## 下一步：推送事件怎样接上快照
 
@@ -610,7 +605,6 @@ WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标�
 > - 用户代理可限制第三方文档访问 `localStorage`；Chrome 115+ 按顶层站点分区第三方存储，WebKit 按第一方网站分区第三方 `localStorage` 与 IndexedDB（同上节）：[WHATWG HTML Standard §12.3.1](https://html.spec.whatwg.org/multipage/webstorage.html#user-tracking)、[Chrome Storage Partitioning](https://privacysandbox.google.com/cookies/storage-partitioning)、[WebKit Tracking Prevention](https://webkit.org/tracking-prevention/#partitioned-third-party-storage)，2026-11-12 核对。
 > - IndexedDB `readwrite` 事务的作用域、原子提交与失败回滚（“setItem 不是跨标签页的锁”）：[Indexed Database API 3.0 §2.7.1](https://www.w3.org/TR/2026/WD-IndexedDB-3-20261030/)，W3C Working Draft 2026-10-30；2026-11-12 核对。
 > - Cookie 的 host-only/`Domain`、`Path`、`Secure`、`HttpOnly` 与发送规则，§8.5 说明 Cookie 不按端口隔离（“登录会话为什么不放 Web Storage？”）：[RFC 6265 §§4.1.2.3–4.1.2.6、5.1.3–5.1.4、5.3–5.4、8.5](https://www.rfc-editor.org/rfc/rfc6265.html)，2011-04。
-> - `SameSite=None` 须同时带 `Secure`（同上节）：[draft-ietf-httpbis-rfc6265bis-22 §§4.1.2.7、5.7](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-22)；2026-11-12 核对时 Datatracker 仍标记 RFC Editor “Final Approval Pending”，因此按文稿表述。
 > - `BroadcastChannel` 的接收条件（存储键、频道名、活动上下文）、发送方排除、消息任务与序列化错误；跨窗口 `postMessage` 的目标来源比较、丢弃规则与安全校验；`MessagePort` 的事件与关闭（“BroadcastChannel”“跨源窗口”“SharedWorker”各节）：[WHATWG HTML Standard，Web Messaging §§9.3、9.4.4、9.5](https://html.spec.whatwg.org/multipage/web-messaging.html)，Living Standard 更新于 2026-11-12；2026-11-12 核对。
 > - 结构化克隆副本与 `DataCloneError`（“序列化失败与并发的快照请求”）：[WHATWG HTML Standard，Structured data §2.7](https://html.spec.whatwg.org/multipage/structured-data.html)，2026-11-12 核对。
 > - SharedWorker 连接、复用条件与 worker 生命周期（“SharedWorker”）：[WHATWG HTML Standard，Web Workers §§10.1.3.3、10.2.3、10.2.6.4](https://html.spec.whatwg.org/multipage/workers.html)，Living Standard 更新于 2026-11-12；2026-11-12 核对。

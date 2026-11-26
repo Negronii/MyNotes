@@ -8,7 +8,7 @@
 
 ## 紧急更新与可延后的更新
 
-用户打字时，输入框必须立刻显示新字符，这是 urgent update（紧急更新）。结果列表晚一点更新，用户能接受。React 能把这两类工作分开：先提交紧急的部分，再在后台计算可延后的部分；后台 render 进行中若有新的紧急更新到来，React 可以放弃这轮计算，按最新输入重来。
+用户打字时，输入框必须立刻显示新字符，这是 urgent update (紧急更新)。结果列表晚一点更新，用户能接受。React 能把这两类工作分开：先提交紧急的部分，再在后台计算可延后的部分；后台 render 进行中若有新的紧急更新到来，React 可以放弃这轮计算，按最新输入重来。
 
 React 能中断的只是组件和组件之间的 render 工作。一个组件内部的 `reports.filter(...)` 是一段同步 JavaScript，运行到结束前主线程不能处理新输入，React 也插不进去。
 
@@ -78,23 +78,23 @@ React 能中断的只是组件和组件之间的 render 工作。一个组件内
 
 ## memo 边界决定能否跳过旧列表
 
-第 2 步能跳过 `ReportResults`，靠的是 `memo`（记忆化组件）：它按浅比较检查 props，`reports` 和 `query` 都没变就跳过这次 render。没有这道边界，紧急 render 会用旧的 `deferredQuery` 把整个列表重算一遍，输入照样变慢。
+第 2 步能跳过 `ReportResults`，靠的是 `memo` (记忆化组件)：它按浅比较检查 props，`reports` 和 `query` 都没变就跳过这次 render。没有这道边界，紧急 render 会用旧的 `deferredQuery` 把整个列表重算一遍，输入照样变慢。
 
-浅比较比的是引用。`reports` 必须在输入期间保持同一个数组、也不被原地修改；父组件若每次 render 都传一个新数组，`memo` 就会认为 props 变了。`memo` 是性能优化，不是正确性保证。项目配置了 React Compiler（React 编译器）并核对过编译结果时，编译器可能自动建立同样的跳过边界；本例显式写 `memo`，让因果关系在没有编译器时也看得见。怎样测量和建立 memo 边界，见[React 渲染慢时，先改什么？](../delivery/react-rendering-optimization.md)。
+浅比较比的是引用。`reports` 必须在输入期间保持同一个数组、也不被原地修改；父组件若每次 render 都传一个新数组，`memo` 就会认为 props 变了。`memo` 是性能优化，不是正确性保证。项目配置了 React Compiler (React 编译器)并核对过编译结果时，编译器可能自动建立同样的跳过边界；本例显式写 `memo`，让因果关系在没有编译器时也看得见。怎样测量和建立 memo 边界，见[React 渲染慢时，先改什么？](../delivery/react-rendering-optimization.md)。
 
 ## deferred 不是 debounce
 
-`useDeferredValue` 和 debounce（防抖）解决不同的问题：
+`useDeferredValue` 和 debounce (防抖)解决不同的问题：
 
 - **它不等待固定时长。** React 在紧急更新之后立即开始后台 render，有新输入就中断重来；没有“停止输入 300 ms 后再算”这回事。
 - **它不减少网络请求。** 若结果来自远端搜索，每个 `deferredQuery` 值仍可能触发一次请求；请求频率要由明确的请求策略或查询层控制，debounce 的语义见[怎样包装一个函数而不弄丢参数、this 和结果？](../javascript/wrapping-functions.md)。
-- **它不缩短同步计算。** 全量过滤本身若已是长任务，React 也无法在中途让出。这时要先缩小数据、改进算法、把工作拆成能在小块之间让出主线程的片段，或放进 Web Worker（网页工作线程），见[用户觉得慢时，怎样从指标走到证据？](../delivery/performance-metrics-and-diagnosis.md)。只有成本来自许多结果组件的 render 时，跳过旧查询的子树才有帮助。
+- **它不缩短同步计算。** 全量过滤本身若已是长任务，React 也无法在中途让出。这时要先缩小数据、改进算法、把工作拆成能在小块之间让出主线程的片段，或放进 Web Worker (网页工作线程)，见[用户觉得慢时，怎样从指标走到证据？](../delivery/performance-metrics-and-diagnosis.md)。只有成本来自许多结果组件的 render 时，跳过旧查询的子树才有帮助。
 
 ## useTransition：把一次界面切换标为非紧急
 
 第二个场景独立于搜索：搜索框为空，列表按“最早优先”显示 April、May；用户点“查看摘要”，而摘要模块的代码可能还没下载。
 
-`useTransition` 返回 `[isPending, startTransition]`。`startTransition(fn)` 会**立即同步**调用 `fn`，并把 `fn` 里排入的状态更新标为 Transition（过渡更新）。它标记的是更新的优先级，不会推迟处理器的执行。`isPending` 在这次 Transition 完成前为 `true`，可用来给出轻量的等待反馈。Transition 可被更紧急的更新打断，所以不能用它更新受控文本输入的值。
+`useTransition` 返回 `[isPending, startTransition]`。`startTransition(fn)` 会**立即同步**调用 `fn`，并把 `fn` 里排入的状态更新标为 Transition (过渡更新)。它标记的是更新的优先级，不会推迟处理器的执行。`isPending` 在这次 Transition 完成前为 `true`，可用来给出轻量的等待反馈。Transition 可被更紧急的更新打断，所以不能用它更新受控文本输入的值。
 
 ~~~tsx
 const ReportSummary = lazy(() => import("./ReportSummary.js"));
@@ -108,7 +108,7 @@ function openSummary() {
 
 ## Suspense 在等什么，等待时显示什么
 
-`<Suspense fallback={…}>` 包住一块子树。子树里的组件在 render 时发现所需资源还没就绪，就 suspend（挂起），由最近的 Suspense 边界决定等待期间显示什么。能让边界进入等待的资源有：
+`<Suspense fallback={…}>` 包住一块子树。子树里的组件在 render 时发现所需资源还没就绪，就 suspend (挂起)，由最近的 Suspense 边界决定等待期间显示什么。能让边界进入等待的资源有：
 
 - `lazy` 加载的组件代码；
 - 通过 `use(promise)` 读取的 Promise；
@@ -185,7 +185,7 @@ React 19 的 `use(promise)` 在 render 中读取 Promise：pending 时挂起，�
 
 ## 异步 Action：等待期间保持 isPending
 
-摘要显示后，用户可能要刷新摘要数据。React 19 的 `startTransition` 可以接收 async 函数，称为 Action（动作）；Action 等待期间 `isPending` 一直为 `true`。
+摘要显示后，用户可能要刷新摘要数据。React 19 的 `startTransition` 可以接收 async 函数，称为 Action (动作)；Action 等待期间 `isPending` 一直为 `true`。
 
 > [!warning] await 之后的更新要再包一次
 > React 目前不会自动把 `await` 之后排入的状态更新算进同一个 Transition。成功或失败后写状态时，要再用一次 `startTransition` 包住，否则这些更新按普通优先级处理。

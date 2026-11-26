@@ -21,9 +21,9 @@
 
 ## 处理器读到的是这一轮的状态快照
 
-React 每次调用组件，都给它一份当前状态的快照；事件处理器是在某一轮 render 里创建的函数，闭包里拿到的就是那一轮的值。setter（状态更新函数）不会原地改写这份快照，它只是向 React 排入一个更新，请求下一轮 render。所以本例的 `chooseSort` 在 `sort` 为 `"recent"` 时调用 `setSort("oldest")`，这个处理器接下来读到的 `sort` 还是 `"recent"`。
+React 每次调用组件，都给它一份当前状态的快照；事件处理器是在某一轮 render 里创建的函数，闭包里拿到的就是那一轮的值。setter (状态更新函数)不会原地改写这份快照，它只是向 React 排入一个更新，请求下一轮 render。所以本例的 `chooseSort` 在 `sort` 为 `"recent"` 时调用 `setSort("oldest")`，这个处理器接下来读到的 `sort` 还是 `"recent"`。
 
-同一个处理器连续调用两次 `setCount(count + 1)`，两次都基于快照里的 `0` 排入 `1`，结果是 `1`。要让每一步基于队列里上一步的结果，就传 updater（更新函数）：
+同一个处理器连续调用两次 `setCount(count + 1)`，两次都基于快照里的 `0` 排入 `1`，结果是 `1`。要让每一步基于队列里上一步的结果，就传 updater (更新函数)：
 
 ~~~tsx
 const [count, setCount] = useState(0);
@@ -49,7 +49,7 @@ React 用 `Object.is` 比较新旧状态。传给 setter 的值与当前状态�
 
 **render** 是计算。React 调用组件，把当前 props 和 state 变成 JSX 元素描述。JSX 是描述元素的语法，构建工具把它编译成 `react/jsx-runtime` 的调用（旧的经典转换编译成 `React.createElement`），转换方式不影响本章的阶段划分。并发特性下，一次尚未提交的 render 可能被暂停、重来或整个放弃，所以 render 必须是纯计算：不发请求，不写 URL，不改已有对象，也不手动改 React 管理的 DOM。
 
-render 时 React 还要做 reconciliation（协调）：把新描述和上一次的描述逐个对应起来，算出哪些宿主节点要新建、移动、更新或删除。对应规则由树中位置、元素类型和 `key` 决定，见下一节。
+render 时 React 还要做 reconciliation (协调)：把新描述和上一次的描述逐个对应起来，算出哪些宿主节点要新建、移动、更新或删除。对应规则由树中位置、元素类型和 `key` 决定，见下一节。
 
 **commit** 是写入。React 把协调出的必要改动应用到宿主树（浏览器里就是 DOM）。一个 setter 不等于一次 DOM 修改：新旧描述相同，React 就不改 DOM；本例排序改变，React 移动两行并更新按钮属性。
 
@@ -57,7 +57,7 @@ render 时 React 还要做 reconciliation（协调）：把新描述和上一次
 
 ### 批处理：同一批更新只走一轮
 
-React 把同一批的多个状态更新合起来处理，只做一轮 render 和 commit，这叫 batching（批处理）。本例点击处理器同时排入 `sort` 和 `requestId`，React 不会先提交一个只改了排序的半成品，再提交一个只改了编号的版本。批处理不改变当前处理器的快照，也不意味着每次 commit 都单独绘制一帧。
+React 把同一批的多个状态更新合起来处理，只做一轮 render 和 commit，这叫 batching (批处理)。本例点击处理器同时排入 `sort` 和 `requestId`，React 不会先提交一个只改了排序的半成品，再提交一个只改了编号的版本。批处理不改变当前处理器的快照，也不意味着每次 commit 都单独绘制一帧。
 
 > [!info] 版本差异：批处理的范围
 > React 18 起，用 `createRoot` 创建的根会自动批处理所有更新，包括 Promise 回调、定时器和原生事件处理器里的更新。React 18 中仍用旧 `ReactDOM.render` 创建的根只在 React 事件处理器内批处理，换成 `createRoot` 才启用新行为。React 19 已移除 `ReactDOM.render`。
@@ -151,7 +151,7 @@ function ReportsPage({
 
 ### Effect 的生命周期
 
-Effect 由“组件现在需要和外部系统保持一致”触发，而不是由某次点击触发。React 在 commit 之后运行它的 setup（建立）；依赖变化时，先用旧闭包运行上一次返回的 cleanup（清理），再用新值运行新的 setup；组件卸载时运行最后一次 cleanup。依赖数组要列出 setup 实际读取的所有响应式值，React 用 `Object.is` 逐个比较。
+Effect 由“组件现在需要和外部系统保持一致”触发，而不是由某次点击触发。React 在 commit 之后运行它的 setup (建立)；依赖变化时，先用旧闭包运行上一次返回的 cleanup (清理)，再用新值运行新的 setup；组件卸载时运行最后一次 cleanup。依赖数组要列出 setup 实际读取的所有响应式值，React 用 `Object.is` 逐个比较。
 
 本例依赖 `sort`、`requestId` 和 `fetchReports`。`fetchReports` 在依赖里，所以路由要传入一个稳定的函数；若父组件每轮 render 都新建这个函数，Effect 会把它当作依赖变化而重新请求。`fetchReports` 内部若读取原始 JSON，应先在数据边界校验形状，而不是只靠 TypeScript 类型断言，见[TypeScript 能保证什么，外部数据又该怎样验证？](../javascript/typescript-guarantees-and-runtime-validation.md)。
 
@@ -258,7 +258,7 @@ cleanup 守卫的含义是“React 清理这个 Effect 后，不再采用它的�
 
 ## StrictMode 在开发环境里故意多调用一次
 
-根组件包在 `StrictMode`（严格模式）里时，React 在开发环境做两类额外调用，用来暴露不纯的代码：
+根组件包在 `StrictMode` (严格模式)里时，React 在开发环境做两类额外调用，用来暴露不纯的代码：
 
 - **组件函数、`useState` 初始化函数和 updater 各多调用一次**，结果丢弃其中一次。render 若有副作用（例如改了外部对象），重复调用会让问题显形。
 - **每个 Effect 在首次挂载时多走一遍 setup → cleanup**，再正式 setup。cleanup 若没能撤销 setup 的工作（例如没退订、没清计时器），这一步会暴露出来。
@@ -278,7 +278,7 @@ React 要求不要在 render 中读写 ref，原因就在 render 和 commit 的�
 
 ## 类组件的生命周期对照
 
-维护旧代码时会遇到 class component（类组件）。它的 `render()` 同样必须是纯计算。`componentDidMount` 和 `componentDidUpdate` 在 DOM 提交后运行，可用来同步外部系统；`componentWillUnmount` 负责清理；需要在 DOM 更新前读取布局快照（例如滚动位置）时用 `getSnapshotBeforeUpdate`，它的返回值作为第三个参数交给 `componentDidUpdate`。这些方法帮助判断代码处在哪个阶段，但不与函数组件的 Effect 一一对应：一个 Effect 把建立和清理写在一起，按依赖变化成对运行，而类组件要把同一件事拆到挂载、更新、卸载三个方法里自己对齐。React 仍支持类组件，新组件通常写成函数组件。错误边界目前仍只能用类组件实现，见[错误发生在哪里，决定了谁能接住它？](./react-error-boundaries.md)。
+维护旧代码时会遇到 class component (类组件)。它的 `render()` 同样必须是纯计算。`componentDidMount` 和 `componentDidUpdate` 在 DOM 提交后运行，可用来同步外部系统；`componentWillUnmount` 负责清理；需要在 DOM 更新前读取布局快照（例如滚动位置）时用 `getSnapshotBeforeUpdate`，它的返回值作为第三个参数交给 `componentDidUpdate`。这些方法帮助判断代码处在哪个阶段，但不与函数组件的 Effect 一一对应：一个 Effect 把建立和清理写在一起，按依赖变化成对运行，而类组件要把同一件事拆到挂载、更新、卸载三个方法里自己对齐。React 仍支持类组件，新组件通常写成函数组件。错误边界目前仍只能用类组件实现，见[错误发生在哪里，决定了谁能接住它？](./react-error-boundaries.md)。
 
 ## sort 之外的状态该放在哪？
 

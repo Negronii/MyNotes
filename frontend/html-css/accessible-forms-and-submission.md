@@ -38,7 +38,7 @@
 
 ### placeholder 只是样例，不是名字
 
-有人想用 `placeholder`（占位提示）省掉标签，但它们作用不同。`placeholder` 只在控件没有值时显示一个简短样例，例如给后文的通知邮箱字段加 `placeholder="name@example.com"`。它不是字段值：提交时不会代替用户输入，也不能满足 `required`。用户一开始输入它就消失，所以 `Notification email` 这个可见标签和持续显示的帮助文字仍要保留。
+有人想用 `placeholder` (占位提示)省掉标签，但它们作用不同。`placeholder` 只在控件没有值时显示一个简短样例，例如给后文的通知邮箱字段加 `placeholder="name@example.com"`。它不是字段值：提交时不会代替用户输入，也不能满足 `required`。用户一开始输入它就消失，所以 `Notification email` 这个可见标签和持续显示的帮助文字仍要保留。
 
 CSS 的 `::placeholder` 伪元素只选中提示文字本身：
 
@@ -57,7 +57,7 @@ CSS 的 `::placeholder` 伪元素只选中提示文字本身：
 
 1. 按 Tab，焦点按源码顺序依次经过起始月份、地区、两个复选框和提交按钮。隐藏字段 `sort` 不可见也不可聚焦。焦点为什么跟随源码顺序，见[焦点顺序跟随源码](./semantic-structure-and-accessibility.md#焦点顺序跟随源码)。
 2. 起始月份保留预设值 `2026-04`。月份控件内部可能有年、月等多个键盘停靠点；用户继续按 Tab 离开它。
-3. 到达“地区”。它是单选的 `<select>`，名称来自关联标签 `Region`，当前选项是 `All regions`。按 HTML Accessibility API Mappings（HTML 到无障碍 API 的映射规范），未设 `multiple`、显示大小为 1 的 `<select>` 映射为 `combobox` (组合框) 角色。用户不改，按 Tab 离开。
+3. 到达“地区”。它是单选的 `<select>`，名称来自关联标签 `Region`，当前选项是 `All regions`。按 HTML Accessibility API Mappings (HTML 到无障碍 API 的映射规范)，未设 `multiple`、显示大小为 1 的 `<select>` 映射为 `combobox` (组合框) 角色。用户不改，按 Tab 离开。
 4. 到达 `Open` 复选框。它以原生 checkbox 角色报告名称 `Open` 和“未选中”状态；按空格键切换为已选中。再按 Tab 到 `Closed`，同样按空格键选中。
 5. 按 Tab 到 `Filter reports` 按钮，按空格键或 Enter 激活，提交表单。
 

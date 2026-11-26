@@ -8,14 +8,14 @@
 
 问题是：打开说明面板这个动作和报表数据无关，为什么录制里看到整张列表的行组件都重新执行了？
 
-先回顾一句 React 的更新模型：render（渲染）是 React 调用组件函数，算出下一份界面描述；commit（提交）才把必要的变化写进 DOM。组件运行了，DOM 不一定变；DOM 变了，浏览器还要做样式、布局和绘制。所以“行组件重新执行”是成本，但未必是用户等待的主要部分，要先测。
+先回顾一句 React 的更新模型：render (渲染)是 React 调用组件函数，算出下一份界面描述；commit (提交)才把必要的变化写进 DOM。组件运行了，DOM 不一定变；DOM 变了，浏览器还要做样式、布局和绘制。所以“行组件重新执行”是成本，但未必是用户等待的主要部分，要先测。
 
 ## 先用浏览器 Performance 定位，什么时候再开 React Profiler？
 
 ![React 工作与浏览器呈现的诊断路径](resources/react-rendering-triage.svg)
 
 1. **在浏览器里录基线。** 用同一 URL、同一组报表、同一交互和目标设备，在 Chrome DevTools 的 Performance 面板录一次。Interactions 轨道定位“显示说明”这次点击及其三段延迟；Main 轨道显示时间花在事件处理、React 工作、commit 与 Effect，还是样式、布局和绘制。
-2. **React 子树的 render 占主导时，再开 Profiler。** React Developer Tools（React 开发者工具）的 Profiler（性能分析器）面板能看出这次提交里哪些组件参与了 render。代码里的 `<Profiler>` API 可以给指定子树记录 `phase`、`actualDuration` 和 `baseDuration`：
+2. **React 子树的 render 占主导时，再开 Profiler。** React Developer Tools (React 开发者工具)的 Profiler (性能分析器)面板能看出这次提交里哪些组件参与了 render。代码里的 `<Profiler>` API 可以给指定子树记录 `phase`、`actualDuration` 和 `baseDuration`：
    - `actualDuration`：这次已提交的更新中，该子树实际花在 render 上的时间。
    - `baseDuration`：按各组件最近一次耗时估算、完全不跳过时整棵子树的成本。两者差距大，说明跳过已经生效。
 3. **注意测量本身的条件。** Profiler 有额外开销；普通生产构建不记录 `<Profiler>` 计时，要测接近线上的代码，需改用 React 提供的 profiling 构建。开发构建的耗时也不能当成生产时延。
@@ -31,7 +31,7 @@ render 次数或控制台日志只能提示“谁可能运行过”，不能单�
 - **其余 Effect。** 普通 `useEffect` 通常在绘制后运行；但由点击这类交互引起时，React 也可能在绘制前运行它。
 - **浏览器的样式、布局和绘制。** 阶段边界见[用户觉得慢时，怎样从指标走到证据？](performance-metrics-and-diagnosis.md)，读写几何值引起的同步布局见[DOM 改动后浏览器重做了什么，读几何值为什么会卡住脚本？](../browser/rendering-pipeline-and-forced-layout.md)。
 
-React Performance tracks（React 性能轨道）把 React 的工作直接画在浏览器 Performance 时间线上，分出 render、commit（含 layout Effect）和其余 Effect，便于和 Main 轨道对齐。这些轨道只在开发构建和 profiling 构建中出现，也有额外开销。
+React Performance tracks (React 性能轨道)把 React 的工作直接画在浏览器 Performance 时间线上，分出 render、commit（含 layout Effect）和其余 Effect，便于和 Main 轨道对齐。这些轨道只在开发构建和 profiling 构建中出现，也有额外开销。
 
 ## 第一选择：把状态移进用它的组件
 
@@ -140,7 +140,7 @@ function HelpPanel() {
 
 - **`useMemo` 管计算。** 首次 render 照常筛选；之后只有 `reports` 或 `query` 按 `Object.is` 比较发生变化，才重跑 `filterReports`，否则返回上次的 `visible`。
 - **`useCallback` 管函数身份。** 依赖不变时返回同一个函数引用，不会替你执行函数。这里依赖可以为空，是因为回调只调用 updater 形式的 `setReports`，不读取某一轮的 `reports` 快照。
-- **`memo` 管跳过子组件。** `memo(ReportRow)` 默认对每个 prop（属性）用 `Object.is` 比较；`report` 和 `onToggle` 都与上次相同，就跳过这一行的组件函数。
+- **`memo` 管跳过子组件。** `memo(ReportRow)` 默认对每个 prop (属性)用 `Object.is` 比较；`report` 和 `onToggle` 都与上次相同，就跳过这一行的组件函数。
 
 下表每一行都从同一起点独立重放（两行都挂载），不是连续操作：
 
@@ -169,15 +169,15 @@ function HelpPanel() {
 
 两个相邻的选择也会改变工作量：
 
-- **隐藏还是卸载说明面板。** 用 CSS 隐藏，组件留在 React 树中，state 和 Effect 都还在；条件移除会卸载组件并运行 cleanup（清理），再次显示时创建新实例。按交互和生命周期需求选，不只看性能。
-- **Fragment（片段）** 能省掉纯包装用的 DOM 节点，但有没有性能收益仍要测。
+- **隐藏还是卸载说明面板。** 用 CSS 隐藏，组件留在 React 树中，state 和 Effect 都还在；条件移除会卸载组件并运行 cleanup (清理)，再次显示时创建新实例。按交互和生命周期需求选，不只看性能。
+- **Fragment (片段)** 能省掉纯包装用的 DOM 节点，但有没有性能收益仍要测。
 
 ## 实例：React Compiler 怎样改变手工 memo 的默认做法？
 
 > [!info] 版本
 > React Compiler v1.0（2025-10-07 稳定）；React 官方文档版本 19.3（npm `v19.3.0`，2026-09-09）。核对于 2026-11-12。
 
-React Compiler（React 编译器）是可选的构建期优化。项目要在构建链里配置它，具体文件和组件还要被编译器识别。启用后，它在组件和 Hook 内自动记忆化可复用的子树和计算；上例“打开说明面板”那一行，Compiler 生效时也可能自动建立等价的缓存。新代码通常不必先手写 `memo`、`useMemo`、`useCallback`。
+React Compiler (React 编译器)是可选的构建期优化。项目要在构建链里配置它，具体文件和组件还要被编译器识别。启用后，它在组件和 Hook 内自动记忆化可复用的子树和计算；上例“打开说明面板”那一行，Compiler 生效时也可能自动建立等价的缓存。新代码通常不必先手写 `memo`、`useMemo`、`useCallback`。
 
 它有几条边界：
 

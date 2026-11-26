@@ -6,7 +6,7 @@
 
 ## 回收看的是从根能否到达
 
-ECMAScript 不规定垃圾回收算法，也不承诺一个不可达对象何时被回收。理解保留问题，用 tracing GC（追踪式垃圾回收）作模型就够了：从 GC root（垃圾回收根）出发，例如全局对象和正在执行的函数里的变量，沿强引用标记能到达的对象；标记不到的对象才具备回收条件。
+ECMAScript 不规定垃圾回收算法，也不承诺一个不可达对象何时被回收。理解保留问题，用 tracing GC (追踪式垃圾回收)作模型就够了：从 GC root (垃圾回收根)出发，例如全局对象和正在执行的函数里的变量，沿强引用标记能到达的对象；标记不到的对象才具备回收条件。
 
 这个模型有两个直接推论：
 
@@ -68,20 +68,20 @@ releaseReport = null;
 
 ## 怎样用堆快照找到保留者？
 
-怀疑“打开再关闭报表会留下对象”时，用两份 heap snapshot（堆快照）对比：
+怀疑“打开再关闭报表会留下对象”时，用两份 heap snapshot (堆快照)对比：
 
 1. 打开报表，切到固定的筛选条件，正常关闭。等页面回到关闭且稳定的状态，取第一份快照作基线。
 2. 按完全相同的顺序重复“打开、切筛选、关闭”数次，再回到同样的关闭状态，取第二份快照。
 3. 两份快照处于相同的页面和应用状态，第二份里新增的对象才算残留候选。
 
 > [!info] 实例：Chrome DevTools 与 Node.js 的快照工具
-> Chrome DevTools 的 Memory 面板在取快照前会先执行一次 GC。在 Comparison（比较）视图里展开新增的对象，看属性 `id` 是否为 `"r-104"`，也可以从名字有辨识度的 `onResize` 回调查起。选中对象后看 Retainers（保留者）面板和到根的路径：本例应沿监听器列表、闭包捕获的 `rows`，或调用方仍持有的清理函数找到所有者。控制台输出和断点会暂时保留对象，取快照前要清空控制台、停用断点。
+> Chrome DevTools 的 Memory 面板在取快照前会先执行一次 GC。在 Comparison (比较)视图里展开新增的对象，看属性 `id` 是否为 `"r-104"`，也可以从名字有辨识度的 `onResize` 回调查起。选中对象后看 Retainers (保留者)面板和到根的路径：本例应沿监听器列表、闭包捕获的 `rows`，或调用方仍持有的清理函数找到所有者。控制台输出和断点会暂时保留对象，取快照前要清空控制台、停用断点。
 >
 > Node.js 服务可以用 `v8.writeHeapSnapshot()` 生成 V8 堆快照。它会同步阻塞事件循环，采集时大约需要堆大小两倍的内存，在线上实例使用前要评估余量。这些工具属于运行时，不是 ECMAScript 语义。
 
 ## WeakMap：按对象身份附加数据，但不拥有键
 
-报表界面要给某一行附加“已选中”这样的状态，又不想因为这份附加数据让行对象一直留在内存里。`WeakMap`（弱映射）就是为这个场景设计的：条目按键的身份查找，而这条关联本身不会让键继续存活。
+报表界面要给某一行附加“已选中”这样的状态，又不想因为这份附加数据让行对象一直留在内存里。`WeakMap` (弱映射)就是为这个场景设计的：条目按键的身份查找，而这条关联本身不会让键继续存活。
 
 再沿用[JavaScript 的值有哪些类型，“相等”又有几种？](./values-types-and-equality.md)里的 `retry`：重试请求返回的同一行，业务 id 也是 `r-104`、金额 120，但它是另一个对象。
 
@@ -109,7 +109,7 @@ console.log(rowMetadata.has(retry));              // false：业务 id 相同，
 
 ## 哪些值能作弱键？
 
-对象是最常见的弱键。从 ECMAScript 2023 起，非注册的 `Symbol`（符号）也可以作弱键；用 `Symbol.for` 得到的注册 `Symbol` 不行。
+对象是最常见的弱键。从 ECMAScript 2023 起，非注册的 `Symbol` (符号)也可以作弱键；用 `Symbol.for` 得到的注册 `Symbol` 不行。
 
 区别在于身份能否被重新取得。每次调用 `Symbol("row metadata")` 都创建一个新符号，描述相同也是不同的身份；而 `Symbol.for("shared")` 总是从全局注册表取回同一个符号，它永远可以被重新拿到，弱持有它没有意义。
 
@@ -130,7 +130,7 @@ try {
 
 ## WeakSet：只标记成员身份
 
-`WeakSet`（弱集合）按身份弱持有对象或非注册 `Symbol`，只有 `add`、`has`、`delete`，没有遍历和 `size`。它适合标记“别处拥有的这个对象已经处理过”：
+`WeakSet` (弱集合)按身份弱持有对象或非注册 `Symbol`，只有 `add`、`has`、`delete`，没有遍历和 `size`。它适合标记“别处拥有的这个对象已经处理过”：
 
 ```javascript
 const processedRows = new WeakSet();
@@ -150,7 +150,7 @@ console.log(processedRows.has(retry)); // false：仍按对象身份区分
 
 ## WeakRef.deref 拿到的目标能活多久？
 
-`WeakMap` 和 `WeakSet` 只能拿已有的键去查。`WeakRef`（弱引用）直接持有一个对目标的弱引用，目标可以是对象或非注册 `Symbol`。`deref()` 在目标还存活时返回它，否则返回 `undefined`。
+`WeakMap` 和 `WeakSet` 只能拿已有的键去查。`WeakRef` (弱引用)直接持有一个对目标的弱引用，目标可以是对象或非注册 `Symbol`。`deref()` 在目标还存活时返回它，否则返回 `undefined`。
 
 返回了目标以后，它还能保证存活多久？规范维护一张临时保活列表（kept objects）：构造 `WeakRef` 时和 `deref()` 返回目标时，都把目标加进这张列表。浏览器在微任务检查点结束时清空它，而不是一遇到 `await` 就清空。因此可以依赖的窗口是：**当前这段同步执行期间，目标不会被回收**。宿主也许保留得更久，但代码不能依赖。
 
@@ -188,12 +188,12 @@ readAfterRefresh(makePendingRowRef()).then(id => {
 
 ## FinalizationRegistry 能承诺什么？
 
-`FinalizationRegistry`（最终化注册表）让程序在目标被回收之后**可能**收到一次回调。`register(target, heldValue, token)` 的三个参数受到不同的对待：
+`FinalizationRegistry` (最终化注册表)让程序在目标被回收之后**可能**收到一次回调。`register(target, heldValue, token)` 的三个参数受到不同的对待：
 
 | 参数 | 注册表怎样持有 | 作用 |
 | --- | --- | --- |
 | `target` | 弱持有 | 被观察的对象或非注册 `Symbol` |
-| `heldValue`（暂存值） | 注册有效期间强持有 | 回调运行时收到的唯一参数 |
+| `heldValue` (暂存值) | 注册有效期间强持有 | 回调运行时收到的唯一参数 |
 | `token`（可选取消令牌） | 弱持有，须为对象或非注册 `Symbol` | 传给 `unregister(token)` 以提前取消 |
 
 两条约束都来自“`heldValue` 被强持有”：

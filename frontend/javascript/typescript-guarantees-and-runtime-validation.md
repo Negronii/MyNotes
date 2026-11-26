@@ -40,9 +40,9 @@ flowchart TB
 
 ## unknown 和类型谓词怎样配合检查？
 
-`unknown`（未知类型）可以接收任何值，但在缩窄到更具体的类型之前，编译器不允许读取它的属性。这正好逼着我们在第 2 步先检查再读取。
+`unknown` (未知类型)可以接收任何值，但在缩窄到更具体的类型之前，编译器不允许读取它的属性。这正好逼着我们在第 2 步先检查再读取。
 
-把检查封装成函数时，用 type predicate（类型谓词）把运行时的检查结果告诉编译器：
+把检查封装成函数时，用 type predicate (类型谓词)把运行时的检查结果告诉编译器：
 
 ```typescript
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -190,7 +190,7 @@ parseReportData("{");                                  // { ok: false, reason: "
 
 ## 实例：用 Zod 一次声明检查和类型
 
-手写检查一长，字段路径和类型判断就大量重复，而且类型声明和检查代码可能各改各的。schema（结构模式）库让我们只声明一次结构，同时得到运行时检查和静态类型。下面用 Zod 4.6.7（截至 2026-11-17 的 npm 最新版）在同一个报表入口重写：
+手写检查一长，字段路径和类型判断就大量重复，而且类型声明和检查代码可能各改各的。schema (结构模式)库让我们只声明一次结构，同时得到运行时检查和静态类型。下面用 Zod 4.6.7（截至 2026-11-17 的 npm 最新版）在同一个报表入口重写：
 
 ```typescript
 import * as z from "zod"; // zod@4.6.7
@@ -255,7 +255,7 @@ function parseReportDataWithZod(text: string): ParseResult<ReportDataFromSchema>
 
 拒不拒绝额外键、邮箱校验多严格，应按接口契约决定，而不是按库的默认值决定。
 
-同样的思路也用于服务端：Python 服务可以用 Pydantic 模型检查请求，FastAPI 还能根据路由和模型生成 OpenAPI 契约，但实际响应是否符合契约仍要另外核验，见[HTTP API 如何描述实际运行的请求与响应契约](../../engineering-foundations/services/api-contracts-errors-and-evolution.md)。
+同样的思路也用于服务端：Python 服务可以用 Pydantic 模型检查请求，FastAPI 还能根据路由和模型生成 OpenAPI 契约，但实际响应是否符合契约仍要另外核验，见[OpenAPI 描述与运行时是否一致](../../engineering-foundations/services/api-contracts-errors-and-evolution.md#OpenAPI%20描述与运行时是否一致)。
 
 ## as 和 z.infer 为什么都不算验证？
 
@@ -272,7 +272,7 @@ const b = JSON.parse(text) as z.infer<typeof ReportDataSchema>;
 
 ## 数据进入应用后，怎样让新增分支不被漏掉？
 
-通过检查的数据进入应用后，还有另一类风险：类型定义改了，使用它的代码没跟上。调用端按角色分支处理时，可以在 `default` 分支把值赋给 `never`（不可能出现的类型），这叫 exhaustiveness checking（穷尽性检查）：
+通过检查的数据进入应用后，还有另一类风险：类型定义改了，使用它的代码没跟上。调用端按角色分支处理时，可以在 `default` 分支把值赋给 `never` (不可能出现的类型)，这叫 exhaustiveness checking (穷尽性检查)：
 
 ```typescript
 function roleLabel(role: Role): string {

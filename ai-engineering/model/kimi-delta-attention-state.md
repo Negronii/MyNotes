@@ -1,8 +1,8 @@
 # Kimi Delta Attention 怎样用一张固定矩阵读写历史？
 
-标准 full attention（全注意力）为每个历史位置保存一条 key（K）和 value（V），当前 query（Q）再对所有可见位置打分、混合 value，所以缓存随历史长度增长。Kimi Delta Attention（KDA）是 Kimi Linear 架构里的一种 linear attention（线性注意力）层：每个 attention head（注意力头）只维护一张固定形状的矩阵，新词元先用 key 检查矩阵已有的关联，按误差修正它，再由 query 从修正后的矩阵读出结果。本章沿着一个词元讲清这张矩阵怎样读、写、遗忘，它为什么能并行计算，以及它记住什么、丢掉什么。读者需要的输入是 Q/K/V 和 KV 缓存的基本概念（见[模型怎样把提示词算成下一个词元？](next-token-computation.md)）。
+标准 full attention (全注意力)为每个历史位置保存一条 key（K）和 value（V），当前 query（Q）再对所有可见位置打分、混合 value，所以缓存随历史长度增长。Kimi Delta Attention（KDA）是 Kimi Linear 架构里的一种 linear attention (线性注意力)层：每个 attention head (注意力头)只维护一张固定形状的矩阵，新词元先用 key 检查矩阵已有的关联，按误差修正它，再由 query 从修正后的矩阵读出结果。本章沿着一个词元讲清这张矩阵怎样读、写、遗忘，它为什么能并行计算，以及它记住什么、丢掉什么。读者需要的输入是 Q/K/V 和 KV 缓存的基本概念（见[模型怎样把提示词算成下一个词元？](next-token-computation.md)）。
 
-“固定大小”只描述单个 KDA 头的主状态矩阵不随历史变长。Kimi Linear 是混合架构，其中的 MLA 层仍逐位置保存缓存，KDA 层也还有 short convolution（短卷积）状态，prefill（提示预填充）的分块计算还会产生临时张量；这些在“[每步成本固定，整个模型的内存也固定吗？](#每步成本固定，整个模型的内存也固定吗？)”一节一起核算。本章沿用 Kimi 论文的列向量写法。
+“固定大小”只描述单个 KDA 头的主状态矩阵不随历史变长。Kimi Linear 是混合架构，其中的 MLA 层仍逐位置保存缓存，KDA 层也还有 short convolution (短卷积)状态，prefill (提示预填充)的分块计算还会产生临时张量；这些在“[每步成本固定，整个模型的内存也固定吗？](#每步成本固定，整个模型的内存也固定吗？)”一节一起核算。本章沿用 Kimi 论文的列向量写法。
 
 ## 怎样把按位置读取换成一张矩阵？
 
@@ -13,7 +13,7 @@ o_t=\sum_{s=1}^{t}\operatorname{softmax}_{s}
 \left(\frac{q_t^\top k_s}{\sqrt{d_k}}\right)v_s .
 $$
 
-softmax（归一化指数函数）把各位置的分数变成和为 1 的权重，再用权重混合 value。每来一个新词元，就把它的 K、V 追加进缓存；旧条目留在原处，后来的 query 可以重新给每个位置打分。
+softmax (归一化指数函数)把各位置的分数变成和为 1 的权重，再用权重混合 value。每来一个新词元，就把它的 K、V 追加进缓存；旧条目留在原处，后来的 query 可以重新给每个位置打分。
 
 现在去掉 softmax，假设位置 $s$ 的权重就是点积 $q_t^\top k_s$。求和就能换个次序：
 
@@ -32,7 +32,7 @@ $$
 
 ## KDA 怎样读、写和遗忘？
 
-每个新词元仍即时算出自己的 $q_t,k_t\in\mathbb{R}^{d_k}$ 和 $v_t\in\mathbb{R}^{d_v}$，来源是当前层 hidden state（隐藏状态）$h_t$ 的学习投影。在 Kimi Linear 的 Transformers 实现里，三个投影结果先各经过一个带 SiLU 激活的短卷积，递归 kernel 再对 query 和 key 做 L2 归一化；参考 kernel 默认还给归一化后的 query 乘 $d_k^{-1/2}$，下文把这个缩放并入 $q_t$。
+每个新词元仍即时算出自己的 $q_t,k_t\in\mathbb{R}^{d_k}$ 和 $v_t\in\mathbb{R}^{d_v}$，来源是当前层 hidden state (隐藏状态)$h_t$ 的学习投影。在 Kimi Linear 的 Transformers 实现里，三个投影结果先各经过一个带 SiLU 激活的短卷积，递归 kernel 再对 query 和 key 做 L2 归一化；参考 kernel 默认还给归一化后的 query 乘 $d_k^{-1/2}$，下文把这个缩放并入 $q_t$。
 
 $S_{t-1}$ 是处理当前词元之前的状态。一个头的更新分五步：
 
@@ -48,7 +48,7 @@ $$
 
 - $\alpha_t\in[0,1]^{d_k}$ 是按 key 通道生成的保留门。$\operatorname{diag}(\alpha_t)$ 把门值放到对角线上，逐行缩放旧状态：接近 1 的通道保留较多旧关联，小的值让对应行衰减更多。
 - $\beta_t\in[0,1]$ 是当前头的写入强度。
-- 外积 $k_te_t^\top$ 把修正写回与当前 key 相关的行。如果状态已经能为 $k_t$ 给出 $v_t$，误差为零，什么也不写；这就是 delta rule（增量规则）名字的来由。
+- 外积 $k_te_t^\top$ 把修正写回与当前 key 相关的行。如果状态已经能为 $k_t$ 给出 $v_t$，误差为零，什么也不写；这就是 delta rule (增量规则)名字的来由。
 - $o_t$ 是核心的每头输出。Kimi Linear 之后还会经过 RMSNorm、数据相关的输出门和输出投影，再合并进残差流。
 
 $S_t$ 是留给下一位置的运行时状态。$h_t$、$o_t$ 都是前向激活，不是词表概率；要等最后一层经 LM head 产生 logits、再经 softmax，才得到下一词元的分布。完成这次更新后，当前的 key 和 value 不必作为一行追加到任何历史表里。
@@ -111,7 +111,7 @@ $$
 
 ## 衰减和误差写入怎样组成可并行的 DPLR 结构？
 
-逐词元 decode（增量解码）天然按顺序把 $S_{t-1}$ 更新成 $S_t$。但 prefill 有成千上万个位置，若每个都串行等上一个状态，GPU 的并行度会被浪费。能否把同一递归改写成矩阵运算，取决于状态转移的结构。
+逐词元 decode (增量解码)天然按顺序把 $S_{t-1}$ 更新成 $S_t$。但 prefill 有成千上万个位置，若每个都串行等上一个状态，GPU 的并行度会被浪费。能否把同一递归改写成矩阵运算，取决于状态转移的结构。
 
 令 $D_t=\operatorname{diag}(\alpha_t)$，把误差 $e_t=v_t-(D_tS_{t-1})^\top k_t$ 代入写入式。因为 $D_t$ 是对角矩阵，$D_t^\top=D_t$：
 
@@ -122,9 +122,9 @@ S_t &= D_tS_{t-1}+\beta_t k_t\bigl(v_t-S_{t-1}^\top D_tk_t\bigr)^\top\\
 \end{aligned}
 $$
 
-状态转移矩阵是对角衰减 $D_t$ 加一个秩一项 $-\beta_tk_t(D_tk_t)^\top$，写入项 $\beta_tk_tv_t^\top$ 也是秩一外积。这种 diagonal-plus-low-rank（对角加低秩，DPLR）结构来自逐通道门控加 delta rule 写入。
+状态转移矩阵是对角衰减 $D_t$ 加一个秩一项 $-\beta_tk_t(D_tk_t)^\top$，写入项 $\beta_tk_tv_t^\top$ 也是秩一外积。这种 diagonal-plus-low-rank (对角加低秩，DPLR)结构来自逐通道门控加 delta rule 写入。
 
-Kimi 的 chunkwise（分块）KDA 利用这一结构，把一段位置切成若干 chunk，在块内把连续的状态转移组合成满足因果约束的矩阵运算，并行求出块内各位置的输出和块末状态：
+Kimi 的 chunkwise (分块)KDA 利用这一结构，把一段位置切成若干 chunk，在块内把连续的状态转移组合成满足因果约束的矩阵运算，并行求出块内各位置的输出和块末状态：
 
 $$
 \begin{aligned}
@@ -162,7 +162,7 @@ $$
 
 但“单个 KDA 矩阵固定”不等于整个模型的内存固定：
 
-- Kimi Linear 论文采用约 3:1 的 KDA 与 Multi-Head Latent Attention（多头潜注意力，MLA）层组合。MLA 层仍按历史位置保留缓存，引用的 Transformers 参考实现把展开后的 key 和 value 逐位置写入 `past_key_values`。MLA 的缓存形状见[DeepSeek 怎样压缩长上下文的注意力状态？](deepseek-compressed-attention.md)。
+- Kimi Linear 论文采用约 3:1 的 KDA 与 Multi-Head Latent Attention (多头潜注意力，MLA)层组合。MLA 层仍按历史位置保留缓存，引用的 Transformers 参考实现把展开后的 key 和 value 逐位置写入 `past_key_values`。MLA 的缓存形状见[DeepSeek 怎样压缩长上下文的注意力状态？](deepseek-compressed-attention.md)。
 - KDA 层除了递归矩阵，还缓存短卷积的状态。
 - prefill 的分块计算需要临时工作区。
 
@@ -170,7 +170,7 @@ $$
 
 ## 门控和 NoPE 怎样理解？
 
-这里的 feature（特征）是模型学出的向量坐标方向，不是预先定义的词义类别。单个头的门控路径在 Kimi Linear 论文里可以概括为
+这里的 feature (特征)是模型学出的向量坐标方向，不是预先定义的词义类别。单个头的门控路径在 Kimi Linear 论文里可以概括为
 
 $$
 g_t^\alpha=W_\alpha^\uparrow W_\alpha^\downarrow h_t,\qquad
@@ -180,7 +180,7 @@ $$
 
 $W_\alpha^\downarrow$ 先把当前层输入 $h_t$ 投影到较窄的中间表示，$W_\alpha^\uparrow$ 再映射到每个 key 通道的门控输入。$f_\alpha$ 是该版本的衰减变换，输出逐通道的 $\alpha_t$；参考代码还把对数步长参数和偏置送入这个变换。$W_\beta^h$ 为第 $h$ 个头产生门控 logit，经 sigmoid 成为该词元的标量 $\beta_t^h$。这些 $W$ 是训练得到的参数，每步的 $\alpha_t$、$\beta_t^h$ 是随输入变化的激活。
 
-NoPE 指 No Positional Encoding（不显式加位置编码）。Kimi Linear 把 NoPE 用在混合架构的全局 MLA 层上。模型整体仍然感知顺序：KDA 按词元顺序递归更新，短卷积也读相邻位置，打乱输入顺序通常会改变递归状态。
+NoPE 指 No Positional Encoding (不显式加位置编码)。Kimi Linear 把 NoPE 用在混合架构的全局 MLA 层上。模型整体仍然感知顺序：KDA 按词元顺序递归更新，短卷积也读相邻位置，打乱输入顺序通常会改变递归状态。
 
 ### 实例：各版本的门控与层组合
 
@@ -189,7 +189,7 @@ NoPE 指 No Positional Encoding（不显式加位置编码）。Kimi Linear 把 
 | 模型资料 | 门控与层组合 | 适用范围 |
 | --- | --- | --- |
 | Kimi Linear 论文 v2 | $\alpha$ 由低秩的 $W_\alpha^\downarrow$、$W_\alpha^\uparrow$ 路径生成；约 3 层 KDA 配 1 层 MLA | 论文中的 Kimi Linear 架构 |
-| Kimi K3 技术报告 v2 | log-decay（对数衰减）下界 $g_{\min}=-5$；69 个 KDA 层与 24 个 Gated MLA 层 | K3 报告配置 |
+| Kimi K3 技术报告 v2 | log-decay (对数衰减)下界 $g_{\min}=-5$；69 个 KDA 层与 24 个 Gated MLA 层 | K3 报告配置 |
 | Kimi K3.1 Pro 模型卡与配置 | 69 个 KDA 层与 24 个 Gated DSA 层，Gated DSA 取代了 K3 的 Gated MLA；配置仍有 $\texttt{gate\_lower\_bound}=-5.0$ | 当前 Pro 发布快照，2026-11-25 核对 |
 
 K3 报告的衰减门满足 $\alpha_t=\exp(g_t)$，所以 $g_{\min}=-5$ 对应的最低保留系数约为 $e^{-5}\approx0.0067$：每一步每个通道至少保留约 0.67% 的旧状态。实际保留多少，由当前输入算出的 $\alpha_t$ 决定。
@@ -202,8 +202,8 @@ K3 报告的衰减门满足 $\alpha_t=\exp(g_t)$，所以 $g_{\min}=-5$ 对应�
 | --- | --- | --- | --- |
 | 全注意力 KV cache | 每个位置一条 K、V | 可见的历史词元位置 | 随位置数增长 |
 | KDA | 每层每头一张固定形状的 $S_t$ | 从矩阵读出与 query 匹配的关联，没有位置 ID | 矩阵本身不增长 |
-| DeepSeek-V4 预览版的 Compressed Sparse Attention（压缩稀疏注意力，CSA）与 Heavily Compressed Attention（重度压缩注意力，HCA） | 每 4 或 128 个位置一条压缩摘要，另保留局部窗口 | CSA 选摘要 ID 后读取，HCA 读全部已完成摘要 | 摘要条数随输入增长 |
-| MemOnce | 每 512 个输入词元保存一段 64 个末层 hidden states，记忆池可卸载到主机内存或 SSD（固态硬盘） | 每次新交互检索一次选中的段；各全注意力层从同一批状态分别生成自己的 K/V | 完整记忆池随历史增长；GPU 活动集受窗口和检索条数限制 |
+| DeepSeek-V4 预览版的 Compressed Sparse Attention (压缩稀疏注意力，CSA)与 Heavily Compressed Attention (重度压缩注意力，HCA) | 每 4 或 128 个位置一条压缩摘要，另保留局部窗口 | CSA 选摘要 ID 后读取，HCA 读全部已完成摘要 | 摘要条数随输入增长 |
+| MemOnce | 每 512 个输入词元保存一段 64 个末层 hidden states，记忆池可卸载到主机内存或 SSD (固态硬盘) | 每次新交互检索一次选中的段；各全注意力层从同一批状态分别生成自己的 K/V | 完整记忆池随历史增长；GPU 活动集受窗口和检索条数限制 |
 
 CSA/HCA 的公式和容量核算见[DeepSeek 怎样压缩长上下文的注意力状态？](deepseek-compressed-attention.md)。
 

@@ -1,6 +1,6 @@
 # 泛型和工具类型怎样从已有类型推出新类型？
 
-为每种数据各写一份函数，维护成本高；一律写成 `any`（任意类型），调用处又丢掉了字段信息。generic（泛型）让同一段逻辑在每次调用时保留具体类型；utility type（工具类型）则从已有类型推出新的形状，例如列表预览和局部更新。本章依次讲类型参数、`keyof` 与索引访问、泛型容器、常用工具类型、分配式条件类型，以及怎样给方法里的 `this` 提供类型。
+为每种数据各写一份函数，维护成本高；一律写成 `any` (任意类型)，调用处又丢掉了字段信息。generic (泛型)让同一段逻辑在每次调用时保留具体类型；utility type (工具类型)则从已有类型推出新的形状，例如列表预览和局部更新。本章依次讲类型参数、`keyof` 与索引访问、泛型容器、常用工具类型、分配式条件类型，以及怎样给方法里的 `this` 提供类型。
 
 本章是[TypeScript 能保证什么，外部数据又该怎样验证？](./typescript-guarantees-and-runtime-validation.md)的支线，沿用那里报表页的行类型 `ReportRow` 和行数据 r-104。这里讲的一切都只作用于编译期：不会在运行时筛选字段、验证数据，也不会替方法绑定 `this`。
 
@@ -28,9 +28,9 @@ const row: ReportRow = {
 
 ## 取一个字段时，怎样保留它的类型？
 
-type parameter（类型参数）相当于类型层面的变量：编译器可以从调用参数推断它，调用者也可以显式指定。
+type parameter (类型参数)相当于类型层面的变量：编译器可以从调用参数推断它，调用者也可以显式指定。
 
-下面的 `getProperty` 用 `T` 代表整行的类型。`keyof T` 是 `T` 所有键名组成的联合类型；`K extends keyof T` 里的 `extends` 表示 constraint（约束），要求传入的键属于这一行已有的键；indexed access type（索引访问类型）`T[K]` 再取出所选键对应的值类型。
+下面的 `getProperty` 用 `T` 代表整行的类型。`keyof T` 是 `T` 所有键名组成的联合类型；`K extends keyof T` 里的 `extends` 表示 constraint (约束)，要求传入的键属于这一行已有的键；indexed access type (索引访问类型)`T[K]` 再取出所选键对应的值类型。
 
 ```typescript
 function getProperty<T, K extends keyof T>(row: T, key: K): T[K] {
@@ -153,11 +153,11 @@ console.log(Object.keys(patch)); // ["month", "ownerEmail"]：仍是同一个运
 | 读取构造签名 | `ConstructorParameters<C>` / `InstanceType<C>` | 构造参数元组或实例类型 |
 | 解开 Promise | `Awaited<T>` | 递归解包 Promise 及符合其 `then` 约定的类型；不等待运行时值 |
 
-这些工具大多由 mapped type（映射类型）、conditional type（条件类型）和索引访问类型组合而成。其中 `Exclude`、`Extract` 依赖条件类型的一条特殊规则，下一节单独说明。
+这些工具大多由 mapped type (映射类型)、conditional type (条件类型)和索引访问类型组合而成。其中 `Exclude`、`Extract` 依赖条件类型的一条特殊规则，下一节单独说明。
 
 ## 条件类型遇到联合，为什么会逐项筛选？
 
-条件类型写作 `T extends X ? A : B`。如果 `extends` 左边是一个“裸”类型参数（没有包进数组、元组等结构），传入联合类型时，编译器把联合成员逐个代入，再把结果合成联合。这叫 distributive conditional type（分配式条件类型）。
+条件类型写作 `T extends X ? A : B`。如果 `extends` 左边是一个“裸”类型参数（没有包进数组、元组等结构），传入联合类型时，编译器把联合成员逐个代入，再把结果合成联合。这叫 distributive conditional type (分配式条件类型)。
 
 ```typescript
 type WithoutArchived<T> = T extends "archived" ? never : T;

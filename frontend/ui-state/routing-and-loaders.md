@@ -19,7 +19,7 @@ URL 的三段在这里分工明确：
 一次客户端导航从“用户点了一个指向新 URL 的控件”开始，到“新 URL 和新数据一起成为当前页面”结束。中间是三步：
 
 1. **匹配**：路由器拿目标 URL 的 pathname 对照路由表，`/reports/42` 命中 `/reports/:reportId`，得到参数 `{ reportId: "42" }`。
-2. **加载**：路由器调用该路由的 loader（数据加载函数），传入一个代表本次导航的 `Request`：`request.url` 是目标的完整 URL（含 origin、path 和 query，不含 fragment），`request.signal` 是一个会在导航被放弃时中止的 `AbortSignal`。
+2. **加载**：路由器调用该路由的 loader (数据加载函数)，传入一个代表本次导航的 `Request`：`request.url` 是目标的完整 URL（含 origin、path 和 query，不含 fragment），`request.signal` 是一个会在导航被放弃时中止的 `AbortSignal`。
 3. **提交**：loader 成功后，路由器把目标位置、loader 的返回值和匹配结果一起写成“已提交状态”，组件据此重新渲染；loader 抛错时，提交的是目标位置和这份错误。
 
 报表页的 loader 只做四件事：
@@ -32,7 +32,7 @@ URL 的三段在这里分工明确：
 这里的结构校验只证明 JSON 符合页面需要的字段，不是身份、授权或数据完整性的边界；那些仍由服务端负责。
 
 > [!info] 实例：React Router v8.5.1 的三种模式（核对于 2026-11-13）
-> React Router 是同一产品的三层接口。**Declarative Mode（声明式模式）** 只做路径匹配、`Link` 和程序化导航；**Data Mode（数据模式）** 在此之上提供 `loader`、`action`、导航等待状态和路由错误边界，用 `createBrowserRouter` 建路由器、`<RouterProvider>` 挂载；**Framework Mode（框架模式）** 再加 Route Module API、类型生成、代码拆分，以及 SPA、SSR 和静态预渲染策略，其路由模块可以有在服务端运行的 loader。本章示例是独立的 Data Mode，loader 在浏览器里运行。Next.js App Router 有自己的文件路由和服务端组件约定（见 [Next.js App Router](next-js-app-router.md)），两者的 loader、执行位置和导航 API 不能互换。v8.5.1 要求 `react` 与 `react-dom` 不低于 19.2.7。
+> React Router 是同一产品的三层接口。**Declarative Mode (声明式模式)** 只做路径匹配、`Link` 和程序化导航；**Data Mode (数据模式)** 在此之上提供 `loader`、`action`、导航等待状态和路由错误边界，用 `createBrowserRouter` 建路由器、`<RouterProvider>` 挂载；**Framework Mode (框架模式)** 再加 Route Module API、类型生成、代码拆分，以及 SPA、SSR 和静态预渲染策略，其路由模块可以有在服务端运行的 loader。本章示例是独立的 Data Mode，loader 在浏览器里运行。Next.js App Router 有自己的文件路由和服务端组件约定（见 [Next.js App Router](next-js-app-router.md)），两者的 loader、执行位置和导航 API 不能互换。v8.5.1 要求 `react` 与 `react-dom` 不低于 19.2.7。
 
 ## 已提交的导航与待定的导航
 
@@ -115,7 +115,7 @@ loader 抛出的状态数据或异常，交给最近匹配路由的 `ErrorBounda
 
 客户端导航保留当前文档，服务器不会重新发送整份 HTML。因此部署时，直接打开或刷新 `/reports/42` 必须由站点入口返回应用文档，而 `/api/reports/42/rows` 仍要交给 API，不能被同一个 HTML 回退规则吞掉。
 
-SPA（单页应用）与 MPA（多页应用）说的是页面之间怎样导航；SSR（服务端渲染）与静态预渲染说的是初始文档怎样产生。这是两个维度，可以组合。若爬虫或不执行 JavaScript 的读者需要直接看到内容，先要让初始 HTML 包含它；后续点击仍可以走客户端导航。需要共享布局、在导航间保留上下文时，客户端导航更容易做到。
+SPA (单页应用)与 MPA (多页应用)说的是页面之间怎样导航；SSR (服务端渲染)与静态预渲染说的是初始文档怎样产生。这是两个维度，可以组合。若爬虫或不执行 JavaScript 的读者需要直接看到内容，先要让初始 HTML 包含它；后续点击仍可以走客户端导航。需要共享布局、在导航间保留上下文时，客户端导航更容易做到。
 
 部署环境不能提供路径回退时，可以改用 Data Mode 的 `createHashRouter`，loader 和错误边界照旧；代价是应用路径进入 fragment，地址形式改变，`#summary` 也不能再单独作页面锚点。测试或非浏览器环境可用 `createMemoryRouter`，它以内存历史运行并保留数据路由能力。`HashRouter` 和 `MemoryRouter` 属于 Declarative Mode，直接替换会失去 loader。
 

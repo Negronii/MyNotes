@@ -16,14 +16,14 @@ scheme       host         path        query   fragment
 
 | 分量 | 本例 | 作用 |
 |---|---|---|
-| scheme（方案） | `https:` | 用什么协议取资源 |
-| host（主机） | `reports.example` | 向哪台服务器要 |
-| port（端口） | 省略，HTTPS 默认 443 | 服务器上的哪个端口 |
-| path（路径） | `/reports/42` | 要哪份资源 |
-| query（查询） | `?sort=recent` | 以什么参数看这份资源 |
-| fragment（片段） | `#summary` | 文档里的哪个位置 |
+| scheme (方案) | `https:` | 用什么协议取资源 |
+| host (主机) | `reports.example` | 向哪台服务器要 |
+| port (端口) | 省略，HTTPS 默认 443 | 服务器上的哪个端口 |
+| path (路径) | `/reports/42` | 要哪份资源 |
+| query (查询) | `?sort=recent` | 以什么参数看这份资源 |
+| fragment (片段) | `#summary` | 文档里的哪个位置 |
 
-origin（源）由 scheme、host、port 三者确定，本例是 `https://reports.example`。同源策略、存储分区、History API 能改写哪些 URL，都以 origin 为界。URL 里还可以有 username 和 password 分量，但不应使用。并非所有 URL 都有 `//主机/路径` 这种结构，例如 `mailto:reports@example.test` 就没有。
+origin (源)由 scheme、host、port 三者确定，本例是 `https://reports.example`。同源策略、存储分区、History API 能改写哪些 URL，都以 origin 为界。URL 里还可以有 username 和 password 分量，但不应使用。并非所有 URL 都有 `//主机/路径` 这种结构，例如 `mailto:reports@example.test` 就没有。
 
 三个分量的分工决定了状态该放哪里：
 

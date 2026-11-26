@@ -9,14 +9,14 @@ Promise 没有通用的取消操作。拿到一个 Promise，只能决定还等�
 | 手段 | 真正停住什么 | 停不住什么 |
 | --- | --- | --- |
 | 超时竞速（`Promise.race` 与计时器） | 调用方不再等待：先到的拒绝决定结果 | 底层工作仍可能继续，并在之后完成或产生副作用 |
-| `AbortSignal`（中止信号） | 接受并监听这个 signal 的 API 按自己的规则停止，例如 Fetch 中止请求和正文读取 | 忽略 signal 的代码、普通 Promise、同步函数；服务端已经收到并执行的写入 |
+| `AbortSignal` (中止信号) | 接受并监听这个 signal 的 API 按自己的规则停止，例如 Fetch 中止请求和正文读取 | 忽略 signal 的代码、普通 Promise、同步函数；服务端已经收到并执行的写入 |
 | 并发上限（任务池的 `limit`） | 还没启动的任务暂时不启动 | 已经启动的任务；任务内部另外发起、却没纳入返回值的工作 |
 
-`AbortSignal` 是 cooperative cancellation (协作式取消)：发出信号的一方只是请求停止，接收方要自己检查 `signal.aborted`、监听 `abort` 事件，或把 signal 继续传给支持它的 API。它也只作用在本地：请求已经到达服务器、写入已经执行，客户端中止只是不再等结果。结果不明的写入怎样对账，见[外部写入与对账](../../ai-engineering/runs/external-writes-and-reconciliation.md)。
+`AbortSignal` 是 cooperative cancellation (协作式取消)：发出信号的一方只是请求停止，接收方要自己检查 `signal.aborted`、监听 `abort` 事件，或把 signal 继续传给支持它的 API。它也只作用在本地：请求已经到达服务器、写入已经执行，客户端中止只是不再等结果。结果不明的写入怎样查清、何时能安全重试，见[写请求超时后，怎样查清结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md)；服务端进程、线程和异步 I/O 里的取消能证明什么，见[一份工作该交给进程、线程还是异步 I/O？](../../engineering-foundations/runtime/processes-threads-and-async-io.md#取消能证明什么？)。
 
 ## AbortSignal 怎样传到工作里
 
-`AbortController`（中止控制器）由拥有这项工作生命周期的一方持有，例如页面；它的 `controller.signal` 交给工作方。调用 `controller.abort(reason)` 后，`signal.aborted` 变为 `true`，`signal.reason` 记下原因（不传时是名为 `AbortError` 的 `DOMException`），并派发一次 `abort` 事件。
+`AbortController` (中止控制器)由拥有这项工作生命周期的一方持有，例如页面；它的 `controller.signal` 交给工作方。调用 `controller.abort(reason)` 后，`signal.aborted` 变为 `true`，`signal.reason` 记下原因（不传时是名为 `AbortError` 的 `DOMException`），并派发一次 `abort` 事件。
 
 Fetch 收到中止后落在哪一步，取决于它进行到哪里：`Response` 交出之前中止，Fetch Promise 以 `signal.reason` 拒绝；正文还在读取时中止，`json()` 拒绝；`json()` 已经履行后中止，不会撤回结果。完整的步骤表在[上一章“fetch 履行不等于请求成功”](./promises-and-async-functions.md#fetch%20履行不等于请求成功)。
 

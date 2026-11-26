@@ -99,19 +99,19 @@ scheme       host         path        query   fragment
 
 确定目标后，浏览器要拿到 `/reports/42?sort=recent` 的响应。它依次经过几个可能的来源，越靠前越可能省掉网络往返：
 
-1. **Service Worker（服务工作线程）。** 如果这个 URL 的作用域内有处于活动状态的 Service Worker，它的 `fetch` 事件处理器可以直接返回自己构造或缓存的响应，也可以自己去请求网络。所以页面不一定向源站重新取 HTML。
-2. **HTTP 缓存。** 缓存里若有新鲜且匹配的响应，直接复用；若响应需要验证，浏览器发条件请求，问服务器它是否仍然有效。新鲜度和验证的规则见[发布新版本时，怎样让缓存和还开着的旧页面都不出错？](../delivery/hashed-release-and-caching.md)。
+1. **Service Worker (服务工作线程)。** 如果这个 URL 的作用域内有处于活动状态的 Service Worker，它的 `fetch` 事件处理器可以直接返回自己构造或缓存的响应，也可以自己去请求网络。所以页面不一定向源站重新取 HTML。
+2. **HTTP 缓存。** 缓存里若有新鲜且匹配的响应，直接复用；若响应需要验证，浏览器发条件请求，问服务器它是否仍然有效。新鲜度和验证的规则见[一份 HTTP 响应什么时候可以直接复用，什么时候必须回源确认？](../../engineering-foundations/services/http-caching-and-conditional-requests.md)；前端静态资源怎样借用它，见[发布新版本时，怎样让缓存和还开着的旧页面都不出错？](../delivery/hashed-release-and-caching.md)。
 3. **复用已有连接。** 需要走网络时，浏览器可以复用一条适用于这次请求的活动连接，例如同一源上已经建立的 HTTP/2 连接。
-4. **DNS 与 TLS。** 只有需要新建连接、而且主机地址也没有缓存时，才查询 Domain Name System（DNS，域名系统）。HTTPS 新连接还要完成 Transport Layer Security（TLS，传输层安全协议）握手：验证服务器证书，建立加密通道，然后才发送请求。
+4. **DNS 与 TLS。** 只有需要新建连接、而且主机地址也没有缓存时，才查询 Domain Name System (DNS，域名系统)。HTTPS 新连接还要完成 Transport Layer Security (TLS，传输层安全协议)握手：验证服务器证书，建立加密通道，然后才发送请求。
 5. **重定向。** 若响应是重定向，浏览器按 `Location` 头继续导航；目标换了主机或协议时，连接也要按新目标重新确定。最终请求的地址和拿到的资源由整条重定向链决定。
 
-逐个协议的细节见[浏览器请求如何到达 HTTP 响应？](../../engineering-foundations/services/http-semantics-and-transport.md)。
+逐个协议的细节见[一次 HTTP 请求怎样从浏览器到达服务，又带回什么？](../../engineering-foundations/services/http-semantics-and-transport.md)。
 
-并非每次 URL 变化都要走这条路：`#summary` 这样的片段导航只在当前文档内定位；脚本用 History API 改地址时也不取新文档；用户后退时，浏览器还可能从 back/forward cache（前进/后退缓存）直接恢复整个旧页面，这和复用 HTTP 缓存里的响应是两回事。这些情况都在[地址变了，浏览器什么时候加载新文档？](navigation-history-and-url-state.md)里展开。
+并非每次 URL 变化都要走这条路：`#summary` 这样的片段导航只在当前文档内定位；脚本用 History API 改地址时也不取新文档；用户后退时，浏览器还可能从 back/forward cache (前进/后退缓存)直接恢复整个旧页面，这和复用 HTTP 缓存里的响应是两回事。这些情况都在[地址变了，浏览器什么时候加载新文档？](navigation-history-and-url-state.md)里展开。
 
 ## 边下载边解析：DOM 和资源发现
 
-浏览器不必等整个响应体下载完才开始工作。HTML 字节持续交给 HTML parser（HTML 解析器），解析器按到达的内容逐步建出新文档的 Document Object Model（DOM，文档对象模型），同时发现外部样式表、模块脚本和图片，让它们与解析并行下载。
+浏览器不必等整个响应体下载完才开始工作。HTML 字节持续交给 HTML parser (HTML 解析器)，解析器按到达的内容逐步建出新文档的 Document Object Model (DOM，文档对象模型)，同时发现外部样式表、模块脚本和图片，让它们与解析并行下载。
 
 解析器有时要停下来等脚本（下文说明原因）。停着的时候，浏览器还可以用预扫描器（preload scanner）往后读标记，提前发现并请求后面的资源。规范把这叫作推测式解析，是否做、怎样做由实现决定。
 
@@ -268,7 +268,7 @@ if (document.readyState === "loading") {
 | 页面可见，点“最早优先”没反应 | 先确认 `/reports.js` 已求值、处理器已注册、按钮已启用；再查主线程上的其他工作是否拖住了事件处理 |
 | 内容出现后位置跳动 | 图片和字体的尺寸与到达时机、后插入的内容 |
 
-同一个“首屏慢”可能来自服务器响应、资源发现或渲染，先沿依赖关系定位是哪一段，再决定改请求、脚本、布局还是绘制。指标和工具见[用户觉得慢时，怎样从指标走到证据？](../delivery/performance-metrics-and-diagnosis.md)。如果页面由框架在服务端渲染，客户端还要做 hydration（水合）才能接上交互，那是可交互线上额外的一段，见[Next.js App Router 怎样把服务端渲染、缓存和客户端交互分开？](../ui-state/next-js-app-router.md)。
+同一个“首屏慢”可能来自服务器响应、资源发现或渲染，先沿依赖关系定位是哪一段，再决定改请求、脚本、布局还是绘制。指标和工具见[用户觉得慢时，怎样从指标走到证据？](../delivery/performance-metrics-and-diagnosis.md)。如果页面由框架在服务端渲染，客户端还要做 hydration (水合)才能接上交互，那是可交互线上额外的一段，见[Next.js App Router 怎样把服务端渲染、缓存和客户端交互分开？](../ui-state/next-js-app-router.md)。
 
 ## 点击之后：处理器何时运行，画面何时更新
 

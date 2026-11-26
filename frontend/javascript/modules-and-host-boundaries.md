@@ -6,13 +6,13 @@
 
 ## 语言、宿主和构建器各管哪一层？
 
-ECMAScript module（ECMAScript 模块，ESM）由 ES2015 引入。它的语法只回答“依赖谁、公开哪些名字”，不规定发哪个 HTTP 请求、读哪个磁盘路径。
+ECMAScript module (ECMAScript 模块，ESM)由 ES2015 引入。它的语法只回答“依赖谁、公开哪些名字”，不规定发哪个 HTTP 请求、读哪个磁盘路径。
 
 | 层 | 决定什么 | 报表页里的例子 |
 | --- | --- | --- |
 | ESM 语法 | 导入、导出哪些名字；依赖是静态声明还是运行时请求 | `import { loadReport } from "./report-api.js"` |
 | 宿主（浏览器、Node.js） | 文件格式、说明符怎样解析成地址、怎样取回、在什么环境执行 | 浏览器用 URL 和 import map；Node.js 看扩展名和 `package.json` |
-| bundler（打包器） | 构建时怎样解析、转换、拆分和优化 | 可能保留 ESM，也可能输出 CommonJS 或普通浏览器脚本 |
+| bundler (打包器) | 构建时怎样解析、转换、拆分和优化 | 可能保留 ESM，也可能输出 CommonJS 或普通浏览器脚本 |
 
 同一行 `import` 能否成立，要先问它运行在哪个宿主、经过了哪个构建器。下面按这三层依次展开。
 
@@ -91,8 +91,8 @@ export function message() {
 
 | 步骤 | 输入与操作 | 输出 |
 | --- | --- | --- |
-| 定位入口 | HTML 解析到模块脚本，按文档 base URL（基准 URL）解析 `src`，取回 `report-page.js` | 入口模块源码 |
-| 解析并取回依赖 | 读出入口的静态 `import`：`./report-api.js` 相对导入者解析；`@reports/` 经 import map 映射。再递归处理每个依赖的静态导入。已发现的模块并行取回，但浏览器只能边取边发现，事先并不知道整张图 | `report-api.js`、`report-format.js` 的源码；跨源模块还必须通过 Cross-Origin Resource Sharing（跨源资源共享，CORS） |
+| 定位入口 | HTML 解析到模块脚本，按文档 base URL (基准 URL)解析 `src`，取回 `report-page.js` | 入口模块源码 |
+| 解析并取回依赖 | 读出入口的静态 `import`：`./report-api.js` 相对导入者解析；`@reports/` 经 import map 映射。再递归处理每个依赖的静态导入。已发现的模块并行取回，但浏览器只能边取边发现，事先并不知道整张图 | `report-api.js`、`report-format.js` 的源码；跨源模块还必须通过 Cross-Origin Resource Sharing (跨源资源共享，CORS) |
 | 链接 | 把每个导入名连到目标模块的导出绑定，检查名字是否存在 | 绑定连好；有名字对不上时，任何模块代码都不会开始执行 |
 | 求值 | 先执行依赖，再执行入口；入口的顶层 `await` 等待接口响应 | 检查通过后，入口把 `1,200` 写进 `output` |
 
@@ -102,7 +102,7 @@ export function message() {
 
 ## 三种地址各按什么基准解析？
 
-`@reports/report-format.js` 不以 `/`、`./`、`../` 开头，也不是完整 URL，属于 bare module specifier（裸模块说明符）。浏览器不会像 Node.js 那样去包目录里找它；没有 import map 提供映射，这条导入直接失败。
+`@reports/report-format.js` 不以 `/`、`./`、`../` 开头，也不是完整 URL，属于 bare module specifier (裸模块说明符)。浏览器不会像 Node.js 那样去包目录里找它；没有 import map 提供映射，这条导入直接失败。
 
 页面里有三类地址，基准各不相同：
 
@@ -114,7 +114,7 @@ Node.js 的 `fetch()` 没有文档可作基准，直接传 `"/api/reports/42"` �
 
 ## 导入拿到的是绑定还是值？
 
-导入建立的是到导出变量的 live binding（实时绑定），不是导入那一刻的拷贝。导出方后来写入的新值，导入方读得到；但导入方不能给导入名赋值。
+导入建立的是到导出变量的 live binding (实时绑定)，不是导入那一刻的拷贝。导出方后来写入的新值，导入方读得到；但导入方不能给导入名赋值。
 
 `month-state.js`：
 
@@ -139,7 +139,7 @@ console.log(JSON.stringify([before, selectedMonth])); // ["2026-04","2026-05"]
 
 `before` 是普通变量，保存了第一次读到的字符串；第二次读 `selectedMonth` 时，读的是导出方的同一个绑定，所以拿到新值。
 
-导出有两种写法。named export（命名导出）要求导入方写对名字，可以用 `as` 换成本地名；default export（默认导出）每个模块最多一个，导入方自己起名。两者可以并存：
+导出有两种写法。named export (命名导出)要求导入方写对名字，可以用 `as` 换成本地名；default export (默认导出)每个模块最多一个，导入方自己起名。两者可以并存：
 
 ```javascript
 // report-format.js
@@ -160,7 +160,7 @@ console.log(JSON.stringify([monthLabel("2026-05"), formatTotal(1200)]));
 
 ## 动态导入和顶层 await 改变了什么？
 
-静态 `import` 只能写在模块顶层，不能放进条件分支。要等用户需要时再加载，用 dynamic import（动态导入）`import()`：执行到调用处才开始加载，返回 Promise，兑现值是模块命名空间对象。
+静态 `import` 只能写在模块顶层，不能放进条件分支。要等用户需要时再加载，用 dynamic import (动态导入)`import()`：执行到调用处才开始加载，返回 Promise，兑现值是模块命名空间对象。
 
 ```javascript
 export async function loadOptionalChart(shouldOpen) {
@@ -170,9 +170,9 @@ export async function loadOptionalChart(shouldOpen) {
 }
 ```
 
-已经加载过的模块会被复用，重复调用 `import()` 不会每次重新取回和执行。浏览器经典脚本、Node.js 的 CommonJS 文件和 ESM 都能调用 `import()`，前面 `index.html` 里的经典脚本就是这样加载 `lazy-tip.js` 的。它会不会被拆成独立 chunk（代码块），由构建配置决定。
+已经加载过的模块会被复用，重复调用 `import()` 不会每次重新取回和执行。浏览器经典脚本、Node.js 的 CommonJS 文件和 ESM 都能调用 `import()`，前面 `index.html` 里的经典脚本就是这样加载 `lazy-tip.js` 的。它会不会被拆成独立 chunk (代码块)，由构建配置决定。
 
-top-level await（顶层 await）自 ES2022 起可用。报表入口在顶层等待接口响应，在无环的模块图里，导入它的模块要等它求值完毕才执行自己的模块体；与它无关的依赖分支可以继续求值。Promise 回调在事件循环中何时运行，见[事件循环怎样安排任务、微任务和渲染？](../browser/event-loop-tasks-and-rendering.md)。
+top-level await (顶层 await)自 ES2022 起可用。报表入口在顶层等待接口响应，在无环的模块图里，导入它的模块要等它求值完毕才执行自己的模块体；与它无关的依赖分支可以继续求值。Promise 回调在事件循环中何时运行，见[事件循环怎样安排任务、微任务和渲染？](../browser/event-loop-tasks-and-rendering.md)。
 
 ## ESM 和 CommonJS 在语言层面差在哪里？
 
@@ -183,13 +183,13 @@ CommonJS（简称 CJS）是 Node.js 早期采用的模块格式，靠包装函�
 | 导入与导出 | 静态 `import` / `export`；也可调用 `import()` | 运行时调用 `require()`，用 `module.exports` 导出；也可调用 `import()` |
 | 依赖何时建立 | 模块体运行前，从语法就能识别 | 执行到 `require()` 那一行才同步加载 |
 | 顶层 `this` | `undefined` | 包装函数收到的初始 `exports` 对象 |
-| strict mode（严格模式） | 自动启用 | 默认不启用，可写 `"use strict"` |
+| strict mode (严格模式) | 自动启用 | 默认不启用，可写 `"use strict"` |
 | 顶层 `await` | 支持 | 不能直接用；可以用 `import()` 加载含顶层 `await` 的 ESM |
 | 谁来解析 | 浏览器或 Node.js | Node.js 或构建工具 |
 
 在 CJS 文件里调用 `import()` 是运行时的异步加载，不会让这个文件变成 ESM。
 
-浏览器里对应的区分是 classic script（经典脚本）和 module script（模块脚本）。两者由同一个引擎执行，但脚本类型决定允许的语法和顶层名字落在哪里：经典脚本写静态 `import` 是语法错误，只能用 `import()`；模块脚本自动处于严格模式，有自己的模块作用域，顶层 `var` 不会成为 `window` 属性。所以去掉 `type="module"` 不只是换了加载方式，代码本身就可能不再合法。模块脚本还要求跨源请求通过 CORS、裸说明符经 import map 映射。
+浏览器里对应的区分是 classic script (经典脚本)和 module script (模块脚本)。两者由同一个引擎执行，但脚本类型决定允许的语法和顶层名字落在哪里：经典脚本写静态 `import` 是语法错误，只能用 `import()`；模块脚本自动处于严格模式，有自己的模块作用域，顶层 `var` 不会成为 `window` 属性。所以去掉 `type="module"` 不只是换了加载方式，代码本身就可能不再合法。模块脚本还要求跨源请求通过 CORS、裸说明符经 import map 映射。
 
 两种脚本何时取回、何时执行（`async`、`defer`、模块脚本默认延迟到解析完成后求值），见[打开一个 URL 后，页面怎样变得可见又可交互？](../browser/from-url-to-interactive-page.md)；各宿主顶层 `this` 和顶层声明落在哪里的完整对照，见[函数里的变量和 this 从哪来？](./scope-closures-and-this.md)。
 
@@ -205,7 +205,7 @@ Node.js 同时支持两种格式，先要判定一个文件按哪种执行。下
 | `.js`，最近的 `package.json` 写 `"type": "commonjs"` | CJS |
 | `.js`，没有任何显式标记 | 语法探测：含有 CJS 包装器里不成立的语法就按 ESM，否则按 CJS |
 
-syntax detection（语法探测）从 Node.js 22.7.0 和 20.19.0 起默认开启，26.13.1 文档仍标为 Release candidate，扫描歧义文件有额外开销。它找的是 CJS 里不能成立的语法：静态 `import` / `export`、`import.meta`、顶层 `await`，以及在顶层用 `const` / `let` 重新声明包装器参数（例如 `const require = 1`）。`import()` 在 CJS 里本来就合法，所以只出现 `import()` 的文件不会被判为 ESM。新项目应在 `package.json` 写明 `"type"`，或直接用 `.mjs` / `.cjs`，不让宿主和构建工具去猜：
+syntax detection (语法探测)从 Node.js 22.7.0 和 20.19.0 起默认开启，26.13.1 文档仍标为 Release candidate，扫描歧义文件有额外开销。它找的是 CJS 里不能成立的语法：静态 `import` / `export`、`import.meta`、顶层 `await`，以及在顶层用 `const` / `let` 重新声明包装器参数（例如 `const require = 1`）。`import()` 在 CJS 里本来就合法，所以只出现 `import()` 的文件不会被判为 ESM。新项目应在 `package.json` 写明 `"type"`，或直接用 `.mjs` / `.cjs`，不让宿主和构建工具去猜：
 
 ```json
 {

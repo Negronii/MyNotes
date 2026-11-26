@@ -1,6 +1,6 @@
 # 模型“调用工具”时实际发生了什么，工具契约该怎样设计？
 
-模型发出的 tool call（工具调用）只是一条结构化请求：它不执行代码，不授予权限，也不代表操作成功。这一章跟着 build 42 的 `c1` 走一遍请求从提出到结果回到模型的全过程，然后讲怎样设计工具契约、怎样区分“形状合格”“有权执行”和“符合事实”三种检查。读者手上的输入来自[上一章](./when-the-model-decides.md)：模型在 CI 诊断中提出了下一步 `read_build_log(build_id=42)`。build 42 与订单、退款工具都是合成例子。
+模型发出的 tool call (工具调用)只是一条结构化请求：它不执行代码，不授予权限，也不代表操作成功。这一章跟着 build 42 的 `c1` 走一遍请求从提出到结果回到模型的全过程，然后讲怎样设计工具契约、怎样区分“形状合格”“有权执行”和“符合事实”三种检查。读者手上的输入来自[上一章](./when-the-model-decides.md)：模型在 CI 诊断中提出了下一步 `read_build_log(build_id=42)`。build 42 与订单、退款工具都是合成例子。
 
 ## 一次请求怎样变成下一轮的观察
 
@@ -47,7 +47,7 @@ flowchart TD
 > {"type": "function_call_output", "call_id": "c1", "output": "{\"status\":\"ok\",\"build_id\":42,\"step\":\"unit-tests\",\"failed_test\":\"reject_empty_name\",\"expected\":\"HTTP 400\",\"actual\":\"HTTP 200\",\"exit_status\":1}"}
 > ~~~
 >
-> `output` 这里是序列化的字符串，也可以是文本、图像或文件内容块组成的数组；`status`、`build_id` 等字段是本例应用自定的结果格式，不是 API 规定的。处理完 `c1` 后，应用发起下一次请求，把 `function_call_output` 放进 `input`。续接上下文有两种做法：用 `previous_response_id` 引用上一次响应，或手动传回必要的条目和工具结果。`previous_response_id` 不继承上一次请求的 `instructions`，常驻指令要每次重新提供；手动管理上下文并使用推理模型时，还要按模型要求回传 reasoning items（推理条目）。
+> `output` 这里是序列化的字符串，也可以是文本、图像或文件内容块组成的数组；`status`、`build_id` 等字段是本例应用自定的结果格式，不是 API 规定的。处理完 `c1` 后，应用发起下一次请求，把 `function_call_output` 放进 `input`。续接上下文有两种做法：用 `previous_response_id` 引用上一次响应，或手动传回必要的条目和工具结果。`previous_response_id` 不继承上一次请求的 `instructions`，常驻指令要每次重新提供；手动管理上下文并使用推理模型时，还要按模型要求回传 reasoning items (推理条目)。
 
 ## 按任务边界设计工具契约
 
@@ -78,7 +78,7 @@ build 42 的只读工具可以写成下面的定义（采用 OpenAI 函数工具
 }
 ~~~
 
-名称和描述告诉模型何时使用，`parameters` 的 schema（结构模式）限制参数形状。命名空间前缀（如 `browser_search`、`file_read`）能提示工具归属；Anthropic 的工具评估发现，用前缀还是后缀，效果随模型而变，所以命名方式要在自己的任务上测，不存在通用最佳写法。
+名称和描述告诉模型何时使用，`parameters` 的 schema (结构模式)限制参数形状。命名空间前缀（如 `browser_search`、`file_read`）能提示工具归属；Anthropic 的工具评估发现，用前缀还是后缀，效果随模型而变，所以命名方式要在自己的任务上测，不存在通用最佳写法。
 
 ## 形状、授权和真实是三道不同的检查
 
@@ -168,7 +168,7 @@ JSON Schema 的 `default` 是注释，验证时不会自动填进缺失字段。
 
 ## 经 MCP 接入时多出一层请求 ID
 
-工具也可以不由应用自己实现，而是经 Model Context Protocol（MCP，模型上下文协议）接到外部 server。这时应用把模型的 `c1` 关联到一个 MCP 请求 ID，用它发出 `tools/call`，收到响应后再映射回 `c1` 交给模型。模型的调用 ID、MCP 请求 ID 和整次运行的 ID 分属三层，不能互相替代；MCP 也不替应用授予业务权限。协议细节见[MCP 2026-07-28 怎样把工具从发现接到有权限的执行？](./mcp-protocol.md)。
+工具也可以不由应用自己实现，而是经 Model Context Protocol (MCP，模型上下文协议)接到外部 server。这时应用把模型的 `c1` 关联到一个 MCP 请求 ID，用它发出 `tools/call`，收到响应后再映射回 `c1` 交给模型。模型的调用 ID、MCP 请求 ID 和整次运行的 ID 分属三层，不能互相替代；MCP 也不替应用授予业务权限。协议细节见[MCP 2026-07-28 怎样把工具从发现接到有权限的执行？](./mcp-protocol.md)。
 
 ## 形状合格的请求，接下来要过授权的关
 

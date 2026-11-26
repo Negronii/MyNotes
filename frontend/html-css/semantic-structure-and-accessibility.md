@@ -198,7 +198,7 @@ td.pending {
 
 HTML 源码里的 `<` 和 `&` 有特殊含义，要显示它们本身就写 character reference (字符引用)：普通文本里 `&lt;` 显示为 `<`，`&amp;` 显示为 `&`，`&nbsp;` 是不换行空格。字符引用按所在解析状态处理：`script` 里的 script data 状态和 `style` 里的 RAWTEXT 状态都不会像正文那样解码它们。
 
-字符引用是写源码的手段，不是安全显示动态字符串的手段。报表标题、负责人姓名这类来自用户的值，要通过 DOM 的文本接口（如 `textContent`）写进页面，浏览器只把它当文字；不要把拼接好的字符串交给 `innerHTML` 当标记解析。几种内容接口的区别见[怎样查询和修改 DOM？](../browser/dom-queries-and-updates.md)，不可信文本的安全显示见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
+字符引用是写源码的手段，不是安全显示动态字符串的手段。报表标题、负责人姓名这类来自用户的值，要通过 DOM 的文本接口（如 `textContent`）写进页面，浏览器只把它当文字；不要把拼接好的字符串交给 `innerHTML` 当标记解析。几种内容接口的区别见[怎样查询和修改 DOM？](../browser/dom-queries-and-updates.md)，不可信文本的安全显示见[不可信报表标题怎样安全显示？](../../engineering-foundations/services/sessions-and-browser-boundaries.md#不可信报表标题怎样安全显示？)。
 
 ## 结构定好之后，表单和样式从这里接手
 

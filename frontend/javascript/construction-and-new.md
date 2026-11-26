@@ -35,7 +35,7 @@ service.onReport({ title: "May" }); // "Sales/daily: May #1"
 
 1. 求值构造器表达式 `C` 和实参 `a`、`b`。
 2. 检查 `C` 能否构造，不能就抛 `TypeError`。
-3. 读 `newTarget.prototype` 选定原型，创建新对象，即 receiver（接收者）。直接 `new C(...)` 时，`newTarget` 就是 `C`。
+3. 读 `newTarget.prototype` 选定原型，创建新对象，即 receiver (接收者)。直接 `new C(...)` 时，`newTarget` 就是 `C`。
 4. 以接收者为 `this` 初始化实例字段（若有），再运行构造器函数体。
 5. 看函数体的返回值：是对象就用它，否则用接收者。
 
@@ -45,7 +45,7 @@ service.onReport({ title: "May" }); // "Sales/daily: May #1"
 
 ## 目标必须可构造
 
-能被普通调用不等于能 `new`。语言用 `IsConstructor` 检查目标有没有 `[[Construct]]` internal method（内部构造方法）——这是语言定义的构造操作，不是对象上叫 `Construct` 的属性。
+能被普通调用不等于能 `new`。语言用 `IsConstructor` 检查目标有没有 `[[Construct]]` internal method (内部构造方法)——这是语言定义的构造操作，不是对象上叫 `Construct` 的属性。
 
 有没有 `prototype` 属性不能证明能否构造。下表检查的是语法刚创建、尚未手动增删属性的函数：
 
@@ -102,7 +102,7 @@ FallbackDemo.prototype = null;
 Object.getPrototypeOf(new FallbackDemo()) === Object.prototype; // true（同一 Realm）
 ~~~
 
-右支的回退值取自 `newTarget` 所属的 Realm（执行域）。每个 Realm（例如一个 iframe）有自己的一套内建对象，所以跨 Realm 构造时，回退得到的不一定是当前代码所在 Realm 的 `Object.prototype`。
+右支的回退值取自 `newTarget` 所属的 Realm (执行域)。每个 Realm（例如一个 iframe）有自己的一套内建对象，所以跨 Realm 构造时，回退得到的不一定是当前代码所在 Realm 的 `Object.prototype`。
 
 ## 构造器的返回值可能替换接收者
 
@@ -116,7 +116,7 @@ flowchart TD
   T -->|否，包括 null 和 undefined| N["返回新建的接收者"]
 ~~~
 
-数字、字符串、布尔值、Symbol、BigInt、`null`、`undefined` 都是 primitive value（原始值），不会替换接收者。没有 `return` 相当于返回 `undefined`，报表案例走的就是右支。
+数字、字符串、布尔值、Symbol、BigInt、`null`、`undefined` 都是 primitive value (原始值)，不会替换接收者。没有 `return` 相当于返回 `undefined`，报表案例走的就是右支。
 
 ~~~javascript
 function ReturnsPrimitive() {
@@ -272,7 +272,7 @@ const reflected = Reflect.construct(BaseReader, [], AlternateTarget);
 
 ## 绑定函数构造时丢弃保存的 this
 
-bound function（绑定函数）能否构造取决于目标：目标可构造，`bind` 返回的函数也可构造。用 `new` 调用它时：
+bound function (绑定函数)能否构造取决于目标：目标可构造，`bind` 返回的函数也可构造。用 `new` 调用它时：
 
 - 已保存的 `this` 被忽略，接收者照常新建；
 - 保存的前置参数仍放在实参列表前面；

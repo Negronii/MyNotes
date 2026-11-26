@@ -8,10 +8,10 @@
 
 ## 错误边界是什么
 
-Error Boundary（错误边界）是一个包住子树的组件：子树出错时，它改为显示 fallback（备用界面）。React 内置的边界只能写成类组件，靠两个方法：
+Error Boundary (错误边界)是一个包住子树的组件：子树出错时，它改为显示 fallback (备用界面)。React 内置的边界只能写成类组件，靠两个方法：
 
 - `static getDerivedStateFromError(error)` 根据错误返回新状态，让下一次 render 显示 fallback；
-- `componentDidCatch(error, info)` 在 commit 阶段运行，用来记录错误和 `info.componentStack`（组件栈）。
+- `componentDidCatch(error, info)` 在 commit 阶段运行，用来记录错误和 `info.componentStack` (组件栈)。
 
 排查时注意：React 开发构建会把已被边界接住的错误继续报告到 `window`，全局 `error` 监听器因此也能看到它；这不代表边界没有接手。生产构建里，被边界接住的错误不会冒泡到 `window`。全局错误事件本身只是诊断信号，见[一次失败该由哪一层处理？](../javascript/error-handling-across-layers.md)。
 

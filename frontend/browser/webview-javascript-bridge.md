@@ -2,14 +2,14 @@
 
 WebView 只给网页一个运行环境；网页能用哪些原生能力，要由原生 App（下称宿主）显式开放。本章回答两件事：页面发来的一条请求怎样经过检查变成原生操作并把结果传回；下载的新页面包怎样经过验证、试启，最后上线或被拒绝。读者需要知道同源（origin）和 Promise 的基本用法；平台接口在专门一节集中对照。
 
-**合成案例。** 沿用主线一的报表页，这次它被打包成页面包 **report-web-17**，放在 Android 或 Apple 的 WebView 里运行。用户在报表 42 上点“打开详情”，页面请宿主显示原生详情界面。稍后服务器发布了 **report-web-18**，它要求 bridge（桥接）API **2.1**，而当前宿主只实现 **2.0**；更新源另外还提供了一个独立包 **report-web-18a**。包名、版本、来源和返回值都是教学用合成数据。
+**合成案例。** 沿用主线一的报表页，这次它被打包成页面包 **report-web-17**，放在 Android 或 Apple 的 WebView 里运行。用户在报表 42 上点“打开详情”，页面请宿主显示原生详情界面。稍后服务器发布了 **report-web-18**，它要求 bridge (桥接)API **2.1**，而当前宿主只实现 **2.0**；更新源另外还提供了一个独立包 **report-web-18a**。包名、版本、来源和返回值都是教学用合成数据。
 
 ## 先分清两个版本号
 
 案例里有两个互不相干的版本号：
 
 - **bridge API 版本**（2.0、2.1）：宿主向页面开放哪些能力的约定。
-- **`protocolVersion`**（本例为 `1`）：消息 envelope（信封）的字段格式，即 `{protocolVersion, id, operation, payload}` 怎样写。
+- **`protocolVersion`**（本例为 `1`）：消息 envelope (信封)的字段格式，即 `{protocolVersion, id, operation, payload}` 怎样写。
 
 API 兼容不代表消息格式兼容，反过来也一样。后文的兼容检查只比 bridge API 版本，消息解析只认 `protocolVersion`。
 
@@ -43,7 +43,7 @@ API 兼容不代表消息格式兼容，反过来也一样。后文的兼容检�
 
 来源检查确认的是“消息来自允许来源的文档主 frame”。宿主把回调里的 origin 与当前 WebView 配置的页面包 origin 精确比较，并要求消息来自主 frame。
 
-它分辨不出是该文档里哪段脚本发的消息：文档里执行的任何脚本都拥有同样的来源和 frame。因此页面内容由谁提供、导航策略、第三方脚本和 XSS 漏洞，都落在桥接的可信边界之内。XSS 的成因与防法见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。若同一 WebView 还要装载不受宿主控制的同源内容，就把它隔离到另一来源或另一 WebView，或者不给它原生能力。
+它分辨不出是该文档里哪段脚本发的消息：文档里执行的任何脚本都拥有同样的来源和 frame。因此页面内容由谁提供、导航策略、第三方脚本和 XSS 漏洞，都落在桥接的可信边界之内。XSS 的成因与防法见[不可信报表标题怎样安全显示？](../../engineering-foundations/services/sessions-and-browser-boundaries.md#不可信报表标题怎样安全显示？)。若同一 WebView 还要装载不受宿主控制的同源内容，就把它隔离到另一来源或另一 WebView，或者不给它原生能力。
 
 ### 宿主按什么顺序处理？
 
@@ -53,7 +53,7 @@ API 兼容不代表消息格式兼容，反过来也一样。后文的兼容检�
 2. **解析信封。** 限制消息大小和字段，解析 `protocolVersion`、`id`、`operation`、`payload`；拒绝未知协议版本和错误类型。
 3. **业务门。** 宿主内存里有一个 `businessReady` 标志。它打开前，只接受受限的引导操作 `bridgeHello`（见[新包怎样试启并晋升为稳定包？](#新包怎样试启并晋升为稳定包？)）。
 4. **操作白名单与参数。** `openReport` 只在 `businessReady=true` 时接受，且 `reportId` 必须是正的安全整数。拒绝任意类名、方法名、URL、文件路径、JavaScript 字符串或通用 evaluate 请求。
-5. **授权。** 从原生登录态取当前主体，检查它此刻能否执行 `report:read` 并访问报表 42。正文里的用户 ID、隐藏的按钮、难猜的报表编号都不能授权。资源级授权怎样做，见[如何逐次授权租户内的报表资源？](../../engineering-foundations/services/per-request-authorization.md)。
+5. **授权。** 从原生登录态取当前主体，检查它此刻能否执行 `report:read` 并访问报表 42。正文里的用户 ID、隐藏的按钮、难猜的报表编号都不能授权。资源级授权怎样做，见[服务怎样逐次确认这个主体能对这份资源做这个动作？](../../engineering-foundations/services/per-request-authorization.md)。
 6. **执行并回复。** 通过后调用一个固定的原生方法，把规范化结果或稳定错误码回给同一个请求 `id`。本例成功时回 `{ opened: true, reportId: 42 }`。
 
 > [!example]- 宿主入口的业务分支（中立伪代码）
@@ -255,7 +255,7 @@ API 兼容不代表消息格式兼容，反过来也一样。后文的兼容检�
 
 两个平台把已验证目录映射成页面 origin 的方式不同：
 
-- **Android `WebViewAssetLoader`** 把本例目录映射到 `https://reports.example/app/<bundleId>/index.html`。它本身不验证包签名；默认 path handler 未命中时可以回退到网络，所以持有原生能力的装载器必须对包内资源未命中 fail closed（失败即拒绝）。
+- **Android `WebViewAssetLoader`** 把本例目录映射到 `https://reports.example/app/<bundleId>/index.html`。它本身不验证包签名；默认 path handler 未命中时可以回退到网络，所以持有原生能力的装载器必须对包内资源未命中 fail closed (失败即拒绝)。
 - **Apple `WKURLSchemeHandler`** 只服务 WebKit 不原生处理的自定义 scheme，不能注册 `https`。本例用 `reportassets://bundle/<bundleId>/index.html`，在 handler 里从对应不可变目录读入口与资源。
 
 > [!info] 自定义 scheme 页面的 origin 是否 opaque（WebKit 固定提交，核对于 2026-11-13）

@@ -18,10 +18,10 @@
 构建器从入口出发扩展这张图，再把图变成文件：
 
 1. **确定入口。** `package.json` 里的脚本只负责启动构建命令，不是模块图的入口。Vite 默认从项目根目录的 `index.html` 开始；本例给 Webpack 显式设置 `entry: "./index.html"`。
-2. **递归发现依赖。** 对每个请求，resolver（模块解析器）先从导入方出发定位到实际资源：相对请求 `./rows.ts` 从导入方所在目录查找，包名则按安装位置和包元数据解析。匹配的 loader（加载器）或内置处理器读取并转换这份资源，构建器再从转换结果里找出静态导入、动态导入和资源引用，把没处理过的目标加入队列，直到队列清空。
-3. **优化并分块。** 队列清空，模块图才完整。tree shaking（摇树优化）删除能证明没被使用的代码；code splitting（代码分割）决定哪些模块进初始 chunk（代码分块），哪些进异步 chunk。最终有几个文件，取决于入口、动态导入和 Webpack `optimization.splitChunks` 这类分组规则。
+2. **递归发现依赖。** 对每个请求，resolver (模块解析器)先从导入方出发定位到实际资源：相对请求 `./rows.ts` 从导入方所在目录查找，包名则按安装位置和包元数据解析。匹配的 loader (加载器)或内置处理器读取并转换这份资源，构建器再从转换结果里找出静态导入、动态导入和资源引用，把没处理过的目标加入队列，直到队列清空。
+3. **优化并分块。** 队列清空，模块图才完整。tree shaking (摇树优化)删除能证明没被使用的代码；code splitting (代码分割)决定哪些模块进初始 chunk (代码分块)，哪些进异步 chunk。最终有几个文件，取决于入口、动态导入和 Webpack `optimization.splitChunks` 这类分组规则。
 4. **生成文件并改写引用。** 构建器写出 HTML、JavaScript、CSS 和资源文件，把源码请求改写成生成文件之间的引用，还可以按配置输出 manifest，记录源入口到输出文件的映射。文件名里的哈希随内容和引用关系变化，它怎样支撑缓存和发布见[发布新版本时，怎样让缓存和还开着的旧页面都不出错？](hashed-release-and-caching.md)。
-5. **部署并运行。** 整套产物要放到与 public path（公开路径）相符的位置。浏览器先按 HTML 请求初始 JS 和 CSS，CSS 再引用图标；执行到动态导入时才请求编辑器的 chunk。
+5. **部署并运行。** 整套产物要放到与 public path (公开路径)相符的位置。浏览器先按 HTML 请求初始 JS 和 CSS，CSS 再引用图标；执行到动态导入时才请求编辑器的 chunk。
 
 构建时发现的关系和浏览器运行时的请求是两件事：
 
@@ -46,7 +46,7 @@
 
 ## tree shaking 能删掉什么，barrel 和 sideEffects 怎样影响它？
 
-tree shaking 是 bundler（打包器）删除未使用导出或整个模块的优化，不是 ESM 在运行时提供的保证。静态 `import`、`export` 让工具能分析依赖关系和被引用的名字；但一个模块即使导出没人用，执行它也可能有 side effect（副作用），例如注册事件监听器、修改全局对象、注入 CSS。工具必须证明删掉它不会改变行为，才能删。
+tree shaking 是 bundler (打包器)删除未使用导出或整个模块的优化，不是 ESM 在运行时提供的保证。静态 `import`、`export` 让工具能分析依赖关系和被引用的名字；但一个模块即使导出没人用，执行它也可能有 side effect (副作用)，例如注册事件监听器、修改全局对象、注入 CSS。工具必须证明删掉它不会改变行为，才能删。
 
 本例在 `rows.ts` 里另放了一个从未被导入的导出 `unusedChart`，里面带一段可搜索的哨兵字符串。生产输出中找不到这段字符串，说明它已被删除。
 
@@ -55,7 +55,7 @@ Webpack 文档把这件事拆成两种优化：
 - **按导出删（`usedExports`）。** 标记哪些导出没被使用，再由代码压缩器删除对应语句。压缩器要逐条语句判断有没有副作用，这很难做准；而且按规范，模块里的副作用必须求值，所以这一层跳不过整个模块及其依赖。
 - **按模块跳过（`sideEffects`）。** 包在 `package.json` 里声明哪些文件没有副作用。若一个被声明为无副作用的模块，没有任何导出被直接使用，打包器可以跳过它和它下面的整棵依赖子树。这一层效果大得多。
 
-barrel（聚合导出模块）是只用 `export ... from` 转发其他模块接口的文件，用来把一个目录要公开的名字集中到一个入口：
+barrel (聚合导出模块)是只用 `export ... from` 转发其他模块接口的文件，用来把一个目录要公开的名字集中到一个入口：
 
 ~~~javascript
 // reports/index.mjs（barrel）
@@ -116,7 +116,7 @@ Vite 用 `base` 配置把引用改写成带公开路径的绝对 URL，见后文
 
 ## Webpack 的 loader 怎样逐个转换模块？
 
-loader 本质上是一个函数：接收一个模块的源码文本，返回转换结果。前面第 2 阶段里，每个请求解析到实际资源后，由匹配的 loader 转换，Webpack 再从转换结果中发现后续依赖。下面这个 loader 只做字符串替换，不理解 JavaScript 结构；需要按语法节点改写代码时，应改用 AST（abstract syntax tree，抽象语法树）转换器：
+loader 本质上是一个函数：接收一个模块的源码文本，返回转换结果。前面第 2 阶段里，每个请求解析到实际资源后，由匹配的 loader 转换，Webpack 再从转换结果中发现后续依赖。下面这个 loader 只做字符串替换，不理解 JavaScript 结构；需要按语法节点改写代码时，应改用 AST (abstract syntax tree，抽象语法树)转换器：
 
 ~~~javascript
 export default function replaceReportTitle(source) {
@@ -145,7 +145,7 @@ module: {
 }
 ~~~
 
-`type: "css/auto"` 把编译出的 CSS 交给 Webpack 原生的 CSS 模块处理。只有每一步确有职责时才串联 loader：Sass、Less、Stylus、PostCSS 仍需要各自的 loader，普通 CSS 已有原生处理，不要只因沿用旧配置再加一个。图片、字体、媒体与文本资源可用 Asset Modules（资源模块）处理，它在许多项目里替代了旧的 `file-loader`、`url-loader` 和 `raw-loader`；图标最终是独立文件还是 data URL，取决于工具版本、资源大小和内联配置。
+`type: "css/auto"` 把编译出的 CSS 交给 Webpack 原生的 CSS 模块处理。只有每一步确有职责时才串联 loader：Sass、Less、Stylus、PostCSS 仍需要各自的 loader，普通 CSS 已有原生处理，不要只因沿用旧配置再加一个。图片、字体、媒体与文本资源可用 Asset Modules (资源模块)处理，它在许多项目里替代了旧的 `file-loader`、`url-loader` 和 `raw-loader`；图标最终是独立文件还是 data URL，取决于工具版本、资源大小和内联配置。
 
 构建成功不等于类型正确。Webpack 原生 TypeScript 擦除、`ts-loader` 的 `transpileOnly: true` 和 Vite 的转译都只删除类型，不做类型检查，需要另设 `tsc --noEmit` 之类的检查步骤；`ts-loader@9.6.2` 默认会做类型检查。
 
@@ -161,7 +161,7 @@ module: {
 
 ## plugin 怎样处理整次构建，DefinePlugin 为什么不能放密钥？
 
-loader 一次只转换一个模块。plugin（插件）挂在编译器和编译过程的钩子上，处理整次构建共享的状态或产物。要新增产物，应在 `compilation.hooks.processAssets` 中选择合适的 stage。下面的统计插件在 `done` 钩子里把 JSON 写到执行命令时的当前目录；它不会自动进 `dist/`，也不属于 Webpack 管理的 asset（产物）：
+loader 一次只转换一个模块。plugin (插件)挂在编译器和编译过程的钩子上，处理整次构建共享的状态或产物。要新增产物，应在 `compilation.hooks.processAssets` 中选择合适的 stage。下面的统计插件在 `done` 钩子里把 JSON 写到执行命令时的当前目录；它不会自动进 `dist/`，也不属于 Webpack 管理的 asset (产物)：
 
 ~~~javascript
 import { writeFileSync } from "node:fs";
@@ -176,7 +176,7 @@ class BuildStatsPlugin {
 }
 ~~~
 
-`DefinePlugin` 在构建时把代码中的表达式替换成常量。替换后的值写进客户端 bundle，任何能打开页面的人都能读到，所以不能放密钥。
+`DefinePlugin` 在构建时把代码中的表达式替换成常量。替换后的值写进客户端 bundle，任何能打开页面的人都能读到，所以不能放密钥。它也让同一份 bundle 绑定在一个环境上；要在各环境间原样晋级同一份产物，就把非秘密的环境配置改为运行时从配置端点读取，见[配置与密钥随版本记录](../../engineering-foundations/practice/build-once-promote-by-digest.md#配置与密钥随版本记录)。
 
 > [!info]- 实例：Webpack 5.109 的 processAssets、emit 与旧插件迁移
 > `processAssets` 的 stage 决定生成或读取资源的时点。`ADDITIONAL` 位于代码压缩、source map 和传输压缩之前，适合新增自有文件。到 `SUMMARIZE` 才新增文件时，`OPTIMIZE_SIZE` 已经过去，Webpack 不会重跑整个阶段；但订阅了 `additionalAssets` 的处理器仍可单独处理后续新增资源。5.109 的默认 JavaScript minimizer 就使用这种订阅，所以不能只凭新增阶段断言文件不会被压缩，还要看处理器的匹配条件。
@@ -187,7 +187,7 @@ class BuildStatsPlugin {
 
 ## Vite 的开发服务器为什么不能代替生产构建检查？
 
-Vite 的开发和生产走两条路。按 Vite 8.3.5 文档，开发服务器按浏览器请求逐个提供转换后的原生 ESM，并用 Rolldown 预打包第三方依赖；`vite build` 则由 Rolldown 一次性生成静态的 HTML、JS、CSS 和资源文件。两条路在分块、目标浏览器、公开路径和服务器行为上都可能不同，开发环境能跑通不代表生产产物没问题。HMR（Hot Module Replacement，热模块替换）只属于开发期：服务器通知文件变化，浏览器端运行时取回更新后的模块并调用其注册的接受回调，当前模块边界处理不了时才整页刷新。它与生产发布无关。
+Vite 的开发和生产走两条路。按 Vite 8.3.5 文档，开发服务器按浏览器请求逐个提供转换后的原生 ESM，并用 Rolldown 预打包第三方依赖；`vite build` 则由 Rolldown 一次性生成静态的 HTML、JS、CSS 和资源文件。两条路在分块、目标浏览器、公开路径和服务器行为上都可能不同，开发环境能跑通不代表生产产物没问题。HMR (Hot Module Replacement，热模块替换)只属于开发期：服务器通知文件变化，浏览器端运行时取回更新后的模块并调用其注册的接受回调，当前模块边界处理不了时才整页刷新。它与生产发布无关。
 
 本例把页面挂在 `/reports/`，并打开 manifest、关闭小 SVG 内联：
 
@@ -220,11 +220,11 @@ Vite 默认不生成 manifest。本例打开它来核对映射：`"index.html"` 
 - 恢复默认内联阈值后，本例的小 SVG 会变成 CSS 里的 data URL，不再单独请求。
 - `base` 必须与静态站点的挂载路径一致。`vite preview` 只用于本地预览生产构建，不是生产服务器；上线前要在实际部署 URL 下检查 HTML、初始脚本和样式、异步 chunk、图像、缓存头、压缩和路由回退。
 - Vite 用 Oxc 转译 TypeScript，只删类型，不做类型检查。
-- Vite 8.3.5 的 `build.target` 默认面向固定日期（2026-01-01）的 Baseline Widely Available 浏览器范围：Chrome/Edge 111、Firefox 114、Safari 16.4。它只决定语法转换到什么程度，不补运行时 API，`tsconfig.json` 的 `target` 也不能代替它。支持更早的浏览器要另配 polyfill（兼容补丁）并在目标环境验证，见[用一个新 API 之前，怎样确认运行时真的支持？](../javascript/feature-availability.md)。
+- Vite 8.3.5 的 `build.target` 默认面向固定日期（2026-01-01）的 Baseline Widely Available 浏览器范围：Chrome/Edge 111、Firefox 114、Safari 16.4。它只决定语法转换到什么程度，不补运行时 API，`tsconfig.json` 的 `target` 也不能代替它。支持更早的浏览器要另配 polyfill (兼容补丁)并在目标环境验证，见[用一个新 API 之前，怎样确认运行时真的支持？](../javascript/feature-availability.md)。
 
 ## source map 怎样把报错映回源码，又会暴露什么？
 
-生产代码经过转换和压缩，报错的行列号对应生成文件，很难读懂。source map（源映射）记录生成代码位置与原始源码位置的对应关系，调试器或错误收集工具据此把位置映回源码；映射本身不能还原出原始文件，除非它附带了源码文本。几个选择各影响一件事：精确到行还是列影响定位精度；是否使用 loader 提供的映射影响能映回多早的源码；映射内嵌还是外置、是否附带源码文本，影响构建成本和对外暴露的信息。
+生产代码经过转换和压缩，报错的行列号对应生成文件，很难读懂。source map (源映射)记录生成代码位置与原始源码位置的对应关系，调试器或错误收集工具据此把位置映回源码；映射本身不能还原出原始文件，除非它附带了源码文本。几个选择各影响一件事：精确到行还是列影响定位精度；是否使用 loader 提供的映射影响能映回多早的源码；映射内嵌还是外置、是否附带源码文本，影响构建成本和对外暴露的信息。
 
 | Webpack `devtool` 例子 | 主要含义 | 适用边界 |
 |---|---|---|

@@ -51,7 +51,7 @@ flowchart TD
 | 动作审批 | 对“`build-service` + 标题 + 正文 + `c1` 证据”这份精确草稿的批准 | 用户看过并批准了这一份预览 | 内容或目标一变就失效；不授予任何 scope |
 | 远端操作键 | `run-r42-6:create-issue:v1` | 接收端据此对这次副作用去重或查询 | 是否真能去重，由接收端的契约决定 |
 
-应用会话怎样建立、OpenID Connect (OIDC) 身份令牌与访问 API 的令牌有什么区别，见[Cookie 会话与 OIDC 令牌怎样建立身份](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
+应用会话怎样建立、OpenID Connect (OIDC) 身份令牌与访问 API 的令牌有什么区别，见[请求怎样带上可信的身份，浏览器又替服务守住哪些边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
 
 grant 记录只保存描述和引用：`grantRef`、用户与租户、第三方账号、目标资源的 resource URI 或令牌的 audience (受众)、实际授予的 scope、到期与刷新状态，以及指向加密秘密存储的凭据引用。运行记录、动作草稿、审批和操作键各自存放，只通过 `grantRef` 关联到 grant。这样一来，模型、事件流和检查点里最多出现 `g-31` 这个引用，看不到令牌本身；模型也无法自己挑选令牌或改换资源。
 
@@ -69,7 +69,7 @@ grant 记录只保存描述和引用：`grantRef`、用户与租户、第三方�
 
 调用者身份来自已认证的应用会话，也就是 `user-17`，而不是模型参数或上下文里的任何文字。应用重新解析 `c2` 的参数，用自己的策略核对三件事：`user-17` 在 `team-4` 内能否给 `build-service` 建单；目标仓库属于当前租户；这个动作正是用户这次要求的。
 
-工单 API 收到请求后还会用它自己的数据再查一次：这个用户能否向该仓库写入。两层检查都需要。应用这一层挡住用户没要求的动作和跨租户的目标；资源服务器那一层是它自己数据的最终裁决者。
+工单 API 收到请求后还会用它自己的数据再查一次：这个用户能否向该仓库写入。两层检查都需要。应用这一层挡住用户没要求的动作和跨租户的目标；资源服务器那一层是它自己数据的最终裁决者。每一层都按“主体、资源、动作”逐次授权，请求里的 ID 和参数只是输入，这套通用步骤见[服务怎样逐次确认这个主体能对这份资源做这个动作？](../../engineering-foundations/services/per-request-authorization.md#逐次授权的五步)。
 
 模型如果把目标改成用户无权写入的仓库，在这一关就会被拒绝。日志里的注入文字诱导模型这样做时，结果也一样，见[为什么提示注入防不住“模型听话”](prompt-injection-as-permission-confusion.md)。
 
@@ -156,7 +156,7 @@ access token 和 refresh token 不进入提示词、模型消息、事件流、�
 
 从用户批准到真正发送，中间可能隔了很久。access token 可能已经过期，用户的权限、草稿或取消状态也可能变了。所以第二到第四关在发送前要再过一遍，而且要针对即将发出的那一份内容。
 
-**按需刷新。** 应用在发送前根据 provider 给的到期信息决定是否刷新。RFC 9700 要求 public client (公共客户端) 的 refresh token 采用 sender constraint (发送方约束) 或 rotation (轮换)；采用轮换时，每次刷新都会签发新的 refresh token，旧的随之作废。因此刷新要以 grant 为单位串行进行，并在同一事务或可靠更新中替换秘密引用和版本号，否则两个并发刷新可能让新令牌被旧值覆盖。
+**按需刷新。** 应用在发送前根据 provider 给的到期信息决定是否刷新。RFC 9700 要求 public client (公共客户端) 的 refresh token 采用 sender constraint (发送方约束) 或 rotation (轮换)；采用轮换时，每次刷新都会签发新的 refresh token，旧的随之作废。因此刷新要以 grant 为单位串行进行，并在同一事务或可靠更新中替换秘密引用和版本号，否则两个并发刷新可能让新令牌被旧值覆盖；刷新锁与条件写回的通用做法见[调用、刷新与三种撤销](../../engineering-foundations/services/sessions-and-browser-boundaries.md#调用、刷新与三种撤销)。
 
 **刷新后复核。** 刷新成功只说明拿到了新令牌。应用仍要重新核对用户资格、grant、目标仓库、精确草稿的摘要、审批状态和是否取消，全部成立才进入发送。
 

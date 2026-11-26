@@ -30,9 +30,9 @@ const records = [
 
 | 结构 | 适合的数据 | 键、成员与顺序 |
 |---|---|---|
-| `Array`（数组） | 有位置、允许重复、按索引访问的数据 | 每个位置独立，相同的值可以重复出现 |
-| `Map`（映射） | 任意类型键的键值对、以对象身份作键、需要 `size` 或直接遍历 | 键按 SameValueZero 匹配；按首次插入顺序遍历 |
-| `Set`（集合） | 唯一成员、频繁的成员查询 | 成员按 SameValueZero 去重；按插入顺序遍历 |
+| `Array` (数组) | 有位置、允许重复、按索引访问的数据 | 每个位置独立，相同的值可以重复出现 |
+| `Map` (映射) | 任意类型键的键值对、以对象身份作键、需要 `size` 或直接遍历 | 键按 SameValueZero 匹配；按首次插入顺序遍历 |
+| `Set` (集合) | 唯一成员、频繁的成员查询 | 成员按 SameValueZero 去重；按插入顺序遍历 |
 | 普通对象 | 字段固定的记录；键本来就是字符串或 Symbol 的字典 | 其他键先转成字符串；默认继承 `Object.prototype` 的属性 |
 
 SameValueZero 是三种相等规则之一：`NaN` 等于自身，`+0` 与 `-0` 相同，对象只比身份，规则对照见[JavaScript 的值有哪些类型，“相等”又有几种？](values-types-and-equality.md#三种相等规则：===、Object.is%20与%20SameValueZero)。
@@ -41,7 +41,7 @@ SameValueZero 是三种相等规则之一：`NaN` 等于自身，`+0` 与 `-0` �
 
 ## 空位：没有元素、存了 undefined 与读出 undefined
 
-先分清三件事：hole（空位）是该索引上根本没有自有属性；显式 `undefined` 是有属性、值为 `undefined`；读取空位时得到的 `undefined` 只是“查到原型链末端也没找到”的结果。三者读出来都是 `undefined`，结构上却不同。
+先分清三件事：hole (空位)是该索引上根本没有自有属性；显式 `undefined` 是有属性、值为 `undefined`；读取空位时得到的 `undefined` 只是“查到原型链末端也没找到”的结果。三者读出来都是 `undefined`，结构上却不同。
 
 数组方法按两类策略对待空位：
 
@@ -217,7 +217,7 @@ removeInPlace([, 1], undefined);     // [1]：空位读成 undefined，被删除
 
 ## 回调参数：map(parseInt) 为什么得到 NaN
 
-`map`、`filter` 的回调都收到 `(value, index, array)` 三个参数。把 `parseInt` 直接传给 `map`，索引就被当成第二个参数 `radix`（进制）：`parseInt("1", 0)` 的进制 0 表示按默认规则，得到 `1`；`parseInt("2", 1)` 的进制 1 无效，得到 `NaN`；`parseInt("3", 2)` 里 `"3"` 不是二进制数字，也是 `NaN`。
+`map`、`filter` 的回调都收到 `(value, index, array)` 三个参数。把 `parseInt` 直接传给 `map`，索引就被当成第二个参数 `radix` (进制)：`parseInt("1", 0)` 的进制 0 表示按默认规则，得到 `1`；`parseInt("2", 1)` 的进制 1 无效，得到 `NaN`；`parseInt("3", 2)` 里 `"3"` 不是二进制数字，也是 `NaN`。
 
 ~~~javascript
 ["1", "2", "3"].map(parseInt);                   // [1, NaN, NaN]
@@ -229,7 +229,7 @@ removeInPlace([, 1], undefined);     // [1]：空位读成 undefined，被删除
 
 ## 从可迭代对象或类数组创建数组
 
-`Array.from` 既能消费可迭代对象，也能按 `length` 和数字索引读取 array-like object（类数组对象：有 `length` 和数字索引、但不是数组）。第二个参数是映射函数，在创建时转换元素。它读稀疏数组时走迭代器，结果是稠密的。数组展开也走迭代器，但不能处理不可迭代的类数组对象。
+`Array.from` 既能消费可迭代对象，也能按 `length` 和数字索引读取 array-like object (类数组对象：有 `length` 和数字索引、但不是数组)。第二个参数是映射函数，在创建时转换元素。它读稀疏数组时走迭代器，结果是稠密的。数组展开也走迭代器，但不能处理不可迭代的类数组对象。
 
 ~~~javascript
 Array.from(rows);                                // [first, undefined, retry]
@@ -394,7 +394,7 @@ new Set([first, retry]).size;               // 2：按对象身份
 
 常用操作是 `add`、`has`、`delete`、`clear` 和 `size`。`keys()` 与 `values()` 产出相同成员；`entries()` 为了和 `Map` 兼容，产出 `[value, value]`；`forEach` 的参数是 `(value, value, set)`。
 
-ECMAScript 2025 给 `Set` 加了集合运算：`union`（并）、`intersection`（交）、`difference`（差）、`symmetricDifference`（对称差）、`isSubsetOf`、`isSupersetOf`、`isDisjointFrom`。调用方法的对象（接收者）必须是真正的 `Set`；参数可以是 set-like object（类 Set 对象），但必须提供三个成员：
+ECMAScript 2025 给 `Set` 加了集合运算：`union` (并)、`intersection` (交)、`difference` (差)、`symmetricDifference` (对称差)、`isSubsetOf`、`isSupersetOf`、`isDisjointFrom`。调用方法的对象（接收者）必须是真正的 `Set`；参数可以是 set-like object (类 Set 对象)，但必须提供三个成员：
 
 - `size`：转成数值后为 `NaN` 抛 `TypeError`，为负数抛 `RangeError`；
 - `has(value)`：判断成员，不可调用抛 `TypeError`；
@@ -453,7 +453,7 @@ Object.keys(orderedObject); // ["2", "10", "z"]
 
 规范要求 `Map`、`Set` 和弱集合的平均访问时间相对集合大小是次线性的，但不规定必须用哈希表或做到常数时间。总成本还取决于外围算法：过滤 n 项时若每一项都重建一张同样的查找表，建表成本就付了 n 次。
 
-`Map` 强引用当前条目的键和值，`Set` 强引用当前成员：只要集合可达，这些对象就不会被回收。替换某个键的值后，旧值不再被集合引用；删除条目也会解除引用。为对象记的元数据若不该延长对象的寿命，用 `WeakMap`（弱映射）；它不提供遍历、`size`，也没有确定的清理时间，见[对象什么时候能被回收，弱引用能帮什么、不能帮什么？](memory-reachability-and-weak-references.md)。
+`Map` 强引用当前条目的键和值，`Set` 强引用当前成员：只要集合可达，这些对象就不会被回收。替换某个键的值后，旧值不再被集合引用；删除条目也会解除引用。为对象记的元数据若不该延长对象的寿命，用 `WeakMap` (弱映射)；它不提供遍历、`size`，也没有确定的清理时间，见[对象什么时候能被回收，弱引用能帮什么、不能帮什么？](memory-reachability-and-weak-references.md)。
 
 ## Lodash 实例：先看返回值和是否修改输入
 

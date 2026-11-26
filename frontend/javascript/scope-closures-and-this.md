@@ -2,13 +2,13 @@
 
 沿用主线一的报表页。本章看它的两段代码：给排序按钮注册点击日志的 `attachLogger(elementId, label)`，以及把一行报表格式化成文本的处理器 `service.onReport(report)`。注册函数早已返回，点击时回调为什么还读得到 `label`？同一个处理器作为方法调用正常，取出来单独调用却抛 `TypeError`，变的又是什么？
 
-答案分两半。函数体里的变量按函数**定义**处的环境查找，closure（闭包）让这些绑定在外层调用返回后仍可访问；普通函数的 `this` 由每次**调用**的形式提供，闭包不保留它。本章先讲变量，再讲 `this`。
+答案分两半。函数体里的变量按函数**定义**处的环境查找，closure (闭包)让这些绑定在外层调用返回后仍可访问；普通函数的 `this` 由每次**调用**的形式提供，闭包不保留它。本章先讲变量，再讲 `this`。
 
-以下代码块彼此独立，注释给出求值结果。标为 HTML 的代码要在浏览器里运行；含非严格函数的代码块要作为 classic script（经典脚本）运行，因为模块代码总是严格模式。
+以下代码块彼此独立，注释给出求值结果。标为 HTML 的代码要在浏览器里运行；含非严格函数的代码块要作为 classic script (经典脚本)运行，因为模块代码总是严格模式。
 
 ## 名称沿函数定义处的环境链查找
 
-读取一个标识符时，JavaScript 先在当前 lexical environment（词法环境）里找对应的 binding（绑定，即名称与值的关联）；找不到才去外层环境，逐层向外。“外层”指函数**定义**时所在的环境，不是调用它的地方。
+读取一个标识符时，JavaScript 先在当前 lexical environment (词法环境)里找对应的 binding (绑定，即名称与值的关联)；找不到才去外层环境，逐层向外。“外层”指函数**定义**时所在的环境，不是调用它的地方。
 
 下面的代码里有三个 `label`。按执行顺序走一遍：
 
@@ -48,7 +48,7 @@ flowchart TB
 
 调用者 `callFromElsewhere` 的环境（其中也有 `label`）不在这条链上。调用者能影响的只有实参，以及普通函数的 `this`。
 
-图里的环境节点是规范描述名称查找用的抽象，引擎不必按这个形状分配对象。规范还用 execution context（执行上下文）描述正在执行的代码及其状态，用 environment record（环境记录）保存绑定。调用栈回答“哪些调用还没返回”，词法链回答“名称按什么顺序解析”：上例调用 `inner` 时，调用栈里有 `callFromElsewhere`，词法链里没有。
+图里的环境节点是规范描述名称查找用的抽象，引擎不必按这个形状分配对象。规范还用 execution context (执行上下文)描述正在执行的代码及其状态，用 environment record (环境记录)保存绑定。调用栈回答“哪些调用还没返回”，词法链回答“名称按什么顺序解析”：上例调用 `inner` 时，调用栈里有 `callFromElsewhere`，词法链里没有。
 
 ## 声明方式决定绑定建在哪里、何时可读
 
@@ -57,7 +57,7 @@ flowchart TB
 | 声明 | 绑定范围 | 初始化时机 | 重复声明与重新赋值 |
 | --- | --- | --- | --- |
 | `var` | 所在函数；在脚本或模块顶层时属于各自的顶层 | 进入作用域时就初始化为 `undefined`（与形参同名时沿用形参值）；`= 值` 要执行到这一行才运行 | 兼容的 `var` 可重复声明；可重新赋值 |
-| `let` | 所在代码块，或脚本、模块顶层 | 进入作用域时建立未初始化的绑定，执行到声明才初始化；中间这段是 temporal dead zone（暂时性死区，TDZ） | 同一作用域不能重复声明；可重新赋值 |
+| `let` | 所在代码块，或脚本、模块顶层 | 进入作用域时建立未初始化的绑定，执行到声明才初始化；中间这段是 temporal dead zone (暂时性死区，TDZ) | 同一作用域不能重复声明；可重新赋值 |
 | `const` | 同 `let` | 同 `let`；必须写初始化式（`for...in` / `for...of` 头部除外） | 同一作用域不能重复声明；不能重新赋值 |
 
 ~~~javascript
@@ -103,11 +103,11 @@ try {
 
 ## 各宿主的“顶层”不同
 
-上表说的“脚本或模块顶层”，在不同宿主里外层环境不同，top-level `this`（顶层 `this`）也不总是全局对象。要在所有环境里拿到当前 Realm（执行域，一套独立的全局对象和内建对象）的全局对象，标准写法是 `globalThis`。
+上表说的“脚本或模块顶层”，在不同宿主里外层环境不同，top-level `this`（顶层 `this`）也不总是全局对象。要在所有环境里拿到当前 Realm (执行域，一套独立的全局对象和内建对象)的全局对象，标准写法是 `globalThis`。
 
 | 运行方式 | 顶层声明 | 顶层 `this` | 全局对象入口 |
 | --- | --- | --- | --- |
-| 浏览器 classic script（`<script>` 不写 `type="module"`） | `var` 通常成为 `window` 的属性；`let` / `const` 是 global lexical binding（全局词法绑定），不是 `window` 属性 | `window` | `window`、`globalThis` |
+| 浏览器 classic script（`<script>` 不写 `type="module"`） | `var` 通常成为 `window` 的属性；`let` / `const` 是 global lexical binding (全局词法绑定)，不是 `window` 属性 | `window` | `window`、`globalThis` |
 | 浏览器 module script（`type="module"`） | `var`、`let`、`const` 都是模块局部绑定 | `undefined` | `globalThis`；窗口页面另有 `window` |
 | Node.js CommonJS（CJS） | 都是模块包装函数内的局部绑定 | 包装函数收到的初始 `exports` 对象 | `globalThis` |
 | Node.js ECMAScript module（ESM） | 都是模块局部绑定 | `undefined` | `globalThis` |
@@ -182,7 +182,7 @@ for (let j = 0; j < 3; j++) fromLet.push(() => j);
 // [[3, 3, 3], [0, 1, 2]]
 ~~~
 
-没有 `let` 的旧代码常用 Immediately Invoked Function Expression（IIFE，立即调用函数表达式）：每轮调用一次函数，借形参为每轮新建一份绑定。
+没有 `let` 的旧代码常用 Immediately Invoked Function Expression (IIFE，立即调用函数表达式)：每轮调用一次函数，借形参为每轮新建一份绑定。
 
 ~~~javascript
 const callbacks = [];
@@ -292,14 +292,14 @@ const thirdReport = service.onReport({ title: "May" });
 
 普通函数的 `this` 分两步确定：
 
-1. **调用表达式给出初值**，即 receiver（接收者）。`obj.m()` 或 `obj[key]()` 把属性访问的基底作为接收者，基底也可以是原始值，如 `"May".toString()`；变量裸调 `fn()` 给出 `undefined`。唯一的例外是非严格代码的 `with` 块，它可以为裸调提供对象接收者。
+1. **调用表达式给出初值**，即 receiver (接收者)。`obj.m()` 或 `obj[key]()` 把属性访问的基底作为接收者，基底也可以是原始值，如 `"May".toString()`；变量裸调 `fn()` 给出 `undefined`。唯一的例外是非严格代码的 `with` 块，它可以为裸调提供对象接收者。
 2. **被调函数的模式决定怎样用这个初值**，下一节展开。
 
 ## 严格模式改变 this 的第二步
 
-strict mode（严格模式）把一些历史上静默出错的写法变成异常，也改变普通函数使用 `this` 初值的方式。经典脚本或函数体开头写 `"use strict"` 启用它；ES 模块和 class 内的代码自动严格。
+strict mode (严格模式)把一些历史上静默出错的写法变成异常，也改变普通函数使用 `this` 初值的方式。经典脚本或函数体开头写 `"use strict"` 启用它；ES 模块和 class 内的代码自动严格。
 
-strict function（严格函数）原样使用初值。sloppy function（非严格函数）把 `null` 或 `undefined` 换成函数所属 Realm 的全局 `this`，并把数字、字符串、布尔值、BigInt、Symbol 接收者装箱成对象：
+strict function (严格函数)原样使用初值。sloppy function (非严格函数)把 `null` 或 `undefined` 换成函数所属 Realm 的全局 `this`，并把数字、字符串、布尔值、BigInt、Symbol 接收者装箱成对象：
 
 | 被调函数模式 | 裸调 `fn()` | `fn.call(null)` | `fn.call(7)` |
 | --- | --- | --- | --- |
@@ -342,7 +342,7 @@ try {
 | `apply` | 立即 | 省略或传 `null` / `undefined` 时为空列表；否则必须是对象，按它的 `length` 和数字索引读取，不遍历迭代器 |
 | `bind` | 调用返回的新函数时 | 保存的前置参数，加上调用时的参数 |
 
-目标若是箭头函数或 bound function（绑定函数），会忽略传入的 `thisArg`。
+目标若是箭头函数或 bound function (绑定函数)，会忽略传入的 `thisArg`。
 
 ~~~javascript
 function describe(prefix, report, punctuation) {
@@ -390,7 +390,7 @@ try {
 
 ## 箭头函数读外层的 this
 
-arrow function（箭头函数）没有自己的 `this`、`arguments`、`super` 和 `new.target`，读的是定义处外层的 lexical `this`（词法 `this`）。`call`、`apply`、`bind` 能传参或预填参数，但换不掉这个 `this`。箭头函数也不能用 `new` 构造，且没有自有的 `prototype` 属性。
+arrow function (箭头函数)没有自己的 `this`、`arguments`、`super` 和 `new.target`，读的是定义处外层的 lexical `this`（词法 `this`）。`call`、`apply`、`bind` 能传参或预填参数，但换不掉这个 `this`。箭头函数也不能用 `new` 构造，且没有自有的 `prototype` 属性。
 
 ~~~javascript
 function makePanel(title) {

@@ -111,19 +111,19 @@ scheme       host         path        query   fragment
 
 确定目标后，浏览器要拿到 `/reports/42?sort=recent` 的响应。它依次经过几个可能的来源，越靠前越可能省掉网络往返：
 
-1. **Service Worker（服务工作线程）。** 如果这个 URL 的作用域内有处于活动状态的 Service Worker，它的 `fetch` 事件处理器可以直接返回自己构造或缓存的响应，也可以自己去请求网络。所以页面不一定向源站重新取 HTML。
-2. **HTTP 缓存。** 缓存里若有新鲜且匹配的响应，直接复用；若响应需要验证，浏览器发条件请求，问服务器它是否仍然有效。新鲜度和验证的规则见[发布新版本时，怎样让缓存和还开着的旧页面都不出错？](#51.%20%E5%8F%91%E5%B8%83%E6%96%B0%E7%89%88%E6%9C%AC%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E8%AE%A9%E7%BC%93%E5%AD%98%E5%92%8C%E8%BF%98%E5%BC%80%E7%9D%80%E7%9A%84%E6%97%A7%E9%A1%B5%E9%9D%A2%E9%83%BD%E4%B8%8D%E5%87%BA%E9%94%99%EF%BC%9F)。
+1. **Service Worker (服务工作线程)。** 如果这个 URL 的作用域内有处于活动状态的 Service Worker，它的 `fetch` 事件处理器可以直接返回自己构造或缓存的响应，也可以自己去请求网络。所以页面不一定向源站重新取 HTML。
+2. **HTTP 缓存。** 缓存里若有新鲜且匹配的响应，直接复用；若响应需要验证，浏览器发条件请求，问服务器它是否仍然有效。新鲜度和验证的规则见[一份 HTTP 响应什么时候可以直接复用，什么时候必须回源确认？](../../engineering-foundations/services/http-caching-and-conditional-requests.md)；前端静态资源怎样借用它，见[发布新版本时，怎样让缓存和还开着的旧页面都不出错？](#51.%20%E5%8F%91%E5%B8%83%E6%96%B0%E7%89%88%E6%9C%AC%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E8%AE%A9%E7%BC%93%E5%AD%98%E5%92%8C%E8%BF%98%E5%BC%80%E7%9D%80%E7%9A%84%E6%97%A7%E9%A1%B5%E9%9D%A2%E9%83%BD%E4%B8%8D%E5%87%BA%E9%94%99%EF%BC%9F)。
 3. **复用已有连接。** 需要走网络时，浏览器可以复用一条适用于这次请求的活动连接，例如同一源上已经建立的 HTTP/2 连接。
-4. **DNS 与 TLS。** 只有需要新建连接、而且主机地址也没有缓存时，才查询 Domain Name System（DNS，域名系统）。HTTPS 新连接还要完成 Transport Layer Security（TLS，传输层安全协议）握手：验证服务器证书，建立加密通道，然后才发送请求。
+4. **DNS 与 TLS。** 只有需要新建连接、而且主机地址也没有缓存时，才查询 Domain Name System (DNS，域名系统)。HTTPS 新连接还要完成 Transport Layer Security (TLS，传输层安全协议)握手：验证服务器证书，建立加密通道，然后才发送请求。
 5. **重定向。** 若响应是重定向，浏览器按 `Location` 头继续导航；目标换了主机或协议时，连接也要按新目标重新确定。最终请求的地址和拿到的资源由整条重定向链决定。
 
-逐个协议的细节见[浏览器请求如何到达 HTTP 响应？](../../engineering-foundations/services/http-semantics-and-transport.md)。
+逐个协议的细节见[一次 HTTP 请求怎样从浏览器到达服务，又带回什么？](../../engineering-foundations/services/http-semantics-and-transport.md)。
 
-并非每次 URL 变化都要走这条路：`#summary` 这样的片段导航只在当前文档内定位；脚本用 History API 改地址时也不取新文档；用户后退时，浏览器还可能从 back/forward cache（前进/后退缓存）直接恢复整个旧页面，这和复用 HTTP 缓存里的响应是两回事。这些情况都在[地址变了，浏览器什么时候加载新文档？](#7.%20%E5%9C%B0%E5%9D%80%E5%8F%98%E4%BA%86%EF%BC%8C%E6%B5%8F%E8%A7%88%E5%99%A8%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%EF%BC%8C%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%BD%95%E6%97%B6%E8%AF%A5%E5%86%99%E8%BF%9B%20URL%EF%BC%9F)里展开。
+并非每次 URL 变化都要走这条路：`#summary` 这样的片段导航只在当前文档内定位；脚本用 History API 改地址时也不取新文档；用户后退时，浏览器还可能从 back/forward cache (前进/后退缓存)直接恢复整个旧页面，这和复用 HTTP 缓存里的响应是两回事。这些情况都在[地址变了，浏览器什么时候加载新文档？](#7.%20%E5%9C%B0%E5%9D%80%E5%8F%98%E4%BA%86%EF%BC%8C%E6%B5%8F%E8%A7%88%E5%99%A8%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%EF%BC%8C%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%BD%95%E6%97%B6%E8%AF%A5%E5%86%99%E8%BF%9B%20URL%EF%BC%9F)里展开。
 
 ### 边下载边解析：DOM 和资源发现
 
-浏览器不必等整个响应体下载完才开始工作。HTML 字节持续交给 HTML parser（HTML 解析器），解析器按到达的内容逐步建出新文档的 Document Object Model（DOM，文档对象模型），同时发现外部样式表、模块脚本和图片，让它们与解析并行下载。
+浏览器不必等整个响应体下载完才开始工作。HTML 字节持续交给 HTML parser (HTML 解析器)，解析器按到达的内容逐步建出新文档的 Document Object Model (DOM，文档对象模型)，同时发现外部样式表、模块脚本和图片，让它们与解析并行下载。
 
 解析器有时要停下来等脚本（下文说明原因）。停着的时候，浏览器还可以用预扫描器（preload scanner）往后读标记，提前发现并请求后面的资源。规范把这叫作推测式解析，是否做、怎样做由实现决定。
 
@@ -280,7 +280,7 @@ if (document.readyState === "loading") {
 | 页面可见，点“最早优先”没反应 | 先确认 `/reports.js` 已求值、处理器已注册、按钮已启用；再查主线程上的其他工作是否拖住了事件处理 |
 | 内容出现后位置跳动 | 图片和字体的尺寸与到达时机、后插入的内容 |
 
-同一个“首屏慢”可能来自服务器响应、资源发现或渲染，先沿依赖关系定位是哪一段，再决定改请求、脚本、布局还是绘制。指标和工具见[用户觉得慢时，怎样从指标走到证据？](#55.%20%E7%94%A8%E6%88%B7%E8%A7%89%E5%BE%97%E6%85%A2%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8C%87%E6%A0%87%E8%B5%B0%E5%88%B0%E8%AF%81%E6%8D%AE%EF%BC%9F)。如果页面由框架在服务端渲染，客户端还要做 hydration（水合）才能接上交互，那是可交互线上额外的一段，见[Next.js App Router 怎样把服务端渲染、缓存和客户端交互分开？](#41.%20Next.js%20App%20Router%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B8%B2%E6%9F%93%E3%80%81%E7%BC%93%E5%AD%98%E5%92%8C%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BA%A4%E4%BA%92%E5%88%86%E5%BC%80%EF%BC%9F)。
+同一个“首屏慢”可能来自服务器响应、资源发现或渲染，先沿依赖关系定位是哪一段，再决定改请求、脚本、布局还是绘制。指标和工具见[用户觉得慢时，怎样从指标走到证据？](#55.%20%E7%94%A8%E6%88%B7%E8%A7%89%E5%BE%97%E6%85%A2%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8C%87%E6%A0%87%E8%B5%B0%E5%88%B0%E8%AF%81%E6%8D%AE%EF%BC%9F)。如果页面由框架在服务端渲染，客户端还要做 hydration (水合)才能接上交互，那是可交互线上额外的一段，见[Next.js App Router 怎样把服务端渲染、缓存和客户端交互分开？](#41.%20Next.js%20App%20Router%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B8%B2%E6%9F%93%E3%80%81%E7%BC%93%E5%AD%98%E5%92%8C%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BA%A4%E4%BA%92%E5%88%86%E5%BC%80%EF%BC%9F)。
 
 ### 点击之后：处理器何时运行，画面何时更新
 
@@ -310,17 +310,17 @@ if (document.readyState === "loading") {
 
 先给出全景，后面各节逐段展开：
 
-1. 用户的点击变成一个排进队列的 task（任务）。
+1. 用户的点击变成一个排进队列的 task (任务)。
 2. 事件循环从有可运行任务的队列里选中它。若当前还有别的任务在运行，它只能等。
 3. 点击任务分发 `click` 事件，处理器同步运行到返回，期间不会被别的任务打断。
-4. 处理器返回、JavaScript 调用栈变空时，事件循环排空 microtask（微任务）队列，例如 Promise 的后续回调。
+4. 处理器返回、JavaScript 调用栈变空时，事件循环排空 microtask (微任务)队列，例如 Promise 的后续回调。
 5. 渲染机会出现时，浏览器排入一个更新渲染任务。它被选中后先运行 `requestAnimationFrame` 回调，再重算样式和布局，之后进入绘制与合成，新画面才出现。
 
 ### task 与 task source：下一项工作从哪里选
 
-task 封装宿主安排的一段工作，例如分发一次点击、运行一个到期的计时器回调。task source（任务源）按工作类别给任务分组，例如用户交互、计时器、网络、更新渲染。
+task 封装宿主安排的一段工作，例如分发一次点击、运行一个到期的计时器回调。task source (任务源)按工作类别给任务分组，例如用户交互、计时器、网络、更新渲染。
 
-事件循环的 task queue（任务队列）不是所有回调共用的一条先进先出队列。规范允许用户代理把不同任务源合并进一个或多个队列；每一轮，事件循环选一个有可运行任务的队列，从中取最早的可运行任务。同一任务源内部保持顺序；不同队列之间选哪个，由用户代理决定。规范没有规定跨队列的固定优先级。它举过一个例子：用户代理可以把鼠标和键盘工作放进一个队列，四次选择中三次优先选它，同时保证其他队列也能推进。这只是说明实现有这种自由，不是浏览器必须采用的策略。
+事件循环的 task queue (任务队列)不是所有回调共用的一条先进先出队列。规范允许用户代理把不同任务源合并进一个或多个队列；每一轮，事件循环选一个有可运行任务的队列，从中取最早的可运行任务。同一任务源内部保持顺序；不同队列之间选哪个，由用户代理决定。规范没有规定跨队列的固定优先级。它举过一个例子：用户代理可以把鼠标和键盘工作放进一个队列，四次选择中三次优先选它，同时保证其他队列也能推进。这只是说明实现有这种自由，不是浏览器必须采用的策略。
 
 被选中的普通任务运行到它的步骤结束，期间同步 JavaScript 不会被另一个普通任务抢占。这就是第一个问题的答案：点击到达时如果当前同步脚本很长，或者它不断追加新的微任务，点击处理器只能等待。
 
@@ -330,7 +330,7 @@ task 封装宿主安排的一段工作，例如分发一次点击、运行一个
 
 ### 渲染机会：画面更新也要排队
 
-rendering opportunity（渲染机会）由用户代理根据显示器刷新、页面是否可见、性能等条件判断。规范把“判断有没有渲染机会、有就排入更新渲染任务”定义为与事件循环主步骤**并行**的步骤。所以同步 JavaScript 运行时，渲染机会照样可能出现，更新渲染任务照样会入队；被推迟的是事件循环之后选中并执行这个任务的时刻。
+rendering opportunity (渲染机会)由用户代理根据显示器刷新、页面是否可见、性能等条件判断。规范把“判断有没有渲染机会、有就排入更新渲染任务”定义为与事件循环主步骤**并行**的步骤。所以同步 JavaScript 运行时，渲染机会照样可能出现，更新渲染任务照样会入队；被推迟的是事件循环之后选中并执行这个任务的时刻。
 
 更新渲染任务和其他任务一样要参与队列选择。若计时器任务和渲染任务都已可运行、又在同一个队列里，先取较早入队的那个；若在不同队列，选哪个由用户代理决定。因此规范不保证每次点击之后立刻更新画面。
 
@@ -342,7 +342,7 @@ rendering opportunity（渲染机会）由用户代理根据显示器刷新、�
 
 #### 微任务按什么顺序运行
 
-microtask 是当前 JavaScript 工作结束后、下一个普通任务开始前处理的短小延续。最常见的是已兑现 Promise 上注册的 reaction（处理函数）：ECMAScript 把它定义为 Promise job，HTML 宿主把它接进事件循环的微任务队列；`queueMicrotask()` 直接往同一个队列里放回调。
+microtask 是当前 JavaScript 工作结束后、下一个普通任务开始前处理的短小延续。最常见的是已兑现 Promise 上注册的 reaction (处理函数)：ECMAScript 把它定义为 Promise job，HTML 宿主把它接进事件循环的微任务队列；`queueMicrotask()` 直接往同一个队列里放回调。
 
 下面的例子里，一个微任务在运行时又排入另一个微任务：
 
@@ -460,7 +460,7 @@ requestIdleCallback(runIdleSlice, { timeout: 2000 });
 
 ### Node.js 的事件循环不是这一套
 
-Node.js 的宿主边界不同：它按 libuv 的阶段处理计时器、I/O 和 `setImmediate()`，另有 `process.nextTick()` 队列；在 CommonJS 顶层和 ES 模块顶层，`nextTick` 与 Promise 微任务的相对顺序也可能不同。本章的渲染机会和 rAF 只属于浏览器窗口，不能套到 Node 的阶段图上。Node 的模型见[Node.js 事件循环阶段与微任务队列如何交互？](../../engineering-foundations/runtime/node-event-loop-and-microtasks.md)。
+Node.js 的宿主边界不同：它按 libuv 的阶段处理计时器、I/O 和 `setImmediate()`，另有 `process.nextTick()` 队列；在 CommonJS 顶层和 ES 模块顶层，`nextTick` 与 Promise 微任务的相对顺序也可能不同。本章的渲染机会和 rAF 只属于浏览器窗口，不能套到 Node 的阶段图上。Node 的模型见[Node.js 的事件循环怎样安排计时器、I/O 回调和微任务？](../../engineering-foundations/runtime/node-event-loop-and-microtasks.md)。
 
 ### 处理器返回之后，下一步是什么
 
@@ -480,7 +480,7 @@ Node.js 的宿主边界不同：它按 libuv 的阶段处理计时器、I/O 和 
 > - **本机 trace（实例 callout）。** headless Chrome 157.0.8103.50，经 CDP `Input.dispatchMouseEvent` 模拟一次鼠标输入，另一次在同步脚本中调用 `button.click()`，记录见 callout；控制台例子以同一语句块重放（只给 `console.log` 包了一层记录器）。改写时另在 Node.js v26.13.1 复跑控制台例子，顺序一致。
 ## 3. 怎样查询和修改 DOM，才拿到并改到预期的节点？
 
-HTML 解析完成后，页面在内存里是一棵 Document Object Model（DOM，文档对象模型）节点树；脚本查询、修改的都是这棵树，而不是 HTML 源文本。本章沿用主线一的报表页：脚本要找到排序按钮和两行报表，把行顺序从 May、April 改成 April、May，并更新按钮状态。读者手上已经有解析好的 DOM 和已注册的模块脚本（见[打开一个 URL 后，页面怎样变得可见又可交互？](#1.%20%E6%89%93%E5%BC%80%E4%B8%80%E4%B8%AA%20URL%20%E5%90%8E%EF%BC%8C%E9%A1%B5%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%8F%98%E5%BE%97%E5%8F%AF%E8%A7%81%E5%8F%88%E5%8F%AF%E4%BA%A4%E4%BA%92%EF%BC%9F)）；点击怎样到达处理器留给下一章。
+HTML 解析完成后，页面在内存里是一棵 Document Object Model (DOM，文档对象模型)节点树；脚本查询、修改的都是这棵树，而不是 HTML 源文本。本章沿用主线一的报表页：脚本要找到排序按钮和两行报表，把行顺序从 May、April 改成 April、May，并更新按钮状态。读者手上已经有解析好的 DOM 和已注册的模块脚本（见[打开一个 URL 后，页面怎样变得可见又可交互？](#1.%20%E6%89%93%E5%BC%80%E4%B8%80%E4%B8%AA%20URL%20%E5%90%8E%EF%BC%8C%E9%A1%B5%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%8F%98%E5%BE%97%E5%8F%AF%E8%A7%81%E5%8F%88%E5%8F%AF%E4%BA%A4%E4%BA%92%EF%BC%9F)）；点击怎样到达处理器留给下一章。
 
 ### 本章用到的报表页片段
 
@@ -511,15 +511,15 @@ HTML 解析完成后，页面在内存里是一棵 Document Object Model（DOM�
 
 ### DOM 树里有哪些节点？
 
-树里不只有元素。标签之间的换行缩进是文本节点，`<!-- -->` 是注释节点，整棵树的根是 Document。元素的 attribute（属性）有对应的 `Attr` 对象，但它不是树的子节点。
+树里不只有元素。标签之间的换行缩进是文本节点，`<!-- -->` 是注释节点，整棵树的根是 Document。元素的 attribute (属性)有对应的 `Attr` 对象，但它不是树的子节点。
 
 | `nodeType` | 节点 | 报表页中的例子 |
 |---:|---|---|
-| 1 | Element（元素） | `<ol>`、`<li>`、`<button>` |
-| 2 | Attr（属性） | `id="reports"`，不是子节点 |
-| 3 | Text（文本） | `May report` |
-| 8 | Comment（注释） | `<!-- 排序控件 -->` |
-| 9 | Document（文档） | `document` 本身 |
+| 1 | Element (元素) | `<ol>`、`<li>`、`<button>` |
+| 2 | Attr (属性) | `id="reports"`，不是子节点 |
+| 3 | Text (文本) | `May report` |
+| 8 | Comment (注释) | `<!-- 排序控件 -->` |
+| 9 | Document (文档) | `document` 本身 |
 
 亲属 API 因此成对出现：一个看所有节点，一个只看元素。
 
@@ -634,15 +634,15 @@ console.log(JSON.stringify({ literal, visibleLines }));
 // visibleLines: ["May<br>Report", "May\nReport"]
 ~~~
 
-`textContent` 把 `<b>` 原样当文字，所以没有生成子元素。报表标题这类来自用户或服务端的字符串，一律用 `textContent` 写；把它交给 `innerHTML` 等于让数据决定页面结构和脚本，安全边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
+`textContent` 把 `<b>` 原样当文字，所以没有生成子元素。报表标题这类来自用户或服务端的字符串，一律用 `textContent` 写；把它交给 `innerHTML` 等于让数据决定页面结构和脚本，安全边界见[不可信报表标题怎样安全显示？](../../engineering-foundations/services/sessions-and-browser-boundaries.md#%E4%B8%8D%E5%8F%AF%E4%BF%A1%E6%8A%A5%E8%A1%A8%E6%A0%87%E9%A2%98%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E6%98%BE%E7%A4%BA%EF%BC%9F)。
 
 ### attribute 和 property 什么时候会分开？
 
-HTML 标记上写的是 content attribute（内容属性），JavaScript 对象上读写的是 DOM property（DOM 对象属性）。许多 property 会 reflect（反射）同名 attribute：读写其中一个，另一个跟着变，例如 `button.id` 与 `id` 属性。但有三种常见情况两者不等价。
+HTML 标记上写的是 content attribute (内容属性)，JavaScript 对象上读写的是 DOM property (DOM 对象属性)。许多 property 会 reflect (反射)同名 attribute：读写其中一个，另一个跟着变，例如 `button.id` 与 `id` 属性。但有三种常见情况两者不等价。
 
 #### 输入框的 value：默认值与当前值
 
-`value` attribute 是默认值，`input.value` property 是当前值。HTML 用 dirty value flag（值已修改标记）区分二者：用户输入或脚本写 `input.value` 之后，标记变为 dirty，此后再改 attribute 只更新默认值；`form.reset()` 把当前值恢复为默认值并清除标记。
+`value` attribute 是默认值，`input.value` property 是当前值。HTML 用 dirty value flag (值已修改标记)区分二者：用户输入或脚本写 `input.value` 之后，标记变为 dirty，此后再改 attribute 只更新默认值；`form.reset()` 把当前值恢复为默认值并清除标记。
 
 ~~~html
 <form id="filter-form">
@@ -670,7 +670,7 @@ console.log(JSON.stringify({ beforeEdit, afterEdit, afterReset }));
 
 #### 布尔属性只看存不存在
 
-`disabled`、`checked`、`hidden` 这类 boolean attribute（布尔属性）只看是否存在，不看值。`setAttribute("disabled", "false")` 照样禁用元素；要解除，写 `button.disabled = false` 或 `removeAttribute("disabled")`。
+`disabled`、`checked`、`hidden` 这类 boolean attribute (布尔属性)只看是否存在，不看值。`setAttribute("disabled", "false")` 照样禁用元素；要解除，写 `button.disabled = false` 或 `removeAttribute("disabled")`。
 
 #### 禁用状态还会从 fieldset 继承
 
@@ -832,7 +832,7 @@ May 行自身和后代都没有 `id`，副本保留 `data-id="r-104"` 和 `data-
 
 - **`removeEventListener()`。** 必须传入注册时的**同一个函数引用**和相同的 `capture` 设置。当场写一个新箭头函数，或者传 `handler.bind(x)` 的又一次结果，都是另一个函数，移除不会生效。
 - **`{ once: true }`。** 监听器第一次运行前就被移除，适合只响应一次的事件。
-- **`{ signal }`。** 把同一个 `AbortSignal`（中止信号）传给多个监听器，页面区域销毁时调用一次 `controller.abort()`，它们全部移除，不必保存每个函数引用。`AbortSignal` 本身的语义见[取消、超时和并发上限各自停得住什么？](#28.%20%E5%8F%96%E6%B6%88%E3%80%81%E8%B6%85%E6%97%B6%E5%92%8C%E5%B9%B6%E5%8F%91%E4%B8%8A%E9%99%90%E5%90%84%E8%87%AA%E5%81%9C%E5%BE%97%E4%BD%8F%E4%BB%80%E4%B9%88%EF%BC%9F)。
+- **`{ signal }`。** 把同一个 `AbortSignal` (中止信号)传给多个监听器，页面区域销毁时调用一次 `controller.abort()`，它们全部移除，不必保存每个函数引用。`AbortSignal` 本身的语义见[取消、超时和并发上限各自停得住什么？](#28.%20%E5%8F%96%E6%B6%88%E3%80%81%E8%B6%85%E6%97%B6%E5%92%8C%E5%B9%B6%E5%8F%91%E4%B8%8A%E9%99%90%E5%90%84%E8%87%AA%E5%81%9C%E5%BE%97%E4%BD%8F%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 ~~~javascript
 const region = new AbortController();
@@ -873,11 +873,11 @@ results; // [true, true]
 
 ### 一次点击沿哪条路径传播？
 
-浏览器派发事件时，先确定 event path（传播路径）：从 `Window` 经 Document 一直到被点中的节点。监听器在三个阶段运行：
+浏览器派发事件时，先确定 event path (传播路径)：从 `Window` 经 Document 一直到被点中的节点。监听器在三个阶段运行：
 
-1. **capture phase（捕获阶段）**：从 `Window` 向内，运行用 `{ capture: true }` 注册的监听器。
-2. **target phase（目标阶段）**：在目标节点上，先运行捕获监听器，再运行普通监听器。
-3. **bubble phase（冒泡阶段）**：从目标的父节点向外，运行普通监听器。只有 `bubbles` 为 true 的事件才有这一段，`click` 会冒泡。
+1. **capture phase (捕获阶段)**：从 `Window` 向内，运行用 `{ capture: true }` 注册的监听器。
+2. **target phase (目标阶段)**：在目标节点上，先运行捕获监听器，再运行普通监听器。
+3. **bubble phase (冒泡阶段)**：从目标的父节点向外，运行普通监听器。只有 `bubbles` 为 true 的事件才有这一段，`click` 会冒泡。
 
 被点中的节点是哪个，取决于命中位置。点按钮上的文字时，目标是 `.sort-label` 这个 `span`；点 SVG 箭头的可见描边时是 `<path>`；点图标里没有描边的留白处则可能是 `svg`。SVG 元素是否命中，按可见的 fill/stroke 和 `pointer-events` 规则判断。
 
@@ -912,11 +912,11 @@ document.body.addEventListener("click", () => console.log("body bubble"));
 - **焦点。** 输入框获得、失去焦点时派发的 `focus` 和 `blur` 不冒泡；父级要统一处理焦点变化，监听会冒泡的 `focusin` 和 `focusout`。
 - **元素滚动。** 元素滚动时派发的 `scroll` 不冒泡，要监听在实际滚动的那个容器上（见后文）。
 
-Shadow DOM（影子 DOM）还会改变外部看到的目标。组件内部的节点被点击后，影子树外的监听器读到的 `target` 会被 retarget（重定向）为该组件的宿主元素，内部结构不外泄。事件能否穿出影子边界由 `composed` 决定，能否向祖先冒泡由 `bubbles` 决定，两者是不同的开关。本章其余例子都在普通文档树中。
+Shadow DOM (影子 DOM)还会改变外部看到的目标。组件内部的节点被点击后，影子树外的监听器读到的 `target` 会被 retarget (重定向)为该组件的宿主元素，内部结构不外泄。事件能否穿出影子边界由 `composed` 决定，能否向祖先冒泡由 `bubbles` 决定，两者是不同的开关。本章其余例子都在普通文档树中。
 
 ### 事件委托：在父级处理一组子控件
 
-冒泡让祖先能收到后代上的事件。event delegation（事件委托）利用这一点：在共同的父级注册一个监听器，处理一组子控件，包括之后才插入的控件。它适用于三个条件同时成立的场景：事件会冒泡；父级确实拥有这些子控件；能从 `event.target` 可靠地判断事件属于哪个控件。委托减少的是注册次数和插入新控件时的重新注册，每次派发和处理器本身的计算并不会变少。
+冒泡让祖先能收到后代上的事件。event delegation (事件委托)利用这一点：在共同的父级注册一个监听器，处理一组子控件，包括之后才插入的控件。它适用于三个条件同时成立的场景：事件会冒泡；父级确实拥有这些子控件；能从 `event.target` 可靠地判断事件属于哪个控件。委托减少的是注册次数和插入新控件时的重新注册，每次派发和处理器本身的计算并不会变少。
 
 报表页的工具栏正好满足这些条件。处理器从命中的节点出发，向上找到带 `data-sort` 的按钮，再交给上一章的 `applySort()`：
 
@@ -946,7 +946,7 @@ controls.addEventListener("click", (event) => {
 
 ### 默认动作和传播控制是两回事
 
-工具栏里的按钮都写了 `type="button"`。不写时，表单里的 `<button>` 默认是提交按钮，点击会提交表单（表单控件的默认行为见[表单控件怎样命名、提交和校验，才对所有人可用？](#10.%20%E8%A1%A8%E5%8D%95%E6%8E%A7%E4%BB%B6%E6%80%8E%E6%A0%B7%E5%91%BD%E5%90%8D%E3%80%81%E6%8F%90%E4%BA%A4%E5%92%8C%E6%A0%A1%E9%AA%8C%EF%BC%8C%E6%89%8D%E5%AF%B9%E6%89%80%E6%9C%89%E4%BA%BA%E5%8F%AF%E7%94%A8%EF%BC%9F)）。这种浏览器自带的 default action（默认动作）和事件传播是两件事，各有各的开关：
+工具栏里的按钮都写了 `type="button"`。不写时，表单里的 `<button>` 默认是提交按钮，点击会提交表单（表单控件的默认行为见[表单控件怎样命名、提交和校验，才对所有人可用？](#10.%20%E8%A1%A8%E5%8D%95%E6%8E%A7%E4%BB%B6%E6%80%8E%E6%A0%B7%E5%91%BD%E5%90%8D%E3%80%81%E6%8F%90%E4%BA%A4%E5%92%8C%E6%A0%A1%E9%AA%8C%EF%BC%8C%E6%89%8D%E5%AF%B9%E6%89%80%E6%9C%89%E4%BA%BA%E5%8F%AF%E7%94%A8%EF%BC%9F)）。这种浏览器自带的 default action (默认动作)和事件传播是两件事，各有各的开关：
 
 | 方法 | 作用 | 不做什么 |
 |---|---|---|
@@ -994,11 +994,11 @@ controls.addEventListener("click", (event) => {
 
 判断“向左移动”这类语义时读 `key === "ArrowLeft"`；只有游戏控制这类要固定物理位置的场景才考虑 `code`，并要处理不同键盘布局的差异。某个动作若要求每次按下只执行一次，可以忽略 `repeat` 为 true 的事件；但这替代不了限流或服务端去重。旧的 `keypress` 和数字式 `keyCode` / `which` 是兼容接口，新代码不要用它们判断字符。
 
-键盘事件也不等于文本变化：粘贴、语音输入和 Input Method Editor（IME，输入法编辑器）都会改变文本，却不一定一次 `keydown` 对应一个字符。观察编辑结果用 `input` 事件；需要在变化发生前处理编辑意图时，用 `beforeinput`，并结合 composition（组合输入）事件判断输入法是否还在组字。
+键盘事件也不等于文本变化：粘贴、语音输入和 Input Method Editor (IME，输入法编辑器)都会改变文本，却不一定一次 `keydown` 对应一个字符。观察编辑结果用 `input` 事件；需要在变化发生前处理编辑意图时，用 `beforeinput`，并结合 composition (组合输入)事件判断输入法是否还在组字。
 
 ### 指针拖动：坐标、捕获与三种结束
 
-Pointer Events（指针事件）把鼠标、触摸和笔统一成 `pointer*` 事件。一次拖动有一个开始和三种结束：
+Pointer Events (指针事件)把鼠标、触摸和笔统一成 `pointer*` 事件。一次拖动有一个开始和三种结束：
 
 - `pointerdown` 开始，可调用 `setPointerCapture(pointerId)`，让这个指针的后续事件都发给被拖元素，即使指针移出了它。
 - `pointerup`：正常松开。
@@ -1009,7 +1009,7 @@ Pointer Events（指针事件）把鼠标、触摸和笔统一成 `pointer*` 事
 
 | 属性 | 参照系 | 回答的问题 |
 |---|---|---|
-| `clientX / clientY` | viewport（视口） | 指针在当前可视区域的哪里 |
+| `clientX / clientY` | viewport (视口) | 指针在当前可视区域的哪里 |
 | `pageX / pageY` | 文档 | 指针在页面内容坐标中的哪里 |
 | `screenX / screenY` | 屏幕 | 指针相对设备显示区域的位置 |
 
@@ -1100,7 +1100,7 @@ function disposeCard() {
 | 想知道 | 监听什么 | 注意 |
 |---|---|---|
 | 窗口（视口）尺寸变了 | `window` 的 `resize` | 父容器单独变大小时不会触发 |
-| 某个元素自身尺寸变了 | `ResizeObserver`（尺寸变化观察器） | 用 `disconnect()` 停止观察 |
+| 某个元素自身尺寸变了 | `ResizeObserver` (尺寸变化观察器) | 用 `disconnect()` 停止观察 |
 | 页面或容器滚动了 | 页面用 `window`，元素用实际滚动的那个容器 | 元素的 `scroll` 不冒泡 |
 
 这些事件都可能高频触发，处理器只做界面确实需要的更新；需要限频时，debounce 和 throttle 的语义见[怎样包装一个函数而不弄丢参数、this 和结果？](#25.%20%E6%80%8E%E6%A0%B7%E5%8C%85%E8%A3%85%E4%B8%80%E4%B8%AA%E5%87%BD%E6%95%B0%E8%80%8C%E4%B8%8D%E5%BC%84%E4%B8%A2%E5%8F%82%E6%95%B0%E3%80%81this%20%E5%92%8C%E7%BB%93%E6%9E%9C%EF%BC%9F)。
@@ -1136,10 +1136,10 @@ function stopObservingReport() {
 
 ### 交给 React 时交出的是意图
 
-如果报表页改由 React 管理，浏览器照常派发 `click`，变化的是处理器做什么：它从按钮读出排序意图 `oldest`，交给 state（状态）更新，由 React 计算新界面并提交 DOM 变化，而不是像 `applySort()` 那样直接移动节点。浏览器这一侧交出的是事件和当前 DOM，应用拿到的是“排序变为 `oldest`”这个意图。React 管理的节点若另用 DOM API 改动，下一次提交可能把修改覆盖掉。React 怎样把意图变成界面，见[React 怎样把一次用户操作变成界面更新？](#37.%20React%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
+如果报表页改由 React 管理，浏览器照常派发 `click`，变化的是处理器做什么：它从按钮读出排序意图 `oldest`，交给 state (状态)更新，由 React 计算新界面并提交 DOM 变化，而不是像 `applySort()` 那样直接移动节点。浏览器这一侧交出的是事件和当前 DOM，应用拿到的是“排序变为 `oldest`”这个意图。React 管理的节点若另用 DOM API 改动，下一次提交可能把修改覆盖掉。React 怎样把意图变成界面，见[React 怎样把一次用户操作变成界面更新？](#37.%20React%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)。
 
 > [!info] React 19 实例：事件对象与 currentTarget（核对 React DOM v19.2.0，2026-11-12）
-> - JSX 事件处理器收到的是 SyntheticEvent（合成事件）。`onClick` 在冒泡阶段运行，`onClickCapture` 对应捕获阶段；`currentTarget` 指向写了该事件属性的元素。
+> - JSX 事件处理器收到的是 SyntheticEvent (合成事件)。`onClick` 在冒泡阶段运行，`onClickCapture` 对应捕获阶段；`currentTarget` 指向写了该事件属性的元素。
 > - React 17 起不再池化事件对象，但每个处理器返回后，React 仍把 `event.currentTarget` 重置为 `null`；`persist()` 在 React DOM 中已无作用。所以在 `await` 之前先把值读成普通字符串：
 >
 >   ~~~jsx
@@ -1178,10 +1178,10 @@ function stopObservingReport() {
 
 DOM 只记录节点怎样嵌套。要变成画面，还要依次派生出几层数据：
 
-1. **style（样式）**：CSS 规则匹配当前 DOM，为每个元素算出 computed style（计算样式）。
-2. **layout（布局）**：为盒子求出尺寸与位置。
-3. **paint（绘制）**：把几何、颜色、文字和图片变成有顺序的绘制操作。
-4. **raster（栅格化）与 composite（合成）**：需要新像素时把绘制操作转成像素，再把各绘制表面组合成一帧交给显示。
+1. **style (样式)**：CSS 规则匹配当前 DOM，为每个元素算出 computed style (计算样式)。
+2. **layout (布局)**：为盒子求出尺寸与位置。
+3. **paint (绘制)**：把几何、颜色、文字和图片变成有顺序的绘制操作。
+4. **raster (栅格化)与 composite (合成)**：需要新像素时把绘制操作转成像素，再把各绘制表面组合成一帧交给显示。
 
 ![点击后的 DOM 状态怎样经过按需的样式、布局与绘制更新进入画面](../../frontend/browser/resources/rendering-update.svg)
 
@@ -1191,9 +1191,9 @@ DOM 只记录节点怎样嵌套。要变成画面，还要依次派生出几层�
 
 #### 计算样式不是最终几何
 
-`/reports.css` 到达后，CSS 解析器把文本解析成样式表和规则；脚本可见的 CSS Object Model（CSSOM，CSS 对象模型）用 `CSSStyleSheet`、`CSSRule` 等对象表示它们。规则不是 DOM 节点：渲染时浏览器让选择器匹配 DOM，按层叠与继承为每个元素挑出适用声明（冲突怎样裁决见[多条 CSS 声明冲突时谁赢，没有声明时值又从哪来？](#11.%20%E5%A4%9A%E6%9D%A1%20CSS%20%E5%A3%B0%E6%98%8E%E5%86%B2%E7%AA%81%E6%97%B6%E8%B0%81%E8%B5%A2%EF%BC%8C%E6%B2%A1%E6%9C%89%E5%A3%B0%E6%98%8E%E6%97%B6%E5%80%BC%E5%8F%88%E4%BB%8E%E5%93%AA%E6%9D%A5%EF%BC%9F)），得到 computed value（计算值），例如标题的字号和行高。
+`/reports.css` 到达后，CSS 解析器把文本解析成样式表和规则；脚本可见的 CSS Object Model (CSSOM，CSS 对象模型)用 `CSSStyleSheet`、`CSSRule` 等对象表示它们。规则不是 DOM 节点：渲染时浏览器让选择器匹配 DOM，按层叠与继承为每个元素挑出适用声明（冲突怎样裁决见[多条 CSS 声明冲突时谁赢，没有声明时值又从哪来？](#11.%20%E5%A4%9A%E6%9D%A1%20CSS%20%E5%A3%B0%E6%98%8E%E5%86%B2%E7%AA%81%E6%97%B6%E8%B0%81%E8%B5%A2%EF%BC%8C%E6%B2%A1%E6%9C%89%E5%A3%B0%E6%98%8E%E6%97%B6%E5%80%BC%E5%8F%88%E4%BB%8E%E5%93%AA%E6%9D%A5%EF%BC%9F)），得到 computed value (计算值)，例如标题的字号和行高。
 
-计算值还不是位置和尺寸。`width: auto` 这样的值要结合可用宽度、字体度量和前面内容，由布局算法求出 used value（使用值）。
+计算值还不是位置和尺寸。`width: auto` 这样的值要结合可用宽度、字体度量和前面内容，由布局算法求出 used value (使用值)。
 
 #### DOM 和盒不是一一对应
 
@@ -1203,7 +1203,7 @@ DOM 只记录节点怎样嵌套。要变成画面，还要依次派生出几层�
 - `display: contents` 的元素自己不生成盒，子元素照常生成。
 - 一个文本节点换行后，会对应多个行内片段。
 
-布局再按父容器约束和前面内容的尺寸，确定每个盒或片段的宽高、坐标和顺序。Blink 把一种布局结果组织为 fragment tree（片段树），Gecko 用 frame tree（帧树），一个节点也可能对应多个 frame。共同点是：这些结构携带布局结果，不是 DOM 的原样复制。
+布局再按父容器约束和前面内容的尺寸，确定每个盒或片段的宽高、坐标和顺序。Blink 把一种布局结果组织为 fragment tree (片段树)，Gecko 用 frame tree (帧树)，一个节点也可能对应多个 frame。共同点是：这些结构携带布局结果，不是 DOM 的原样复制。
 
 ![DOM 节点和 CSS 规则经过匹配、计算样式、盒生成和布局约束，形成片段结构](../../frontend/browser/resources/browser-basics-rules-to-layout.svg)
 
@@ -1258,11 +1258,11 @@ button svg { display: block; width: 16px; height: 16px; flex: none; }
 
 按 Chromium RenderingNG 架构文档（核对于 2026-11-11）：
 
-1. **Pre-paint** 计算 transform、clip、effect、scroll 四类 property trees（属性树），并标记失效的显示项或图块。
-2. **Paint** 按绘制顺序生成 display items（显示项），把共享同一属性状态的显示项分组为 paint chunks（绘制块）。
+1. **Pre-paint** 计算 transform、clip、effect、scroll 四类 property trees (属性树)，并标记失效的显示项或图块。
+2. **Paint** 按绘制顺序生成 display items (显示项)，把共享同一属性状态的显示项分组为 paint chunks (绘制块)。
 3. **Commit** 把显示列表和属性树交给合成器；**layerize** 按可独立合成的视觉关系把绘制块组织成一层或多层。
-4. **Raster** 把可见空间切成相邻的 tile（图块），每个栅格任务处理覆盖到某个矩形图块的绘制项；互不依赖的图块可以并行。一个绘制项可以跨多个图块，各图块只得到自己那部分像素。长页面可以复用已栅格的图块，滚动时补画新进入视口的区域。
-5. **Activate** 产生描述图块摆放和视觉效果的 compositor frame（合成帧）；**Viz** 汇总各可见表面的合成帧，由 GPU 执行 Draw 画出屏幕像素。
+4. **Raster** 把可见空间切成相邻的 tile (图块)，每个栅格任务处理覆盖到某个矩形图块的绘制项；互不依赖的图块可以并行。一个绘制项可以跨多个图块，各图块只得到自己那部分像素。长页面可以复用已栅格的图块，滚动时补画新进入视口的区域。
+5. **Activate** 产生描述图块摆放和视觉效果的 compositor frame (合成帧)；**Viz** 汇总各可见表面的合成帧，由 GPU 执行 Draw 画出屏幕像素。
 
 ![同一报表从已提交的绘制数据与图层进入相邻 tile 栅格区域，再由合成帧描述标题、图片、按钮和两条列表项](../../frontend/browser/resources/browser-basics-tiles-to-frame.svg)
 
@@ -1282,7 +1282,7 @@ Firefox 的公开说明也从 DOM/CSS 得到布局 frame，再生成 WebRender �
 | 改 `transform` 或 `opacity` | 某些实现路径可跳过布局，甚至复用绘制结果 | 不能凭属性名保证只走合成或使用 GPU |
 | DOM 或样式写入后读取几何 | 若所需样式或布局已失效，读取前同步更新 | 同一个几何 API 并非每次调用都触发布局 |
 
-reflow（重排）和 repaint（重绘）是常见的工程说法，指“重新布局”和“重新绘制”，不是可以跨浏览器比较的指标。一个节点尺寸变化后，排在后面的内容可能都要移动；属性变了但几何没失效时，也可能不必重做布局。`transform` 和 `opacity` 常被选作动画属性，是因为它们在某些渲染路径中能绕过布局或复用绘制内容；目标页面是否真走这条路，要看目标浏览器的性能录制（动画层面的取舍见[过渡和关键帧动画怎样选，怎样不伤性能和可访问性？](#17.%20%E8%BF%87%E6%B8%A1%E5%92%8C%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%E6%80%8E%E6%A0%B7%E9%80%89%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%B8%8D%E4%BC%A4%E6%80%A7%E8%83%BD%E5%92%8C%E5%8F%AF%E8%AE%BF%E9%97%AE%E6%80%A7%EF%BC%9F)）。
+reflow (重排)和 repaint (重绘)是常见的工程说法，指“重新布局”和“重新绘制”，不是可以跨浏览器比较的指标。一个节点尺寸变化后，排在后面的内容可能都要移动；属性变了但几何没失效时，也可能不必重做布局。`transform` 和 `opacity` 常被选作动画属性，是因为它们在某些渲染路径中能绕过布局或复用绘制内容；目标页面是否真走这条路，要看目标浏览器的性能录制（动画层面的取舍见[过渡和关键帧动画怎样选，怎样不伤性能和可访问性？](#17.%20%E8%BF%87%E6%B8%A1%E5%92%8C%E5%85%B3%E9%94%AE%E5%B8%A7%E5%8A%A8%E7%94%BB%E6%80%8E%E6%A0%B7%E9%80%89%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%B8%8D%E4%BC%A4%E6%80%A7%E8%83%BD%E5%92%8C%E5%8F%AF%E8%AE%BF%E9%97%AE%E6%80%A7%EF%BC%9F)）。
 
 处理器返回时 DOM 已是新顺序，但浏览器不保证每个任务结束就画一帧，读取几何也不会让屏幕立即多画一帧。上表最后一行是脚本能直接撞上的成本，下面先看几何 API 各量什么，再看读取为什么会卡住。
 
@@ -1350,7 +1350,7 @@ element.scrollTop = 0; // 在普通向下溢出的例子中，回到滚动起点
 
 #### getBoundingClientRect 与 transform
 
-前面的属性都忽略 transform。要知道元素在视口里实际占据的范围，用 `getBoundingClientRect()`：它先取元素的 client rect 列表（每个盒片段一个矩形，已计入元素自身和祖先的 transform），对普通非零片段求最小的轴对齐包围矩形。元素没有布局盒时返回全 0 的矩形。坐标以 layout viewport（布局视口）左上角为原点。
+前面的属性都忽略 transform。要知道元素在视口里实际占据的范围，用 `getBoundingClientRect()`：它先取元素的 client rect 列表（每个盒片段一个矩形，已计入元素自身和祖先的 transform），对普通非零片段求最小的轴对齐包围矩形。元素没有布局盒时返回全 0 的矩形。坐标以 layout viewport (布局视口)左上角为原点。
 
 一个可以手算的例子：文档没有滚动或缩放，祖先没有 transform。
 
@@ -1387,7 +1387,7 @@ function overlapsLayoutViewport(element) {
 }
 ~~~
 
-函数名不叫“已可见”，因为它不检查祖先滚动容器的裁剪、遮挡、透明度或旋转后形状内的空白。移动端 pinch-zoom（双指缩放）放大或平移时，布局视口也不等于用户眼前的 visual viewport（视觉视口）。要和视觉视口比较，把 `window.visualViewport` 的 `offsetLeft`、`offsetTop` 当作视觉视口在布局视口中的左上角，四边界取 `(offsetLeft, offsetTop, offsetLeft + width, offsetTop + height)`，再按同样的条件比较。
+函数名不叫“已可见”，因为它不检查祖先滚动容器的裁剪、遮挡、透明度或旋转后形状内的空白。移动端 pinch-zoom (双指缩放)放大或平移时，布局视口也不等于用户眼前的 visual viewport (视觉视口)。要和视觉视口比较，把 `window.visualViewport` 的 `offsetLeft`、`offsetTop` 当作视觉视口在布局视口中的左上角，四边界取 `(offsetLeft, offsetTop, offsetLeft + width, offsetTop + height)`，再按同样的条件比较。
 
 只想异步知道元素何时与视口或某个根相交时，`IntersectionObserver` 通常比反复读矩形更合适，用法见[图片和音视频该怎样写语义、定地址、选文件和定加载时机？](#6.%20%E5%9B%BE%E7%89%87%E5%92%8C%E9%9F%B3%E8%A7%86%E9%A2%91%E8%AF%A5%E6%80%8E%E6%A0%B7%E5%86%99%E8%AF%AD%E4%B9%89%E3%80%81%E5%AE%9A%E5%9C%B0%E5%9D%80%E3%80%81%E9%80%89%E6%96%87%E4%BB%B6%E5%92%8C%E5%AE%9A%E5%8A%A0%E8%BD%BD%E6%97%B6%E6%9C%BA%EF%BC%9F)。
 
@@ -1399,7 +1399,7 @@ DOM 或样式写入后，浏览器通常只把样式或布局标记为“待更�
 
 ![几何读取遇到失效布局时，浏览器先同步更新再把当前值交回脚本](../../frontend/browser/resources/geometry-read-flow.svg)
 
-这种同步布局，Chrome 文档称为 forced reflow（强制重排），也常叫强制布局。脚本要等它算完才继续，等待多久取决于此前哪些数据失效、影响范围多大、实现能复用多少，不是 API 本身的固定成本。同样的契约也适用于 `getComputedStyle()`：它要返回当前样式，所以在样式已失效时也可能先同步重算样式。
+这种同步布局，Chrome 文档称为 forced reflow (强制重排)，也常叫强制布局。脚本要等它算完才继续，等待多久取决于此前哪些数据失效、影响范围多大、实现能复用多少，不是 API 本身的固定成本。同样的契约也适用于 `getComputedStyle()`：它要返回当前样式，所以在样式已失效时也可能先同步重算样式。
 
 #### 把读和写分批
 
@@ -1476,7 +1476,7 @@ Web 平台规定的是可观察结果：DOM 状态、CSS 计算出的几何、�
 
 ### 图片在页面里承担什么角色？
 
-先按内容选元素：图像内容用 `<img>`，可播放的音频和视频用 `<audio>`、`<video>`。元素定了，再写 alternative text（替代文本），也就是 `alt` 属性。`alt` 写什么由图片的用途决定，不由图片长什么样决定：
+先按内容选元素：图像内容用 `<img>`，可播放的音频和视频用 `<audio>`、`<video>`。元素定了，再写 alternative text (替代文本)，也就是 `alt` 属性。`alt` 写什么由图片的用途决定，不由图片长什么样决定：
 
 | 图片用途 | `alt` 怎样写 | 报表页里的例子 |
 |---|---|---|
@@ -1487,7 +1487,7 @@ Web 平台规定的是可观察结果：DOM 状态、CSS 计算出的几何、�
 
 如果趋势图旁边已有一张数据表给出全部数值，图像不再增加信息，才可以当作装饰写 `alt=""`。`title` 不能代替 `alt`；同理，表单控件的名称应来自关联的 `<label>`，`title` 只是不可靠的备选。
 
-图片常被包在可点击的元素里，这时还要分清链接和按钮：`<a href>` 用于导航到另一个地址，`<button>` 用于在当前页面执行动作。`href="#"` 不是“什么都不做”的占位写法：它会改变 fragment（片段）位置，还可能新增一条历史记录。链接文字要说明去向。
+图片常被包在可点击的元素里，这时还要分清链接和按钮：`<a href>` 用于导航到另一个地址，`<button>` 用于在当前页面执行动作。`href="#"` 不是“什么都不做”的占位写法：它会改变 fragment (片段)位置，还可能新增一条历史记录。链接文字要说明去向。
 
 确需在新浏览上下文打开链接时写 `target="_blank"`。按当前 HTML 标准，只要没写 `rel="opener"`，它默认具有 `noopener` 效果，新页面拿不到指向原页面的 `opener` 引用。显式写 `rel="noopener"` 可以把意图留在标记上，也照顾较旧的浏览器。
 
@@ -1498,7 +1498,7 @@ Web 平台规定的是可观察结果：DOM 状态、CSS 计算出的几何、�
 | 写法 | 示例 | 解析方式 |
 |---|---|---|
 | 绝对 URL（带 `https:` 这类 scheme 前缀） | `https://example.com/a.png` | 直接使用自身的 scheme 和地址；`mailto:team@example.com` 也是绝对 URL，只是没有主机 |
-| 根相对路径 | `/assets/chart.png` | 从文档基准 URL 的 origin（源）根目录解析 |
+| 根相对路径 | `/assets/chart.png` | 从文档基准 URL 的 origin (源)根目录解析 |
 | 文档相对路径 | `../assets/chart.png` | 相对文档基准 URL 的路径解析 |
 
 文档基准 URL 默认就是当前文档的 URL。以报表页地址 `https://reports.example/reports/42?sort=recent#summary` 为例：
@@ -1543,7 +1543,7 @@ Web 平台规定的是可观察结果：DOM 状态、CSS 计算出的几何、�
 
 #### 首屏主图为什么不能延迟？
 
-延迟加载只适合首屏之外的图片。首屏的主图很可能是 Largest Contentful Paint（最大内容绘制，LCP）元素，而浏览器发现和请求它越晚，LCP 就越晚。因此：
+延迟加载只适合首屏之外的图片。首屏的主图很可能是 Largest Contentful Paint (最大内容绘制，LCP)元素，而浏览器发现和请求它越晚，LCP 就越晚。因此：
 
 - 已确认是 LCP 元素的图片不写 `loading="lazy"`；首屏可见、很可能成为 LCP 的主图（例如报表页的摘要图 `/report-summary.png`）也不写。
 - 这张图写在初始 HTML 里，让浏览器边解析边发现并请求它，而不是等脚本插入。
@@ -1580,7 +1580,7 @@ LCP 怎样测、慢在哪一段，见[用户觉得慢时，怎样从指标走到
 ~~~
 
 > [!example] 理想文件宽度
-> device pixel ratio（设备像素比，DPR）是一个 CSS 像素对应几个设备像素。理想文件宽度 = 展示宽度 × DPR。
+> device pixel ratio (设备像素比，DPR)是一个 CSS 像素对应几个设备像素。理想文件宽度 = 展示宽度 × DPR。
 >
 > - 视口宽 `320px`，按 `sizes` 展示宽度是 `320px`；DPR 为 `2` 时目标是 `320 × 2 = 640` 像素，通常选 `640w`。
 > - 视口宽 `1024px`，展示宽度是 `640px`；DPR 为 `2` 时目标是 `640 × 2 = 1280` 像素，通常选 `1280w`。
@@ -1655,7 +1655,7 @@ LCP 怎样测、慢在哪一段，见[用户觉得慢时，怎样从指标走到
 
 ### 需要自己控制时机时，怎样用 IntersectionObserver？
 
-`loading="lazy"` 把触发时机完全交给浏览器。下面几种情况需要自己控制，这时用 `IntersectionObserver`（相交观察器）：
+`loading="lazy"` 把触发时机完全交给浏览器。下面几种情况需要自己控制，这时用 `IntersectionObserver` (相交观察器)：
 
 - 观察范围是某个滚动容器，而不是视口；
 - 要指定提前多远开始加载，或可见到什么比例才触发；
@@ -1788,14 +1788,14 @@ scheme       host         path        query   fragment
 
 | 分量 | 本例 | 作用 |
 |---|---|---|
-| scheme（方案） | `https:` | 用什么协议取资源 |
-| host（主机） | `reports.example` | 向哪台服务器要 |
-| port（端口） | 省略，HTTPS 默认 443 | 服务器上的哪个端口 |
-| path（路径） | `/reports/42` | 要哪份资源 |
-| query（查询） | `?sort=recent` | 以什么参数看这份资源 |
-| fragment（片段） | `#summary` | 文档里的哪个位置 |
+| scheme (方案) | `https:` | 用什么协议取资源 |
+| host (主机) | `reports.example` | 向哪台服务器要 |
+| port (端口) | 省略，HTTPS 默认 443 | 服务器上的哪个端口 |
+| path (路径) | `/reports/42` | 要哪份资源 |
+| query (查询) | `?sort=recent` | 以什么参数看这份资源 |
+| fragment (片段) | `#summary` | 文档里的哪个位置 |
 
-origin（源）由 scheme、host、port 三者确定，本例是 `https://reports.example`。同源策略、存储分区、History API 能改写哪些 URL，都以 origin 为界。URL 里还可以有 username 和 password 分量，但不应使用。并非所有 URL 都有 `//主机/路径` 这种结构，例如 `mailto:reports@example.test` 就没有。
+origin (源)由 scheme、host、port 三者确定，本例是 `https://reports.example`。同源策略、存储分区、History API 能改写哪些 URL，都以 origin 为界。URL 里还可以有 username 和 password 分量，但不应使用。并非所有 URL 都有 `//主机/路径` 这种结构，例如 `mailto:reports@example.test` 就没有。
 
 三个分量的分工决定了状态该放哪里：
 
@@ -1991,14 +1991,14 @@ cancel.addEventListener("click", () => {
 
 WebView 只给网页一个运行环境；网页能用哪些原生能力，要由原生 App（下称宿主）显式开放。本章回答两件事：页面发来的一条请求怎样经过检查变成原生操作并把结果传回；下载的新页面包怎样经过验证、试启，最后上线或被拒绝。读者需要知道同源（origin）和 Promise 的基本用法；平台接口在专门一节集中对照。
 
-**合成案例。** 沿用主线一的报表页，这次它被打包成页面包 **report-web-17**，放在 Android 或 Apple 的 WebView 里运行。用户在报表 42 上点“打开详情”，页面请宿主显示原生详情界面。稍后服务器发布了 **report-web-18**，它要求 bridge（桥接）API **2.1**，而当前宿主只实现 **2.0**；更新源另外还提供了一个独立包 **report-web-18a**。包名、版本、来源和返回值都是教学用合成数据。
+**合成案例。** 沿用主线一的报表页，这次它被打包成页面包 **report-web-17**，放在 Android 或 Apple 的 WebView 里运行。用户在报表 42 上点“打开详情”，页面请宿主显示原生详情界面。稍后服务器发布了 **report-web-18**，它要求 bridge (桥接)API **2.1**，而当前宿主只实现 **2.0**；更新源另外还提供了一个独立包 **report-web-18a**。包名、版本、来源和返回值都是教学用合成数据。
 
 ### 先分清两个版本号
 
 案例里有两个互不相干的版本号：
 
 - **bridge API 版本**（2.0、2.1）：宿主向页面开放哪些能力的约定。
-- **`protocolVersion`**（本例为 `1`）：消息 envelope（信封）的字段格式，即 `{protocolVersion, id, operation, payload}` 怎样写。
+- **`protocolVersion`**（本例为 `1`）：消息 envelope (信封)的字段格式，即 `{protocolVersion, id, operation, payload}` 怎样写。
 
 API 兼容不代表消息格式兼容，反过来也一样。后文的兼容检查只比 bridge API 版本，消息解析只认 `protocolVersion`。
 
@@ -2032,7 +2032,7 @@ API 兼容不代表消息格式兼容，反过来也一样。后文的兼容检�
 
 来源检查确认的是“消息来自允许来源的文档主 frame”。宿主把回调里的 origin 与当前 WebView 配置的页面包 origin 精确比较，并要求消息来自主 frame。
 
-它分辨不出是该文档里哪段脚本发的消息：文档里执行的任何脚本都拥有同样的来源和 frame。因此页面内容由谁提供、导航策略、第三方脚本和 XSS 漏洞，都落在桥接的可信边界之内。XSS 的成因与防法见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。若同一 WebView 还要装载不受宿主控制的同源内容，就把它隔离到另一来源或另一 WebView，或者不给它原生能力。
+它分辨不出是该文档里哪段脚本发的消息：文档里执行的任何脚本都拥有同样的来源和 frame。因此页面内容由谁提供、导航策略、第三方脚本和 XSS 漏洞，都落在桥接的可信边界之内。XSS 的成因与防法见[不可信报表标题怎样安全显示？](../../engineering-foundations/services/sessions-and-browser-boundaries.md#%E4%B8%8D%E5%8F%AF%E4%BF%A1%E6%8A%A5%E8%A1%A8%E6%A0%87%E9%A2%98%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E6%98%BE%E7%A4%BA%EF%BC%9F)。若同一 WebView 还要装载不受宿主控制的同源内容，就把它隔离到另一来源或另一 WebView，或者不给它原生能力。
 
 #### 宿主按什么顺序处理？
 
@@ -2042,7 +2042,7 @@ API 兼容不代表消息格式兼容，反过来也一样。后文的兼容检�
 2. **解析信封。** 限制消息大小和字段，解析 `protocolVersion`、`id`、`operation`、`payload`；拒绝未知协议版本和错误类型。
 3. **业务门。** 宿主内存里有一个 `businessReady` 标志。它打开前，只接受受限的引导操作 `bridgeHello`（见[新包怎样试启并晋升为稳定包？](#%E6%96%B0%E5%8C%85%E6%80%8E%E6%A0%B7%E8%AF%95%E5%90%AF%E5%B9%B6%E6%99%8B%E5%8D%87%E4%B8%BA%E7%A8%B3%E5%AE%9A%E5%8C%85%EF%BC%9F)）。
 4. **操作白名单与参数。** `openReport` 只在 `businessReady=true` 时接受，且 `reportId` 必须是正的安全整数。拒绝任意类名、方法名、URL、文件路径、JavaScript 字符串或通用 evaluate 请求。
-5. **授权。** 从原生登录态取当前主体，检查它此刻能否执行 `report:read` 并访问报表 42。正文里的用户 ID、隐藏的按钮、难猜的报表编号都不能授权。资源级授权怎样做，见[如何逐次授权租户内的报表资源？](../../engineering-foundations/services/per-request-authorization.md)。
+5. **授权。** 从原生登录态取当前主体，检查它此刻能否执行 `report:read` 并访问报表 42。正文里的用户 ID、隐藏的按钮、难猜的报表编号都不能授权。资源级授权怎样做，见[服务怎样逐次确认这个主体能对这份资源做这个动作？](../../engineering-foundations/services/per-request-authorization.md)。
 6. **执行并回复。** 通过后调用一个固定的原生方法，把规范化结果或稳定错误码回给同一个请求 `id`。本例成功时回 `{ opened: true, reportId: 42 }`。
 
 > [!example]- 宿主入口的业务分支（中立伪代码）
@@ -2244,7 +2244,7 @@ API 兼容不代表消息格式兼容，反过来也一样。后文的兼容检�
 
 两个平台把已验证目录映射成页面 origin 的方式不同：
 
-- **Android `WebViewAssetLoader`** 把本例目录映射到 `https://reports.example/app/<bundleId>/index.html`。它本身不验证包签名；默认 path handler 未命中时可以回退到网络，所以持有原生能力的装载器必须对包内资源未命中 fail closed（失败即拒绝）。
+- **Android `WebViewAssetLoader`** 把本例目录映射到 `https://reports.example/app/<bundleId>/index.html`。它本身不验证包签名；默认 path handler 未命中时可以回退到网络，所以持有原生能力的装载器必须对包内资源未命中 fail closed (失败即拒绝)。
 - **Apple `WKURLSchemeHandler`** 只服务 WebKit 不原生处理的自定义 scheme，不能注册 `https`。本例用 `reportassets://bundle/<bundleId>/index.html`，在 handler 里从对应不可变目录读入口与资源。
 
 > [!info] 自定义 scheme 页面的 origin 是否 opaque（WebKit 固定提交，核对于 2026-11-13）
@@ -2568,7 +2568,7 @@ td.pending {
 
 HTML 源码里的 `<` 和 `&` 有特殊含义，要显示它们本身就写 character reference (字符引用)：普通文本里 `&lt;` 显示为 `<`，`&amp;` 显示为 `&`，`&nbsp;` 是不换行空格。字符引用按所在解析状态处理：`script` 里的 script data 状态和 `style` 里的 RAWTEXT 状态都不会像正文那样解码它们。
 
-字符引用是写源码的手段，不是安全显示动态字符串的手段。报表标题、负责人姓名这类来自用户的值，要通过 DOM 的文本接口（如 `textContent`）写进页面，浏览器只把它当文字；不要把拼接好的字符串交给 `innerHTML` 当标记解析。几种内容接口的区别见[怎样查询和修改 DOM？](#3.%20%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E5%92%8C%E4%BF%AE%E6%94%B9%20DOM%EF%BC%8C%E6%89%8D%E6%8B%BF%E5%88%B0%E5%B9%B6%E6%94%B9%E5%88%B0%E9%A2%84%E6%9C%9F%E7%9A%84%E8%8A%82%E7%82%B9%EF%BC%9F)，不可信文本的安全显示见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
+字符引用是写源码的手段，不是安全显示动态字符串的手段。报表标题、负责人姓名这类来自用户的值，要通过 DOM 的文本接口（如 `textContent`）写进页面，浏览器只把它当文字；不要把拼接好的字符串交给 `innerHTML` 当标记解析。几种内容接口的区别见[怎样查询和修改 DOM？](#3.%20%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E5%92%8C%E4%BF%AE%E6%94%B9%20DOM%EF%BC%8C%E6%89%8D%E6%8B%BF%E5%88%B0%E5%B9%B6%E6%94%B9%E5%88%B0%E9%A2%84%E6%9C%9F%E7%9A%84%E8%8A%82%E7%82%B9%EF%BC%9F)，不可信文本的安全显示见[不可信报表标题怎样安全显示？](../../engineering-foundations/services/sessions-and-browser-boundaries.md#%E4%B8%8D%E5%8F%AF%E4%BF%A1%E6%8A%A5%E8%A1%A8%E6%A0%87%E9%A2%98%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E6%98%BE%E7%A4%BA%EF%BC%9F)。
 
 ### 结构定好之后，表单和样式从这里接手
 
@@ -2627,7 +2627,7 @@ HTML 源码里的 `<` 和 `&` 有特殊含义，要显示它们本身就写 char
 
 #### placeholder 只是样例，不是名字
 
-有人想用 `placeholder`（占位提示）省掉标签，但它们作用不同。`placeholder` 只在控件没有值时显示一个简短样例，例如给后文的通知邮箱字段加 `placeholder="name@example.com"`。它不是字段值：提交时不会代替用户输入，也不能满足 `required`。用户一开始输入它就消失，所以 `Notification email` 这个可见标签和持续显示的帮助文字仍要保留。
+有人想用 `placeholder` (占位提示)省掉标签，但它们作用不同。`placeholder` 只在控件没有值时显示一个简短样例，例如给后文的通知邮箱字段加 `placeholder="name@example.com"`。它不是字段值：提交时不会代替用户输入，也不能满足 `required`。用户一开始输入它就消失，所以 `Notification email` 这个可见标签和持续显示的帮助文字仍要保留。
 
 CSS 的 `::placeholder` 伪元素只选中提示文字本身：
 
@@ -2646,7 +2646,7 @@ CSS 的 `::placeholder` 伪元素只选中提示文字本身：
 
 1. 按 Tab，焦点按源码顺序依次经过起始月份、地区、两个复选框和提交按钮。隐藏字段 `sort` 不可见也不可聚焦。焦点为什么跟随源码顺序，见[焦点顺序跟随源码](#%E7%84%A6%E7%82%B9%E9%A1%BA%E5%BA%8F%E8%B7%9F%E9%9A%8F%E6%BA%90%E7%A0%81)。
 2. 起始月份保留预设值 `2026-04`。月份控件内部可能有年、月等多个键盘停靠点；用户继续按 Tab 离开它。
-3. 到达“地区”。它是单选的 `<select>`，名称来自关联标签 `Region`，当前选项是 `All regions`。按 HTML Accessibility API Mappings（HTML 到无障碍 API 的映射规范），未设 `multiple`、显示大小为 1 的 `<select>` 映射为 `combobox` (组合框) 角色。用户不改，按 Tab 离开。
+3. 到达“地区”。它是单选的 `<select>`，名称来自关联标签 `Region`，当前选项是 `All regions`。按 HTML Accessibility API Mappings (HTML 到无障碍 API 的映射规范)，未设 `multiple`、显示大小为 1 的 `<select>` 映射为 `combobox` (组合框) 角色。用户不改，按 Tab 离开。
 4. 到达 `Open` 复选框。它以原生 checkbox 角色报告名称 `Open` 和“未选中”状态；按空格键切换为已选中。再按 Tab 到 `Closed`，同样按空格键选中。
 5. 按 Tab 到 `Filter reports` 按钮，按空格键或 Enter 激活，提交表单。
 
@@ -3733,11 +3733,11 @@ Grid 版把项目在格内两个方向对齐；Flex 版分别沿主轴和交叉�
 
 | `position` | 普通流中的位置 | 偏移参照 | 滚动表现 |
 | --- | --- | --- | --- |
-| `static`（静态） | 保留 | 偏移属性不生效 | 随文档移动 |
-| `relative`（相对） | 保留原位置 | 自己原来的流位置 | 随文档移动 |
-| `absolute`（绝对） | 不占原位置 | 最近建立绝对定位包含块的祖先；没有则用初始包含块 | 随该包含块移动 |
-| `fixed`（固定） | 不占原位置 | 最近建立固定定位包含块的祖先；通常是视口 | 相对该包含块固定；若某个祖先建立了这种包含块，就不再贴着视口 |
-| `sticky`（粘性） | 保留原位置 | 最近滚动容器的可视区域，并受自身包含块约束 | 某轴至少一个偏移不是 `auto` 时，滚动中才沿该轴贴边 |
+| `static` (静态) | 保留 | 偏移属性不生效 | 随文档移动 |
+| `relative` (相对) | 保留原位置 | 自己原来的流位置 | 随文档移动 |
+| `absolute` (绝对) | 不占原位置 | 最近建立绝对定位包含块的祖先；没有则用初始包含块 | 随该包含块移动 |
+| `fixed` (固定) | 不占原位置 | 最近建立固定定位包含块的祖先；通常是视口 | 相对该包含块固定；若某个祖先建立了这种包含块，就不再贴着视口 |
+| `sticky` (粘性) | 保留原位置 | 最近滚动容器的可视区域，并受自身包含块约束 | 某轴至少一个偏移不是 `auto` 时，滚动中才沿该轴贴边 |
 
 `absolute` 和 `fixed` 会把盒子的外部 `display` 类型 blockify (块化)，例如 `display: inline` 的元素变成块级盒。这只改盒子类型，与包含块和堆叠上下文无关。
 
@@ -4109,7 +4109,7 @@ Grid 版把项目在格内两个方向对齐；Flex 版分别沿主轴和交叉�
 
 ### 关闭一个面板，要回答哪四个问题
 
-沿用[主线一的报表页](#1.%20%E6%89%93%E5%BC%80%E4%B8%80%E4%B8%AA%20URL%20%E5%90%8E%EF%BC%8C%E9%A1%B5%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%8F%98%E5%BE%97%E5%8F%AF%E8%A7%81%E5%8F%88%E5%8F%AF%E4%BA%A4%E4%BA%92%EF%BC%9F)。本章在它上面加一个普通的 disclosure（展开/折叠控件）：“查看详情”按钮（`Show details`）控制下方的 `#report-details` 面板，面板里有一个“关闭详情”按钮（`Close details`），页面其余部分始终可操作。用户在面板里点“关闭详情”时，期望三件事：内容淡出；焦点回到“查看详情”；之后按 Tab 不再进入已关闭的面板。
+沿用[主线一的报表页](#1.%20%E6%89%93%E5%BC%80%E4%B8%80%E4%B8%AA%20URL%20%E5%90%8E%EF%BC%8C%E9%A1%B5%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%8F%98%E5%BE%97%E5%8F%AF%E8%A7%81%E5%8F%88%E5%8F%AF%E4%BA%A4%E4%BA%92%EF%BC%9F)。本章在它上面加一个普通的 disclosure (展开/折叠控件)：“查看详情”按钮（`Show details`）控制下方的 `#report-details` 面板，面板里有一个“关闭详情”按钮（`Close details`），页面其余部分始终可操作。用户在面板里点“关闭详情”时，期望三件事：内容淡出；焦点回到“查看详情”；之后按 Tab 不再进入已关闭的面板。
 
 关闭其实改变了两件事，而且时点不同：
 
@@ -4142,7 +4142,7 @@ Grid 版把项目在格内两个方向对齐；Flex 版分别沿主轴和交叉�
 - **`inert` 与 `aria-hidden` 的职责不同。** `inert` 让子树同时退出用户交互、焦点和辅助技术呈现，外观仍由 CSS 决定，也不阻止脚本读取 DOM 或调用函数。`aria-hidden` 只对辅助技术隐藏，不管焦点；把仍可聚焦的区域标成 `aria-hidden`，键盘用户会 Tab 进一块读屏“看不见”的区域，所以不要用它代替焦点管理。
 
 > [!warning] 模态对话框是 inert 的例外
-> 用 `showModal()` 打开的 modal dialog（模态对话框）可以脱离祖先的 inert 状态，除非对话框自身也显式设置了 `inert`。不要假设给外层容器加 `inert` 就能连带关掉其中的模态对话框。
+> 用 `showModal()` 打开的 modal dialog (模态对话框)可以脱离祖先的 inert 状态，除非对话框自身也显式设置了 `inert`。不要假设给外层容器加 `inert` 就能连带关掉其中的模态对话框。
 
 ### until-found：可以被页内查找揭示的隐藏
 
@@ -4150,7 +4150,7 @@ HTML `hidden` 还有第二种状态 `hidden="until-found"`，用于折叠起来�
 
 - 元素仍有盒子、边框和间距，只是内容不显示。
 - 页内查找或片段导航命中其中内容时，浏览器先在元素上派发 `beforematch` 事件，再移除 `hidden` 属性。页面可以在 `beforematch` 里同步自己的展开状态，例如更新触发按钮的 `aria-expanded`。
-- 它依赖 layout containment（布局包含）。作者样式若把元素设成 `display: none`、`contents` 或 `inline`，查找就无法揭示它。
+- 它依赖 layout containment (布局包含)。作者样式若把元素设成 `display: none`、`contents` 或 `inline`，查找就无法揭示它。
 
 报表页的详情面板关闭后不需要被查找到，所以下面用普通 `hidden`。
 
@@ -4548,7 +4548,7 @@ const retry = {
 
 ### 七种原始类型，其余都是对象
 
-JavaScript 有七种 primitive type（原始类型），其余的值都是 object（对象），函数也是对象。
+JavaScript 有七种 primitive type (原始类型)，其余的值都是 object (对象)，函数也是对象。
 
 | 类型 | 本章用到的行为 |
 |---|---|
@@ -4557,10 +4557,10 @@ JavaScript 有七种 primitive type（原始类型），其余的值都是 objec
 | `Boolean` | `true` 与 `false` |
 | `Number` | IEEE 754 `binary64`（64 位二进制浮点）；包含 `NaN`、正负无穷和 `+0`/`-0` |
 | `BigInt` | 任意精度整数；不能直接与 `Number` 混合做算术 |
-| `String` | 不可变的 UTF-16 code unit（码元）序列 |
+| `String` | 不可变的 UTF-16 code unit (码元)序列 |
 | `Symbol` | 每次 `Symbol()` 都产生一个新的唯一值；`Symbol.for(key)` 从全局注册表取回同一个值；可作属性键 |
 
-对象和原始值的关键区别在“身份”。把对象赋给另一个变量，复制的是指向它的引用，两个变量从此指向同一个对象；修改其中一个看到的属性，另一个也看得到。常说的 reference type（引用类型）只是这条语义的简称：值在内存里放在栈上还是堆上，由引擎决定，语言并不规定。
+对象和原始值的关键区别在“身份”。把对象赋给另一个变量，复制的是指向它的引用，两个变量从此指向同一个对象；修改其中一个看到的属性，另一个也看得到。常说的 reference type (引用类型)只是这条语义的简称：值在内存里放在栈上还是堆上，由引擎决定，语言并不规定。
 
 案例里，`first.owner` 和变量 `owner` 是同一个对象；`retry.owner` 是第二次响应解析出来的另一个对象，只是字段内容相同。
 
@@ -4592,7 +4592,7 @@ isNaN("x");        // true：先把 "x" 转成数字 NaN
 
 ### == 会先转换，=== 不会
 
-strict equality（严格相等，`===`）不做跨类型转换，类型不同直接为 `false`。loose equality（宽松相等，`==`）在类型不同时按一串规则转换后再比，结果常常出人意料：
+strict equality (严格相等，`===`)不做跨类型转换，类型不同直接为 `false`。loose equality (宽松相等，`==`)在类型不同时按一串规则转换后再比，结果常常出人意料：
 
 ~~~javascript
 5 == "5";          // true：字符串转成数字
@@ -4605,7 +4605,7 @@ null == 0;         // false：null 只与 undefined 宽松相等
 
 所以默认用 `===`。`value == null` 是少数有意的用法：它恰好匹配 `null` 和 `undefined`，不匹配 `0`、`""` 或 `false`（`document.all` 这个历史例外除外）。
 
-比较对象时，两个运算符都只看 identity（身份）：
+比较对象时，两个运算符都只看 identity (身份)：
 
 ~~~javascript
 first.id === retry.id;       // true：业务字段相同
@@ -4622,9 +4622,9 @@ first.owner === owner;       // true：同一个对象
 
 | 规则 | `NaN` 与自身 | `+0` 与 `-0` | 对象 | 谁在用 |
 |---|---|---|---|---|
-| IsStrictlyEqual（严格相等） | 不等 | 相等 | 按身份 | `===`、`!==`；数组 `indexOf`、`lastIndexOf`；`switch` 的 `case` 匹配 |
-| SameValue（同值） | 相等 | 不等 | 按身份 | `Object.is`；React 判断 state 是否变化、依赖是否变化 |
-| SameValueZero（同值零） | 相等 | 相等 | 按身份 | `Map` 的键、`Set` 的成员、数组 `includes` |
+| IsStrictlyEqual (严格相等) | 不等 | 相等 | 按身份 | `===`、`!==`；数组 `indexOf`、`lastIndexOf`；`switch` 的 `case` 匹配 |
+| SameValue (同值) | 相等 | 不等 | 按身份 | `Object.is`；React 判断 state 是否变化、依赖是否变化 |
+| SameValueZero (同值零) | 相等 | 相等 | 按身份 | `Map` 的键、`Set` 的成员、数组 `includes` |
 
 ~~~javascript
 NaN === NaN;                      // false
@@ -4652,7 +4652,7 @@ Math.abs((0.1 + 0.2) - 0.3);         // 5.551115123125783e-17
 Math.abs((0.1 + 0.2) - 0.3) < 1e-12; // true：对这个量级的数成立
 ~~~
 
-容差要按领域定：数值量级、业务能接受的误差和舍入规则共同决定它，没有对所有场景都成立的固定 epsilon（误差容限）。`Number.EPSILON`（约 `2.22e-16`）只是 `1` 附近相邻两个浮点数的间距，数值变大后间距随之变大，它不是通用容差。
+容差要按领域定：数值量级、业务能接受的误差和舍入规则共同决定它，没有对所有场景都成立的固定 epsilon (误差容限)。`Number.EPSILON`（约 `2.22e-16`）只是 `1` 附近相邻两个浮点数的间距，数值变大后间距随之变大，它不是通用容差。
 
 金额这类需要精确相等的量，可在币种规则允许时换成最小单位的整数：`0.10 + 0.20` 元改记为 `10 + 20` 分，得到精确的 `30`。整数在 `Number.MAX_SAFE_INTEGER`（2⁵³ − 1 = 9007199254740991）以内才能精确表示，超出时用 `BigInt` 或明确舍入规则的十进制库。
 
@@ -4700,7 +4700,7 @@ profile.name; // "Grace"
 几种常见检查各自只回答一个窄问题：
 
 - `typeof` 适合区分原始值和函数：`typeof 1n` 为 `"bigint"`，`typeof (() => {})` 为 `"function"`；但 `typeof null` 是 `"object"`，数组也是 `"object"`。
-- `Array.isArray(value)` 检查是不是数组，也能认出来自另一个 realm（执行环境，例如 iframe 或另一个窗口各有一套全局对象）的数组。
+- `Array.isArray(value)` 检查是不是数组，也能认出来自另一个 realm (执行环境，例如 iframe 或另一个窗口各有一套全局对象)的数组。
 - `value instanceof C` 检查 `C.prototype` 是否在 `value` 的原型链上。不同 realm 的 `Array` 各有自己的 `prototype`，所以 iframe 里创建的数组 `instanceof Array` 为 `false`；`Symbol.hasInstance` 还能改写这项检查。
 - `Object.prototype.toString.call(value)` 给出 `"[object Array]"` 这类内建标签，但 `Symbol.toStringTag` 可以伪造它：
 
@@ -4853,9 +4853,9 @@ const report = { profile: null, rows };
 
 ### 属性键只有字符串和 Symbol
 
-property key（属性键）只能是字符串或 `Symbol`。点号写法 `object.key` 用字符串 `"key"`；方括号写法 `object[expr]` 先求出 `expr`，再用规范操作 `ToPropertyKey` 把它转成键，分两步：
+property key (属性键)只能是字符串或 `Symbol`。点号写法 `object.key` 用字符串 `"key"`；方括号写法 `object[expr]` 先求出 `expr`，再用规范操作 `ToPropertyKey` 把它转成键，分两步：
 
-1. 以 string hint（字符串提示）调用 `ToPrimitive`，把值转成原始值。对象若定义了可调用的 `Symbol.toPrimitive`，就以 `"string"` 为参数调用它，返回对象则抛 `TypeError`；若该属性是 `null`/`undefined` 以外的不可调用值，也抛 `TypeError`。没有定义时依次尝试 `toString`、`valueOf`，取第一个返回的原始值；都不返回原始值则抛 `TypeError`。
+1. 以 string hint (字符串提示)调用 `ToPrimitive`，把值转成原始值。对象若定义了可调用的 `Symbol.toPrimitive`，就以 `"string"` 为参数调用它，返回对象则抛 `TypeError`；若该属性是 `null`/`undefined` 以外的不可调用值，也抛 `TypeError`。没有定义时依次尝试 `toString`、`valueOf`，取第一个返回的原始值；都不返回原始值则抛 `TypeError`。
 2. 得到 `Symbol` 就原样作为键，其他原始值转成字符串。
 
 所以“对象作键时调用 `toString`”只是默认情况，钩子可以改变结果。
@@ -4900,11 +4900,11 @@ dictionary["[object Object]"]; // "retry object"：两条记录撞在同一个�
 
 ### 读取：先查自有属性，再沿原型链
 
-每个对象都有一个内部链接 `[[Prototype]]`，指向它的原型对象（或 `null`）。一串这样的链接组成 prototype chain（原型链）。读取 `object.key` 时：
+每个对象都有一个内部链接 `[[Prototype]]`，指向它的原型对象（或 `null`）。一串这样的链接组成 prototype chain (原型链)。读取 `object.key` 时：
 
-1. 先在 `object` 自身找这个键的 property descriptor（属性描述符）。
+1. 先在 `object` 自身找这个键的 property descriptor (属性描述符)。
 2. 没有找到，就沿 `[[Prototype]]` 到下一个对象继续找，直到命中或到达 `null`。
-3. 命中 data descriptor（数据描述符）时返回它的 `value`，值也可以是函数；命中 accessor descriptor（访问器描述符）时，调用它的 getter（读取器），没有 getter 就得到 `undefined`。
+3. 命中 data descriptor (数据描述符)时返回它的 `value`，值也可以是函数；命中 accessor descriptor (访问器描述符)时，调用它的 getter (读取器)，没有 getter 就得到 `undefined`。
 4. 到达 `null` 仍未找到，结果是 `undefined`。
 
 继承不是拷贝：对象只保存自己的属性，继承来的成员每次读取都要重新查找。
@@ -4929,7 +4929,7 @@ Object.getPrototypeOf(record) === base;  // true
 
 ### 访问器以最初的接收者为 this
 
-getter 定义在原型上时，调用它的 `this` 仍是最初被读取的那个对象（接收者），而不是原型。setter（设置器）同理。所以原型上的访问器能读写每个实例自己的状态：
+getter 定义在原型上时，调用它的 `this` 仍是最初被读取的那个对象（接收者），而不是原型。setter (设置器)同理。所以原型上的访问器能读写每个实例自己的状态：
 
 ~~~javascript
 const profile = { _name: "John" };
@@ -4960,7 +4960,7 @@ setter 里那次 `this._name = value` 为什么新建了属性而没有改 `prof
 
 ### 实例状态放实例，共享方法放原型
 
-有了查找规则，就能回到报表服务。每个实例的前缀和处理器放在实例上；格式化函数只有一份，放在 `ReportService.prototype` 上。工厂函数 `makeReportHandler` 用 closure（闭包）给每个处理器保存标签和调用次数：
+有了查找规则，就能回到报表服务。每个实例的前缀和处理器放在实例上；格式化函数只有一份，放在 `ReportService.prototype` 上。工厂函数 `makeReportHandler` 用 closure (闭包)给每个处理器保存标签和调用次数：
 
 ~~~javascript
 function makeReportHandler(tag) {
@@ -5085,7 +5085,7 @@ Object.defineProperty(demo, "fresh", { value: 1 });
 // { value: 1, writable: false, enumerable: false, configurable: false }
 ~~~
 
-不可配置的属性不能删除或任意重定义。给不可写属性或没有 setter 的访问器赋值时，strict mode（严格模式）下普通赋值抛 `TypeError`，非严格代码静默失败。
+不可配置的属性不能删除或任意重定义。给不可写属性或没有 setter 的访问器赋值时，strict mode (严格模式)下普通赋值抛 `TypeError`，非严格代码静默失败。
 
 ### 赋值的三种结局
 
@@ -5138,7 +5138,7 @@ Example.value();   // 1：构造函数体改写了函数对象自己的静态属
 - `for...in` 还会遍历继承来的可枚举字符串键，不适合遍历对象数据或数组。
 - 要 Symbol 键用 `Object.getOwnPropertySymbols`，要全部自有键用 `Reflect.ownKeys`。
 
-普通对象的键顺序是：先按数值升序列出 array index（数组索引，`0` 到 2³² − 2 的规范整数字符串），再按创建顺序列出其他字符串键。`Proxy` 和特殊对象的顺序可能不同。
+普通对象的键顺序是：先按数值升序列出 array index (数组索引，`0` 到 2³² − 2 的规范整数字符串)，再按创建顺序列出其他字符串键。`Proxy` 和特殊对象的顺序可能不同。
 
 ~~~javascript
 const record = { name: "Ada", age: 36 };
@@ -5175,7 +5175,7 @@ const spread = { ...{ retries: 2 }, ...{ retries: 4 } };
 
 ### 缺失属性：可选链、空值合并与解构默认值
 
-回到案例的零金额和空位。optional chaining（可选链）`?.` 只在左侧为 `null` 或 `undefined` 时短路，返回 `undefined`；`0`、`false`、空字符串不算缺失。它有两个边界：根变量未声明仍抛 `ReferenceError`；用括号截断链后，括号外的普通访问不受保护。
+回到案例的零金额和空位。optional chaining (可选链)`?.` 只在左侧为 `null` 或 `undefined` 时短路，返回 `undefined`；`0`、`false`、空字符串不算缺失。它有两个边界：根变量未声明仍抛 `ReferenceError`；用括号截断链后，括号外的普通访问不受保护。
 
 ~~~javascript
 report.profile?.name;   // undefined
@@ -5195,7 +5195,7 @@ user?.profile?.name;    // undefined
 // undeclaredUser?.name // ReferenceError：根标识符不存在
 ~~~
 
-只在值缺失时取默认值，用 nullish coalescing（空值合并）`??`；`||` 会把所有假值都换掉。`??` 与 `||` 或 `&&` 混用时必须加括号，否则是语法错误。
+只在值缺失时取默认值，用 nullish coalescing (空值合并)`??`；`||` 会把所有假值都换掉。`??` 与 `||` 或 `&&` 混用时必须加括号，否则是语法错误。
 
 ~~~javascript
 report.rows[0].amount ?? 100;  // 0：保留零金额
@@ -5203,7 +5203,7 @@ report.rows[0].amount || 100;  // 100：零被当成缺失
 report.rows[1]?.amount ?? 100; // 100：空位读出 undefined
 ~~~
 
-destructuring（解构）的默认值只在读到 `undefined` 时生效，不会覆盖 `0`、`false`、空字符串或 `null`。对象的剩余项 `...rest` 收集余下的自有可枚举属性，只复制一层。数组解构按迭代器逐个取值，模式里留空的位置也会消耗一个值。
+destructuring (解构)的默认值只在读到 `undefined` 时生效，不会覆盖 `0`、`false`、空字符串或 `null`。对象的剩余项 `...rest` 收集余下的自有可枚举属性，只复制一层。数组解构按迭代器逐个取值，模式里留空的位置也会消耗一个值。
 
 ~~~javascript
 const { amount: firstAmount = 100, owner: firstOwner, ...rowFields } = first;
@@ -5250,11 +5250,11 @@ bag.toString;        // undefined
 代价是不能直接调用这些常用方法，需要时用 `Object.hasOwn` 这类静态函数。去掉原型不改变键转换规则：`bag[123]` 和 `bag["123"]` 仍是同一个属性。
 
 > [!info] V8 实例：hidden class
-> V8 用 hidden class（隐藏类）记录对象的属性布局，并沿属性添加顺序做布局转换，以加快属性访问。这是引擎的实现选择，不是 ECMAScript 语义。只有性能测量确认瓶颈在属性访问时，才值得为了保持对象形状稳定而调整代码。
+> V8 用 hidden class (隐藏类)记录对象的属性布局，并沿属性添加顺序做布局转换，以加快属性访问。这是引擎的实现选择，不是 ECMAScript 语义。只有性能测量确认瓶颈在属性访问时，才值得为了保持对象形状稳定而调整代码。
 
 ### 属性值拼进文本：带标签模板不会净化
 
-行数据最后常被拼进文本。template literal（模板字面量）把表达式的值插进字符串；tagged template（带标签模板）调用一个标签函数，把固定文本片段和各个表达式的值分开传给它：
+行数据最后常被拼进文本。template literal (模板字面量)把表达式的值插进字符串；tagged template (带标签模板)调用一个标签函数，把固定文本片段和各个表达式的值分开传给它：
 
 ~~~javascript
 function capture(strings, ...values) {
@@ -5266,7 +5266,7 @@ capture`label: ${untrusted}`;
 // { strings: ["label: ", ""], values: ["<b>user text</b>"] }
 ~~~
 
-标签函数可以做格式化或转义，但“用了标签”本身不让插入的用户输入变安全；转义规则要按输出上下文（HTML 文本、属性、URL）选择。报表文本进入 DOM 时的上下文边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
+标签函数可以做格式化或转义，但“用了标签”本身不让插入的用户输入变安全；转义规则要按输出上下文（HTML 文本、属性、URL）选择。报表文本进入 DOM 时的上下文边界见[不可信报表标题怎样安全显示？](../../engineering-foundations/services/sessions-and-browser-boundaries.md#%E4%B8%8D%E5%8F%AF%E4%BF%A1%E6%8A%A5%E8%A1%A8%E6%A0%87%E9%A2%98%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E6%98%BE%E7%A4%BA%EF%BC%9F)。
 
 ### 属性规则定下后：集合该怎样选
 
@@ -5323,7 +5323,7 @@ service.onReport({ title: "May" }); // "Sales/daily: May #1"
 
 1. 求值构造器表达式 `C` 和实参 `a`、`b`。
 2. 检查 `C` 能否构造，不能就抛 `TypeError`。
-3. 读 `newTarget.prototype` 选定原型，创建新对象，即 receiver（接收者）。直接 `new C(...)` 时，`newTarget` 就是 `C`。
+3. 读 `newTarget.prototype` 选定原型，创建新对象，即 receiver (接收者)。直接 `new C(...)` 时，`newTarget` 就是 `C`。
 4. 以接收者为 `this` 初始化实例字段（若有），再运行构造器函数体。
 5. 看函数体的返回值：是对象就用它，否则用接收者。
 
@@ -5333,7 +5333,7 @@ service.onReport({ title: "May" }); // "Sales/daily: May #1"
 
 ### 目标必须可构造
 
-能被普通调用不等于能 `new`。语言用 `IsConstructor` 检查目标有没有 `[[Construct]]` internal method（内部构造方法）——这是语言定义的构造操作，不是对象上叫 `Construct` 的属性。
+能被普通调用不等于能 `new`。语言用 `IsConstructor` 检查目标有没有 `[[Construct]]` internal method (内部构造方法)——这是语言定义的构造操作，不是对象上叫 `Construct` 的属性。
 
 有没有 `prototype` 属性不能证明能否构造。下表检查的是语法刚创建、尚未手动增删属性的函数：
 
@@ -5390,7 +5390,7 @@ FallbackDemo.prototype = null;
 Object.getPrototypeOf(new FallbackDemo()) === Object.prototype; // true（同一 Realm）
 ~~~
 
-右支的回退值取自 `newTarget` 所属的 Realm（执行域）。每个 Realm（例如一个 iframe）有自己的一套内建对象，所以跨 Realm 构造时，回退得到的不一定是当前代码所在 Realm 的 `Object.prototype`。
+右支的回退值取自 `newTarget` 所属的 Realm (执行域)。每个 Realm（例如一个 iframe）有自己的一套内建对象，所以跨 Realm 构造时，回退得到的不一定是当前代码所在 Realm 的 `Object.prototype`。
 
 ### 构造器的返回值可能替换接收者
 
@@ -5404,7 +5404,7 @@ flowchart TD
   T -->|否，包括 null 和 undefined| N["返回新建的接收者"]
 ~~~
 
-数字、字符串、布尔值、Symbol、BigInt、`null`、`undefined` 都是 primitive value（原始值），不会替换接收者。没有 `return` 相当于返回 `undefined`，报表案例走的就是右支。
+数字、字符串、布尔值、Symbol、BigInt、`null`、`undefined` 都是 primitive value (原始值)，不会替换接收者。没有 `return` 相当于返回 `undefined`，报表案例走的就是右支。
 
 ~~~javascript
 function ReturnsPrimitive() {
@@ -5560,7 +5560,7 @@ const reflected = Reflect.construct(BaseReader, [], AlternateTarget);
 
 ### 绑定函数构造时丢弃保存的 this
 
-bound function（绑定函数）能否构造取决于目标：目标可构造，`bind` 返回的函数也可构造。用 `new` 调用它时：
+bound function (绑定函数)能否构造取决于目标：目标可构造，`bind` 返回的函数也可构造。用 `new` 调用它时：
 
 - 已保存的 `this` 被忽略，接收者照常新建；
 - 保存的前置参数仍放在实参列表前面；
@@ -5640,11 +5640,11 @@ const simple = emulateNew(SimpleReport, "West");
 > - 本章各代码块的结果在 Node.js 26.13.1 上复跑核对。
 ## 21. Proxy 能拦截什么，又在哪里拦不住？
 
-`new Proxy(target, handler)` 创建一个 Proxy（代理对象），让你在读、写、删、枚举、调用、构造这些对象操作上插入自己的逻辑：记录、校验、改写或拒绝。本章先说明 Proxy 拦的是哪一层的操作，再用报表服务的例子看 receiver（接收者）怎样决定 getter 的 `this` 和写入落点，最后列出它拦不住的地方：内部槽、私有字段、trap 结果的不变量、绕过代理的原始引用。读者需要先知道属性沿原型链查找、getter/setter 以接收者为 `this`（见[读写一个属性时，JavaScript 沿什么规则查找、落在哪里？](#19.%20%E8%AF%BB%E5%86%99%E4%B8%80%E4%B8%AA%E5%B1%9E%E6%80%A7%E6%97%B6%EF%BC%8CJavaScript%20%E6%B2%BF%E4%BB%80%E4%B9%88%E8%A7%84%E5%88%99%E6%9F%A5%E6%89%BE%E3%80%81%E8%90%BD%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F)）。
+`new Proxy(target, handler)` 创建一个 Proxy (代理对象)，让你在读、写、删、枚举、调用、构造这些对象操作上插入自己的逻辑：记录、校验、改写或拒绝。本章先说明 Proxy 拦的是哪一层的操作，再用报表服务的例子看 receiver (接收者)怎样决定 getter 的 `this` 和写入落点，最后列出它拦不住的地方：内部槽、私有字段、trap 结果的不变量、绕过代理的原始引用。读者需要先知道属性沿原型链查找、getter/setter 以接收者为 `this`（见[读写一个属性时，JavaScript 沿什么规则查找、落在哪里？](#19.%20%E8%AF%BB%E5%86%99%E4%B8%80%E4%B8%AA%E5%B1%9E%E6%80%A7%E6%97%B6%EF%BC%8CJavaScript%20%E6%B2%BF%E4%BB%80%E4%B9%88%E8%A7%84%E5%88%99%E6%9F%A5%E6%89%BE%E3%80%81%E8%90%BD%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%9F)）。
 
 ### Proxy 把内部方法交给 trap
 
-JavaScript 的读取、赋值、删除等操作，在规范里都落到对象的 internal method（内部方法）上，例如读属性对应 `[[Get]]`。Proxy 执行某个内部方法时，会在 handler 上查找规范规定的同名方法，这类方法叫 trap（拦截方法）：
+JavaScript 的读取、赋值、删除等操作，在规范里都落到对象的 internal method (内部方法)上，例如读属性对应 `[[Get]]`。Proxy 执行某个内部方法时，会在 handler 上查找规范规定的同名方法，这类方法叫 trap (拦截方法)：
 
 - 找到可调用的 trap：调用它，由它观察、改写或拒绝这次操作；
 - 该属性是 `undefined` 或 `null`：把同一个内部操作原样转发给 target；
@@ -5665,7 +5665,7 @@ JavaScript 的读取、赋值、删除等操作，在规范里都落到对象的
 
 ### Reflect：按内部方法原样转发
 
-Reflect（反射 API）有 13 个函数，名字和参数与 13 个 trap 一一对应，例如 `Reflect.get(target, key, receiver)` 就是对 `target` 执行 `[[Get]]`。trap 里通常用它把操作转发给 target，只在需要的地方加逻辑。`Reflect.set`、`Reflect.defineProperty` 返回布尔值表示成功与否，而不是抛错，正好对上 trap 的返回约定。
+Reflect (反射 API)有 13 个函数，名字和参数与 13 个 trap 一一对应，例如 `Reflect.get(target, key, receiver)` 就是对 `target` 执行 `[[Get]]`。trap 里通常用它把操作转发给 target，只在需要的地方加逻辑。`Reflect.set`、`Reflect.defineProperty` 返回布尔值表示成功与否，而不是抛错，正好对上 trap 的返回约定。
 
 读写属性的 trap 和 Reflect 函数都带一个 `receiver` 参数，它决定 getter/setter 里的 `this`，以及赋值最终落在哪个对象上。`Reflect.get` / `Reflect.set` 省略它时默认用 target，不会自动猜出原来的代理。下一节的差别全部来自这一点。
 
@@ -5805,7 +5805,7 @@ Reflect（反射 API）有 13 个函数，名字和参数与 13 个 trap 一一�
 
 上面的方法以代理为 `this` 能正常工作，是因为方法内部只做普通属性读取。依赖只有原对象才有的内部状态的方法则会失败。
 
-`Map.prototype.get` 要求 `this` 带有 `[[MapData]]` internal slot（内部槽）。包住 Map 的 Proxy 没有 target 的内部槽，所以即使 `Reflect.get` 正确取到了方法，方法以 Proxy 为 `this` 执行时仍抛 `TypeError`：
+`Map.prototype.get` 要求 `this` 带有 `[[MapData]]` internal slot (内部槽)。包住 Map 的 Proxy 没有 target 的内部槽，所以即使 `Reflect.get` 正确取到了方法，方法以 Proxy 为 `this` 执行时仍抛 `TypeError`：
 
 ~~~javascript
 const originalMap = new Map([["May", 5]]);
@@ -5823,7 +5823,7 @@ try {
 }
 ~~~
 
-class private field（私有字段）类似。它不是字符串或 Symbol 键属性，`this.#id` 不触发 `get` trap，而是直接在 `this` 指向的对象上查私有元素；Proxy 没有原实例的私有元素，于是抛 `TypeError`：
+class private field (私有字段)类似。它不是字符串或 Symbol 键属性，`this.#id` 不触发 `get` trap，而是直接在 `this` 指向的对象上查私有元素；Proxy 没有原实例的私有元素，于是抛 `TypeError`：
 
 ~~~javascript
 class PrivateReport {
@@ -5878,7 +5878,7 @@ Reflect.set(reportedOnly, "label", "Ops"); // true
 reportedTarget.label;                      // "Sales"：trap 没有写入
 ~~~
 
-后一种“报告成功却没写”之所以被接受，是因为 `label` 可配置。Proxy invariant（代理不变量）禁止 trap 对 target 上已经固定的**自有**属性报告矛盾的结果，违反就抛 `TypeError`：
+后一种“报告成功却没写”之所以被接受，是因为 `label` 可配置。Proxy invariant (代理不变量)禁止 trap 对 target 上已经固定的**自有**属性报告矛盾的结果，违反就抛 `TypeError`：
 
 | trap | 约束 |
 |---|---|
@@ -6055,9 +6055,9 @@ const records = [
 
 | 结构 | 适合的数据 | 键、成员与顺序 |
 |---|---|---|
-| `Array`（数组） | 有位置、允许重复、按索引访问的数据 | 每个位置独立，相同的值可以重复出现 |
-| `Map`（映射） | 任意类型键的键值对、以对象身份作键、需要 `size` 或直接遍历 | 键按 SameValueZero 匹配；按首次插入顺序遍历 |
-| `Set`（集合） | 唯一成员、频繁的成员查询 | 成员按 SameValueZero 去重；按插入顺序遍历 |
+| `Array` (数组) | 有位置、允许重复、按索引访问的数据 | 每个位置独立，相同的值可以重复出现 |
+| `Map` (映射) | 任意类型键的键值对、以对象身份作键、需要 `size` 或直接遍历 | 键按 SameValueZero 匹配；按首次插入顺序遍历 |
+| `Set` (集合) | 唯一成员、频繁的成员查询 | 成员按 SameValueZero 去重；按插入顺序遍历 |
 | 普通对象 | 字段固定的记录；键本来就是字符串或 Symbol 的字典 | 其他键先转成字符串；默认继承 `Object.prototype` 的属性 |
 
 SameValueZero 是三种相等规则之一：`NaN` 等于自身，`+0` 与 `-0` 相同，对象只比身份，规则对照见[JavaScript 的值有哪些类型，“相等”又有几种？](#%E4%B8%89%E7%A7%8D%E7%9B%B8%E7%AD%89%E8%A7%84%E5%88%99%EF%BC%9A===%E3%80%81Object.is%20%E4%B8%8E%20SameValueZero)。
@@ -6066,7 +6066,7 @@ SameValueZero 是三种相等规则之一：`NaN` 等于自身，`+0` 与 `-0` �
 
 ### 空位：没有元素、存了 undefined 与读出 undefined
 
-先分清三件事：hole（空位）是该索引上根本没有自有属性；显式 `undefined` 是有属性、值为 `undefined`；读取空位时得到的 `undefined` 只是“查到原型链末端也没找到”的结果。三者读出来都是 `undefined`，结构上却不同。
+先分清三件事：hole (空位)是该索引上根本没有自有属性；显式 `undefined` 是有属性、值为 `undefined`；读取空位时得到的 `undefined` 只是“查到原型链末端也没找到”的结果。三者读出来都是 `undefined`，结构上却不同。
 
 数组方法按两类策略对待空位：
 
@@ -6242,7 +6242,7 @@ removeInPlace([, 1], undefined);     // [1]：空位读成 undefined，被删除
 
 ### 回调参数：map(parseInt) 为什么得到 NaN
 
-`map`、`filter` 的回调都收到 `(value, index, array)` 三个参数。把 `parseInt` 直接传给 `map`，索引就被当成第二个参数 `radix`（进制）：`parseInt("1", 0)` 的进制 0 表示按默认规则，得到 `1`；`parseInt("2", 1)` 的进制 1 无效，得到 `NaN`；`parseInt("3", 2)` 里 `"3"` 不是二进制数字，也是 `NaN`。
+`map`、`filter` 的回调都收到 `(value, index, array)` 三个参数。把 `parseInt` 直接传给 `map`，索引就被当成第二个参数 `radix` (进制)：`parseInt("1", 0)` 的进制 0 表示按默认规则，得到 `1`；`parseInt("2", 1)` 的进制 1 无效，得到 `NaN`；`parseInt("3", 2)` 里 `"3"` 不是二进制数字，也是 `NaN`。
 
 ~~~javascript
 ["1", "2", "3"].map(parseInt);                   // [1, NaN, NaN]
@@ -6254,7 +6254,7 @@ removeInPlace([, 1], undefined);     // [1]：空位读成 undefined，被删除
 
 ### 从可迭代对象或类数组创建数组
 
-`Array.from` 既能消费可迭代对象，也能按 `length` 和数字索引读取 array-like object（类数组对象：有 `length` 和数字索引、但不是数组）。第二个参数是映射函数，在创建时转换元素。它读稀疏数组时走迭代器，结果是稠密的。数组展开也走迭代器，但不能处理不可迭代的类数组对象。
+`Array.from` 既能消费可迭代对象，也能按 `length` 和数字索引读取 array-like object (类数组对象：有 `length` 和数字索引、但不是数组)。第二个参数是映射函数，在创建时转换元素。它读稀疏数组时走迭代器，结果是稠密的。数组展开也走迭代器，但不能处理不可迭代的类数组对象。
 
 ~~~javascript
 Array.from(rows);                                // [first, undefined, retry]
@@ -6419,7 +6419,7 @@ new Set([first, retry]).size;               // 2：按对象身份
 
 常用操作是 `add`、`has`、`delete`、`clear` 和 `size`。`keys()` 与 `values()` 产出相同成员；`entries()` 为了和 `Map` 兼容，产出 `[value, value]`；`forEach` 的参数是 `(value, value, set)`。
 
-ECMAScript 2025 给 `Set` 加了集合运算：`union`（并）、`intersection`（交）、`difference`（差）、`symmetricDifference`（对称差）、`isSubsetOf`、`isSupersetOf`、`isDisjointFrom`。调用方法的对象（接收者）必须是真正的 `Set`；参数可以是 set-like object（类 Set 对象），但必须提供三个成员：
+ECMAScript 2025 给 `Set` 加了集合运算：`union` (并)、`intersection` (交)、`difference` (差)、`symmetricDifference` (对称差)、`isSubsetOf`、`isSupersetOf`、`isDisjointFrom`。调用方法的对象（接收者）必须是真正的 `Set`；参数可以是 set-like object (类 Set 对象)，但必须提供三个成员：
 
 - `size`：转成数值后为 `NaN` 抛 `TypeError`，为负数抛 `RangeError`；
 - `has(value)`：判断成员，不可调用抛 `TypeError`；
@@ -6478,7 +6478,7 @@ Object.keys(orderedObject); // ["2", "10", "z"]
 
 规范要求 `Map`、`Set` 和弱集合的平均访问时间相对集合大小是次线性的，但不规定必须用哈希表或做到常数时间。总成本还取决于外围算法：过滤 n 项时若每一项都重建一张同样的查找表，建表成本就付了 n 次。
 
-`Map` 强引用当前条目的键和值，`Set` 强引用当前成员：只要集合可达，这些对象就不会被回收。替换某个键的值后，旧值不再被集合引用；删除条目也会解除引用。为对象记的元数据若不该延长对象的寿命，用 `WeakMap`（弱映射）；它不提供遍历、`size`，也没有确定的清理时间，见[对象什么时候能被回收，弱引用能帮什么、不能帮什么？](#33.%20%E5%AF%B9%E8%B1%A1%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E8%83%BD%E8%A2%AB%E5%9B%9E%E6%94%B6%EF%BC%8C%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E5%B8%AE%E4%BB%80%E4%B9%88%E3%80%81%E4%B8%8D%E8%83%BD%E5%B8%AE%E4%BB%80%E4%B9%88%EF%BC%9F)。
+`Map` 强引用当前条目的键和值，`Set` 强引用当前成员：只要集合可达，这些对象就不会被回收。替换某个键的值后，旧值不再被集合引用；删除条目也会解除引用。为对象记的元数据若不该延长对象的寿命，用 `WeakMap` (弱映射)；它不提供遍历、`size`，也没有确定的清理时间，见[对象什么时候能被回收，弱引用能帮什么、不能帮什么？](#33.%20%E5%AF%B9%E8%B1%A1%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E8%83%BD%E8%A2%AB%E5%9B%9E%E6%94%B6%EF%BC%8C%E5%BC%B1%E5%BC%95%E7%94%A8%E8%83%BD%E5%B8%AE%E4%BB%80%E4%B9%88%E3%80%81%E4%B8%8D%E8%83%BD%E5%B8%AE%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 ### Lodash 实例：先看返回值和是否修改输入
 
@@ -6536,7 +6536,7 @@ oldest[0] === records[1];            // true：仍共享 April 行对象
 
 ### 案例：编辑前先存一份快照
 
-沿用主线一的报表页。用户打开编辑抽屉前，页面要存一份当前报表数据的快照，让编辑过程不影响列表，取消时还能恢复。这份数据是一张 object graph（对象图）：对象是节点，属性引用是边。下面让 May 行 `r-104` 和 April 行 `r-103` 共用同一个负责人对象，页面还用 `focusedOwner` 记着当前查看的负责人，并让根对象的 `self` 指回自己，构成一个循环：
+沿用主线一的报表页。用户打开编辑抽屉前，页面要存一份当前报表数据的快照，让编辑过程不影响列表，取消时还能恢复。这份数据是一张 object graph (对象图)：对象是节点，属性引用是边。下面让 May 行 `r-104` 和 April 行 `r-103` 共用同一个负责人对象，页面还用 `focusedOwner` 记着当前查看的负责人，并让根对象的 `self` 指回自己，构成一个循环：
 
 ~~~javascript
 const sharedOwner = { id: "u-17", name: "Ada" };
@@ -6555,8 +6555,8 @@ report.self = report;
 “复制”要回答的不止“嵌套对象有没有复制”，而是五个问题：
 
 1. 哪些节点得到新身份，哪些仍与原图共享？
-2. 原图里多处指向同一节点的 shared reference（共享引用），副本里是否仍指向同一个节点？
-3. cyclic reference（循环引用）怎样处理？
+2. 原图里多处指向同一节点的 shared reference (共享引用)，副本里是否仍指向同一个节点？
+3. cyclic reference (循环引用)怎样处理？
 4. 原型、属性描述符、getter、`Map` 条目这类内部状态保留多少？
 5. 二进制缓冲区这类底层资源是复制、共享还是转移？
 
@@ -6653,7 +6653,7 @@ stringifyErrorName(report);         // "TypeError"：report.self 构成循环
 
 ### structuredClone：复制对象图，保留图内关系
 
-`structuredClone(value)` 是宿主 API：WHATWG HTML 标准规定它执行 structured clone（结构化克隆），ECMAScript 本身不提供这个全局函数，Node.js 等运行时也实现了它。算法先把输入序列化成与 realm（执行环境，每个 realm 有自己一套全局对象和内建对象）无关的记录，再在调用方所在的 realm 中反序列化。序列化过程维护一张记忆表：第一次遇到某个对象时登记它，再次遇到同一对象时直接复用登记项。因此循环引用回指克隆出的对象，原本指向同一子对象的多处引用，在副本里也仍指向同一个克隆对象。
+`structuredClone(value)` 是宿主 API：WHATWG HTML 标准规定它执行 structured clone (结构化克隆)，ECMAScript 本身不提供这个全局函数，Node.js 等运行时也实现了它。算法先把输入序列化成与 realm (执行环境，每个 realm 有自己一套全局对象和内建对象)无关的记录，再在调用方所在的 realm 中反序列化。序列化过程维护一张记忆表：第一次遇到某个对象时登记它，再次遇到同一对象时直接复用登记项。因此循环引用回指克隆出的对象，原本指向同一子对象的多处引用，在副本里也仍指向同一个克隆对象。
 
 把案例的 `report` 交给它：
 
@@ -6699,7 +6699,7 @@ propertyCopy[metadataKey];  // undefined
 
 不可枚举的 `internal` 虽然是函数，却因为被跳过而没有导致报错。其他类型按各自的规则处理：
 
-- **有序列化步骤的标准对象**：`Date`、`RegExp`、`Map`、`Set`、`ArrayBuffer`、typed array（类型化数组）、`Error` 等，内部槽里的数据按类型复制；额外挂在对象上的属性不一定参与，例如 `Map` 的条目会复制，自己加的 `note` 属性不会。平台对象能否克隆，取决于该接口是否定义了序列化步骤。
+- **有序列化步骤的标准对象**：`Date`、`RegExp`、`Map`、`Set`、`ArrayBuffer`、typed array (类型化数组)、`Error` 等，内部槽里的数据按类型复制；额外挂在对象上的属性不一定参与，例如 `Map` 的条目会复制，自己加的 `note` 属性不会。平台对象能否克隆，取决于该接口是否定义了序列化步骤。
 - **用户自定义类的实例**：当作普通对象处理，自有可枚举数据会复制，但类原型、原型方法和访问器都不随之复制。
 - **拒绝的值**：函数、`WeakMap`、`Symbol` 值、`Proxy` 和普通 DOM `Node` 不能序列化；对象图中任何待复制的位置出现它们，调用就抛 `DataCloneError`。
 - **`BigInt`**：与 JSON 不同，可以克隆。
@@ -6739,7 +6739,7 @@ cloneErrorName({ format: () => "r-104" });   // "DataCloneError"：嵌套的函�
 
 ### 转移与共享：transfer 和 SharedArrayBuffer
 
-上面讨论的都是复制。`structuredClone` 的 `transfer`（转移）选项则把可转移资源的所有权交给结果，而不是再复制一份。对 `ArrayBuffer`，结果接管原缓冲区的字节，原 `ArrayBuffer` 变为 detached（已分离）状态：对象还在，长度变为 0，不能再读写内容。只有确实要交出所有权时才转移，普通快照不要带 `transfer`。
+上面讨论的都是复制。`structuredClone` 的 `transfer` (转移)选项则把可转移资源的所有权交给结果，而不是再复制一份。对 `ArrayBuffer`，结果接管原缓冲区的字节，原 `ArrayBuffer` 变为 detached (已分离)状态：对象还在，长度变为 0，不能再读写内容。只有确实要交出所有权时才转移，普通快照不要带 `transfer`。
 
 ~~~javascript
 const buffer = new ArrayBuffer(8);
@@ -6748,7 +6748,7 @@ transferred.buffer.byteLength; // 8
 buffer.byteLength;             // 0：原 buffer 已分离
 ~~~
 
-反过来，得到新的包装对象也不代表底层数据独立了。`SharedArrayBuffer`（共享数组缓冲区）被结构化克隆时，得到一个新的包装对象，但两者仍共享同一块字节；在浏览器中，克隆它还要求页面处于 cross-origin isolated（跨源隔离）状态。要得到独立快照，就把内容复制到普通 `ArrayBuffer`：
+反过来，得到新的包装对象也不代表底层数据独立了。`SharedArrayBuffer` (共享数组缓冲区)被结构化克隆时，得到一个新的包装对象，但两者仍共享同一块字节；在浏览器中，克隆它还要求页面处于 cross-origin isolated (跨源隔离)状态。要得到独立快照，就把内容复制到普通 `ArrayBuffer`：
 
 ~~~javascript
 const sharedBuffer = new SharedArrayBuffer(1);
@@ -6942,13 +6942,13 @@ Array.isArray(draft.rows); // true
 
 沿用主线一的报表页。本章看它的两段代码：给排序按钮注册点击日志的 `attachLogger(elementId, label)`，以及把一行报表格式化成文本的处理器 `service.onReport(report)`。注册函数早已返回，点击时回调为什么还读得到 `label`？同一个处理器作为方法调用正常，取出来单独调用却抛 `TypeError`，变的又是什么？
 
-答案分两半。函数体里的变量按函数**定义**处的环境查找，closure（闭包）让这些绑定在外层调用返回后仍可访问；普通函数的 `this` 由每次**调用**的形式提供，闭包不保留它。本章先讲变量，再讲 `this`。
+答案分两半。函数体里的变量按函数**定义**处的环境查找，closure (闭包)让这些绑定在外层调用返回后仍可访问；普通函数的 `this` 由每次**调用**的形式提供，闭包不保留它。本章先讲变量，再讲 `this`。
 
-以下代码块彼此独立，注释给出求值结果。标为 HTML 的代码要在浏览器里运行；含非严格函数的代码块要作为 classic script（经典脚本）运行，因为模块代码总是严格模式。
+以下代码块彼此独立，注释给出求值结果。标为 HTML 的代码要在浏览器里运行；含非严格函数的代码块要作为 classic script (经典脚本)运行，因为模块代码总是严格模式。
 
 ### 名称沿函数定义处的环境链查找
 
-读取一个标识符时，JavaScript 先在当前 lexical environment（词法环境）里找对应的 binding（绑定，即名称与值的关联）；找不到才去外层环境，逐层向外。“外层”指函数**定义**时所在的环境，不是调用它的地方。
+读取一个标识符时，JavaScript 先在当前 lexical environment (词法环境)里找对应的 binding (绑定，即名称与值的关联)；找不到才去外层环境，逐层向外。“外层”指函数**定义**时所在的环境，不是调用它的地方。
 
 下面的代码里有三个 `label`。按执行顺序走一遍：
 
@@ -6988,7 +6988,7 @@ flowchart TB
 
 调用者 `callFromElsewhere` 的环境（其中也有 `label`）不在这条链上。调用者能影响的只有实参，以及普通函数的 `this`。
 
-图里的环境节点是规范描述名称查找用的抽象，引擎不必按这个形状分配对象。规范还用 execution context（执行上下文）描述正在执行的代码及其状态，用 environment record（环境记录）保存绑定。调用栈回答“哪些调用还没返回”，词法链回答“名称按什么顺序解析”：上例调用 `inner` 时，调用栈里有 `callFromElsewhere`，词法链里没有。
+图里的环境节点是规范描述名称查找用的抽象，引擎不必按这个形状分配对象。规范还用 execution context (执行上下文)描述正在执行的代码及其状态，用 environment record (环境记录)保存绑定。调用栈回答“哪些调用还没返回”，词法链回答“名称按什么顺序解析”：上例调用 `inner` 时，调用栈里有 `callFromElsewhere`，词法链里没有。
 
 ### 声明方式决定绑定建在哪里、何时可读
 
@@ -6997,7 +6997,7 @@ flowchart TB
 | 声明 | 绑定范围 | 初始化时机 | 重复声明与重新赋值 |
 | --- | --- | --- | --- |
 | `var` | 所在函数；在脚本或模块顶层时属于各自的顶层 | 进入作用域时就初始化为 `undefined`（与形参同名时沿用形参值）；`= 值` 要执行到这一行才运行 | 兼容的 `var` 可重复声明；可重新赋值 |
-| `let` | 所在代码块，或脚本、模块顶层 | 进入作用域时建立未初始化的绑定，执行到声明才初始化；中间这段是 temporal dead zone（暂时性死区，TDZ） | 同一作用域不能重复声明；可重新赋值 |
+| `let` | 所在代码块，或脚本、模块顶层 | 进入作用域时建立未初始化的绑定，执行到声明才初始化；中间这段是 temporal dead zone (暂时性死区，TDZ) | 同一作用域不能重复声明；可重新赋值 |
 | `const` | 同 `let` | 同 `let`；必须写初始化式（`for...in` / `for...of` 头部除外） | 同一作用域不能重复声明；不能重新赋值 |
 
 ~~~javascript
@@ -7043,11 +7043,11 @@ try {
 
 ### 各宿主的“顶层”不同
 
-上表说的“脚本或模块顶层”，在不同宿主里外层环境不同，top-level `this`（顶层 `this`）也不总是全局对象。要在所有环境里拿到当前 Realm（执行域，一套独立的全局对象和内建对象）的全局对象，标准写法是 `globalThis`。
+上表说的“脚本或模块顶层”，在不同宿主里外层环境不同，top-level `this`（顶层 `this`）也不总是全局对象。要在所有环境里拿到当前 Realm (执行域，一套独立的全局对象和内建对象)的全局对象，标准写法是 `globalThis`。
 
 | 运行方式 | 顶层声明 | 顶层 `this` | 全局对象入口 |
 | --- | --- | --- | --- |
-| 浏览器 classic script（`<script>` 不写 `type="module"`） | `var` 通常成为 `window` 的属性；`let` / `const` 是 global lexical binding（全局词法绑定），不是 `window` 属性 | `window` | `window`、`globalThis` |
+| 浏览器 classic script（`<script>` 不写 `type="module"`） | `var` 通常成为 `window` 的属性；`let` / `const` 是 global lexical binding (全局词法绑定)，不是 `window` 属性 | `window` | `window`、`globalThis` |
 | 浏览器 module script（`type="module"`） | `var`、`let`、`const` 都是模块局部绑定 | `undefined` | `globalThis`；窗口页面另有 `window` |
 | Node.js CommonJS（CJS） | 都是模块包装函数内的局部绑定 | 包装函数收到的初始 `exports` 对象 | `globalThis` |
 | Node.js ECMAScript module（ESM） | 都是模块局部绑定 | `undefined` | `globalThis` |
@@ -7122,7 +7122,7 @@ for (let j = 0; j < 3; j++) fromLet.push(() => j);
 // [[3, 3, 3], [0, 1, 2]]
 ~~~
 
-没有 `let` 的旧代码常用 Immediately Invoked Function Expression（IIFE，立即调用函数表达式）：每轮调用一次函数，借形参为每轮新建一份绑定。
+没有 `let` 的旧代码常用 Immediately Invoked Function Expression (IIFE，立即调用函数表达式)：每轮调用一次函数，借形参为每轮新建一份绑定。
 
 ~~~javascript
 const callbacks = [];
@@ -7232,14 +7232,14 @@ const thirdReport = service.onReport({ title: "May" });
 
 普通函数的 `this` 分两步确定：
 
-1. **调用表达式给出初值**，即 receiver（接收者）。`obj.m()` 或 `obj[key]()` 把属性访问的基底作为接收者，基底也可以是原始值，如 `"May".toString()`；变量裸调 `fn()` 给出 `undefined`。唯一的例外是非严格代码的 `with` 块，它可以为裸调提供对象接收者。
+1. **调用表达式给出初值**，即 receiver (接收者)。`obj.m()` 或 `obj[key]()` 把属性访问的基底作为接收者，基底也可以是原始值，如 `"May".toString()`；变量裸调 `fn()` 给出 `undefined`。唯一的例外是非严格代码的 `with` 块，它可以为裸调提供对象接收者。
 2. **被调函数的模式决定怎样用这个初值**，下一节展开。
 
 ### 严格模式改变 this 的第二步
 
-strict mode（严格模式）把一些历史上静默出错的写法变成异常，也改变普通函数使用 `this` 初值的方式。经典脚本或函数体开头写 `"use strict"` 启用它；ES 模块和 class 内的代码自动严格。
+strict mode (严格模式)把一些历史上静默出错的写法变成异常，也改变普通函数使用 `this` 初值的方式。经典脚本或函数体开头写 `"use strict"` 启用它；ES 模块和 class 内的代码自动严格。
 
-strict function（严格函数）原样使用初值。sloppy function（非严格函数）把 `null` 或 `undefined` 换成函数所属 Realm 的全局 `this`，并把数字、字符串、布尔值、BigInt、Symbol 接收者装箱成对象：
+strict function (严格函数)原样使用初值。sloppy function (非严格函数)把 `null` 或 `undefined` 换成函数所属 Realm 的全局 `this`，并把数字、字符串、布尔值、BigInt、Symbol 接收者装箱成对象：
 
 | 被调函数模式 | 裸调 `fn()` | `fn.call(null)` | `fn.call(7)` |
 | --- | --- | --- | --- |
@@ -7282,7 +7282,7 @@ try {
 | `apply` | 立即 | 省略或传 `null` / `undefined` 时为空列表；否则必须是对象，按它的 `length` 和数字索引读取，不遍历迭代器 |
 | `bind` | 调用返回的新函数时 | 保存的前置参数，加上调用时的参数 |
 
-目标若是箭头函数或 bound function（绑定函数），会忽略传入的 `thisArg`。
+目标若是箭头函数或 bound function (绑定函数)，会忽略传入的 `thisArg`。
 
 ~~~javascript
 function describe(prefix, report, punctuation) {
@@ -7330,7 +7330,7 @@ try {
 
 ### 箭头函数读外层的 this
 
-arrow function（箭头函数）没有自己的 `this`、`arguments`、`super` 和 `new.target`，读的是定义处外层的 lexical `this`（词法 `this`）。`call`、`apply`、`bind` 能传参或预填参数，但换不掉这个 `this`。箭头函数也不能用 `new` 构造，且没有自有的 `prototype` 属性。
+arrow function (箭头函数)没有自己的 `this`、`arguments`、`super` 和 `new.target`，读的是定义处外层的 lexical `this`（词法 `this`）。`call`、`apply`、`bind` 能传参或预填参数，但换不掉这个 `this`。箭头函数也不能用 `new` 构造，且没有自有的 `prototype` 属性。
 
 ~~~javascript
 function makePanel(title) {
@@ -7441,13 +7441,13 @@ try {
 > - 箭头函数没有自己的 `this` 等绑定（“箭头函数读外层的 this”）：[ECMAScript 2026 Arrow Function Definitions](https://tc39.es/ecma262/2026/multipage/ecmascript-language-functions-and-classes.html#sec-arrow-function-definitions)；普通函数监听器以 `currentTarget` 为 `this`：[WHATWG DOM Event Listener Invocation](https://dom.spec.whatwg.org/#concept-event-listener-invoke)。
 ## 25. 怎样包装一个函数而不弄丢参数、this 和结果？
 
-wrapper（包装器）是一个新函数：它调用原函数，并在调用前后加一种策略，比如固定部分参数、计时、只执行一次、缓存结果、推迟执行。上一章讲了闭包保存跨调用的状态、`this` 由调用形式提供；本章把两者用到包装器上。
+wrapper (包装器)是一个新函数：它调用原函数，并在调用前后加一种策略，比如固定部分参数、计时、只执行一次、缓存结果、推迟执行。上一章讲了闭包保存跨调用的状态、`this` 由调用形式提供；本章把两者用到包装器上。
 
-每个包装器都要回答四个问题：实参何时凑齐，`this` 怎样转给原函数，返回值和异常怎样传出，闭包里存什么状态。本章按这四个问题依次看 currying（柯里化）、composition（组合）、计时包装、`once`、memoization（记忆化），最后是 debounce（防抖）和 throttle（节流）。
+每个包装器都要回答四个问题：实参何时凑齐，`this` 怎样转给原函数，返回值和异常怎样传出，闭包里存什么状态。本章按这四个问题依次看 currying (柯里化)、composition (组合)、计时包装、`once`、memoization (记忆化)，最后是 debounce (防抖)和 throttle (节流)。
 
 ### rest 参数收集实参
 
-rest parameter（剩余参数）把前面形参没接住的实参收集成数组。下面的函数只有 `...args`，所以收集全部实参；显式传入的 `undefined` 也算一个。
+rest parameter (剩余参数)把前面形参没接住的实参收集成数组。下面的函数只有 `...args`，所以收集全部实参；显式传入的 `undefined` 也算一个。
 
 ~~~javascript
 function argumentsLength(...args) {
@@ -7471,9 +7471,9 @@ createHelloWorld()({}, null, 42); // "Hello World"
 
 ### 柯里化与部分应用：实参分几次给
 
-严格意义的 currying 把多参数函数变成一串单参数函数：`sum(a, b, c)` 变成 `curriedSum(a)(b)(c)`。partial application（部分应用）先固定一部分实参，返回等待其余实参的函数，不要求每次只给一个。
+严格意义的 currying 把多参数函数变成一串单参数函数：`sum(a, b, c)` 变成 `curriedSum(a)(b)(c)`。partial application (部分应用)先固定一部分实参，返回等待其余实参的函数，不要求每次只给一个。
 
-下面是常见的宽松版 `curry`：每次可以给一个或多个实参，凑够声明的个数才调用原函数。“声明的个数”取 `fn.length`，即 arity（元数）。
+下面是常见的宽松版 `curry`：每次可以给一个或多个实参，凑够声明的个数才调用原函数。“声明的个数”取 `fn.length`，即 arity (元数)。
 
 ~~~javascript
 function curry(fn) {
@@ -7520,7 +7520,7 @@ partial.call({ name: "final" }, "May"); // "final:daily/May"
 
 ### 组合：上一步的输出接到下一步的输入
 
-function composition（函数组合）按从右到左执行：`compose([f, g, h])(x)` 计算 `f(g(h(x)))`。列表为空时返回 identity function（恒等函数），原样返回输入。
+function composition (函数组合)按从右到左执行：`compose([f, g, h])(x)` 计算 `f(g(h(x)))`。列表为空时返回 identity function (恒等函数)，原样返回输入。
 
 ~~~javascript
 function compose(functions) {
@@ -7667,7 +7667,7 @@ const add = memoizeNumeric(function (a, b) {
 
 沿用主线一的报表页，本章给它加一个搜索框：用户停止输入后再按搜索词请求报表列表。排序按钮则不该延迟，点击就立即导航。
 
-debounce（防抖）在一串连续调用停下、静默一段时间后，只执行最后一次；throttle（节流）限制执行频率。执行时机可以在 leading edge（首沿，一串调用的开头）、trailing edge（尾沿，一串调用结束后），或两者都要。两者都由返回的包装函数用闭包保存状态，区别在存什么、何时更新。
+debounce (防抖)在一串连续调用停下、静默一段时间后，只执行最后一次；throttle (节流)限制执行频率。执行时机可以在 leading edge (首沿，一串调用的开头)、trailing edge (尾沿，一串调用结束后)，或两者都要。两者都由返回的包装函数用闭包保存状态，区别在存什么、何时更新。
 
 #### 尾沿防抖与首沿节流的实现
 
@@ -7731,7 +7731,7 @@ function throttleLeading(fn, interval) {
 - **只要首沿**：一串调用的第一次立即执行，之后在窗口内的调用被忽略。按钮防连点通常这样用。
 - **首沿和尾沿都要**：第一次立即执行；窗口内若又有调用，窗口结束时再执行最后那次。窗口内只有一次调用时，尾沿不会重复执行它。
 
-只用尾沿防抖时，用户一直输入就永远不触发。maxWait（最大等待时间）给出上限：从这串调用开始（或上次执行）算起，等满 `maxWait` 就先执行当时最新的输入，不再等静默。节流可以看成 `maxWait` 等于 `wait` 的防抖：连续调用期间每隔 `wait` 至少执行一次。
+只用尾沿防抖时，用户一直输入就永远不触发。maxWait (最大等待时间)给出上限：从这串调用开始（或上次执行）算起，等满 `maxWait` 就先执行当时最新的输入，不再等静默。节流可以看成 `maxWait` 等于 `wait` 的防抖：连续调用期间每隔 `wait` 至少执行一次。
 
 #### cancel 和 flush 只管还没执行的调用
 
@@ -7901,13 +7901,13 @@ ahooks 把同样的计时策略包成两类 Hook：一类延迟**值**，一类�
 > - ahooks 实例（“实例：ahooks 的防抖与节流 Hook”）：[useDebounce](https://ahooks.js.org/hooks/use-debounce/)、[useDebounceFn](https://ahooks.js.org/hooks/use-debounce-fn/)、[useThrottle](https://ahooks.js.org/hooks/use-throttle/)、[useThrottleFn](https://ahooks.js.org/hooks/use-throttle-fn/)；v3 `debounceWait` / `throttleWait`：[v3.11.0 useRequest option types](https://github.com/alibaba/hooks/blob/v3.11.0/packages/hooks/src/useRequest/src/types.ts)；v2 旧选项迁移：[ahooks upgrade guide](https://ahooks.js.org/guide/upgrade/)（2026-11-06）；版本：[ahooks v3.11.0 release](https://github.com/alibaba/hooks/releases/tag/v3.11.0)（2026-10-27 发布，2026-11-12 核对）。
 ## 26. 同步事件总线在分发途中增删监听器会怎样？
 
-沿用主线一的报表页：报表 42 每次更新，页面都发布一条 `report:updated` 事件，通知摘要、旧版界面和恢复模块三个本地模块。监听器处理事件时可能增删订阅，甚至同步再发布一次同名事件，这时谁先谁后就不再直观。本章用一个自建的同步事件总线追踪这种 reentrancy（重入：回调还没返回，又进入了同一段分发逻辑），答案取决于区分两样东西：本次分发开始时复制的监听器快照，和总线此刻保存的监听器集合。
+沿用主线一的报表页：报表 42 每次更新，页面都发布一条 `report:updated` 事件，通知摘要、旧版界面和恢复模块三个本地模块。监听器处理事件时可能增删订阅，甚至同步再发布一次同名事件，这时谁先谁后就不再直观。本章用一个自建的同步事件总线追踪这种 reentrancy (重入：回调还没返回，又进入了同一段分发逻辑)，答案取决于区分两样东西：本次分发开始时复制的监听器快照，和总线此刻保存的监听器集合。
 
-这里的 event bus（事件总线）是应用层的 publish–subscribe（发布订阅）实现，与浏览器 DOM 的事件分发无关；DOM 事件的传播与取消见[一次点击怎样传播到处理器，处理器该怎样注册和清理？](#4.%20%E4%B8%80%E6%AC%A1%E7%82%B9%E5%87%BB%E6%80%8E%E6%A0%B7%E4%BC%A0%E6%92%AD%E5%88%B0%E5%A4%84%E7%90%86%E5%99%A8%EF%BC%8C%E5%A4%84%E7%90%86%E5%99%A8%E8%AF%A5%E6%80%8E%E6%A0%B7%E6%B3%A8%E5%86%8C%E5%92%8C%E6%B8%85%E7%90%86%EF%BC%9F)。
+这里的 event bus (事件总线)是应用层的 publish–subscribe (发布订阅)实现，与浏览器 DOM 的事件分发无关；DOM 事件的传播与取消见[一次点击怎样传播到处理器，处理器该怎样注册和清理？](#4.%20%E4%B8%80%E6%AC%A1%E7%82%B9%E5%87%BB%E6%80%8E%E6%A0%B7%E4%BC%A0%E6%92%AD%E5%88%B0%E5%A4%84%E7%90%86%E5%99%A8%EF%BC%8C%E5%A4%84%E7%90%86%E5%99%A8%E8%AF%A5%E6%80%8E%E6%A0%B7%E6%B3%A8%E5%86%8C%E5%92%8C%E6%B8%85%E7%90%86%EF%BC%9F)。
 
 ### 一个用 Map 和 Set 实现的总线
 
-总线用 Map（映射）按事件名找到一个 Set（集合）。同一个函数对同一事件重复 `on` 只占一个位置，Set 按插入顺序迭代。每次 `emit` 先把该事件当前的全部监听器复制成数组，再同步地逐个调用。Map、Set 的语义见[数组、Map、Set 和普通对象怎样选，空位和去重有哪些坑？](#22.%20%E6%95%B0%E7%BB%84%E3%80%81Map%E3%80%81Set%20%E5%92%8C%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%E6%80%8E%E6%A0%B7%E9%80%89%EF%BC%8C%E7%A9%BA%E4%BD%8D%E5%92%8C%E5%8E%BB%E9%87%8D%E6%9C%89%E5%93%AA%E4%BA%9B%E5%9D%91%EF%BC%9F)。
+总线用 Map (映射)按事件名找到一个 Set (集合)。同一个函数对同一事件重复 `on` 只占一个位置，Set 按插入顺序迭代。每次 `emit` 先把该事件当前的全部监听器复制成数组，再同步地逐个调用。Map、Set 的语义见[数组、Map、Set 和普通对象怎样选，空位和去重有哪些坑？](#22.%20%E6%95%B0%E7%BB%84%E3%80%81Map%E3%80%81Set%20%E5%92%8C%E6%99%AE%E9%80%9A%E5%AF%B9%E8%B1%A1%E6%80%8E%E6%A0%B7%E9%80%89%EF%BC%8C%E7%A9%BA%E4%BD%8D%E5%92%8C%E5%8E%BB%E9%87%8D%E6%9C%89%E5%93%AA%E4%BA%9B%E5%9D%91%EF%BC%9F)。
 
 ~~~javascript
 class EventBus {
@@ -8033,7 +8033,7 @@ trace.join(" → ");
 
 ### 事件总线还是观察者模式
 
-另一种常见做法是 Observer pattern（观察者模式）：拥有状态的对象自己保存观察者列表，直接通知它们。事件总线则让发布者和订阅者只通过事件名和中间的总线通信。
+另一种常见做法是 Observer pattern (观察者模式)：拥有状态的对象自己保存观察者列表，直接通知它们。事件总线则让发布者和订阅者只通过事件名和中间的总线通信。
 
 | | 观察者模式 | 事件总线 |
 | --- | --- | --- |
@@ -8041,7 +8041,7 @@ trace.join(" → ");
 | 模块间引用 | 订阅者要拿到被观察对象 | 只共享总线和事件名 |
 | 主要代价 | 耦合到具体对象 | 依赖清楚的事件名、载荷约定和调试追踪 |
 
-两者都只是同一浏览上下文（例如一个标签页）内的内存实现，快照与重入的问题同样存在。
+两者都只是同一浏览上下文（例如一个标签页）内的内存实现，快照与重入的问题同样存在。观察者与发布订阅在系统设计里各解决什么协作问题、通知语义怎样约定，见[工厂、策略、观察者和单例各解决什么协作问题，何时多余？](../../engineering-foundations/practice/design-patterns-in-practice.md#%E8%A7%82%E5%AF%9F%E8%80%85%E3%80%81%E5%8F%91%E5%B8%83%E8%AE%A2%E9%98%85%E3%80%81%E5%9B%9E%E8%B0%83%E8%BF%98%E6%98%AF%20EventTarget%EF%BC%9F)。
 
 ### 跨出一个标签页之后
 
@@ -8058,7 +8058,7 @@ trace.join(" → ");
 
 ### 本章要写的请求：报表、摘要和权限
 
-三项数据互相独立，可以同时请求。Fetch API 先交回的是 `Response`（响应对象），正文要另外读取和解析。只有三份响应状态都成功、正文都能解析、内容都通过校验，页面才算拿到一组可信数据。权限结果里的 `canReadRows` 再决定要不要继续读取报表行。
+三项数据互相独立，可以同时请求。Fetch API 先交回的是 `Response` (响应对象)，正文要另外读取和解析。只有三份响应状态都成功、正文都能解析、内容都通过校验，页面才算拿到一组可信数据。权限结果里的 `canReadRows` 再决定要不要继续读取报表行。
 
 本章最后写出的 `loadReport(reportId, sort, signal)` 要么履行为三份已校验的数据，要么以失败原因拒绝。传进去的 `AbortSignal` 能停住什么，留给[下一章](#28.%20%E5%8F%96%E6%B6%88%E3%80%81%E8%B6%85%E6%97%B6%E5%92%8C%E5%B9%B6%E5%8F%91%E4%B8%8A%E9%99%90%E5%90%84%E8%87%AA%E5%81%9C%E5%BE%97%E4%BD%8F%E4%BB%80%E4%B9%88%EF%BC%9F)；失败交给哪一层处理，见[错误处理一章](#30.%20%E4%B8%80%E6%AC%A1%E5%A4%B1%E8%B4%A5%E8%AF%A5%E7%94%B1%E5%93%AA%E4%B8%80%E5%B1%82%E5%A4%84%E7%90%86%EF%BC%9F)。
 
@@ -8099,7 +8099,7 @@ response.then(value => console.log(value));
 // （约 20 ms 或更久之后）报表响应已到
 ~~~
 
-20 毫秒只是计时器的最短等待，计时器由宿主提供，不属于语言本身。在浏览器里，Promise 处理器和 `await` 之后的代码作为 microtask (微任务) 排队：当前调用栈清空后，浏览器在微任务检查点把队列逐个跑完。微任务何时插进事件循环、和绘制怎样交错，见[事件循环怎样安排任务、微任务和渲染？](#2.%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E6%80%8E%E6%A0%B7%E5%AE%89%E6%8E%92%E4%BB%BB%E5%8A%A1%E3%80%81%E5%BE%AE%E4%BB%BB%E5%8A%A1%E5%92%8C%E6%B8%B2%E6%9F%93%EF%BC%9F)；Node.js 的调度边界不同，见 [Node.js 事件循环阶段与微任务队列如何交互？](../../engineering-foundations/runtime/node-event-loop-and-microtasks.md)。
+20 毫秒只是计时器的最短等待，计时器由宿主提供，不属于语言本身。在浏览器里，Promise 处理器和 `await` 之后的代码作为 microtask (微任务) 排队：当前调用栈清空后，浏览器在微任务检查点把队列逐个跑完。微任务何时插进事件循环、和绘制怎样交错，见[事件循环怎样安排任务、微任务和渲染？](#2.%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E6%80%8E%E6%A0%B7%E5%AE%89%E6%8E%92%E4%BB%BB%E5%8A%A1%E3%80%81%E5%BE%AE%E4%BB%BB%E5%8A%A1%E5%92%8C%E6%B8%B2%E6%9F%93%EF%BC%9F)；Node.js 的调度边界不同，见 [Node.js 的事件循环怎样安排计时器、I/O 回调和微任务？](../../engineering-foundations/runtime/node-event-loop-and-microtasks.md)。
 
 ### then 链怎样决定下一个 Promise
 
@@ -8108,7 +8108,7 @@ response.then(value => console.log(value));
 - 处理器返回普通值，新 Promise 以该值履行；
 - 处理器抛出异常，新 Promise 以该异常拒绝；
 - 处理器返回 Promise，新 Promise 跟随它的最终结局，这一步叫“采用”；
-- 处理器返回 thenable（带 `then` 方法的对象），新 Promise 会调用这个 `then`，看它回调解析函数还是拒绝函数来决定结局。
+- 处理器返回 thenable (带 `then` 方法的对象)，新 Promise 会调用这个 `then`，看它回调解析函数还是拒绝函数来决定结局。
 
 内建 Promise 也有 `then` 方法，但有一条捷径：`Promise.resolve(p)` 遇到真正的 Promise、且读到 `p.constructor === Promise` 时直接返回 `p`，不经过采用。普通 thenable 没有这条捷径，[组合器一节](#%E7%BB%84%E5%90%88%E5%99%A8%E6%80%8E%E6%A0%B7%E4%BF%9D%E6%8C%81%E8%BE%93%E5%85%A5%E9%A1%BA%E5%BA%8F)会看到它的处理步骤。
 
@@ -8458,14 +8458,14 @@ Promise 没有通用的取消操作。拿到一个 Promise，只能决定还等�
 | 手段 | 真正停住什么 | 停不住什么 |
 | --- | --- | --- |
 | 超时竞速（`Promise.race` 与计时器） | 调用方不再等待：先到的拒绝决定结果 | 底层工作仍可能继续，并在之后完成或产生副作用 |
-| `AbortSignal`（中止信号） | 接受并监听这个 signal 的 API 按自己的规则停止，例如 Fetch 中止请求和正文读取 | 忽略 signal 的代码、普通 Promise、同步函数；服务端已经收到并执行的写入 |
+| `AbortSignal` (中止信号) | 接受并监听这个 signal 的 API 按自己的规则停止，例如 Fetch 中止请求和正文读取 | 忽略 signal 的代码、普通 Promise、同步函数；服务端已经收到并执行的写入 |
 | 并发上限（任务池的 `limit`） | 还没启动的任务暂时不启动 | 已经启动的任务；任务内部另外发起、却没纳入返回值的工作 |
 
-`AbortSignal` 是 cooperative cancellation (协作式取消)：发出信号的一方只是请求停止，接收方要自己检查 `signal.aborted`、监听 `abort` 事件，或把 signal 继续传给支持它的 API。它也只作用在本地：请求已经到达服务器、写入已经执行，客户端中止只是不再等结果。结果不明的写入怎样对账，见[外部写入与对账](../../ai-engineering/runs/external-writes-and-reconciliation.md)。
+`AbortSignal` 是 cooperative cancellation (协作式取消)：发出信号的一方只是请求停止，接收方要自己检查 `signal.aborted`、监听 `abort` 事件，或把 signal 继续传给支持它的 API。它也只作用在本地：请求已经到达服务器、写入已经执行，客户端中止只是不再等结果。结果不明的写入怎样查清、何时能安全重试，见[写请求超时后，怎样查清结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md)；服务端进程、线程和异步 I/O 里的取消能证明什么，见[一份工作该交给进程、线程还是异步 I/O？](../../engineering-foundations/runtime/processes-threads-and-async-io.md#%E5%8F%96%E6%B6%88%E8%83%BD%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 ### AbortSignal 怎样传到工作里
 
-`AbortController`（中止控制器）由拥有这项工作生命周期的一方持有，例如页面；它的 `controller.signal` 交给工作方。调用 `controller.abort(reason)` 后，`signal.aborted` 变为 `true`，`signal.reason` 记下原因（不传时是名为 `AbortError` 的 `DOMException`），并派发一次 `abort` 事件。
+`AbortController` (中止控制器)由拥有这项工作生命周期的一方持有，例如页面；它的 `controller.signal` 交给工作方。调用 `controller.abort(reason)` 后，`signal.aborted` 变为 `true`，`signal.reason` 记下原因（不传时是名为 `AbortError` 的 `DOMException`），并派发一次 `abort` 事件。
 
 Fetch 收到中止后落在哪一步，取决于它进行到哪里：`Response` 交出之前中止，Fetch Promise 以 `signal.reason` 拒绝；正文还在读取时中止，`json()` 拒绝；`json()` 已经履行后中止，不会撤回结果。完整的步骤表在[上一章“fetch 履行不等于请求成功”](#fetch%20%E5%B1%A5%E8%A1%8C%E4%B8%8D%E7%AD%89%E4%BA%8E%E8%AF%B7%E6%B1%82%E6%88%90%E5%8A%9F)。
 
@@ -9664,13 +9664,13 @@ refreshButton.addEventListener("click", () => {
 
 ### 语言、宿主和构建器各管哪一层？
 
-ECMAScript module（ECMAScript 模块，ESM）由 ES2015 引入。它的语法只回答“依赖谁、公开哪些名字”，不规定发哪个 HTTP 请求、读哪个磁盘路径。
+ECMAScript module (ECMAScript 模块，ESM)由 ES2015 引入。它的语法只回答“依赖谁、公开哪些名字”，不规定发哪个 HTTP 请求、读哪个磁盘路径。
 
 | 层 | 决定什么 | 报表页里的例子 |
 | --- | --- | --- |
 | ESM 语法 | 导入、导出哪些名字；依赖是静态声明还是运行时请求 | `import { loadReport } from "./report-api.js"` |
 | 宿主（浏览器、Node.js） | 文件格式、说明符怎样解析成地址、怎样取回、在什么环境执行 | 浏览器用 URL 和 import map；Node.js 看扩展名和 `package.json` |
-| bundler（打包器） | 构建时怎样解析、转换、拆分和优化 | 可能保留 ESM，也可能输出 CommonJS 或普通浏览器脚本 |
+| bundler (打包器) | 构建时怎样解析、转换、拆分和优化 | 可能保留 ESM，也可能输出 CommonJS 或普通浏览器脚本 |
 
 同一行 `import` 能否成立，要先问它运行在哪个宿主、经过了哪个构建器。下面按这三层依次展开。
 
@@ -9749,8 +9749,8 @@ export function message() {
 
 | 步骤 | 输入与操作 | 输出 |
 | --- | --- | --- |
-| 定位入口 | HTML 解析到模块脚本，按文档 base URL（基准 URL）解析 `src`，取回 `report-page.js` | 入口模块源码 |
-| 解析并取回依赖 | 读出入口的静态 `import`：`./report-api.js` 相对导入者解析；`@reports/` 经 import map 映射。再递归处理每个依赖的静态导入。已发现的模块并行取回，但浏览器只能边取边发现，事先并不知道整张图 | `report-api.js`、`report-format.js` 的源码；跨源模块还必须通过 Cross-Origin Resource Sharing（跨源资源共享，CORS） |
+| 定位入口 | HTML 解析到模块脚本，按文档 base URL (基准 URL)解析 `src`，取回 `report-page.js` | 入口模块源码 |
+| 解析并取回依赖 | 读出入口的静态 `import`：`./report-api.js` 相对导入者解析；`@reports/` 经 import map 映射。再递归处理每个依赖的静态导入。已发现的模块并行取回，但浏览器只能边取边发现，事先并不知道整张图 | `report-api.js`、`report-format.js` 的源码；跨源模块还必须通过 Cross-Origin Resource Sharing (跨源资源共享，CORS) |
 | 链接 | 把每个导入名连到目标模块的导出绑定，检查名字是否存在 | 绑定连好；有名字对不上时，任何模块代码都不会开始执行 |
 | 求值 | 先执行依赖，再执行入口；入口的顶层 `await` 等待接口响应 | 检查通过后，入口把 `1,200` 写进 `output` |
 
@@ -9760,7 +9760,7 @@ export function message() {
 
 ### 三种地址各按什么基准解析？
 
-`@reports/report-format.js` 不以 `/`、`./`、`../` 开头，也不是完整 URL，属于 bare module specifier（裸模块说明符）。浏览器不会像 Node.js 那样去包目录里找它；没有 import map 提供映射，这条导入直接失败。
+`@reports/report-format.js` 不以 `/`、`./`、`../` 开头，也不是完整 URL，属于 bare module specifier (裸模块说明符)。浏览器不会像 Node.js 那样去包目录里找它；没有 import map 提供映射，这条导入直接失败。
 
 页面里有三类地址，基准各不相同：
 
@@ -9772,7 +9772,7 @@ Node.js 的 `fetch()` 没有文档可作基准，直接传 `"/api/reports/42"` �
 
 ### 导入拿到的是绑定还是值？
 
-导入建立的是到导出变量的 live binding（实时绑定），不是导入那一刻的拷贝。导出方后来写入的新值，导入方读得到；但导入方不能给导入名赋值。
+导入建立的是到导出变量的 live binding (实时绑定)，不是导入那一刻的拷贝。导出方后来写入的新值，导入方读得到；但导入方不能给导入名赋值。
 
 `month-state.js`：
 
@@ -9797,7 +9797,7 @@ console.log(JSON.stringify([before, selectedMonth])); // ["2026-04","2026-05"]
 
 `before` 是普通变量，保存了第一次读到的字符串；第二次读 `selectedMonth` 时，读的是导出方的同一个绑定，所以拿到新值。
 
-导出有两种写法。named export（命名导出）要求导入方写对名字，可以用 `as` 换成本地名；default export（默认导出）每个模块最多一个，导入方自己起名。两者可以并存：
+导出有两种写法。named export (命名导出)要求导入方写对名字，可以用 `as` 换成本地名；default export (默认导出)每个模块最多一个，导入方自己起名。两者可以并存：
 
 ```javascript
 // report-format.js
@@ -9818,7 +9818,7 @@ console.log(JSON.stringify([monthLabel("2026-05"), formatTotal(1200)]));
 
 ### 动态导入和顶层 await 改变了什么？
 
-静态 `import` 只能写在模块顶层，不能放进条件分支。要等用户需要时再加载，用 dynamic import（动态导入）`import()`：执行到调用处才开始加载，返回 Promise，兑现值是模块命名空间对象。
+静态 `import` 只能写在模块顶层，不能放进条件分支。要等用户需要时再加载，用 dynamic import (动态导入)`import()`：执行到调用处才开始加载，返回 Promise，兑现值是模块命名空间对象。
 
 ```javascript
 export async function loadOptionalChart(shouldOpen) {
@@ -9828,9 +9828,9 @@ export async function loadOptionalChart(shouldOpen) {
 }
 ```
 
-已经加载过的模块会被复用，重复调用 `import()` 不会每次重新取回和执行。浏览器经典脚本、Node.js 的 CommonJS 文件和 ESM 都能调用 `import()`，前面 `index.html` 里的经典脚本就是这样加载 `lazy-tip.js` 的。它会不会被拆成独立 chunk（代码块），由构建配置决定。
+已经加载过的模块会被复用，重复调用 `import()` 不会每次重新取回和执行。浏览器经典脚本、Node.js 的 CommonJS 文件和 ESM 都能调用 `import()`，前面 `index.html` 里的经典脚本就是这样加载 `lazy-tip.js` 的。它会不会被拆成独立 chunk (代码块)，由构建配置决定。
 
-top-level await（顶层 await）自 ES2022 起可用。报表入口在顶层等待接口响应，在无环的模块图里，导入它的模块要等它求值完毕才执行自己的模块体；与它无关的依赖分支可以继续求值。Promise 回调在事件循环中何时运行，见[事件循环怎样安排任务、微任务和渲染？](#2.%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E6%80%8E%E6%A0%B7%E5%AE%89%E6%8E%92%E4%BB%BB%E5%8A%A1%E3%80%81%E5%BE%AE%E4%BB%BB%E5%8A%A1%E5%92%8C%E6%B8%B2%E6%9F%93%EF%BC%9F)。
+top-level await (顶层 await)自 ES2022 起可用。报表入口在顶层等待接口响应，在无环的模块图里，导入它的模块要等它求值完毕才执行自己的模块体；与它无关的依赖分支可以继续求值。Promise 回调在事件循环中何时运行，见[事件循环怎样安排任务、微任务和渲染？](#2.%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E6%80%8E%E6%A0%B7%E5%AE%89%E6%8E%92%E4%BB%BB%E5%8A%A1%E3%80%81%E5%BE%AE%E4%BB%BB%E5%8A%A1%E5%92%8C%E6%B8%B2%E6%9F%93%EF%BC%9F)。
 
 ### ESM 和 CommonJS 在语言层面差在哪里？
 
@@ -9841,13 +9841,13 @@ CommonJS（简称 CJS）是 Node.js 早期采用的模块格式，靠包装函�
 | 导入与导出 | 静态 `import` / `export`；也可调用 `import()` | 运行时调用 `require()`，用 `module.exports` 导出；也可调用 `import()` |
 | 依赖何时建立 | 模块体运行前，从语法就能识别 | 执行到 `require()` 那一行才同步加载 |
 | 顶层 `this` | `undefined` | 包装函数收到的初始 `exports` 对象 |
-| strict mode（严格模式） | 自动启用 | 默认不启用，可写 `"use strict"` |
+| strict mode (严格模式) | 自动启用 | 默认不启用，可写 `"use strict"` |
 | 顶层 `await` | 支持 | 不能直接用；可以用 `import()` 加载含顶层 `await` 的 ESM |
 | 谁来解析 | 浏览器或 Node.js | Node.js 或构建工具 |
 
 在 CJS 文件里调用 `import()` 是运行时的异步加载，不会让这个文件变成 ESM。
 
-浏览器里对应的区分是 classic script（经典脚本）和 module script（模块脚本）。两者由同一个引擎执行，但脚本类型决定允许的语法和顶层名字落在哪里：经典脚本写静态 `import` 是语法错误，只能用 `import()`；模块脚本自动处于严格模式，有自己的模块作用域，顶层 `var` 不会成为 `window` 属性。所以去掉 `type="module"` 不只是换了加载方式，代码本身就可能不再合法。模块脚本还要求跨源请求通过 CORS、裸说明符经 import map 映射。
+浏览器里对应的区分是 classic script (经典脚本)和 module script (模块脚本)。两者由同一个引擎执行，但脚本类型决定允许的语法和顶层名字落在哪里：经典脚本写静态 `import` 是语法错误，只能用 `import()`；模块脚本自动处于严格模式，有自己的模块作用域，顶层 `var` 不会成为 `window` 属性。所以去掉 `type="module"` 不只是换了加载方式，代码本身就可能不再合法。模块脚本还要求跨源请求通过 CORS、裸说明符经 import map 映射。
 
 两种脚本何时取回、何时执行（`async`、`defer`、模块脚本默认延迟到解析完成后求值），见[打开一个 URL 后，页面怎样变得可见又可交互？](#1.%20%E6%89%93%E5%BC%80%E4%B8%80%E4%B8%AA%20URL%20%E5%90%8E%EF%BC%8C%E9%A1%B5%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%8F%98%E5%BE%97%E5%8F%AF%E8%A7%81%E5%8F%88%E5%8F%AF%E4%BA%A4%E4%BA%92%EF%BC%9F)；各宿主顶层 `this` 和顶层声明落在哪里的完整对照，见[函数里的变量和 this 从哪来？](#24.%20%E5%87%BD%E6%95%B0%E9%87%8C%E7%9A%84%E5%8F%98%E9%87%8F%E5%92%8C%20this%20%E4%BB%8E%E5%93%AA%E6%9D%A5%EF%BC%9F)。
 
@@ -9863,7 +9863,7 @@ Node.js 同时支持两种格式，先要判定一个文件按哪种执行。下
 | `.js`，最近的 `package.json` 写 `"type": "commonjs"` | CJS |
 | `.js`，没有任何显式标记 | 语法探测：含有 CJS 包装器里不成立的语法就按 ESM，否则按 CJS |
 
-syntax detection（语法探测）从 Node.js 22.7.0 和 20.19.0 起默认开启，26.13.1 文档仍标为 Release candidate，扫描歧义文件有额外开销。它找的是 CJS 里不能成立的语法：静态 `import` / `export`、`import.meta`、顶层 `await`，以及在顶层用 `const` / `let` 重新声明包装器参数（例如 `const require = 1`）。`import()` 在 CJS 里本来就合法，所以只出现 `import()` 的文件不会被判为 ESM。新项目应在 `package.json` 写明 `"type"`，或直接用 `.mjs` / `.cjs`，不让宿主和构建工具去猜：
+syntax detection (语法探测)从 Node.js 22.7.0 和 20.19.0 起默认开启，26.13.1 文档仍标为 Release candidate，扫描歧义文件有额外开销。它找的是 CJS 里不能成立的语法：静态 `import` / `export`、`import.meta`、顶层 `await`，以及在顶层用 `const` / `let` 重新声明包装器参数（例如 `const require = 1`）。`import()` 在 CJS 里本来就合法，所以只出现 `import()` 的文件不会被判为 ESM。新项目应在 `package.json` 写明 `"type"`，或直接用 `.mjs` / `.cjs`，不让宿主和构建工具去猜：
 
 ```json
 {
@@ -10155,8 +10155,8 @@ console.log(JSON.stringify({
 
 | 手段 | 补什么 | 补不了什么 |
 | --- | --- | --- |
-| transpiler（转译器） | 旧引擎读不懂的**语法**，例如把箭头函数改写成普通函数 | 通常不会往运行时里补上缺失的内建 API |
-| polyfill（兼容补丁） | 缺失的**内建 API**，在运行时把实现装上 | 新语法；解析失败时补丁代码根本执行不到 |
+| transpiler (转译器) | 旧引擎读不懂的**语法**，例如把箭头函数改写成普通函数 | 通常不会往运行时里补上缺失的内建 API |
+| polyfill (兼容补丁) | 缺失的**内建 API**，在运行时把实现装上 | 新语法；解析失败时补丁代码根本执行不到 |
 | 运行时探测，如 `typeof Object.groupBy === "function"` | 在代码成功解析后，为缺失的 API 走另一条分支 | 同上，文件里有旧引擎解析不了的语法时，整个文件在解析阶段就失败 |
 
 所以顺序是：先用转译保证每个文件在目标引擎上能解析，再用 polyfill 或探测处理缺失的 API。
@@ -10304,7 +10304,7 @@ DOM 和其他宿主 API 需要另选对应的补丁。
 
 ### 回收看的是从根能否到达
 
-ECMAScript 不规定垃圾回收算法，也不承诺一个不可达对象何时被回收。理解保留问题，用 tracing GC（追踪式垃圾回收）作模型就够了：从 GC root（垃圾回收根）出发，例如全局对象和正在执行的函数里的变量，沿强引用标记能到达的对象；标记不到的对象才具备回收条件。
+ECMAScript 不规定垃圾回收算法，也不承诺一个不可达对象何时被回收。理解保留问题，用 tracing GC (追踪式垃圾回收)作模型就够了：从 GC root (垃圾回收根)出发，例如全局对象和正在执行的函数里的变量，沿强引用标记能到达的对象；标记不到的对象才具备回收条件。
 
 这个模型有两个直接推论：
 
@@ -10366,20 +10366,20 @@ releaseReport = null;
 
 ### 怎样用堆快照找到保留者？
 
-怀疑“打开再关闭报表会留下对象”时，用两份 heap snapshot（堆快照）对比：
+怀疑“打开再关闭报表会留下对象”时，用两份 heap snapshot (堆快照)对比：
 
 1. 打开报表，切到固定的筛选条件，正常关闭。等页面回到关闭且稳定的状态，取第一份快照作基线。
 2. 按完全相同的顺序重复“打开、切筛选、关闭”数次，再回到同样的关闭状态，取第二份快照。
 3. 两份快照处于相同的页面和应用状态，第二份里新增的对象才算残留候选。
 
 > [!info] 实例：Chrome DevTools 与 Node.js 的快照工具
-> Chrome DevTools 的 Memory 面板在取快照前会先执行一次 GC。在 Comparison（比较）视图里展开新增的对象，看属性 `id` 是否为 `"r-104"`，也可以从名字有辨识度的 `onResize` 回调查起。选中对象后看 Retainers（保留者）面板和到根的路径：本例应沿监听器列表、闭包捕获的 `rows`，或调用方仍持有的清理函数找到所有者。控制台输出和断点会暂时保留对象，取快照前要清空控制台、停用断点。
+> Chrome DevTools 的 Memory 面板在取快照前会先执行一次 GC。在 Comparison (比较)视图里展开新增的对象，看属性 `id` 是否为 `"r-104"`，也可以从名字有辨识度的 `onResize` 回调查起。选中对象后看 Retainers (保留者)面板和到根的路径：本例应沿监听器列表、闭包捕获的 `rows`，或调用方仍持有的清理函数找到所有者。控制台输出和断点会暂时保留对象，取快照前要清空控制台、停用断点。
 >
 > Node.js 服务可以用 `v8.writeHeapSnapshot()` 生成 V8 堆快照。它会同步阻塞事件循环，采集时大约需要堆大小两倍的内存，在线上实例使用前要评估余量。这些工具属于运行时，不是 ECMAScript 语义。
 
 ### WeakMap：按对象身份附加数据，但不拥有键
 
-报表界面要给某一行附加“已选中”这样的状态，又不想因为这份附加数据让行对象一直留在内存里。`WeakMap`（弱映射）就是为这个场景设计的：条目按键的身份查找，而这条关联本身不会让键继续存活。
+报表界面要给某一行附加“已选中”这样的状态，又不想因为这份附加数据让行对象一直留在内存里。`WeakMap` (弱映射)就是为这个场景设计的：条目按键的身份查找，而这条关联本身不会让键继续存活。
 
 再沿用[JavaScript 的值有哪些类型，“相等”又有几种？](#18.%20JavaScript%20%E7%9A%84%E5%80%BC%E6%9C%89%E5%93%AA%E4%BA%9B%E7%B1%BB%E5%9E%8B%EF%BC%8C%E2%80%9C%E7%9B%B8%E7%AD%89%E2%80%9D%E5%8F%88%E6%9C%89%E5%87%A0%E7%A7%8D%EF%BC%9F)里的 `retry`：重试请求返回的同一行，业务 id 也是 `r-104`、金额 120，但它是另一个对象。
 
@@ -10407,7 +10407,7 @@ console.log(rowMetadata.has(retry));              // false：业务 id 相同，
 
 ### 哪些值能作弱键？
 
-对象是最常见的弱键。从 ECMAScript 2023 起，非注册的 `Symbol`（符号）也可以作弱键；用 `Symbol.for` 得到的注册 `Symbol` 不行。
+对象是最常见的弱键。从 ECMAScript 2023 起，非注册的 `Symbol` (符号)也可以作弱键；用 `Symbol.for` 得到的注册 `Symbol` 不行。
 
 区别在于身份能否被重新取得。每次调用 `Symbol("row metadata")` 都创建一个新符号，描述相同也是不同的身份；而 `Symbol.for("shared")` 总是从全局注册表取回同一个符号，它永远可以被重新拿到，弱持有它没有意义。
 
@@ -10428,7 +10428,7 @@ try {
 
 ### WeakSet：只标记成员身份
 
-`WeakSet`（弱集合）按身份弱持有对象或非注册 `Symbol`，只有 `add`、`has`、`delete`，没有遍历和 `size`。它适合标记“别处拥有的这个对象已经处理过”：
+`WeakSet` (弱集合)按身份弱持有对象或非注册 `Symbol`，只有 `add`、`has`、`delete`，没有遍历和 `size`。它适合标记“别处拥有的这个对象已经处理过”：
 
 ```javascript
 const processedRows = new WeakSet();
@@ -10448,7 +10448,7 @@ console.log(processedRows.has(retry)); // false：仍按对象身份区分
 
 ### WeakRef.deref 拿到的目标能活多久？
 
-`WeakMap` 和 `WeakSet` 只能拿已有的键去查。`WeakRef`（弱引用）直接持有一个对目标的弱引用，目标可以是对象或非注册 `Symbol`。`deref()` 在目标还存活时返回它，否则返回 `undefined`。
+`WeakMap` 和 `WeakSet` 只能拿已有的键去查。`WeakRef` (弱引用)直接持有一个对目标的弱引用，目标可以是对象或非注册 `Symbol`。`deref()` 在目标还存活时返回它，否则返回 `undefined`。
 
 返回了目标以后，它还能保证存活多久？规范维护一张临时保活列表（kept objects）：构造 `WeakRef` 时和 `deref()` 返回目标时，都把目标加进这张列表。浏览器在微任务检查点结束时清空它，而不是一遇到 `await` 就清空。因此可以依赖的窗口是：**当前这段同步执行期间，目标不会被回收**。宿主也许保留得更久，但代码不能依赖。
 
@@ -10486,12 +10486,12 @@ readAfterRefresh(makePendingRowRef()).then(id => {
 
 ### FinalizationRegistry 能承诺什么？
 
-`FinalizationRegistry`（最终化注册表）让程序在目标被回收之后**可能**收到一次回调。`register(target, heldValue, token)` 的三个参数受到不同的对待：
+`FinalizationRegistry` (最终化注册表)让程序在目标被回收之后**可能**收到一次回调。`register(target, heldValue, token)` 的三个参数受到不同的对待：
 
 | 参数 | 注册表怎样持有 | 作用 |
 | --- | --- | --- |
 | `target` | 弱持有 | 被观察的对象或非注册 `Symbol` |
-| `heldValue`（暂存值） | 注册有效期间强持有 | 回调运行时收到的唯一参数 |
+| `heldValue` (暂存值) | 注册有效期间强持有 | 回调运行时收到的唯一参数 |
 | `token`（可选取消令牌） | 弱持有，须为对象或非注册 `Symbol` | 传给 `unregister(token)` 以提前取消 |
 
 两条约束都来自“`heldValue` 被强持有”：
@@ -10586,9 +10586,9 @@ flowchart TB
 
 ### unknown 和类型谓词怎样配合检查？
 
-`unknown`（未知类型）可以接收任何值，但在缩窄到更具体的类型之前，编译器不允许读取它的属性。这正好逼着我们在第 2 步先检查再读取。
+`unknown` (未知类型)可以接收任何值，但在缩窄到更具体的类型之前，编译器不允许读取它的属性。这正好逼着我们在第 2 步先检查再读取。
 
-把检查封装成函数时，用 type predicate（类型谓词）把运行时的检查结果告诉编译器：
+把检查封装成函数时，用 type predicate (类型谓词)把运行时的检查结果告诉编译器：
 
 ```typescript
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -10736,7 +10736,7 @@ parseReportData("{");                                  // { ok: false, reason: "
 
 ### 实例：用 Zod 一次声明检查和类型
 
-手写检查一长，字段路径和类型判断就大量重复，而且类型声明和检查代码可能各改各的。schema（结构模式）库让我们只声明一次结构，同时得到运行时检查和静态类型。下面用 Zod 4.6.7（截至 2026-11-17 的 npm 最新版）在同一个报表入口重写：
+手写检查一长，字段路径和类型判断就大量重复，而且类型声明和检查代码可能各改各的。schema (结构模式)库让我们只声明一次结构，同时得到运行时检查和静态类型。下面用 Zod 4.6.7（截至 2026-11-17 的 npm 最新版）在同一个报表入口重写：
 
 ```typescript
 import * as z from "zod"; // zod@4.6.7
@@ -10801,7 +10801,7 @@ function parseReportDataWithZod(text: string): ParseResult<ReportDataFromSchema>
 
 拒不拒绝额外键、邮箱校验多严格，应按接口契约决定，而不是按库的默认值决定。
 
-同样的思路也用于服务端：Python 服务可以用 Pydantic 模型检查请求，FastAPI 还能根据路由和模型生成 OpenAPI 契约，但实际响应是否符合契约仍要另外核验，见[HTTP API 如何描述实际运行的请求与响应契约](../../engineering-foundations/services/api-contracts-errors-and-evolution.md)。
+同样的思路也用于服务端：Python 服务可以用 Pydantic 模型检查请求，FastAPI 还能根据路由和模型生成 OpenAPI 契约，但实际响应是否符合契约仍要另外核验，见[OpenAPI 描述与运行时是否一致](../../engineering-foundations/services/api-contracts-errors-and-evolution.md#OpenAPI%20%E6%8F%8F%E8%BF%B0%E4%B8%8E%E8%BF%90%E8%A1%8C%E6%97%B6%E6%98%AF%E5%90%A6%E4%B8%80%E8%87%B4)。
 
 ### as 和 z.infer 为什么都不算验证？
 
@@ -10818,7 +10818,7 @@ const b = JSON.parse(text) as z.infer<typeof ReportDataSchema>;
 
 ### 数据进入应用后，怎样让新增分支不被漏掉？
 
-通过检查的数据进入应用后，还有另一类风险：类型定义改了，使用它的代码没跟上。调用端按角色分支处理时，可以在 `default` 分支把值赋给 `never`（不可能出现的类型），这叫 exhaustiveness checking（穷尽性检查）：
+通过检查的数据进入应用后，还有另一类风险：类型定义改了，使用它的代码没跟上。调用端按角色分支处理时，可以在 `default` 分支把值赋给 `never` (不可能出现的类型)，这叫 exhaustiveness checking (穷尽性检查)：
 
 ```typescript
 function roleLabel(role: Role): string {
@@ -10859,7 +10859,7 @@ if (manualResult.ok) {
 > - **Zod 4.6.7**（实例节、接受面对照）：[v4.6.7 发布记录](https://github.com/colinhacks/zod/releases/tag/v4.6.7)、[4.6.7 文档与源码](https://github.com/colinhacks/zod/tree/v4.6.7/packages/docs/content)、[对象 schema 与 strict keys](https://zod.dev/api?id=objects)、[`safeParse` 与 `z.infer`](https://zod.dev/basics)、[issue 路径](https://zod.dev/packages/core#issues)、[Zod 4 的格式 API 与 number 变化](https://zod.dev/v4)。原稿在隔离目录安装此版本、TypeScript 编译后于 Node v26.13.0 运行核对（2026-11-12）；本章改用 r-104 数据后，以 zod 4.6.7、TypeScript 5.7.2（`strict`、`noUncheckedIndexedAccess`）、Node v26.13.1 重新运行，对照表四行均为实测输出。
 ## 35. 泛型和工具类型怎样从已有类型推出新类型？
 
-为每种数据各写一份函数，维护成本高；一律写成 `any`（任意类型），调用处又丢掉了字段信息。generic（泛型）让同一段逻辑在每次调用时保留具体类型；utility type（工具类型）则从已有类型推出新的形状，例如列表预览和局部更新。本章依次讲类型参数、`keyof` 与索引访问、泛型容器、常用工具类型、分配式条件类型，以及怎样给方法里的 `this` 提供类型。
+为每种数据各写一份函数，维护成本高；一律写成 `any` (任意类型)，调用处又丢掉了字段信息。generic (泛型)让同一段逻辑在每次调用时保留具体类型；utility type (工具类型)则从已有类型推出新的形状，例如列表预览和局部更新。本章依次讲类型参数、`keyof` 与索引访问、泛型容器、常用工具类型、分配式条件类型，以及怎样给方法里的 `this` 提供类型。
 
 本章是[TypeScript 能保证什么，外部数据又该怎样验证？](#34.%20TypeScript%20%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%8C%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%E5%8F%88%E8%AF%A5%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%EF%BC%9F)的支线，沿用那里报表页的行类型 `ReportRow` 和行数据 r-104。这里讲的一切都只作用于编译期：不会在运行时筛选字段、验证数据，也不会替方法绑定 `this`。
 
@@ -10887,9 +10887,9 @@ const row: ReportRow = {
 
 ### 取一个字段时，怎样保留它的类型？
 
-type parameter（类型参数）相当于类型层面的变量：编译器可以从调用参数推断它，调用者也可以显式指定。
+type parameter (类型参数)相当于类型层面的变量：编译器可以从调用参数推断它，调用者也可以显式指定。
 
-下面的 `getProperty` 用 `T` 代表整行的类型。`keyof T` 是 `T` 所有键名组成的联合类型；`K extends keyof T` 里的 `extends` 表示 constraint（约束），要求传入的键属于这一行已有的键；indexed access type（索引访问类型）`T[K]` 再取出所选键对应的值类型。
+下面的 `getProperty` 用 `T` 代表整行的类型。`keyof T` 是 `T` 所有键名组成的联合类型；`K extends keyof T` 里的 `extends` 表示 constraint (约束)，要求传入的键属于这一行已有的键；indexed access type (索引访问类型)`T[K]` 再取出所选键对应的值类型。
 
 ```typescript
 function getProperty<T, K extends keyof T>(row: T, key: K): T[K] {
@@ -11012,11 +11012,11 @@ console.log(Object.keys(patch)); // ["month", "ownerEmail"]：仍是同一个运
 | 读取构造签名 | `ConstructorParameters<C>` / `InstanceType<C>` | 构造参数元组或实例类型 |
 | 解开 Promise | `Awaited<T>` | 递归解包 Promise 及符合其 `then` 约定的类型；不等待运行时值 |
 
-这些工具大多由 mapped type（映射类型）、conditional type（条件类型）和索引访问类型组合而成。其中 `Exclude`、`Extract` 依赖条件类型的一条特殊规则，下一节单独说明。
+这些工具大多由 mapped type (映射类型)、conditional type (条件类型)和索引访问类型组合而成。其中 `Exclude`、`Extract` 依赖条件类型的一条特殊规则，下一节单独说明。
 
 ### 条件类型遇到联合，为什么会逐项筛选？
 
-条件类型写作 `T extends X ? A : B`。如果 `extends` 左边是一个“裸”类型参数（没有包进数组、元组等结构），传入联合类型时，编译器把联合成员逐个代入，再把结果合成联合。这叫 distributive conditional type（分配式条件类型）。
+条件类型写作 `T extends X ? A : B`。如果 `extends` 左边是一个“裸”类型参数（没有包进数组、元组等结构），传入联合类型时，编译器把联合成员逐个代入，再把结果合成联合。这叫 distributive conditional type (分配式条件类型)。
 
 ```typescript
 type WithoutArchived<T> = T extends "archived" ? never : T;
@@ -11114,7 +11114,7 @@ console.log(viewer.describe()); // 报表查看者：Ada
 > 来源核对日期：2026-11-12。原稿示例以 TypeScript 5.7.2 在 `strict`、`noUncheckedIndexedAccess` 下检查；本章改用 r-104 数据后以同一版本重新编译并运行，编译期错误用 `@ts-expect-error` 逐条确认，`exactOptionalPropertyTypes` 的开关差异单独验证。
 ## 36. TypeScript 的两种装饰器模式有什么不同？
 
-报表服务常常要给多个方法加上日志、缓存或指标统计。decorator（装饰器）让这类横切逻辑只写一次，用 `@名称` 贴到类或类成员上：它在**类定义时**被调用，可以用返回值替换被装饰的定义。TypeScript 里同时存在两种装饰器模式，调用参数、可装饰的位置和元数据配置都不同，为一种模式写的装饰器不能直接拿到另一种模式的项目里用。本章只讨论方法装饰器，依次给出两种模式的写法，最后说明怎样判断一个项目用的是哪种。
+报表服务常常要给多个方法加上日志、缓存或指标统计。decorator (装饰器)让这类横切逻辑只写一次，用 `@名称` 贴到类或类成员上：它在**类定义时**被调用，可以用返回值替换被装饰的定义。TypeScript 里同时存在两种装饰器模式，调用参数、可装饰的位置和元数据配置都不同，为一种模式写的装饰器不能直接拿到另一种模式的项目里用。本章只讨论方法装饰器，依次给出两种模式的写法，最后说明怎样判断一个项目用的是哪种。
 
 本章是[TypeScript 能保证什么，外部数据又该怎样验证？](#34.%20TypeScript%20%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%8C%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%E5%8F%88%E8%AF%A5%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%EF%BC%9F)的支线。例子沿用主线一的报表页：一个 `ReportService` 的 `loadRows` 方法读取报表 42 的行。新版写法用到泛型参数保留签名，相关基础见[泛型和工具类型怎样从已有类型推出新类型？](#35.%20%E6%B3%9B%E5%9E%8B%E5%92%8C%E5%B7%A5%E5%85%B7%E7%B1%BB%E5%9E%8B%E6%80%8E%E6%A0%B7%E4%BB%8E%E5%B7%B2%E6%9C%89%E7%B1%BB%E5%9E%8B%E6%8E%A8%E5%87%BA%E6%96%B0%E7%B1%BB%E5%9E%8B%EF%BC%9F)。
 
@@ -11253,9 +11253,9 @@ console.log(new LegacyReportService().loadRows("42"));
 
 ### 处理器读到的是这一轮的状态快照
 
-React 每次调用组件，都给它一份当前状态的快照；事件处理器是在某一轮 render 里创建的函数，闭包里拿到的就是那一轮的值。setter（状态更新函数）不会原地改写这份快照，它只是向 React 排入一个更新，请求下一轮 render。所以本例的 `chooseSort` 在 `sort` 为 `"recent"` 时调用 `setSort("oldest")`，这个处理器接下来读到的 `sort` 还是 `"recent"`。
+React 每次调用组件，都给它一份当前状态的快照；事件处理器是在某一轮 render 里创建的函数，闭包里拿到的就是那一轮的值。setter (状态更新函数)不会原地改写这份快照，它只是向 React 排入一个更新，请求下一轮 render。所以本例的 `chooseSort` 在 `sort` 为 `"recent"` 时调用 `setSort("oldest")`，这个处理器接下来读到的 `sort` 还是 `"recent"`。
 
-同一个处理器连续调用两次 `setCount(count + 1)`，两次都基于快照里的 `0` 排入 `1`，结果是 `1`。要让每一步基于队列里上一步的结果，就传 updater（更新函数）：
+同一个处理器连续调用两次 `setCount(count + 1)`，两次都基于快照里的 `0` 排入 `1`，结果是 `1`。要让每一步基于队列里上一步的结果，就传 updater (更新函数)：
 
 ~~~tsx
 const [count, setCount] = useState(0);
@@ -11281,7 +11281,7 @@ React 用 `Object.is` 比较新旧状态。传给 setter 的值与当前状态�
 
 **render** 是计算。React 调用组件，把当前 props 和 state 变成 JSX 元素描述。JSX 是描述元素的语法，构建工具把它编译成 `react/jsx-runtime` 的调用（旧的经典转换编译成 `React.createElement`），转换方式不影响本章的阶段划分。并发特性下，一次尚未提交的 render 可能被暂停、重来或整个放弃，所以 render 必须是纯计算：不发请求，不写 URL，不改已有对象，也不手动改 React 管理的 DOM。
 
-render 时 React 还要做 reconciliation（协调）：把新描述和上一次的描述逐个对应起来，算出哪些宿主节点要新建、移动、更新或删除。对应规则由树中位置、元素类型和 `key` 决定，见下一节。
+render 时 React 还要做 reconciliation (协调)：把新描述和上一次的描述逐个对应起来，算出哪些宿主节点要新建、移动、更新或删除。对应规则由树中位置、元素类型和 `key` 决定，见下一节。
 
 **commit** 是写入。React 把协调出的必要改动应用到宿主树（浏览器里就是 DOM）。一个 setter 不等于一次 DOM 修改：新旧描述相同，React 就不改 DOM；本例排序改变，React 移动两行并更新按钮属性。
 
@@ -11289,7 +11289,7 @@ render 时 React 还要做 reconciliation（协调）：把新描述和上一次
 
 #### 批处理：同一批更新只走一轮
 
-React 把同一批的多个状态更新合起来处理，只做一轮 render 和 commit，这叫 batching（批处理）。本例点击处理器同时排入 `sort` 和 `requestId`，React 不会先提交一个只改了排序的半成品，再提交一个只改了编号的版本。批处理不改变当前处理器的快照，也不意味着每次 commit 都单独绘制一帧。
+React 把同一批的多个状态更新合起来处理，只做一轮 render 和 commit，这叫 batching (批处理)。本例点击处理器同时排入 `sort` 和 `requestId`，React 不会先提交一个只改了排序的半成品，再提交一个只改了编号的版本。批处理不改变当前处理器的快照，也不意味着每次 commit 都单独绘制一帧。
 
 > [!info] 版本差异：批处理的范围
 > React 18 起，用 `createRoot` 创建的根会自动批处理所有更新，包括 Promise 回调、定时器和原生事件处理器里的更新。React 18 中仍用旧 `ReactDOM.render` 创建的根只在 React 事件处理器内批处理，换成 `createRoot` 才启用新行为。React 19 已移除 `ReactDOM.render`。
@@ -11383,7 +11383,7 @@ function ReportsPage({
 
 #### Effect 的生命周期
 
-Effect 由“组件现在需要和外部系统保持一致”触发，而不是由某次点击触发。React 在 commit 之后运行它的 setup（建立）；依赖变化时，先用旧闭包运行上一次返回的 cleanup（清理），再用新值运行新的 setup；组件卸载时运行最后一次 cleanup。依赖数组要列出 setup 实际读取的所有响应式值，React 用 `Object.is` 逐个比较。
+Effect 由“组件现在需要和外部系统保持一致”触发，而不是由某次点击触发。React 在 commit 之后运行它的 setup (建立)；依赖变化时，先用旧闭包运行上一次返回的 cleanup (清理)，再用新值运行新的 setup；组件卸载时运行最后一次 cleanup。依赖数组要列出 setup 实际读取的所有响应式值，React 用 `Object.is` 逐个比较。
 
 本例依赖 `sort`、`requestId` 和 `fetchReports`。`fetchReports` 在依赖里，所以路由要传入一个稳定的函数；若父组件每轮 render 都新建这个函数，Effect 会把它当作依赖变化而重新请求。`fetchReports` 内部若读取原始 JSON，应先在数据边界校验形状，而不是只靠 TypeScript 类型断言，见[TypeScript 能保证什么，外部数据又该怎样验证？](#34.%20TypeScript%20%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%8C%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%E5%8F%88%E8%AF%A5%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%EF%BC%9F)。
 
@@ -11490,7 +11490,7 @@ cleanup 守卫的含义是“React 清理这个 Effect 后，不再采用它的�
 
 ### StrictMode 在开发环境里故意多调用一次
 
-根组件包在 `StrictMode`（严格模式）里时，React 在开发环境做两类额外调用，用来暴露不纯的代码：
+根组件包在 `StrictMode` (严格模式)里时，React 在开发环境做两类额外调用，用来暴露不纯的代码：
 
 - **组件函数、`useState` 初始化函数和 updater 各多调用一次**，结果丢弃其中一次。render 若有副作用（例如改了外部对象），重复调用会让问题显形。
 - **每个 Effect 在首次挂载时多走一遍 setup → cleanup**，再正式 setup。cleanup 若没能撤销 setup 的工作（例如没退订、没清计时器），这一步会暴露出来。
@@ -11510,7 +11510,7 @@ React 要求不要在 render 中读写 ref，原因就在 render 和 commit 的�
 
 ### 类组件的生命周期对照
 
-维护旧代码时会遇到 class component（类组件）。它的 `render()` 同样必须是纯计算。`componentDidMount` 和 `componentDidUpdate` 在 DOM 提交后运行，可用来同步外部系统；`componentWillUnmount` 负责清理；需要在 DOM 更新前读取布局快照（例如滚动位置）时用 `getSnapshotBeforeUpdate`，它的返回值作为第三个参数交给 `componentDidUpdate`。这些方法帮助判断代码处在哪个阶段，但不与函数组件的 Effect 一一对应：一个 Effect 把建立和清理写在一起，按依赖变化成对运行，而类组件要把同一件事拆到挂载、更新、卸载三个方法里自己对齐。React 仍支持类组件，新组件通常写成函数组件。错误边界目前仍只能用类组件实现，见[错误发生在哪里，决定了谁能接住它？](#46.%20%E9%94%99%E8%AF%AF%E5%8F%91%E7%94%9F%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%8C%E5%86%B3%E5%AE%9A%E4%BA%86%E8%B0%81%E8%83%BD%E6%8E%A5%E4%BD%8F%E5%AE%83%EF%BC%9F)。
+维护旧代码时会遇到 class component (类组件)。它的 `render()` 同样必须是纯计算。`componentDidMount` 和 `componentDidUpdate` 在 DOM 提交后运行，可用来同步外部系统；`componentWillUnmount` 负责清理；需要在 DOM 更新前读取布局快照（例如滚动位置）时用 `getSnapshotBeforeUpdate`，它的返回值作为第三个参数交给 `componentDidUpdate`。这些方法帮助判断代码处在哪个阶段，但不与函数组件的 Effect 一一对应：一个 Effect 把建立和清理写在一起，按依赖变化成对运行，而类组件要把同一件事拆到挂载、更新、卸载三个方法里自己对齐。React 仍支持类组件，新组件通常写成函数组件。错误边界目前仍只能用类组件实现，见[错误发生在哪里，决定了谁能接住它？](#46.%20%E9%94%99%E8%AF%AF%E5%8F%91%E7%94%9F%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%8C%E5%86%B3%E5%AE%9A%E4%BA%86%E8%B0%81%E8%83%BD%E6%8E%A5%E4%BD%8F%E5%AE%83%EF%BC%9F)。
 
 ### sort 之外的状态该放在哪？
 
@@ -11540,11 +11540,11 @@ React 要求不要在 render 中读写 ref，原因就在 render 和 commit 的�
 
 所有界面框架都要把应用状态变成浏览器里的节点，但中间产物不一样：
 
-- **React** 的组件 render 产生 element（元素），是描述“这里应该有什么”的普通对象。
-- **Vue** 的模板被编译成渲染函数，运行时产生 VNode（virtual node，虚拟节点），同样是交给渲染器的描述。
+- **React** 的组件 render 产生 element (元素)，是描述“这里应该有什么”的普通对象。
+- **Vue** 的模板被编译成渲染函数，运行时产生 VNode (virtual node，虚拟节点)，同样是交给渲染器的描述。
 - **Svelte** 没有这类运行时描述。编译器把组件转换成 JavaScript 模块，模块里的更新代码在状态变化时直接操作 DOM。
 
-element 和 VNode 都不是浏览器 DOM 的副本，也不是现成的 DOM 节点。所谓 virtual DOM（虚拟 DOM），说的是“开发者声明界面应该是什么样，框架负责把新旧描述对应起来、算出要改哪些节点”。它声明的是**结果**，没有声明**成本**：它不意味着更新一定更快，也不意味着每次更新都重建真实 DOM。组件被再次调用，结果和上次相同时可以完全不改 DOM；DOM 改了以后浏览器是否重算样式、布局、重新绘制，又是另一回事。React 这三段的区分见[React 怎样把一次用户操作变成界面更新？](#render%E3%80%81commit%20%E5%92%8C%20paint%20%E6%98%AF%E4%B8%89%E4%BB%B6%E4%BA%8B)。
+element 和 VNode 都不是浏览器 DOM 的副本，也不是现成的 DOM 节点。所谓 virtual DOM (虚拟 DOM)，说的是“开发者声明界面应该是什么样，框架负责把新旧描述对应起来、算出要改哪些节点”。它声明的是**结果**，没有声明**成本**：它不意味着更新一定更快，也不意味着每次更新都重建真实 DOM。组件被再次调用，结果和上次相同时可以完全不改 DOM；DOM 改了以后浏览器是否重算样式、布局、重新绘制，又是另一回事。React 这三段的区分见[React 怎样把一次用户操作变成界面更新？](#render%E3%80%81commit%20%E5%92%8C%20paint%20%E6%98%AF%E4%B8%89%E4%BB%B6%E4%BA%8B)。
 
 ### 同一次换序：三种框架怎样保住 May 的草稿
 
@@ -11590,7 +11590,7 @@ Svelte 编译器把模板和对状态的引用转换成更新代码；收到新�
 
 #### 探针证明了什么
 
-一个独立的 React 浏览器探针确认了稳定 ID 作 key 和下标作 key 的差异：前者让 May 的输入值、同一个 DOM 节点和焦点都跟着 May，后者把它们留在第一个位置。Vue 和 Svelte 的文档说明带 key 的列表会按身份复用和移动条目，但没有在这两个框架里实测焦点。产品验收应在选定版本的真实浏览器里检查重排后 May 的输入值、DOM 节点和 `document.activeElement`（当前活动元素）。
+一个独立的 React 浏览器探针确认了稳定 ID 作 key 和下标作 key 的差异：前者让 May 的输入值、同一个 DOM 节点和焦点都跟着 May，后者把它们留在第一个位置。Vue 和 Svelte 的文档说明带 key 的列表会按身份复用和移动条目，但没有在这两个框架里实测焦点。产品验收应在选定版本的真实浏览器里检查重排后 May 的输入值、DOM 节点和 `document.activeElement` (当前活动元素)。
 
 三种模型的结论是同一个：**列表身份由你提供的键决定，与有没有虚拟 DOM 无关。** 键也只在列表子树持续挂载时起作用；路由若卸载了整个列表，草稿要由更高层的所有者保存。
 
@@ -11774,7 +11774,7 @@ flowchart TD
 
 ### Context：远距离读取同一份值
 
-`sort` 只跨一层父子关系，用 props 传很自然。行距偏好不同：读它的按钮和列表中间隔着布局组件，逐层转发 props 会让中间组件接收自己不用的值。这时用 Context（上下文）。
+`sort` 只跨一层父子关系，用 props 传很自然。行距偏好不同：读它的按钮和列表中间隔着布局组件，逐层转发 props 会让中间组件接收自己不用的值。这时用 Context (上下文)。
 
 ![Provider 持有行距状态，布局组件只转交 children，两个消费者读取同一个 Context](../../frontend/ui-state/resources/report-context-ownership.svg)
 
@@ -12003,7 +12003,7 @@ URL 的三段在这里分工明确：
 一次客户端导航从“用户点了一个指向新 URL 的控件”开始，到“新 URL 和新数据一起成为当前页面”结束。中间是三步：
 
 1. **匹配**：路由器拿目标 URL 的 pathname 对照路由表，`/reports/42` 命中 `/reports/:reportId`，得到参数 `{ reportId: "42" }`。
-2. **加载**：路由器调用该路由的 loader（数据加载函数），传入一个代表本次导航的 `Request`：`request.url` 是目标的完整 URL（含 origin、path 和 query，不含 fragment），`request.signal` 是一个会在导航被放弃时中止的 `AbortSignal`。
+2. **加载**：路由器调用该路由的 loader (数据加载函数)，传入一个代表本次导航的 `Request`：`request.url` 是目标的完整 URL（含 origin、path 和 query，不含 fragment），`request.signal` 是一个会在导航被放弃时中止的 `AbortSignal`。
 3. **提交**：loader 成功后，路由器把目标位置、loader 的返回值和匹配结果一起写成“已提交状态”，组件据此重新渲染；loader 抛错时，提交的是目标位置和这份错误。
 
 报表页的 loader 只做四件事：
@@ -12016,7 +12016,7 @@ URL 的三段在这里分工明确：
 这里的结构校验只证明 JSON 符合页面需要的字段，不是身份、授权或数据完整性的边界；那些仍由服务端负责。
 
 > [!info] 实例：React Router v8.5.1 的三种模式（核对于 2026-11-13）
-> React Router 是同一产品的三层接口。**Declarative Mode（声明式模式）** 只做路径匹配、`Link` 和程序化导航；**Data Mode（数据模式）** 在此之上提供 `loader`、`action`、导航等待状态和路由错误边界，用 `createBrowserRouter` 建路由器、`<RouterProvider>` 挂载；**Framework Mode（框架模式）** 再加 Route Module API、类型生成、代码拆分，以及 SPA、SSR 和静态预渲染策略，其路由模块可以有在服务端运行的 loader。本章示例是独立的 Data Mode，loader 在浏览器里运行。Next.js App Router 有自己的文件路由和服务端组件约定（见 [Next.js App Router](#41.%20Next.js%20App%20Router%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B8%B2%E6%9F%93%E3%80%81%E7%BC%93%E5%AD%98%E5%92%8C%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BA%A4%E4%BA%92%E5%88%86%E5%BC%80%EF%BC%9F)），两者的 loader、执行位置和导航 API 不能互换。v8.5.1 要求 `react` 与 `react-dom` 不低于 19.2.7。
+> React Router 是同一产品的三层接口。**Declarative Mode (声明式模式)** 只做路径匹配、`Link` 和程序化导航；**Data Mode (数据模式)** 在此之上提供 `loader`、`action`、导航等待状态和路由错误边界，用 `createBrowserRouter` 建路由器、`<RouterProvider>` 挂载；**Framework Mode (框架模式)** 再加 Route Module API、类型生成、代码拆分，以及 SPA、SSR 和静态预渲染策略，其路由模块可以有在服务端运行的 loader。本章示例是独立的 Data Mode，loader 在浏览器里运行。Next.js App Router 有自己的文件路由和服务端组件约定（见 [Next.js App Router](#41.%20Next.js%20App%20Router%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%B8%B2%E6%9F%93%E3%80%81%E7%BC%93%E5%AD%98%E5%92%8C%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%BA%A4%E4%BA%92%E5%88%86%E5%BC%80%EF%BC%9F)），两者的 loader、执行位置和导航 API 不能互换。v8.5.1 要求 `react` 与 `react-dom` 不低于 19.2.7。
 
 ### 已提交的导航与待定的导航
 
@@ -12099,7 +12099,7 @@ loader 抛出的状态数据或异常，交给最近匹配路由的 `ErrorBounda
 
 客户端导航保留当前文档，服务器不会重新发送整份 HTML。因此部署时，直接打开或刷新 `/reports/42` 必须由站点入口返回应用文档，而 `/api/reports/42/rows` 仍要交给 API，不能被同一个 HTML 回退规则吞掉。
 
-SPA（单页应用）与 MPA（多页应用）说的是页面之间怎样导航；SSR（服务端渲染）与静态预渲染说的是初始文档怎样产生。这是两个维度，可以组合。若爬虫或不执行 JavaScript 的读者需要直接看到内容，先要让初始 HTML 包含它；后续点击仍可以走客户端导航。需要共享布局、在导航间保留上下文时，客户端导航更容易做到。
+SPA (单页应用)与 MPA (多页应用)说的是页面之间怎样导航；SSR (服务端渲染)与静态预渲染说的是初始文档怎样产生。这是两个维度，可以组合。若爬虫或不执行 JavaScript 的读者需要直接看到内容，先要让初始 HTML 包含它；后续点击仍可以走客户端导航。需要共享布局、在导航间保留上下文时，客户端导航更容易做到。
 
 部署环境不能提供路径回退时，可以改用 Data Mode 的 `createHashRouter`，loader 和错误边界照旧；代价是应用路径进入 fragment，地址形式改变，`#summary` 也不能再单独作页面锚点。测试或非浏览器环境可用 `createMemoryRouter`，它以内存历史运行并保留数据路由能力。`HashRouter` 和 `MemoryRouter` 属于 Declarative Mode，直接替换会失去 loader。
 
@@ -12324,7 +12324,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 前几章的路由和数据读取都在浏览器里发生。Next.js App Router 把一部分工作移到服务端：页面默认在服务端渲染、在服务端取数，只把需要交互的部分作为客户端代码发给浏览器。本章是一个综合实例，沿报表页从文件路由走到首屏、排序、Back 和失败重试，回答四个问题：哪段代码在哪一侧运行；首屏怎样从服务端结果变成可交互的页面；哪些等待可以分块显示；缓存存在哪一层。读者需要知道[路由怎样把 URL 变成已提交的数据](#40.%20%E8%B7%AF%E7%94%B1%E6%80%8E%E6%A0%B7%E6%8A%8A%20URL%20%E5%8F%98%E6%88%90%E5%B7%B2%E6%8F%90%E4%BA%A4%E7%9A%84%E6%95%B0%E6%8D%AE%E5%92%8C%E7%95%8C%E9%9D%A2%EF%BC%9F)，以及 React 的 render/commit 与 key 身份（见 [React 更新模型](#37.%20React%20%E6%80%8E%E6%A0%B7%E6%8A%8A%E4%B8%80%E6%AC%A1%E7%94%A8%E6%88%B7%E6%93%8D%E4%BD%9C%E5%8F%98%E6%88%90%E7%95%8C%E9%9D%A2%E6%9B%B4%E6%96%B0%EF%BC%9F)）。
 
-主例采用 Next.js 16.4.6 App Router，按官方建议同时开启 Cache Components（组件缓存）与 Partial Prefetching（部分预取），核对于 2026-11-12。
+主例采用 Next.js 16.4.6 App Router，按官方建议同时开启 Cache Components (组件缓存)与 Partial Prefetching (部分预取)，核对于 2026-11-12。
 
 ### 案例：服务端读取报表 42
 
@@ -12351,10 +12351,10 @@ App Router 用 `app/` 下的特殊文件组成路由：
 
 - `app/reports/[reportId]/page.tsx` 对应 `/reports/:reportId`；方括号是动态段，`42` 通过 `params` 交给页面。
 - `layout.tsx` 给一组子路由提供共享外壳，共享段在客户端导航时可以保留。从零搭建至少需要根 `app/layout.tsx`。
-- `app/api/reports/route.ts` 这样的 Route Handler（路由处理器）是独立的 HTTP 端点：按方法导出 `GET`、`POST` 等函数，返回 Web `Response`，不生成页面。
+- `app/api/reports/route.ts` 这样的 Route Handler (路由处理器)是独立的 HTTP 端点：按方法导出 `GET`、`POST` 等函数，返回 Web `Response`，不生成页面。
 - 同一段下的 `loading.tsx` 和 `error.tsx` 分别是该段的等待边界和错误边界，不是端点（见后文）。
 
-Cache Components 要求 Node.js runtime，不支持 Edge，也不支持路由段里的 `runtime` 导出。托管平台可以把 Node.js 服务打包成 serverless function（无服务器函数）；运行时与托管形态是两个独立的选择。
+Cache Components 要求 Node.js runtime，不支持 Edge，也不支持路由段里的 `runtime` 导出。托管平台可以把 Node.js 服务打包成 serverless function (无服务器函数)；运行时与托管形态是两个独立的选择。
 
 ### params 与 searchParams 都是 Promise
 
@@ -12368,9 +12368,9 @@ URL 三段在这里跨越不同边界：path `/reports/42` 决定匹配的页面
 
 ### 服务端组件与客户端组件的分界线
 
-layout 和 page 默认是 Server Component（服务端组件）：可以在服务端读数据库、非公开环境变量或后端 API，这些模块不会因此进入浏览器的 JavaScript。组件需要本地 state、事件处理器、Effect 或浏览器 API 时，才在**最小的交互子树**的文件顶部写 `"use client"`，它就成为 Client Component（客户端组件）。
+layout 和 page 默认是 Server Component (服务端组件)：可以在服务端读数据库、非公开环境变量或后端 API，这些模块不会因此进入浏览器的 JavaScript。组件需要本地 state、事件处理器、Effect 或浏览器 API 时，才在**最小的交互子树**的文件顶部写 `"use client"`，它就成为 Client Component (客户端组件)。
 
-这条指令划分的是 module graph（模块图）：该文件直接和间接导入的运行时模块都进入客户端模块图，不必在每个子组件重复标记。反方向不行：客户端模块不能导入并执行需要服务端能力的组件。但服务端可以把一个**已经渲染好的** Server Component 作为 `children` 交给 Client Component。
+这条指令划分的是 module graph (模块图)：该文件直接和间接导入的运行时模块都进入客户端模块图，不必在每个子组件重复标记。反方向不行：客户端模块不能导入并执行需要服务端能力的组件。但服务端可以把一个**已经渲染好的** Server Component 作为 `children` 交给 Client Component。
 
 服务端传给客户端组件的 props 必须满足 React 的可序列化规则，而且会原样进入发往浏览器的载荷。可序列化不等于保密：只传标题、期间、ID 这类展示字段，不传凭证或内部记录；普通回调和数据库连接也不能作为 props。以 `NEXT_PUBLIC_` 开头的环境变量会编进客户端 bundle，服务端密钥不能用这个前缀命名。
 
@@ -12380,9 +12380,9 @@ layout 和 page 默认是 Server Component（服务端组件）：可以在服�
 
 首次打开文档时，服务端结果经过三种表示才变成可交互的页面：
 
-1. **RSC payload（React Server Component Payload，服务端组件载荷）。** Server Component 先渲染成一份载荷，里面有服务端组件的渲染结果、Client Component 的位置占位与 JavaScript 文件引用，以及传给客户端组件的 props。
-2. **初始 HTML。** Next.js 用这份载荷加上 Client Component 生成 HTML。这一步是 SSR（服务端渲染），给首次文档可显示的标记，不会因此把 Server Component 的代码发给浏览器。
-3. **hydration（水合）。** 浏览器先显示不可交互的 HTML，再用载荷对齐两侧的组件树，最后运行客户端 JavaScript，把事件处理器接上去。
+1. **RSC payload (React Server Component Payload，服务端组件载荷)。** Server Component 先渲染成一份载荷，里面有服务端组件的渲染结果、Client Component 的位置占位与 JavaScript 文件引用，以及传给客户端组件的 props。
+2. **初始 HTML。** Next.js 用这份载荷加上 Client Component 生成 HTML。这一步是 SSR (服务端渲染)，给首次文档可显示的标记，不会因此把 Server Component 的代码发给浏览器。
+3. **hydration (水合)。** 浏览器先显示不可交互的 HTML，再用载荷对齐两侧的组件树，最后运行客户端 JavaScript，把事件处理器接上去。
 
 流式页面可以逐区完成，数据交付和水合交错进行；下图画的是一个交互区域从“看得见”到“能操作”的条件。
 
@@ -12390,7 +12390,7 @@ layout 和 page 默认是 Server Component（服务端组件）：可以在服�
 
 图的右栏是后续导航：用户先在搜索框输入 `April`，再点“最早优先”。客户端导航不重新下载整份 HTML，而是请求新的 RSC payload 合进现有组件树。`ReportSearch` 若仍在同一树位置，就保留本地的 `query = "April"`，并继续过滤新列表；它若被卸载、key 改变或整页重载，没写进 URL 的 `query` 不会恢复。
 
-服务器的第一次渲染和浏览器的第一次渲染必须得到同样的结果，否则会出现 hydration mismatch（水合不匹配）。时间、随机数、地区设置和浏览器专属值都是常见来源：需要浏览器值时，先渲染稳定的占位，再在首次提交后的 Effect 里读取。这类问题的更多处理见[紧急更新与延后更新](#45.%20%E6%98%82%E8%B4%B5%E6%9B%B4%E6%96%B0%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E8%AE%A9%E8%BE%93%E5%85%A5%E4%BF%9D%E6%8C%81%E5%8D%B3%E6%97%B6%EF%BC%9F)。
+服务器的第一次渲染和浏览器的第一次渲染必须得到同样的结果，否则会出现 hydration mismatch (水合不匹配)。时间、随机数、地区设置和浏览器专属值都是常见来源：需要浏览器值时，先渲染稳定的占位，再在首次提交后的 Effect 里读取。这类问题的更多处理见[紧急更新与延后更新](#45.%20%E6%98%82%E8%B4%B5%E6%9B%B4%E6%96%B0%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E8%AE%A9%E8%BE%93%E5%85%A5%E4%BF%9D%E6%8C%81%E5%8D%B3%E6%97%B6%EF%BC%9F)。
 
 ### 用 Suspense 分块等待
 
@@ -12545,7 +12545,7 @@ Suspense 只处理等待，读取失败会向错误边界传播。实际哪个 f
 >
 > 排序控件用 `<Link>` 而不是主线一的 `aria-pressed` 按钮：切换排序就是切换地址，Link 保留链接语义，并让 Next 能预取目标。
 
-示例在服务边界把 `response.json()` 当作 `unknown`，逐行检查并投影成只含展示字段的 DTO（Data Transfer Object，数据传输对象），避免把上游行里可能存在的内部字段带进 RSC payload；摘要的 `rowCount` 也必须是非负安全整数（见 [TypeScript 能保证什么](#34.%20TypeScript%20%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%8C%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%E5%8F%88%E8%AF%A5%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%EF%BC%9F)）。本例没有身份提供者，省略了鉴权接线；真实读取要先验证会话，再确认用户有权看报表 42。数据量大、需要分页，或过滤受权限影响时，把条件写进 URL，由服务端按条件查询，而不是把全部行发给浏览器再本地过滤。
+示例在服务边界把 `response.json()` 当作 `unknown`，逐行检查并投影成只含展示字段的 DTO (Data Transfer Object，数据传输对象)，避免把上游行里可能存在的内部字段带进 RSC payload；摘要的 `rowCount` 也必须是非负安全整数（见 [TypeScript 能保证什么](#34.%20TypeScript%20%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%8C%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%E5%8F%88%E8%AF%A5%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%EF%BC%9F)）。本例没有身份提供者，省略了鉴权接线；真实读取要先验证会话，再确认用户有权看报表 42。数据量大、需要分页，或过滤受权限影响时，把条件写进 URL，由服务端按条件查询，而不是把全部行发给浏览器再本地过滤。
 
 ### 缓存存在哪一层
 
@@ -12559,7 +12559,7 @@ Suspense 只处理等待，读取失败会向错误边界传播。实际哪个 f
 
 Cache Components 的作用是让静态外壳先返回，把只有本次请求才知道的数据留在等待边界里；它并没有把所有数据自动变成跨请求可复用。`fetch` 的 `force-cache` 在开启 Cache Components 后仍然有效，但它缓存的是 fetch 响应，与 `use cache` 的函数/组件结果缓存是两回事。与身份有关的数据，还要把权限范围纳入缓存设计，不能把一个用户的结果共享给另一个用户。
 
-`no-store` 约束的只是那次 fetch，不能迫使每次 Link 或 Back 都重跑服务端。选择缓存时要说清：缓存的是哪一层、能陈旧多久、变更后怎样失效；不能因为页面变快就推断数据仍然正确。浏览器自身的 HTTP 缓存语义是另一层，见[哈希发布与缓存](#51.%20%E5%8F%91%E5%B8%83%E6%96%B0%E7%89%88%E6%9C%AC%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E8%AE%A9%E7%BC%93%E5%AD%98%E5%92%8C%E8%BF%98%E5%BC%80%E7%9D%80%E7%9A%84%E6%97%A7%E9%A1%B5%E9%9D%A2%E9%83%BD%E4%B8%8D%E5%87%BA%E9%94%99%EF%BC%9F)。
+`no-store` 约束的只是那次 fetch，不能迫使每次 Link 或 Back 都重跑服务端。选择缓存时要说清：缓存的是哪一层、能陈旧多久、变更后怎样失效；不能因为页面变快就推断数据仍然正确。浏览器自身的 HTTP 缓存是另一层，语义见[一份 HTTP 响应什么时候可以直接复用，什么时候必须回源确认？](../../engineering-foundations/services/http-caching-and-conditional-requests.md)；静态资源的哈希发布策略见[发布新版本时，怎样让缓存和还开着的旧页面都不出错？](#51.%20%E5%8F%91%E5%B8%83%E6%96%B0%E7%89%88%E6%9C%AC%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E8%AE%A9%E7%BC%93%E5%AD%98%E5%92%8C%E8%BF%98%E5%BC%80%E7%9D%80%E7%9A%84%E6%97%A7%E9%A1%B5%E9%9D%A2%E9%83%BD%E4%B8%8D%E5%87%BA%E9%94%99%EF%BC%9F)。
 
 > [!info] 实例：Next.js 16.4.6 的缓存配置与旧模型识别
 > ~~~ts
@@ -12568,7 +12568,7 @@ Cache Components 的作用是让静态外壳先返回，把只有本次请求才
 > const nextConfig: NextConfig = { cacheComponents: true, partialPrefetching: true };
 > export default nextConfig;
 > ~~~
-> 官方要求开启 `cacheComponents` 时显式设置 `partialPrefetching`，不设会输出警告，因为 Cache Components 的首个版本不含部分预取；只有迁移更早采用 Cache Components 的应用时才暂设为 `false`。官方计划在下一个大版本默认启用二者并移除这两个选项。维护未开启 Cache Components 的旧项目时，按上一缓存模型理解：动态页面的默认 fetch 在请求时执行，静态页面可能在构建时读取；`dynamic`、`revalidate` 等路由段选项不能原样套到新模型。开发模式的 HMR（Hot Module Replacement，热模块替换）可能复用部分 `no-store` 结果，实际缓存契约要在生产运行中检验。
+> 官方要求开启 `cacheComponents` 时显式设置 `partialPrefetching`，不设会输出警告，因为 Cache Components 的首个版本不含部分预取；只有迁移更早采用 Cache Components 的应用时才暂设为 `false`。官方计划在下一个大版本默认启用二者并移除这两个选项。维护未开启 Cache Components 的旧项目时，按上一缓存模型理解：动态页面的默认 fetch 在请求时执行，静态页面可能在构建时读取；`dynamic`、`revalidate` 等路由段选项不能原样套到新模型。开发模式的 HMR (Hot Module Replacement，热模块替换)可能复用部分 `no-store` 结果，实际缓存契约要在生产运行中检验。
 
 ### 等待与失败各有自己的边界
 
@@ -12604,7 +12604,7 @@ Cache Components 的作用是让静态外壳先返回，把只有本次请求才
 
 ### Server Action 不是私有接口
 
-若之后要加“标记已读”这样的变更，可以用 Server Action（服务端动作）处理表单：它是一个用 `"use server"` 标记的 Server Function（服务端函数），客户端通过 POST 调用。它在网络上就是一个可以被直接请求的端点，按钮隐藏了、action ID 不好猜，都不能让它变成私有接口。每次调用都要重新认证调用者、授权这次操作、校验输入。需要给其他消费者提供独立 HTTP API 时，用 Route Handler。
+若之后要加“标记已读”这样的变更，可以用 Server Action (服务端动作)处理表单：它是一个用 `"use server"` 标记的 Server Function (服务端函数)，客户端通过 POST 调用。它在网络上就是一个可以被直接请求的端点，按钮隐藏了、action ID 不好猜，都不能让它变成私有接口。每次调用都要重新认证调用者、授权这次操作、校验输入。需要给其他消费者提供独立 HTTP API 时，用 Route Handler。
 
 ### 排序、Back 与取消
 
@@ -12627,7 +12627,7 @@ Back 把地址恢复成 `sort=recent`，但可能复用客户端已有的路由�
 > | 动态路径参数 | `next/router` 的 `router.query` | 页面收到 Promise `params`，`await` 后读取 |
 > | 查询参数 | `router.query`；自动静态优化时首屏可能暂为空，客户端代码要在 Effect 里等 `router.isReady` | 页面收到 Promise `searchParams`，读取请求时的 URL |
 > | 服务端数据 | `getServerSideProps` 按请求读；`getStaticProps` 读静态数据；动态路径用 `getStaticPaths` 列出构建路径 | 默认由 Server Component 读取；本例等待边界里的 `no-store` fetch 执行时取新数据 |
-> | 刷新静态结果 | `getStaticProps` 的 `revalidate`，即 ISR（Incremental Static Regeneration，增量静态再生） | 按当前 App Router 缓存配置 |
+> | 刷新静态结果 | `getStaticProps` 的 `revalidate`，即 ISR (Incremental Static Regeneration，增量静态再生) | 按当前 App Router 缓存配置 |
 > | API 端点 | `pages/api` 的默认处理器 | `app/**/route.ts` 按 HTTP 方法导出 |
 >
 > `revalidate: 60` 不是后台每分钟定时重建：构建出的页面先被缓存，60 秒后遇到的第一个请求仍拿到旧页并触发后台生成，生成成功后，之后的请求才拿到新页。对构建时未列出的动态路径，`getStaticPaths` 的 `fallback: false` 直接 404；`fallback: true` 在普通浏览器首次直达时先给 fallback 并在后台生成，但爬虫以及经 `next/link` 或 `next/router` 的客户端导航按 blocking 行为等待；`"blocking"` 对首次访问也等生成完成再返回。
@@ -12662,7 +12662,7 @@ App Router 把一次页面请求分成三条线：服务端组件读数据、决
 
 ### 查询键就是结果的身份
 
-查询缓存把一次读取描述成两样东西：`queryFn`（查询函数）负责取数，`queryKey`（查询键）标识这次取数的**结果**。规则只有一条：凡是会改变 `queryFn` 返回值的输入，都要进键。本例的行数据取决于账户、报表和排序：
+查询缓存把一次读取描述成两样东西：`queryFn` (查询函数)负责取数，`queryKey` (查询键)标识这次取数的**结果**。规则只有一条：凡是会改变 `queryFn` 返回值的输入，都要进键。本例的行数据取决于账户、报表和排序：
 
 ~~~ts
 ["reports", "acct-a", "42", "rows", "recent"]
@@ -12713,11 +12713,11 @@ App Router 把一次页面请求分成三条线：服务端组件读数据、决
 
 ### 首屏数据、占位与新鲜度
 
-**`initialData`（初始数据）** 把路由交付的行写进对应键的缓存，只用于 `initialAccountId`、`initialSort` 对应的那个键，其他排序和账户不使用它。缓存需要知道这批数据是什么时候生成的：若路由给出了生成时间，就以毫秒时间戳传给 `initialDataUpdatedAt`，否则客户端会把初始化的时刻当作数据时间，从而高估它的新鲜度。
+**`initialData` (初始数据)** 把路由交付的行写进对应键的缓存，只用于 `initialAccountId`、`initialSort` 对应的那个键，其他排序和账户不使用它。缓存需要知道这批数据是什么时候生成的：若路由给出了生成时间，就以毫秒时间戳传给 `initialDataUpdatedAt`，否则客户端会把初始化的时刻当作数据时间，从而高估它的新鲜度。
 
-**`placeholderData`（占位数据）** 不写入缓存，查询结果带 `isPlaceholderData` 标记。它常用来在切换键时暂留上一个键的行。用之前先确认上一个键的账户就是当前账户，在界面上标明这些行尚未得到新条件的确认，并禁止在占位行上操作；绝不能拿其他账户的数据作占位。本例主线不用它，而是在成员完全相同的同账户行上做本地重排。
+**`placeholderData` (占位数据)** 不写入缓存，查询结果带 `isPlaceholderData` 标记。它常用来在切换键时暂留上一个键的行。用之前先确认上一个键的账户就是当前账户，在界面上标明这些行尚未得到新条件的确认，并禁止在占位行上操作；绝不能拿其他账户的数据作占位。本例主线不用它，而是在成员完全相同的同账户行上做本地重排。
 
-**`staleTime`（新鲜期）** 只决定客户端在多长时间内不按“过期”策略自动重取。本例设 30 秒，意思是 30 秒内挂载、窗口重新聚焦或网络恢复都不会触发后台重取；它不表示服务器数据 30 秒内不变，手动失效仍可强制重读。若用户切到 oldest 再按 Back，路由把 `sort` 恢复成 recent，键随之切回 recent 的缓存，是否后台重取由它是否已过期决定。
+**`staleTime` (新鲜期)** 只决定客户端在多长时间内不按“过期”策略自动重取。本例设 30 秒，意思是 30 秒内挂载、窗口重新聚焦或网络恢复都不会触发后台重取；它不表示服务器数据 30 秒内不变，手动失效仍可强制重读。若用户切到 oldest 再按 Back，路由把 `sort` 恢复成 recent，键随之切回 recent 的缓存，是否后台重取由它是否已过期决定。
 
 ### 用 status 和 data 一起决定显示
 
@@ -12736,7 +12736,7 @@ App Router 把一次页面请求分成三条线：服务端组件读数据、决
 
 ### 乐观更新：在界面层叠加待处理的值
 
-假设 `acct-a/oldest` 已显示服务端确认的行，用户点 April 行的“标为已审阅”。点击事件把 `{ accountId: "acct-a", sort: "oldest", id: "r-103", reviewed: true }` 交给 mutation（服务端变更）。保存期间，TanStack Query 暴露这份待处理的 variables；组件按账户、排序和行 ID 找到 April，把它的 `reviewed` 暂时显示为 `true`。查询缓存里仍是上次服务端确认的行。这种只在界面层叠加待处理值、不改缓存的做法，下文称为 overlay（界面覆盖层）。
+假设 `acct-a/oldest` 已显示服务端确认的行，用户点 April 行的“标为已审阅”。点击事件把 `{ accountId: "acct-a", sort: "oldest", id: "r-103", reviewed: true }` 交给 mutation (服务端变更)。保存期间，TanStack Query 暴露这份待处理的 variables；组件按账户、排序和行 ID 找到 April，把它的 `reviewed` 暂时显示为 `true`。查询缓存里仍是上次服务端确认的行。这种只在界面层叠加待处理值、不改缓存的做法，下文称为 overlay (界面覆盖层)。
 
 ![保存期间查询缓存与待处理 mutation 变量合成界面的状态图](../../frontend/ui-state/resources/react-server-state-overlay.svg)
 
@@ -12782,7 +12782,7 @@ overlay 不会出这个问题，因为它从不把待处理的值写进共享缓
 
 ### 保存成功之后，读取仍可能更旧
 
-上面的成功路径假设：保存之后发起的校准读取能看到刚才的写入。这叫 read-your-writes（读己之写），它是服务端读取契约的一部分，客户端无法自行保证。若这次读取落到落后的副本上，它会把刚确认的新行换回旧值，而且客户端看到的只是“一次正常的成功读取”。
+上面的成功路径假设：保存之后发起的校准读取能看到刚才的写入。这叫 read-your-writes (读己之写)，它是服务端读取契约的一部分，客户端无法自行保证；它能保证什么、版本门槛怎样设，见[版本号和 read-your-writes 能保证什么？](../../engineering-foundations/data/caching-and-staleness.md#%E7%89%88%E6%9C%AC%E5%8F%B7%E5%92%8C%20read-your-writes%20%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%9F)。若这次读取落到落后的副本上，它会把刚确认的新行换回旧值，而且客户端看到的只是“一次正常的成功读取”。
 
 修复只能在契约层：让校准读取到达权威数据源，或让服务端返回修订号，客户端拒绝低于已确认修订的结果。延长 overlay 不能修复读取契约。写入后怎样按版本核对缓存，下一章用 ETag 给出完整做法。
 
@@ -12798,7 +12798,7 @@ overlay 不会出这个问题，因为它从不把待处理的值写进共享缓
 
 ### 缓存生命周期与账户隔离
 
-查询缓存和页面上任何“已确认”的数据，都只是服务端状态的副本，不是授权来源。账户隔离要分三处做：
+查询缓存和页面上任何“已确认”的数据，都只是服务端状态的副本，不是授权来源：每次读写仍由服务端按当前主体逐次授权，见[服务怎样逐次确认这个主体能对这份资源做这个动作？](../../engineering-foundations/services/per-request-authorization.md)。客户端这一侧的账户隔离要分三处做：
 
 - **键。** 账户进键，组件读到的缓存自然按账户隔开。
 - **组件身份。** 路由组件以 `accountId` 作 React key，切换账户时整个页面重建，组件本地 state 和 overlay 不会带到新账户。
@@ -13076,7 +13076,7 @@ function RowFeed({ reportId, sort }: { reportId: string; sort: SortOrder }) {
 > - 以 key 重置子组件状态：[Preserving and Resetting State](https://react.dev/learn/preserving-and-resetting-state#option-2-resetting-state-with-a-key)。
 ## 43. Redux 怎样管理跨组件的客户端状态和异步请求？
 
-当一份纯客户端状态要被页面上相距很远的几个组件同时读写，而且希望每次变化都可追踪时，可以把它放进 Redux 的 store（状态容器）。本章沿一次“勾选行 → 请求导出预览 → 显示结果”的操作，说明 Redux 的更新链、异步请求放在哪里、怎样不让迟到的响应覆盖较新的选择，以及组件怎样订阅才不会多余渲染。读者需要知道一份状态该归谁（见[界面状态的所有权](#39.%20%E4%B8%80%E4%BB%BD%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E8%AF%A5%E7%94%B1%E8%B0%81%E6%8C%81%E6%9C%89%EF%BC%9F)），以及“异步结果按身份归属”的原理（见[服务端数据的缓存与乐观更新](#%E5%BC%82%E6%AD%A5%E7%BB%93%E6%9E%9C%E6%8C%89%E8%BA%AB%E4%BB%BD%E5%BD%92%E5%B1%9E)）。
+当一份纯客户端状态要被页面上相距很远的几个组件同时读写，而且希望每次变化都可追踪时，可以把它放进 Redux 的 store (状态容器)。本章沿一次“勾选行 → 请求导出预览 → 显示结果”的操作，说明 Redux 的更新链、异步请求放在哪里、怎样不让迟到的响应覆盖较新的选择，以及组件怎样订阅才不会多余渲染。读者需要知道一份状态该归谁（见[界面状态的所有权](#39.%20%E4%B8%80%E4%BB%BD%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E8%AF%A5%E7%94%B1%E8%B0%81%E6%8C%81%E6%9C%89%EF%BC%9F)），以及“异步结果按身份归属”的原理（见[服务端数据的缓存与乐观更新](#%E5%BC%82%E6%AD%A5%E7%BB%93%E6%9E%9C%E6%8C%89%E8%BA%AB%E4%BB%BD%E5%BD%92%E5%B1%9E)）。
 
 示例按 Redux Toolkit 2.14.0 与 React-Redux 9.3.1 核对（2026-11-12 时两者均为 npm latest）。
 
@@ -13093,7 +13093,7 @@ function RowFeed({ reportId, sort }: { reportId: string; sort: SortOrder }) {
 - **排序** 在 URL：分享、刷新和 Back 都恢复它。Back 不会改动 Redux 里的勾选。
 - **报表行** 归服务器，查询缓存保存副本，键里含 `sort`。不要把同一批行再复制进 Redux：两个缓存所有者会各自过期、各自更新，迟早不一致。Redux 应用若要缓存服务器数据，官方方案是 RTK Query；本例已用 TanStack Query，就只用它。
 - **已选行 ID** 进 Redux：行、工具栏都读同一组稳定 ID，排序或列表位置变了也仍指向同一行。
-- **预览状态与结果** 进同一个 slice（状态切片）：工具栏和预览区共用，而且勾选一变，预览就要在同一次更新里作废。
+- **预览状态与结果** 进同一个 slice (状态切片)：工具栏和预览区共用，而且勾选一变，预览就要在同一次更新里作废。
 - **弹层开关** 这类只影响一个组件的值，留在组件本地。
 
 只有一个组件用的值留在组件里；两个相邻组件共享时，先考虑提升到最近的共同父组件。多个相距较远的部分共享、并且需要统一可追踪的更新时，再评估 Redux。若预览结果可以按选择集合缓存复用，查询缓存可能更合适；本例只保留“当前选择”的一份预览，所以用 slice 演示。
@@ -13102,7 +13102,7 @@ store 默认只在本次运行期间保存勾选；本例没有把勾选写进 U
 
 ### action 怎样经过 store 变成新状态
 
-勾选框派发的是一个事实：“某一行被勾选或取消勾选”。Redux 的 action（动作）就是描述这个事实的普通对象，`payload`（载荷）携带所需的值；reducer（归约函数）根据当前 state 和 action 同步算出下一份 state；store 保存结果并通知订阅者。
+勾选框派发的是一个事实：“某一行被勾选或取消勾选”。Redux 的 action (动作)就是描述这个事实的普通对象，`payload` (载荷)携带所需的值；reducer (归约函数)根据当前 state 和 action 同步算出下一份 state；store 保存结果并通知订阅者。
 
 设开始时 `selectedIds=[]`。点 April 行派发：
 
@@ -13110,19 +13110,19 @@ store 默认只在本次运行期间保存勾选；本例没有把勾选写进 U
 { type: "rowSelection/rowToggled", payload: "r-103" }
 ~~~
 
-reducer 算出 `selectedIds=["r-103"]`，并在同一次计算里把旧预览清空；store 通知订阅者，各组件的 selector（选择器）重新检查：April 行的 selector 得到 `true`，工具栏读到新的数组引用。行 ID 不随排序改变，所以不要用数组下标代替它。
+reducer 算出 `selectedIds=["r-103"]`，并在同一次计算里把旧预览清空；store 通知订阅者，各组件的 selector (选择器)重新检查：April 行的 selector 得到 `true`，工具栏读到新的数组引用。行 ID 不随排序改变，所以不要用数组下标代替它。
 
-Redux Toolkit 的 `createSlice` 把初始状态、reducers 和自动生成的 action creator 放在一起。reducer 里可以写 `push`、`splice` 这种看似原地修改的代码：Immer 把它们记录为对 draft（草稿副本）的修改，再产出新的不可变 state，并没有改动 store 已发布的对象。reducer 只计算状态，不能在里面发请求、启动计时器或取消请求。
+Redux Toolkit 的 `createSlice` 把初始状态、reducers 和自动生成的 action creator 放在一起。reducer 里可以写 `push`、`splice` 这种看似原地修改的代码：Immer 把它们记录为对 draft (草稿副本)的修改，再产出新的不可变 state，并没有改动 store 已发布的对象。reducer 只计算状态，不能在里面发请求、启动计时器或取消请求。
 
 ### 异步工作插在 dispatch 的路径上
 
-reducer 不能发请求，异步工作就要放在 `dispatch` 之前。普通 action 先经过已配置的 middleware（中间件），再交给核心 `dispatch`，然后根 reducer 同步计算新状态。中间件包裹 `dispatch`，可以观察 action、扩展 `dispatch` 能接受的输入，或在 action 到达 reducer 前后执行副作用。
+reducer 不能发请求，异步工作就要放在 `dispatch` 之前。普通 action 先经过已配置的 middleware (中间件)，再交给核心 `dispatch`，然后根 reducer 同步计算新状态。中间件包裹 `dispatch`，可以观察 action、扩展 `dispatch` 能接受的输入，或在 action 到达 reducer 前后执行副作用。
 
 thunk middleware 让 `dispatch` 能接受一个函数。这个函数（thunk）在 reducer 之外运行，可以读 `getState`、派发普通 action、等待异步操作；store 本身仍然只根据普通 action 同步更新。`configureStore` 默认加入 thunk、开发期检查和 Redux DevTools 集成；添加自定义中间件时用 `getDefaultMiddleware().concat(...)` 保留默认项。
 
 DevTools 能看到所有派发过的 action 和 state，所以不要把凭证放进去，也不要把 `AbortController`、Promise 这类运行时对象存进 Redux state。
 
-`createAsyncThunk` 为常见的请求生命周期生成 action：正常启动时先派发 `pending`，再调用 payload creator（载荷函数）执行请求，完成后派发 `fulfilled` 或 `rejected`。slice 用 `extraReducers` 响应它们。这套生命周期是 `createAsyncThunk` 提供的，手写的普通 thunk 不会自动派发。若工作需要响应**后续**的 action 或状态变化，再评估 listener middleware；普通按钮触发的请求不必手写异步中间件。
+`createAsyncThunk` 为常见的请求生命周期生成 action：正常启动时先派发 `pending`，再调用 payload creator (载荷函数)执行请求，完成后派发 `fulfilled` 或 `rejected`。slice 用 `extraReducers` 响应它们。这套生命周期是 `createAsyncThunk` 提供的，手写的普通 thunk 不会自动派发。若工作需要响应**后续**的 action 或状态变化，再评估 listener middleware；普通按钮触发的请求不必手写异步中间件。
 
 ### 用 requestId 守住唯一的预览槽
 
@@ -13159,7 +13159,7 @@ flowchart TD
 
 本例只有一个预览槽。若要同时保留多个并发预览或导出作业，就按请求 ID 或服务端作业 ID 分格存储，而不是共用一个槽。
 
-服务器仍须按当前调用者和租户范围逐个授权这些行 ID，客户端勾选不能代替[服务端资源权限检查](../../engineering-foundations/services/per-request-authorization.md)。响应 JSON 先当作 `unknown`，在运行时校验 `rowCount`、`estimatedBytes` 是非负安全整数（见 [TypeScript 能保证什么](#34.%20TypeScript%20%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%8C%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%E5%8F%88%E8%AF%A5%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%EF%BC%9F)）。
+服务器仍须按当前调用者和租户范围逐个授权这些行 ID，客户端勾选不能代替服务端资源权限检查，见[服务怎样逐次确认这个主体能对这份资源做这个动作？](../../engineering-foundations/services/per-request-authorization.md)。响应 JSON 先当作 `unknown`，在运行时校验 `rowCount`、`estimatedBytes` 是非负安全整数（见 [TypeScript 能保证什么](#34.%20TypeScript%20%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%8C%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%E5%8F%88%E8%AF%A5%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%EF%BC%9F)）。
 
 ### 取消与错误
 
@@ -13169,7 +13169,7 @@ flowchart TD
 
 `dispatch(thunk)` 返回的 Promise 总以 `fulfilled` 或 `rejected` action 结束，不会自己抛错。调用方需要在失败时进入 `catch`，就调用 `.unwrap()`。本例的预览区直接由 Redux state 驱动，工具栏不必等待这个 Promise。
 
-**没有乐观更新，也不需要补偿。** 勾选 action 记录的是已经发生的本地操作，预览出错不会把 ID 回滚。预览接口没有远端写入，所以可以用同一组勾选直接重试。若按钮改成“创建导出作业”，情况就变了：网络超时不能证明服务器没有创建作业，那是有外部效果的命令，需要接口提供幂等键、作业 ID 或核对流程（见[超时后怎样查清外部写入的结果](../../ai-engineering/runs/external-writes-and-reconciliation.md)），不能照搬只读预览的重试结论。
+**没有乐观更新，也不需要补偿。** 勾选 action 记录的是已经发生的本地操作，预览出错不会把 ID 回滚。预览接口没有远端写入，所以可以用同一组勾选直接重试。若按钮改成“创建导出作业”，情况就变了：网络超时不能证明服务器没有创建作业，那是有外部效果的命令，需要接口提供幂等键、作业 ID 或核对流程（见[写请求超时后，怎样查清结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md)），不能照搬只读预览的重试结论。
 
 ### 接进 React：类型化 Hook 与 selector 引用
 
@@ -13360,13 +13360,13 @@ Redux 管的是跨组件共享的纯客户端状态：action 描述事实，redu
 
 沿用主线一的报表页：报表 42 就是 `/reports/42` 那份报表。本章从报表**列表**进入它。管理员在合成账户 `acct-a` 打开 `/reports?sort=recent&status=published&page=1#summary`；每页两行，已发布第 1 页是报表 `17`、`42`，第 2 页是 `61`。管理员勾选 `42`，翻到第 2 页，再从工具栏的“已选 1 项”打开编辑抽屉。账户、地址、字段和响应都是合成数据。
 
-报表 42 的详情和它的强 ETag（entity tag，实体标签）`"report-42-v7"` 一起返回：
+报表 42 的详情和它的强 ETag (entity tag，实体标签) `"report-42-v7"` 一起返回：
 
 ~~~json
 {"id":42,"title":"Monthly summary","delivery":{"channel":"email","recipients":["reader@example.test"]},"note":"Draft"}
 ~~~
 
-抽屉有两步：第 1 步编辑通知方式 `delivery.channel` 和收件人 `delivery.recipients`，第 2 步编辑备注 `note` 并确认。`title` 在表单里只读，用来演示服务端同时改了别的字段时怎样比较。保存使用 [HTTP API 条件更新契约](../../engineering-foundations/services/api-contracts-errors-and-evolution.md)里的 JSON Merge Patch、`If-Match`、强 ETag 和 `412` 约定。客户端的选择、URL 和缓存都不授予任何权限，每次读写仍由服务端按当前身份授权。
+抽屉有两步：第 1 步编辑通知方式 `delivery.channel` 和收件人 `delivery.recipients`，第 2 步编辑备注 `note` 并确认。`title` 在表单里只读，用来演示服务端同时改了别的字段时怎样比较。保存沿用[两个客户端同时修改同一资源时，API 怎样防止互相覆盖？](../../engineering-foundations/services/conditional-updates-and-etags.md)定下的 JSON Merge Patch、`If-Match`、强 ETag 和 `412`/`428` 语义，本章只讲界面侧怎样用它们。客户端的选择、URL 和缓存都不授予任何权限，每次读写仍由服务端按当前身份授权。
 
 示例的本地验证组合是 React 19.3.1、React Router 8.5.1 Declarative Mode（组件用 `useSearchParams` 读查询、`useNavigate` 写地址，不用 loader）、TanStack Query 5.107.1。
 
@@ -13432,7 +13432,7 @@ URL 不编码选择，所以 Back/Forward 恢复的是地址和查询键，不�
 这次 GET 要拿到**当前**版本，所以有两个细节：
 
 - **先清掉同键的旧读取。** 先取消并等待同一详情键上的旧请求结束，再发新请求。这一步不能省：即使设了 `staleTime: 0`，TanStack Query 仍会把同键的新读取并入在途的旧请求，一条更早开始的读取就会被当成当前值。
-- **要求 HTTP 缓存重新验证。** 请求用 Fetch 的 `cache: "no-cache"`：HTTP 缓存里有对应响应就发条件请求，没有就发普通请求，然后更新缓存。它不同于完全跳过缓存的 `no-store`（两者的语义见[哈希发布与缓存](#51.%20%E5%8F%91%E5%B8%83%E6%96%B0%E7%89%88%E6%9C%AC%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E8%AE%A9%E7%BC%93%E5%AD%98%E5%92%8C%E8%BF%98%E5%BC%80%E7%9D%80%E7%9A%84%E6%97%A7%E9%A1%B5%E9%9D%A2%E9%83%BD%E4%B8%8D%E5%87%BA%E9%94%99%EF%BC%9F)）。本例假定 Service Worker 不会把它替换成旧的本地响应。
+- **要求 HTTP 缓存重新验证。** 请求用 Fetch 的 `cache: "no-cache"`：HTTP 缓存里有对应响应就发条件请求，没有就发普通请求，然后更新缓存。它不同于完全跳过缓存的 `no-store`（HTTP 缓存的 `no-cache` 与 `no-store` 语义见[一份 HTTP 响应什么时候可以直接复用，什么时候必须回源确认？](../../engineering-foundations/services/http-caching-and-conditional-requests.md#%E5%B8%B8%E7%94%A8%E6%8C%87%E4%BB%A4%E5%90%84%E5%85%81%E8%AE%B8%E4%BB%80%E4%B9%88)）。本例假定 Service Worker 不会把它替换成旧的本地响应。
 
 还有一个跨挂载周期的协调：若同一账户/报表还有旧 PATCH 没结算（包括它的缓存回调），新的打开意图先显示等待，不发详情 GET；等旧 mutation 完全结算、再确认意图仍有效，才开始读取。否则旧成功回调“取消同键 GET”时，会把新抽屉刚发出的读取一起取消。这份协调状态不能随旧编辑器卸载而消失。不同详情键互不影响。
 
@@ -13585,7 +13585,7 @@ ETag: "report-42-v9"
 
 客户端能做的是：保留草稿和原基线，告诉用户“写入结果未确认”；等客户端请求结算后，发一次重新验证的 GET 核对当前资源。核对也有边界：若服务端仍可能处理那条断开的写请求，GET 的结果和那次写入孰先孰后，要由 API 的回执或一致性契约确定；即使读到的值和草稿一样，也不能证明是这次写入造成的。同理，若更早一次尝试的回执丢失，后来的 412 也不能证明那次写入一定没发生。
 
-“结果不明”之后怎样查清、何时允许用同一个幂等键重放，是一套通用的外部写入状态机，见[超时后怎样查清外部写入的结果](../../ai-engineering/runs/external-writes-and-reconciliation.md)。
+“结果不明”之后怎样查清、何时允许用同一个幂等键重放，是通用的未知结果机制，见[写请求超时后，怎样查清结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md#%E8%B6%85%E6%97%B6%E4%B9%8B%E5%90%8E%EF%BC%8C%E8%B0%83%E7%94%A8%E6%96%B9%E5%A4%84%E4%BA%8E%E4%BB%80%E4%B9%88%E7%8A%B6%E6%80%81%EF%BC%9F)；`PATCH` 不保证幂等、响应丢失后重放得到 `412` 无法区分“自己已写入”与“别人先写”，见条件写章的[412 之后客户端怎么办](../../engineering-foundations/services/conditional-updates-and-etags.md#412%20%E4%B9%8B%E5%90%8E%E5%AE%A2%E6%88%B7%E7%AB%AF%E6%80%8E%E4%B9%88%E5%8A%9E)。AI 工程里的退款状态机是同一机制的一个领域实例，见[退款请求超时后，怎样查清结果而不重复扣款？](../../ai-engineering/runs/external-writes-and-reconciliation.md)。
 
 ### 代码：意图、票据、闩锁与补丁
 
@@ -13843,7 +13843,7 @@ ETag: "report-42-v9"
 
 ### 紧急更新与可延后的更新
 
-用户打字时，输入框必须立刻显示新字符，这是 urgent update（紧急更新）。结果列表晚一点更新，用户能接受。React 能把这两类工作分开：先提交紧急的部分，再在后台计算可延后的部分；后台 render 进行中若有新的紧急更新到来，React 可以放弃这轮计算，按最新输入重来。
+用户打字时，输入框必须立刻显示新字符，这是 urgent update (紧急更新)。结果列表晚一点更新，用户能接受。React 能把这两类工作分开：先提交紧急的部分，再在后台计算可延后的部分；后台 render 进行中若有新的紧急更新到来，React 可以放弃这轮计算，按最新输入重来。
 
 React 能中断的只是组件和组件之间的 render 工作。一个组件内部的 `reports.filter(...)` 是一段同步 JavaScript，运行到结束前主线程不能处理新输入，React 也插不进去。
 
@@ -13913,23 +13913,23 @@ React 能中断的只是组件和组件之间的 render 工作。一个组件内
 
 ### memo 边界决定能否跳过旧列表
 
-第 2 步能跳过 `ReportResults`，靠的是 `memo`（记忆化组件）：它按浅比较检查 props，`reports` 和 `query` 都没变就跳过这次 render。没有这道边界，紧急 render 会用旧的 `deferredQuery` 把整个列表重算一遍，输入照样变慢。
+第 2 步能跳过 `ReportResults`，靠的是 `memo` (记忆化组件)：它按浅比较检查 props，`reports` 和 `query` 都没变就跳过这次 render。没有这道边界，紧急 render 会用旧的 `deferredQuery` 把整个列表重算一遍，输入照样变慢。
 
-浅比较比的是引用。`reports` 必须在输入期间保持同一个数组、也不被原地修改；父组件若每次 render 都传一个新数组，`memo` 就会认为 props 变了。`memo` 是性能优化，不是正确性保证。项目配置了 React Compiler（React 编译器）并核对过编译结果时，编译器可能自动建立同样的跳过边界；本例显式写 `memo`，让因果关系在没有编译器时也看得见。怎样测量和建立 memo 边界，见[React 渲染慢时，先改什么？](#57.%20React%20%E6%B8%B2%E6%9F%93%E6%85%A2%E6%97%B6%EF%BC%8C%E5%85%88%E6%94%B9%E4%BB%80%E4%B9%88%EF%BC%9F)。
+浅比较比的是引用。`reports` 必须在输入期间保持同一个数组、也不被原地修改；父组件若每次 render 都传一个新数组，`memo` 就会认为 props 变了。`memo` 是性能优化，不是正确性保证。项目配置了 React Compiler (React 编译器)并核对过编译结果时，编译器可能自动建立同样的跳过边界；本例显式写 `memo`，让因果关系在没有编译器时也看得见。怎样测量和建立 memo 边界，见[React 渲染慢时，先改什么？](#57.%20React%20%E6%B8%B2%E6%9F%93%E6%85%A2%E6%97%B6%EF%BC%8C%E5%85%88%E6%94%B9%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 ### deferred 不是 debounce
 
-`useDeferredValue` 和 debounce（防抖）解决不同的问题：
+`useDeferredValue` 和 debounce (防抖)解决不同的问题：
 
 - **它不等待固定时长。** React 在紧急更新之后立即开始后台 render，有新输入就中断重来；没有“停止输入 300 ms 后再算”这回事。
 - **它不减少网络请求。** 若结果来自远端搜索，每个 `deferredQuery` 值仍可能触发一次请求；请求频率要由明确的请求策略或查询层控制，debounce 的语义见[怎样包装一个函数而不弄丢参数、this 和结果？](#25.%20%E6%80%8E%E6%A0%B7%E5%8C%85%E8%A3%85%E4%B8%80%E4%B8%AA%E5%87%BD%E6%95%B0%E8%80%8C%E4%B8%8D%E5%BC%84%E4%B8%A2%E5%8F%82%E6%95%B0%E3%80%81this%20%E5%92%8C%E7%BB%93%E6%9E%9C%EF%BC%9F)。
-- **它不缩短同步计算。** 全量过滤本身若已是长任务，React 也无法在中途让出。这时要先缩小数据、改进算法、把工作拆成能在小块之间让出主线程的片段，或放进 Web Worker（网页工作线程），见[用户觉得慢时，怎样从指标走到证据？](#55.%20%E7%94%A8%E6%88%B7%E8%A7%89%E5%BE%97%E6%85%A2%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8C%87%E6%A0%87%E8%B5%B0%E5%88%B0%E8%AF%81%E6%8D%AE%EF%BC%9F)。只有成本来自许多结果组件的 render 时，跳过旧查询的子树才有帮助。
+- **它不缩短同步计算。** 全量过滤本身若已是长任务，React 也无法在中途让出。这时要先缩小数据、改进算法、把工作拆成能在小块之间让出主线程的片段，或放进 Web Worker (网页工作线程)，见[用户觉得慢时，怎样从指标走到证据？](#55.%20%E7%94%A8%E6%88%B7%E8%A7%89%E5%BE%97%E6%85%A2%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8C%87%E6%A0%87%E8%B5%B0%E5%88%B0%E8%AF%81%E6%8D%AE%EF%BC%9F)。只有成本来自许多结果组件的 render 时，跳过旧查询的子树才有帮助。
 
 ### useTransition：把一次界面切换标为非紧急
 
 第二个场景独立于搜索：搜索框为空，列表按“最早优先”显示 April、May；用户点“查看摘要”，而摘要模块的代码可能还没下载。
 
-`useTransition` 返回 `[isPending, startTransition]`。`startTransition(fn)` 会**立即同步**调用 `fn`，并把 `fn` 里排入的状态更新标为 Transition（过渡更新）。它标记的是更新的优先级，不会推迟处理器的执行。`isPending` 在这次 Transition 完成前为 `true`，可用来给出轻量的等待反馈。Transition 可被更紧急的更新打断，所以不能用它更新受控文本输入的值。
+`useTransition` 返回 `[isPending, startTransition]`。`startTransition(fn)` 会**立即同步**调用 `fn`，并把 `fn` 里排入的状态更新标为 Transition (过渡更新)。它标记的是更新的优先级，不会推迟处理器的执行。`isPending` 在这次 Transition 完成前为 `true`，可用来给出轻量的等待反馈。Transition 可被更紧急的更新打断，所以不能用它更新受控文本输入的值。
 
 ~~~tsx
 const ReportSummary = lazy(() => import("./ReportSummary.js"));
@@ -13943,7 +13943,7 @@ function openSummary() {
 
 ### Suspense 在等什么，等待时显示什么
 
-`<Suspense fallback={…}>` 包住一块子树。子树里的组件在 render 时发现所需资源还没就绪，就 suspend（挂起），由最近的 Suspense 边界决定等待期间显示什么。能让边界进入等待的资源有：
+`<Suspense fallback={…}>` 包住一块子树。子树里的组件在 render 时发现所需资源还没就绪，就 suspend (挂起)，由最近的 Suspense 边界决定等待期间显示什么。能让边界进入等待的资源有：
 
 - `lazy` 加载的组件代码；
 - 通过 `use(promise)` 读取的 Promise；
@@ -14020,7 +14020,7 @@ React 19 的 `use(promise)` 在 render 中读取 Promise：pending 时挂起，�
 
 ### 异步 Action：等待期间保持 isPending
 
-摘要显示后，用户可能要刷新摘要数据。React 19 的 `startTransition` 可以接收 async 函数，称为 Action（动作）；Action 等待期间 `isPending` 一直为 `true`。
+摘要显示后，用户可能要刷新摘要数据。React 19 的 `startTransition` 可以接收 async 函数，称为 Action (动作)；Action 等待期间 `isPending` 一直为 `true`。
 
 > [!warning] await 之后的更新要再包一次
 > React 目前不会自动把 `await` 之后排入的状态更新算进同一个 Transition。成功或失败后写状态时，要再用一次 `startTransition` 包住，否则这些更新按普通优先级处理。
@@ -14124,10 +14124,10 @@ TanStack Query v5（要求 React 18 及以上）用专门的 Hook 接入 Suspens
 
 ### 错误边界是什么
 
-Error Boundary（错误边界）是一个包住子树的组件：子树出错时，它改为显示 fallback（备用界面）。React 内置的边界只能写成类组件，靠两个方法：
+Error Boundary (错误边界)是一个包住子树的组件：子树出错时，它改为显示 fallback (备用界面)。React 内置的边界只能写成类组件，靠两个方法：
 
 - `static getDerivedStateFromError(error)` 根据错误返回新状态，让下一次 render 显示 fallback；
-- `componentDidCatch(error, info)` 在 commit 阶段运行，用来记录错误和 `info.componentStack`（组件栈）。
+- `componentDidCatch(error, info)` 在 commit 阶段运行，用来记录错误和 `info.componentStack` (组件栈)。
 
 排查时注意：React 开发构建会把已被边界接住的错误继续报告到 `window`，全局 `error` 监听器因此也能看到它；这不代表边界没有接手。生产构建里，被边界接住的错误不会冒泡到 `window`。全局错误事件本身只是诊断信号，见[一次失败该由哪一层处理？](#30.%20%E4%B8%80%E6%AC%A1%E5%A4%B1%E8%B4%A5%E8%AF%A5%E7%94%B1%E5%93%AA%E4%B8%80%E5%B1%82%E5%A4%84%E7%90%86%EF%BC%9F)。
 
@@ -14321,7 +14321,7 @@ Web Storage (网页存储) 指 `localStorage` 和 `sessionStorage`。两者接�
 
 `sessionStorage` 再按顶层浏览上下文隔离。同一标签页里导航到另一个来源，新来源读写自己的存储区；回到原来源或重载后，原来的值还在。另一个标签页则有自己独立的一份。关闭标签页通常结束这份会话存储；浏览器恢复已关闭的标签页时是否连同值一起恢复，取决于用户代理，所以它不能保存需要跨会话保留的数据。用带 `opener` 的方式打开同源新窗口时，新窗口一开始可能拿到一份 `sessionStorage` 副本，之后两边各改各的，这只是初始复制，不是持续共享。
 
-规范建议每个存储端点（`localStorage`、`sessionStorage` 各算一个）配额 5 MiB；这只是建议值，浏览器策略仍可能让读取不可用或写入失败。`navigator.storage.estimate()` 返回的是整个 local storage shelf（本地存储架）的近似用量和配额，不是 `localStorage` 还剩多少空间。
+规范建议每个存储端点（`localStorage`、`sessionStorage` 各算一个）配额 5 MiB；这只是建议值，浏览器策略仍可能让读取不可用或写入失败。`navigator.storage.estimate()` 返回的是整个 local storage shelf (本地存储架)的近似用量和配额，不是 `localStorage` 还剩多少空间。
 
 #### 读写会失败
 
@@ -14438,14 +14438,9 @@ Web Storage 有两个真实的异常分支：
 
 Web Storage 里的内容，当前页面上任何脚本都能读。页面一旦出现 cross-site scripting (跨站脚本攻击，XSS)，存在那里的 bearer token (持有者令牌) 也可能被读走。服务端设置的 `HttpOnly` Cookie 不向页面脚本开放，这是会话标识通常放在 Cookie 里的原因。代价是浏览器会按规则自动附带它，于是服务端必须防护 Cross-Site Request Forgery (跨站请求伪造，CSRF)。
 
-浏览器决定是否附带 Cookie，看的是这几个属性：
+浏览器是否附带 Cookie，由 host-only 或 `Domain`、`Path`、`Secure`、`SameSite` 决定（Cookie 不按端口隔离），`HttpOnly` 让脚本读不到它；会话 Cookie 该怎样设这些属性、怎样换 ID 和超时，以[服务端会话 Cookie 怎样设计](../../engineering-foundations/services/sessions-and-browser-boundaries.md#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E4%BC%9A%E8%AF%9D%20Cookie%20%E6%80%8E%E6%A0%B7%E8%AE%BE%E8%AE%A1)为准，CSRF 与 SameSite 的局限见同章[Cookie 自动发送时，怎样防止伪造变更？](../../engineering-foundations/services/sessions-and-browser-boundaries.md#Cookie%20%E8%87%AA%E5%8A%A8%E5%8F%91%E9%80%81%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E9%98%B2%E6%AD%A2%E4%BC%AA%E9%80%A0%E5%8F%98%E6%9B%B4%EF%BC%9F)。
 
-- **host-only 或 `Domain`、`Path`：** 决定哪些主机名和路径能收到它。Cookie 不按端口隔离，同一主机不同端口的服务会收到同一份 Cookie。
-- **`Secure`：** 只在安全连接上发送。
-- **`SameSite`：** 控制跨站请求是否附带；当前 IETF Cookie 文稿要求 `SameSite=None` 必须同时带 `Secure`。
-- **`HttpOnly`：** 不让脚本通过 `document.cookie` 读到。
-
-换一个存储位置本身不完成认证或授权。Cookie、XSS 和 CSRF 的服务端防护见[Web 安全与认证](../../engineering-foundations/services/per-request-authorization.md)。
+换一个存储位置本身不完成认证或授权：每次读写仍要由服务端逐次授权，见[服务怎样逐次确认这个主体能对这份资源做这个动作？](../../engineering-foundations/services/per-request-authorization.md)。
 
 ### 收到通知后，向权威核实
 
@@ -14877,7 +14872,7 @@ worker 方案和上一节的 `BroadcastChannel` 是二选一的传输方式：�
 | Fetch 响应流 | 响应体是 `ReadableStream`，请求方法、请求头和正文可自定义 | 应用自己读字节、组帧、取消、重试和续读 |
 | WebSocket | 握手后双向发送消息 | 应用协议定义重连、事件 ID、确认、去重和补发 |
 
-WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标签页互相提醒的默认方案。它的握手与 Fetch 流程集成，却使用 WebSocket 专有的握手模式，不是普通 Fetch 的 Cross-Origin Resource Sharing (跨来源资源共享，CORS) 授权。服务端可以用握手请求的 `Origin` 限制浏览器来源，但非浏览器客户端能伪造这个头，所以它不是身份认证；仍要验证用户身份、逐条检查操作权限，并规定断线重放、确认与去重。通道选型的完整比较见[何时选择轮询、SSE、流式 Fetch 或 WebSocket](../../engineering-foundations/services/real-time-channels-and-resume.md)。
+WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标签页互相提醒的默认方案。它的握手不走普通 Fetch 的 Cross-Origin Resource Sharing (跨来源资源共享，CORS) 授权，`Origin` 检查也不是身份认证；握手与逐条授权、重放与限流见[WebSocket 怎样建立连接并持续授权](../../engineering-foundations/services/real-time-channels-and-resume.md#WebSocket%20%E6%80%8E%E6%A0%B7%E5%BB%BA%E7%AB%8B%E8%BF%9E%E6%8E%A5%E5%B9%B6%E6%8C%81%E7%BB%AD%E6%8E%88%E6%9D%83)。三种通道的完整选型以[按方向、请求形状和恢复责任选通道](../../engineering-foundations/services/real-time-channels-and-resume.md#%E6%8C%89%E6%96%B9%E5%90%91%E3%80%81%E8%AF%B7%E6%B1%82%E5%BD%A2%E7%8A%B6%E5%92%8C%E6%81%A2%E5%A4%8D%E8%B4%A3%E4%BB%BB%E9%80%89%E9%80%9A%E9%81%93)为准，上表只是页面侧的摘要。
 
 ### 下一步：推送事件怎样接上快照
 
@@ -14889,7 +14884,6 @@ WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标�
 > - 用户代理可限制第三方文档访问 `localStorage`；Chrome 115+ 按顶层站点分区第三方存储，WebKit 按第一方网站分区第三方 `localStorage` 与 IndexedDB（同上节）：[WHATWG HTML Standard §12.3.1](https://html.spec.whatwg.org/multipage/webstorage.html#user-tracking)、[Chrome Storage Partitioning](https://privacysandbox.google.com/cookies/storage-partitioning)、[WebKit Tracking Prevention](https://webkit.org/tracking-prevention/#partitioned-third-party-storage)，2026-11-12 核对。
 > - IndexedDB `readwrite` 事务的作用域、原子提交与失败回滚（“setItem 不是跨标签页的锁”）：[Indexed Database API 3.0 §2.7.1](https://www.w3.org/TR/2026/WD-IndexedDB-3-20261030/)，W3C Working Draft 2026-10-30；2026-11-12 核对。
 > - Cookie 的 host-only/`Domain`、`Path`、`Secure`、`HttpOnly` 与发送规则，§8.5 说明 Cookie 不按端口隔离（“登录会话为什么不放 Web Storage？”）：[RFC 6265 §§4.1.2.3–4.1.2.6、5.1.3–5.1.4、5.3–5.4、8.5](https://www.rfc-editor.org/rfc/rfc6265.html)，2011-04。
-> - `SameSite=None` 须同时带 `Secure`（同上节）：[draft-ietf-httpbis-rfc6265bis-22 §§4.1.2.7、5.7](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis-22)；2026-11-12 核对时 Datatracker 仍标记 RFC Editor “Final Approval Pending”，因此按文稿表述。
 > - `BroadcastChannel` 的接收条件（存储键、频道名、活动上下文）、发送方排除、消息任务与序列化错误；跨窗口 `postMessage` 的目标来源比较、丢弃规则与安全校验；`MessagePort` 的事件与关闭（“BroadcastChannel”“跨源窗口”“SharedWorker”各节）：[WHATWG HTML Standard，Web Messaging §§9.3、9.4.4、9.5](https://html.spec.whatwg.org/multipage/web-messaging.html)，Living Standard 更新于 2026-11-12；2026-11-12 核对。
 > - 结构化克隆副本与 `DataCloneError`（“序列化失败与并发的快照请求”）：[WHATWG HTML Standard，Structured data §2.7](https://html.spec.whatwg.org/multipage/structured-data.html)，2026-11-12 核对。
 > - SharedWorker 连接、复用条件与 worker 生命周期（“SharedWorker”）：[WHATWG HTML Standard，Web Workers §§10.1.3.3、10.2.3、10.2.6.4](https://html.spec.whatwg.org/multipage/workers.html)，Living Standard 更新于 2026-11-12；2026-11-12 核对。
@@ -14897,7 +14891,7 @@ WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标�
 > - Fetch 响应体流与 `websocket` 请求模式（“更新来自服务端时”）：[WHATWG Fetch Standard §§2.2.5、5.3、5.6](https://fetch.spec.whatwg.org/)，Living Standard 更新于 2026-10-19；SSE 重连与 `Last-Event-ID`：[WHATWG HTML Standard §§9.2.2–9.2.5](https://html.spec.whatwg.org/multipage/server-sent-events.html)；WebSocket 握手与 Fetch 集成：[WHATWG WebSockets Standard §§2.1–2.2](https://websockets.spec.whatwg.org/)；浏览器来源检查与非浏览器客户端可伪造 `Origin`：[RFC 6455 §§4.2.1、10.1–10.2](https://www.rfc-editor.org/rfc/rfc6455.html)。均于 2026-11-12 核对。服务端保留历史并按 ID 重放是应用协议的条件。
 ## 48. 服务端持续推送时，界面怎样合并更新并从断线恢复？
 
-本章回答：服务端不断推送更新时，页面怎样把每条更新合并进已有画面，连接断开后又怎样从正确的位置接着读，既不漏也不重。读者手上已有[上一章](#47.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%83%BD%E6%8A%8A%E7%8A%B6%E6%80%81%E5%AD%98%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%8C%E6%A0%87%E7%AD%BE%E9%A1%B5%E5%92%8C%E7%AA%97%E5%8F%A3%E4%B9%8B%E9%97%B4%E6%80%8E%E6%A0%B7%E4%BA%92%E7%9B%B8%E9%80%9A%E7%9F%A5%EF%BC%9F)的规则：任何通知都要向权威核实、只单调推进。这里的权威是“快照 + 游标”：快照给出某一时刻的完整状态，游标指出从事件日志的哪里接着读。传输方式怎样选、SSE 线格式的完整定义，见[何时选择轮询、SSE、流式 Fetch 或 WebSocket](../../engineering-foundations/services/real-time-channels-and-resume.md)；本章只讲页面侧的责任。
+本章回答：服务端不断推送更新时，页面怎样把每条更新合并进已有画面，连接断开后又怎样从正确的位置接着读，既不漏也不重。读者手上已有[上一章](#47.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%83%BD%E6%8A%8A%E7%8A%B6%E6%80%81%E5%AD%98%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%8C%E6%A0%87%E7%AD%BE%E9%A1%B5%E5%92%8C%E7%AA%97%E5%8F%A3%E4%B9%8B%E9%97%B4%E6%80%8E%E6%A0%B7%E4%BA%92%E7%9B%B8%E9%80%9A%E7%9F%A5%EF%BC%9F)的规则：任何通知都要向权威核实、只单调推进。这里的权威是“快照 + 游标”：快照给出某一时刻的完整状态，游标指出从事件日志的哪里接着读。传输方式怎样选、快照与订阅的衔接、SSE 线格式和游标过期的协议规则，以[服务端要持续推送更新时，怎样选通道，断线后又怎样接上？](../../engineering-foundations/services/real-time-channels-and-resume.md)为准；本章只讲页面侧的责任。
 
 **案例。** 沿用主线一的报表页和上一章的报表 42 快照，所有 ID 和响应都是教学用合成数据。页面先取得快照 `id=42, version=9, status=running, progress=0, event_cursor="103"`，然后用 Server-Sent Events (服务器发送事件，SSE) 订阅进度。连接在收到事件 104 之后中断，浏览器自动重连，服务端接着发送事件 105，报表变为 `ready`。页面要做到三件事：断线期间保留最后一份有效状态；正确合并后续更新；把“连接是否正常”和“报表运行到哪一步”分开显示。本章最后换用一个独立的 NDJSON 作业例子，讲页面自己读字节流时多出来的责任。
 
@@ -14915,7 +14909,7 @@ WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标�
 
 ### 快照和游标必须来自同一个一致性点
 
-页面先读快照，再从快照里的游标之后订阅事件。这一步成立的前提是：**服务端在同一个一致性点读出快照和游标**，也就是说，快照恰好包含了日志里直到 103 为止的所有事件。如果服务端分两次读取（先读报表状态，再读日志最新位置），两次之间写入的事件既不在快照里，也不在游标之后，就会被漏掉。这是应用 API 的约定，浏览器不提供任何保证。
+页面先读快照，再从快照里的游标之后订阅事件。这一步成立的前提是：**服务端在同一个一致性点读出快照和游标**，快照恰好包含日志里直到 103 为止的所有事件；服务端怎样保证这一点、订阅怎样从回放切到尾读，见[快照和订阅怎样衔接在同一日志位置](../../engineering-foundations/services/real-time-channels-and-resume.md#%E5%BF%AB%E7%85%A7%E5%92%8C%E8%AE%A2%E9%98%85%E6%80%8E%E6%A0%B7%E8%A1%94%E6%8E%A5%E5%9C%A8%E5%90%8C%E4%B8%80%E6%97%A5%E5%BF%97%E4%BD%8D%E7%BD%AE)。这是应用 API 的约定，浏览器不提供任何保证；页面的责任是只用同一份响应里的快照和游标，不自己拼凑。
 
 ```http
 GET /api/reports/42 HTTP/1.1
@@ -14994,9 +14988,9 @@ URL 里仍是 `after=103`，请求头却是 `Last-Event-ID: 104`。本例服务�
 
 #### Last-Event-ID 只是解析位置，不是确认
 
-按标准，浏览器先更新 `EventSource` 的 last-event-ID，再排队派发 JavaScript 事件。所以这个值只说明“浏览器解析到了哪里”，不是 acknowledgment (确认，ACK)：它不证明应用已经渲染、写入本地存储或完成了某个副作用。服务端可以用 `retry:` 字段给出重连等待的毫秒数，但网络和浏览器实现仍会影响实际恢复时间，页面不应假定固定间隔。
+按标准，浏览器先更新 `EventSource` 的 last-event-ID，再排队派发 JavaScript 事件。所以这个值只说明“浏览器解析到了哪里”，不是 acknowledgment (确认，ACK)：它不证明应用已经渲染、写入本地存储或完成了某个副作用（协议层的论证见[Last-Event-ID 只是解析位置，不是业务确认](../../engineering-foundations/services/real-time-channels-and-resume.md#Last-Event-ID%20%E5%8F%AA%E6%98%AF%E8%A7%A3%E6%9E%90%E4%BD%8D%E7%BD%AE%EF%BC%8C%E4%B8%8D%E6%98%AF%E4%B8%9A%E5%8A%A1%E7%A1%AE%E8%AE%A4)）。服务端可以用 `retry:` 字段给出重连等待的毫秒数，但网络和浏览器实现仍会影响实际恢复时间，页面不应假定固定间隔。
 
-本例只需要最新的报表视图，所以够用：即使某条事件解析了却没来得及渲染，下一条完整视图或一次快照恢复都能把画面校正过来。如果每条事件都代表必须完成的副作用，`Last-Event-ID` 可能比应用真正完成的位置更靠后；这时要持久记录连续的应用层 ACK、按事件 ID 幂等处理，并处理 ACK 与副作用之间的崩溃窗口，见[断线后，客户端要重建状态还是补齐每条事件](../../engineering-foundations/services/real-time-channels-and-resume.md)。
+本例只需要最新的报表视图，所以够用：即使某条事件解析了却没来得及渲染，下一条完整视图或一次快照恢复都能把画面校正过来。如果每条事件都代表必须完成的副作用，`Last-Event-ID` 可能比应用真正完成的位置更靠后；这时要持久记录连续的应用层 ACK、按事件 ID 幂等处理，并处理 ACK 与副作用之间的崩溃窗口，见[游标过期：重置状态，还是标记缺口去对账](../../engineering-foundations/services/real-time-channels-and-resume.md#%E6%B8%B8%E6%A0%87%E8%BF%87%E6%9C%9F%EF%BC%9A%E9%87%8D%E7%BD%AE%E7%8A%B6%E6%80%81%EF%BC%8C%E8%BF%98%E6%98%AF%E6%A0%87%E8%AE%B0%E7%BC%BA%E5%8F%A3%E5%8E%BB%E5%AF%B9%E8%B4%A6)。
 
 ### 合并更新：完整视图按版本覆盖，patch 必须连续
 
@@ -15007,14 +15001,9 @@ URL 里仍是 `after=103`，请求头却是 `Last-Event-ID: 104`。本例服务�
 
 ### 续读接不上时：reset 事件与有界恢复
 
-#### SSE 的派发规则与 reset 事件
+#### 页面怎样接住 reset 事件
 
-续读能否补齐，取决于服务端是否还保留游标之后的事件。游标过期（日志已不保留该位置）时，服务端需要告诉页面“接不上了”。先看几条 SSE 派发规则：
-
-- `event` 字段决定由哪个命名监听器接收，缺省是 `message`；`data` 字段构成 `event.data`。
-- 空行结束一条事件。没有 `data` 字段的事件不会被派发；而显式写出的 `data:` 即使值为空，也会派发为 `event.data === ""`。
-
-所以服务端可以发送 `event: reset\ndata: {}\n\n`，用显式的 `data:` 保证事件一定被派发。`reset` 是本例服务端与页面约定的事件名，不是浏览器的内建状态。页面收到它时，关闭旧的 `EventSource`，重新取一份快照与游标一致的响应：快照已是 v11、`ready` 就显示终态并停止；仍是 `running` 就用新游标重新订阅。页面自己发现坏 JSON 或无效字段时，也走同一条恢复路径。
+续读能否补齐，取决于服务端是否还保留游标之后的事件。游标过期（日志已不保留该位置）时，服务端发本例约定的 `event: reset\ndata: {}\n\n` 告诉页面“接不上了”；协议规则（`event` 选命名监听器、空行结束事件、必须显式带 `data:` 才会派发）见[SSE：线格式与事件边界](../../engineering-foundations/services/real-time-channels-and-resume.md#SSE%EF%BC%9A%E7%BA%BF%E6%A0%BC%E5%BC%8F%E4%B8%8E%E4%BA%8B%E4%BB%B6%E8%BE%B9%E7%95%8C)和[游标过期](../../engineering-foundations/services/real-time-channels-and-resume.md#%E6%B8%B8%E6%A0%87%E8%BF%87%E6%9C%9F%EF%BC%9A%E9%87%8D%E7%BD%AE%E7%8A%B6%E6%80%81%EF%BC%8C%E8%BF%98%E6%98%AF%E6%A0%87%E8%AE%B0%E7%BC%BA%E5%8F%A3%E5%8E%BB%E5%AF%B9%E8%B4%A6)。对页面而言，`reset` 由 `addEventListener("reset", …)` 接收，不是浏览器的内建状态。页面收到它时，关闭旧的 `EventSource`，重新取一份快照与游标一致的响应：快照已是 v11、`ready` 就显示终态并停止；仍是 `running` 就用新游标重新订阅。页面自己发现坏 JSON 或无效字段时，也走同一条恢复路径。
 
 #### 三类信号通向不同分支
 
@@ -15707,7 +15696,7 @@ Content-Type: application/x-ndjson
 推送的若是持久 AI 运行的事件，事件到达后怎样把运行 ID、序号、工具调用和不完整的 Markdown 安全地投影到聊天界面，见支线[AI 聊天界面怎样应用重放事件、安全渲染 Markdown，并处理停止与重试](#49.%20AI%20%E8%81%8A%E5%A4%A9%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%BA%94%E7%94%A8%E9%87%8D%E6%94%BE%E4%BA%8B%E4%BB%B6%E3%80%81%E5%AE%89%E5%85%A8%E6%B8%B2%E6%9F%93%20Markdown%EF%BC%8C%E5%B9%B6%E5%A4%84%E7%90%86%E5%81%9C%E6%AD%A2%E4%B8%8E%E9%87%8D%E8%AF%95%EF%BC%9F)。主线五从另一端接手：这些代码怎样构建、测试、发布，并测出页面慢在哪里，从[构建器怎样把源码变成可部署的文件](#50.%20%E6%9E%84%E5%BB%BA%E5%99%A8%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E9%83%A8%E7%BD%B2%E7%9A%84%E6%96%87%E4%BB%B6%EF%BC%9F)开始。
 
 > [!info]- 来源
-> - SSE 字段解析与空行分发、显式空 `data:` 也会派发、命名事件、`readyState` 三值、204 停止重连、last-event-ID 先于事件派发更新、`Last-Event-ID` 请求头与 `retry:`（“连接状态和报表状态分开显示”“一次完整的续读”“续读接不上时”）：[WHATWG HTML Living Standard，Server-sent events §§9.2.2–9.2.6](https://html.spec.whatwg.org/multipage/server-sent-events.html)，2026-11-12 更新并核对。`after` 参数、优先采用 `Last-Event-ID`、`reset` 事件与报表 42 的快照/事件是本例应用约定，沿用[实时更新协议案例](../../engineering-foundations/services/real-time-channels-and-resume.md)。
+> - SSE 字段解析与空行分发、显式空 `data:` 也会派发、命名事件、`readyState` 三值、204 停止重连、last-event-ID 先于事件派发更新、`Last-Event-ID` 请求头与 `retry:`（“连接状态和报表状态分开显示”“一次完整的续读”“续读接不上时”）：[WHATWG HTML Living Standard，Server-sent events §§9.2.2–9.2.6](https://html.spec.whatwg.org/multipage/server-sent-events.html)，2026-11-12 更新并核对。`after` 参数、优先采用 `Last-Event-ID`、`reset` 事件与报表 42 的快照/事件是本例应用约定，沿用[实时通道章](../../engineering-foundations/services/real-time-channels-and-resume.md)的协议案例。
 > - Fetch 请求缓存模式 `cache: "no-store"` 不使用 HTTP 缓存（“快照和游标必须来自同一个一致性点”）：[WHATWG Fetch Standard §5.4 Request](https://fetch.spec.whatwg.org/#request-class)，2026-10-19 版本；2026-11-12 核对。
 > - Fetch 响应状态与 `Response.body` 流（“Fetch 流和 SSE 有什么不同？”）：[WHATWG Fetch Standard §5.3 Response](https://fetch.spec.whatwg.org/#response-class)；`getReader()`、读取、取消与释放 reader、内部队列与背压（“NDJSON 解析器的边界”“背压”）：[WHATWG Streams Standard §§4.2、4.3.3、4.4、4.9.3](https://streams.spec.whatwg.org/)，2026-11-12 核对。
 > - NDJSON 的 UTF-8、LF/CRLF 分隔与建议媒体类型（“从字节到记录要过三道关”）：[NDJSON Specification 1.0.0 §§3.1–3.3](https://github.com/ndjson/ndjson-spec)，2014-10-19。8,192 帧上限、64 Ki 输出上限、`seq`、`runId` 与终帧是本例教学协议扩展，不由 NDJSON 定义。
@@ -16114,10 +16103,10 @@ for (const chunk of chunks) {
 构建器从入口出发扩展这张图，再把图变成文件：
 
 1. **确定入口。** `package.json` 里的脚本只负责启动构建命令，不是模块图的入口。Vite 默认从项目根目录的 `index.html` 开始；本例给 Webpack 显式设置 `entry: "./index.html"`。
-2. **递归发现依赖。** 对每个请求，resolver（模块解析器）先从导入方出发定位到实际资源：相对请求 `./rows.ts` 从导入方所在目录查找，包名则按安装位置和包元数据解析。匹配的 loader（加载器）或内置处理器读取并转换这份资源，构建器再从转换结果里找出静态导入、动态导入和资源引用，把没处理过的目标加入队列，直到队列清空。
-3. **优化并分块。** 队列清空，模块图才完整。tree shaking（摇树优化）删除能证明没被使用的代码；code splitting（代码分割）决定哪些模块进初始 chunk（代码分块），哪些进异步 chunk。最终有几个文件，取决于入口、动态导入和 Webpack `optimization.splitChunks` 这类分组规则。
+2. **递归发现依赖。** 对每个请求，resolver (模块解析器)先从导入方出发定位到实际资源：相对请求 `./rows.ts` 从导入方所在目录查找，包名则按安装位置和包元数据解析。匹配的 loader (加载器)或内置处理器读取并转换这份资源，构建器再从转换结果里找出静态导入、动态导入和资源引用，把没处理过的目标加入队列，直到队列清空。
+3. **优化并分块。** 队列清空，模块图才完整。tree shaking (摇树优化)删除能证明没被使用的代码；code splitting (代码分割)决定哪些模块进初始 chunk (代码分块)，哪些进异步 chunk。最终有几个文件，取决于入口、动态导入和 Webpack `optimization.splitChunks` 这类分组规则。
 4. **生成文件并改写引用。** 构建器写出 HTML、JavaScript、CSS 和资源文件，把源码请求改写成生成文件之间的引用，还可以按配置输出 manifest，记录源入口到输出文件的映射。文件名里的哈希随内容和引用关系变化，它怎样支撑缓存和发布见[发布新版本时，怎样让缓存和还开着的旧页面都不出错？](#51.%20%E5%8F%91%E5%B8%83%E6%96%B0%E7%89%88%E6%9C%AC%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E8%AE%A9%E7%BC%93%E5%AD%98%E5%92%8C%E8%BF%98%E5%BC%80%E7%9D%80%E7%9A%84%E6%97%A7%E9%A1%B5%E9%9D%A2%E9%83%BD%E4%B8%8D%E5%87%BA%E9%94%99%EF%BC%9F)。
-5. **部署并运行。** 整套产物要放到与 public path（公开路径）相符的位置。浏览器先按 HTML 请求初始 JS 和 CSS，CSS 再引用图标；执行到动态导入时才请求编辑器的 chunk。
+5. **部署并运行。** 整套产物要放到与 public path (公开路径)相符的位置。浏览器先按 HTML 请求初始 JS 和 CSS，CSS 再引用图标；执行到动态导入时才请求编辑器的 chunk。
 
 构建时发现的关系和浏览器运行时的请求是两件事：
 
@@ -16142,7 +16131,7 @@ for (const chunk of chunks) {
 
 ### tree shaking 能删掉什么，barrel 和 sideEffects 怎样影响它？
 
-tree shaking 是 bundler（打包器）删除未使用导出或整个模块的优化，不是 ESM 在运行时提供的保证。静态 `import`、`export` 让工具能分析依赖关系和被引用的名字；但一个模块即使导出没人用，执行它也可能有 side effect（副作用），例如注册事件监听器、修改全局对象、注入 CSS。工具必须证明删掉它不会改变行为，才能删。
+tree shaking 是 bundler (打包器)删除未使用导出或整个模块的优化，不是 ESM 在运行时提供的保证。静态 `import`、`export` 让工具能分析依赖关系和被引用的名字；但一个模块即使导出没人用，执行它也可能有 side effect (副作用)，例如注册事件监听器、修改全局对象、注入 CSS。工具必须证明删掉它不会改变行为，才能删。
 
 本例在 `rows.ts` 里另放了一个从未被导入的导出 `unusedChart`，里面带一段可搜索的哨兵字符串。生产输出中找不到这段字符串，说明它已被删除。
 
@@ -16151,7 +16140,7 @@ Webpack 文档把这件事拆成两种优化：
 - **按导出删（`usedExports`）。** 标记哪些导出没被使用，再由代码压缩器删除对应语句。压缩器要逐条语句判断有没有副作用，这很难做准；而且按规范，模块里的副作用必须求值，所以这一层跳不过整个模块及其依赖。
 - **按模块跳过（`sideEffects`）。** 包在 `package.json` 里声明哪些文件没有副作用。若一个被声明为无副作用的模块，没有任何导出被直接使用，打包器可以跳过它和它下面的整棵依赖子树。这一层效果大得多。
 
-barrel（聚合导出模块）是只用 `export ... from` 转发其他模块接口的文件，用来把一个目录要公开的名字集中到一个入口：
+barrel (聚合导出模块)是只用 `export ... from` 转发其他模块接口的文件，用来把一个目录要公开的名字集中到一个入口：
 
 ~~~javascript
 // reports/index.mjs（barrel）
@@ -16212,7 +16201,7 @@ Vite 用 `base` 配置把引用改写成带公开路径的绝对 URL，见后文
 
 ### Webpack 的 loader 怎样逐个转换模块？
 
-loader 本质上是一个函数：接收一个模块的源码文本，返回转换结果。前面第 2 阶段里，每个请求解析到实际资源后，由匹配的 loader 转换，Webpack 再从转换结果中发现后续依赖。下面这个 loader 只做字符串替换，不理解 JavaScript 结构；需要按语法节点改写代码时，应改用 AST（abstract syntax tree，抽象语法树）转换器：
+loader 本质上是一个函数：接收一个模块的源码文本，返回转换结果。前面第 2 阶段里，每个请求解析到实际资源后，由匹配的 loader 转换，Webpack 再从转换结果中发现后续依赖。下面这个 loader 只做字符串替换，不理解 JavaScript 结构；需要按语法节点改写代码时，应改用 AST (abstract syntax tree，抽象语法树)转换器：
 
 ~~~javascript
 export default function replaceReportTitle(source) {
@@ -16241,7 +16230,7 @@ module: {
 }
 ~~~
 
-`type: "css/auto"` 把编译出的 CSS 交给 Webpack 原生的 CSS 模块处理。只有每一步确有职责时才串联 loader：Sass、Less、Stylus、PostCSS 仍需要各自的 loader，普通 CSS 已有原生处理，不要只因沿用旧配置再加一个。图片、字体、媒体与文本资源可用 Asset Modules（资源模块）处理，它在许多项目里替代了旧的 `file-loader`、`url-loader` 和 `raw-loader`；图标最终是独立文件还是 data URL，取决于工具版本、资源大小和内联配置。
+`type: "css/auto"` 把编译出的 CSS 交给 Webpack 原生的 CSS 模块处理。只有每一步确有职责时才串联 loader：Sass、Less、Stylus、PostCSS 仍需要各自的 loader，普通 CSS 已有原生处理，不要只因沿用旧配置再加一个。图片、字体、媒体与文本资源可用 Asset Modules (资源模块)处理，它在许多项目里替代了旧的 `file-loader`、`url-loader` 和 `raw-loader`；图标最终是独立文件还是 data URL，取决于工具版本、资源大小和内联配置。
 
 构建成功不等于类型正确。Webpack 原生 TypeScript 擦除、`ts-loader` 的 `transpileOnly: true` 和 Vite 的转译都只删除类型，不做类型检查，需要另设 `tsc --noEmit` 之类的检查步骤；`ts-loader@9.6.2` 默认会做类型检查。
 
@@ -16257,7 +16246,7 @@ module: {
 
 ### plugin 怎样处理整次构建，DefinePlugin 为什么不能放密钥？
 
-loader 一次只转换一个模块。plugin（插件）挂在编译器和编译过程的钩子上，处理整次构建共享的状态或产物。要新增产物，应在 `compilation.hooks.processAssets` 中选择合适的 stage。下面的统计插件在 `done` 钩子里把 JSON 写到执行命令时的当前目录；它不会自动进 `dist/`，也不属于 Webpack 管理的 asset（产物）：
+loader 一次只转换一个模块。plugin (插件)挂在编译器和编译过程的钩子上，处理整次构建共享的状态或产物。要新增产物，应在 `compilation.hooks.processAssets` 中选择合适的 stage。下面的统计插件在 `done` 钩子里把 JSON 写到执行命令时的当前目录；它不会自动进 `dist/`，也不属于 Webpack 管理的 asset (产物)：
 
 ~~~javascript
 import { writeFileSync } from "node:fs";
@@ -16272,7 +16261,7 @@ class BuildStatsPlugin {
 }
 ~~~
 
-`DefinePlugin` 在构建时把代码中的表达式替换成常量。替换后的值写进客户端 bundle，任何能打开页面的人都能读到，所以不能放密钥。
+`DefinePlugin` 在构建时把代码中的表达式替换成常量。替换后的值写进客户端 bundle，任何能打开页面的人都能读到，所以不能放密钥。它也让同一份 bundle 绑定在一个环境上；要在各环境间原样晋级同一份产物，就把非秘密的环境配置改为运行时从配置端点读取，见[配置与密钥随版本记录](../../engineering-foundations/practice/build-once-promote-by-digest.md#%E9%85%8D%E7%BD%AE%E4%B8%8E%E5%AF%86%E9%92%A5%E9%9A%8F%E7%89%88%E6%9C%AC%E8%AE%B0%E5%BD%95)。
 
 > [!info]- 实例：Webpack 5.109 的 processAssets、emit 与旧插件迁移
 > `processAssets` 的 stage 决定生成或读取资源的时点。`ADDITIONAL` 位于代码压缩、source map 和传输压缩之前，适合新增自有文件。到 `SUMMARIZE` 才新增文件时，`OPTIMIZE_SIZE` 已经过去，Webpack 不会重跑整个阶段；但订阅了 `additionalAssets` 的处理器仍可单独处理后续新增资源。5.109 的默认 JavaScript minimizer 就使用这种订阅，所以不能只凭新增阶段断言文件不会被压缩，还要看处理器的匹配条件。
@@ -16283,7 +16272,7 @@ class BuildStatsPlugin {
 
 ### Vite 的开发服务器为什么不能代替生产构建检查？
 
-Vite 的开发和生产走两条路。按 Vite 8.3.5 文档，开发服务器按浏览器请求逐个提供转换后的原生 ESM，并用 Rolldown 预打包第三方依赖；`vite build` 则由 Rolldown 一次性生成静态的 HTML、JS、CSS 和资源文件。两条路在分块、目标浏览器、公开路径和服务器行为上都可能不同，开发环境能跑通不代表生产产物没问题。HMR（Hot Module Replacement，热模块替换）只属于开发期：服务器通知文件变化，浏览器端运行时取回更新后的模块并调用其注册的接受回调，当前模块边界处理不了时才整页刷新。它与生产发布无关。
+Vite 的开发和生产走两条路。按 Vite 8.3.5 文档，开发服务器按浏览器请求逐个提供转换后的原生 ESM，并用 Rolldown 预打包第三方依赖；`vite build` 则由 Rolldown 一次性生成静态的 HTML、JS、CSS 和资源文件。两条路在分块、目标浏览器、公开路径和服务器行为上都可能不同，开发环境能跑通不代表生产产物没问题。HMR (Hot Module Replacement，热模块替换)只属于开发期：服务器通知文件变化，浏览器端运行时取回更新后的模块并调用其注册的接受回调，当前模块边界处理不了时才整页刷新。它与生产发布无关。
 
 本例把页面挂在 `/reports/`，并打开 manifest、关闭小 SVG 内联：
 
@@ -16316,11 +16305,11 @@ Vite 默认不生成 manifest。本例打开它来核对映射：`"index.html"` 
 - 恢复默认内联阈值后，本例的小 SVG 会变成 CSS 里的 data URL，不再单独请求。
 - `base` 必须与静态站点的挂载路径一致。`vite preview` 只用于本地预览生产构建，不是生产服务器；上线前要在实际部署 URL 下检查 HTML、初始脚本和样式、异步 chunk、图像、缓存头、压缩和路由回退。
 - Vite 用 Oxc 转译 TypeScript，只删类型，不做类型检查。
-- Vite 8.3.5 的 `build.target` 默认面向固定日期（2026-01-01）的 Baseline Widely Available 浏览器范围：Chrome/Edge 111、Firefox 114、Safari 16.4。它只决定语法转换到什么程度，不补运行时 API，`tsconfig.json` 的 `target` 也不能代替它。支持更早的浏览器要另配 polyfill（兼容补丁）并在目标环境验证，见[用一个新 API 之前，怎样确认运行时真的支持？](#32.%20%E7%94%A8%E4%B8%80%E4%B8%AA%E6%96%B0%20API%20%E4%B9%8B%E5%89%8D%EF%BC%8C%E6%80%8E%E6%A0%B7%E7%A1%AE%E8%AE%A4%E8%BF%90%E8%A1%8C%E6%97%B6%E7%9C%9F%E7%9A%84%E6%94%AF%E6%8C%81%EF%BC%9F)。
+- Vite 8.3.5 的 `build.target` 默认面向固定日期（2026-01-01）的 Baseline Widely Available 浏览器范围：Chrome/Edge 111、Firefox 114、Safari 16.4。它只决定语法转换到什么程度，不补运行时 API，`tsconfig.json` 的 `target` 也不能代替它。支持更早的浏览器要另配 polyfill (兼容补丁)并在目标环境验证，见[用一个新 API 之前，怎样确认运行时真的支持？](#32.%20%E7%94%A8%E4%B8%80%E4%B8%AA%E6%96%B0%20API%20%E4%B9%8B%E5%89%8D%EF%BC%8C%E6%80%8E%E6%A0%B7%E7%A1%AE%E8%AE%A4%E8%BF%90%E8%A1%8C%E6%97%B6%E7%9C%9F%E7%9A%84%E6%94%AF%E6%8C%81%EF%BC%9F)。
 
 ### source map 怎样把报错映回源码，又会暴露什么？
 
-生产代码经过转换和压缩，报错的行列号对应生成文件，很难读懂。source map（源映射）记录生成代码位置与原始源码位置的对应关系，调试器或错误收集工具据此把位置映回源码；映射本身不能还原出原始文件，除非它附带了源码文本。几个选择各影响一件事：精确到行还是列影响定位精度；是否使用 loader 提供的映射影响能映回多早的源码；映射内嵌还是外置、是否附带源码文本，影响构建成本和对外暴露的信息。
+生产代码经过转换和压缩，报错的行列号对应生成文件，很难读懂。source map (源映射)记录生成代码位置与原始源码位置的对应关系，调试器或错误收集工具据此把位置映回源码；映射本身不能还原出原始文件，除非它附带了源码文本。几个选择各影响一件事：精确到行还是列影响定位精度；是否使用 loader 提供的映射影响能映回多早的源码；映射内嵌还是外置、是否附带源码文本，影响构建成本和对外暴露的信息。
 
 | Webpack `devtool` 例子 | 主要含义 | 适用边界 |
 |---|---|---|
@@ -16365,24 +16354,9 @@ source map 不是权限边界。`.map` URL 只要仍由服务器公开提供，�
 
 所以发布要同时解决两件事：每个 URL 的缓存规则，以及新旧文件在服务器上共存多久。先看缓存规则。
 
-### HTTP 缓存怎样决定能不能复用一份响应？
+### 静态资源怎样借用 HTTP 缓存？
 
-浏览器或 CDN 收到请求时，按三个问题决定能否用存储的响应代替网络：
-
-1. **能不能存。** `Cache-Control: no-store` 要求缓存不存储这次响应；其他响应按状态码和指令判断。
-2. **缓存键是否匹配。** 缓存通常按请求方法和目标 URL 区分响应，响应里的 `Vary` 再列出影响表示的请求字段，例如语言或编码偏好。
-3. **是否仍新鲜。** `max-age=N` 表示响应的年龄（自源站生成以来的时间）小于 N 秒时新鲜。新鲜的响应可以直接复用，不联系服务器。
-
-响应不再新鲜时，缓存可以发条件请求验证：响应带过 `ETag`（实体标签）时，缓存发 `If-None-Match`；服务器回 `304 Not Modified` 表示内容没变，缓存复用已存的正文；内容变了就回 `200 OK` 和新正文。验证器和新鲜时间管不同的事：`ETag` 只在需要验证时使用，不会让仍新鲜的响应提前去验证。
-
-几个常被混淆的指令：
-
-| 指令 | 含义 | 常见误解 |
-|---|---|---|
-| `max-age=31536000` | 一年（365 × 24 × 3600 秒）内新鲜，可直接复用 | 以为过期就绝不能用；有些指令或配置允许使用特定的过期响应 |
-| `immutable` | 响应在新鲜期内不会变化，浏览器无需重新验证，用户普通刷新时也不必发条件请求 | 以为它能让内容永不过期；它只在新鲜期内生效 |
-| `no-cache` | 可以存，但每次复用前都要先向服务器验证 | 以为是“不要缓存” |
-| `no-store` | 不要存储这次响应 | 以为能单独保证隐私 |
+HTTP 缓存只在三件事都成立时不联系服务器、直接复用存储的响应：响应允许存储（没有 `no-store`），缓存键匹配（请求方法、URL 和 `Vary` 列出的请求字段），且仍在 `max-age` 给出的新鲜期内。否则它带着存储的 `ETag` 发 `If-None-Match` 验证，`304 Not Modified` 表示复用已存正文。对发布最要紧的两条：`no-cache` 是“可以存，复用前必须验证”，不是“不要缓存”；`immutable` 只免去新鲜期内（包括普通刷新时）的验证，不让内容永不过期。三问、各指令的确切语义和验证路径以[一份 HTTP 响应什么时候可以直接复用，什么时候必须回源确认？](../../engineering-foundations/services/http-caching-and-conditional-requests.md)为准。
 
 由此得到前端静态资源的两种做法：
 
@@ -16396,7 +16370,7 @@ source map 不是权限边界。`.map` URL 只要仍由服务器公开提供，�
 
 - **同一个 URL 的内容会变**，例如入口 HTML。用 `no-cache` 加 `ETag`，让缓存保留正文，但每次复用前都问服务器；或给较短的 `max-age`，限制旧内容最多被直接复用多久，到期后再用 `ETag` 验证。
 
-报表 API 这类带用户数据的响应，还涉及 `private`、授权撤销与缓存的关系，见[浏览器请求如何到达 HTTP 响应？](../../engineering-foundations/services/http-semantics-and-transport.md)的缓存一节。本章只处理公开的静态资源。
+报表 API 这类按用户变化的响应要用 `private` 或 `no-store` 挡住共享缓存，新鲜期还决定撤权最晚多久生效，见缓存章的[用户范围的响应怎样写缓存字段](../../engineering-foundations/services/http-caching-and-conditional-requests.md#%E7%94%A8%E6%88%B7%E8%8C%83%E5%9B%B4%E7%9A%84%E5%93%8D%E5%BA%94%E6%80%8E%E6%A0%B7%E5%86%99%E7%BC%93%E5%AD%98%E5%AD%97%E6%AE%B5)。本章只处理公开的静态资源。
 
 ### 编辑器改了一行字，为什么入口脚本的文件名也变了？
 
@@ -16453,11 +16427,11 @@ HTTP 缓存和 Service Worker 的 Cache Storage 是两套机制，要分开设�
 
 回滚是把指针指回 v41，同样要成套：入口 HTML 和服务端会读取的 manifest 一起指回去。已经打开的 v42 页面仍可能需要 v42 的文件，所以回滚后也不能立即删除 v42。
 
-旧版本文件的保留时长，要覆盖三样东西：仍可能被提供的 HTML（包括 CDN 边缘上的副本）、用户仍开着的页面、可能继续控制旧页面的 Service Worker。后端 API 能否同时兼容新旧页面，是另一项要单独检查的发布条件。本章止于静态资源；构建一次、逐环境验证、渐进放量和服务端回滚见[如何晋级并回滚已验证的报表服务产物？](../../engineering-foundations/practice/build-once-promote-by-digest.md)。
+旧版本文件的保留时长，要覆盖三样东西：仍可能被提供的 HTML（包括 CDN 边缘上的副本）、用户仍开着的页面、可能继续控制旧页面的 Service Worker。后端 API 能否同时兼容新旧页面，是另一项要单独检查的发布条件。本章止于静态资源；构建一次、按摘要逐环境晋级见[已验证的产物怎样原样晋级到生产？](../../engineering-foundations/practice/build-once-promote-by-digest.md)，渐进放量和服务端回退见[新版本怎样逐步放量，出问题时能撤回什么？](../../engineering-foundations/practice/canary-rollout-and-rollback.md)。
 
 ### 例子：图集和独立图标，缓存粒度差在哪里？
 
-哈希 URL 让缓存以“文件”为单位失效，所以把几个资源合进一个文件，就把它们的失效绑在了一起。CSS sprite（雪碧图）是现成的例子：多个小图标排进一张图集，用 `background-position` 露出其中一格。图集怎样裁切、图标形式怎样选，见[图标该用行内 SVG、外部图片、雪碧图还是图标字体？](#52.%20%E5%9B%BE%E6%A0%87%E8%AF%A5%E7%94%A8%E8%A1%8C%E5%86%85%20SVG%E3%80%81%E5%A4%96%E9%83%A8%E5%9B%BE%E7%89%87%E3%80%81%E9%9B%AA%E7%A2%A7%E5%9B%BE%E8%BF%98%E6%98%AF%E5%9B%BE%E6%A0%87%E5%AD%97%E4%BD%93%EF%BC%9F)；这里只看缓存。
+哈希 URL 让缓存以“文件”为单位失效，所以把几个资源合进一个文件，就把它们的失效绑在了一起。CSS sprite (雪碧图)是现成的例子：多个小图标排进一张图集，用 `background-position` 露出其中一格。图集怎样裁切、图标形式怎样选，见[图标该用行内 SVG、外部图片、雪碧图还是图标字体？](#52.%20%E5%9B%BE%E6%A0%87%E8%AF%A5%E7%94%A8%E8%A1%8C%E5%86%85%20SVG%E3%80%81%E5%A4%96%E9%83%A8%E5%9B%BE%E7%89%87%E3%80%81%E9%9B%AA%E7%A2%A7%E5%9B%BE%E8%BF%98%E6%98%AF%E5%9B%BE%E6%A0%87%E5%AD%97%E4%BD%93%EF%BC%9F)；这里只看缓存。
 
 设报表详情页 `/reports/42` 为 A，用整组 8 个状态图标；报表列表页为 B，只用第 1 个。这次发布只改了第 7 个图标。
 
@@ -16475,13 +16449,13 @@ HTTP 缓存和 Service Worker 的 Cache Storage 是两套机制，要分开设�
 | 只取 1 个独立 SVG | 1 | 210 | 510 | 0 个新请求，`transferSize` 为 0 |
 | 只用图集中的 1 格 | 1 | 1,383 | 1,683 | 0 个新请求，`transferSize` 为 0 |
 
-字节来自 PerformanceResourceTiming（资源计时 API）。`encodedBodySize` 是响应正文的编码大小；网络响应的 `transferSize` 按规范等于编码正文大小加一个 300 字节的响应头估值，所以 8 个独立文件是 `1,780 + 8 × 300 = 4,180`，图集是 `1,383 + 300 = 1,683`。本地缓存命中且无需网络验证时为 0；经网络验证后复用则记 300。这个值不是实际 HTTP 头、TLS 或链路字节的精确账单，表里也不含 HTML、CSS、连接、压缩和 CDN。
+字节来自 PerformanceResourceTiming (资源计时 API)。`encodedBodySize` 是响应正文的编码大小；网络响应的 `transferSize` 按规范等于编码正文大小加一个 300 字节的响应头估值，所以 8 个独立文件是 `1,780 + 8 × 300 = 4,180`，图集是 `1,383 + 300 = 1,683`。本地缓存命中且无需网络验证时为 0；经网络验证后复用则记 300。这个值不是实际 HTTP 头、TLS 或链路字节的精确账单，表里也不含 HTML、CSS、连接、压缩和 CDN。
 
 结论只有资源粒度：页面用全组时，图集少 7 个请求；只用一格时，单个独立 SVG 比图集少传 `1,683 − 510 = 1,173` 个 `transferSize` 字节。
 
 ### HTTP/2 与 HTTP/3 下，“少一个请求”还值多少？
 
-HTTP/1.1 时代，合并文件的主要理由是减少连接和排队。HTTP/2 让多个资源流在同一条 TCP 连接上交错传输，请求数不再等于新建连接数；但 TCP 丢失字节时，仍可能暂时挡住同一连接上所有流的后续数据。HTTP/3 用 QUIC 流承载请求，单个流受阻时其他流可以继续推进，但这些流仍共享连接级的拥塞控制和流量控制。协议细节见[浏览器请求如何到达 HTTP 响应？](../../engineering-foundations/services/http-semantics-and-transport.md)。
+HTTP/1.1 时代，合并文件的主要理由是减少连接和排队。HTTP/2 让多个资源流在同一条 TCP 连接上交错传输，请求数不再等于新建连接数；但 TCP 丢失字节时，仍可能暂时挡住同一连接上所有流的后续数据。HTTP/3 用 QUIC 流承载请求，单个流受阻时其他流可以继续推进，但这些流仍共享连接级的拥塞控制和流量控制。协议细节见[一次 HTTP 请求怎样从浏览器到达服务，又带回什么？](../../engineering-foundations/services/http-semantics-and-transport.md#%E4%B8%89%E4%B8%AA%20HTTP%20%E7%89%88%E6%9C%AC%E6%80%8E%E6%A0%B7%E6%89%BF%E8%BD%BD%E5%90%8C%E4%B8%80%E8%AF%B7%E6%B1%82)。
 
 所以不能只凭“文件更少”断言合并更快。独立资源仍有各自的请求处理和响应头；合并则把未用部分的字节、变更频率和缓存失效绑在一起。若一组资源在多数页面一起出现、且一起更新，可以测合并；若路由只取其中少数、或它们经常独立更新，独立资源只请求当前需要的 URL，未变部分继续命中缓存。
 
@@ -16490,8 +16464,8 @@ HTTP/1.1 时代，合并文件的主要理由是减少连接和排队。HTTP/2 �
 到这里，发布规则已经确定：哈希资源长缓存加 `immutable`，入口 HTML 每次验证；先传全套、后切指针，旧文件保留到没有 HTML、页面和 Service Worker 再引用它；缺失文件返回 404 而不是 HTML，chunk 失败时保住草稿、让用户选择刷新。这些规则是否真的落实，要靠测试在实际部署 URL 下证明，例如旧页面首次打开编辑抽屉时请求是否成功。下一章讨论这类证明该放在哪一层：[前端测试该在哪一层证明什么？](#53.%20%E5%89%8D%E7%AB%AF%E6%B5%8B%E8%AF%95%E8%AF%A5%E5%9C%A8%E5%93%AA%E4%B8%80%E5%B1%82%E8%AF%81%E6%98%8E%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 > [!info]- 来源
-> - **缓存三问、新鲜度与 `max-age`、`ETag` 验证、`no-cache` 与 `no-store`：** [IETF RFC 9111, HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111.html)，§§2、4.2（缓存键与新鲜度）、4.3（验证）、5.2（`Cache-Control` 指令），2022-06，核对于 2026-11-12。
-> - **`immutable`（新鲜期内包括刷新时不发条件请求）：** [IETF RFC 8246](https://www.rfc-editor.org/rfc/rfc8246.html)，§§2–3，2017-09。哈希 URL 更新策略：[MDN HTTP Caching，Cache busting](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching#cache_busting)，访问于 2026-11-12。
+> - **缓存三问、`no-cache` 与 `immutable` 的回顾：** 权威推导与来源（RFC 9111、RFC 8246）在[工程基础的 HTTP 缓存章](../../engineering-foundations/services/http-caching-and-conditional-requests.md)；本章不重复。
+> - **哈希 URL 更新策略：** [MDN HTTP Caching，Cache busting](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching#cache_busting)，访问于 2026-11-12。
 > - **Service Worker Cache Storage 独立于 HTTP 缓存：** [W3C Service Workers](https://www.w3.org/TR/service-workers/)，Cache 对象节。
 > - **哈希级联、v41/v42 文件名、200/404 与缺失 chunk 回退 HTML：** Node.js 26.13.0 + Vite 8.3.5 合成 fixture 的本地静态服务与无界面 Chromium 实测；文件名是版本与配置结果，不是稳定 API。生产动态导入改写：[Vite 8.3.5 importAnalysisBuild.ts](https://github.com/vitejs/vite/blob/v8.3.5/packages/vite/src/node/plugins/importAnalysisBuild.ts#L314-L344)。
 > - **`vite:preloadError`、HTML 需 `no-cache`、可重试模块加载与旧浏览器缓存失败：** [Vite Building for Production，Load Error Handling](https://vite.dev/guide/build#load-error-handling)，文档版本 v8.3.7，核对于 2026-11-26。
@@ -16499,7 +16473,7 @@ HTTP/1.1 时代，合并文件的主要理由是减少连接和排队。HTTP/2 �
 > - **HTTP/2 多路复用与 TCP 队头阻塞：** [IETF RFC 9113](https://www.rfc-editor.org/rfc/rfc9113.html)，§§1.2、5，2022-06；**HTTP/3 的 QUIC 流与连接级拥塞控制：** [IETF RFC 9114](https://www.rfc-editor.org/rfc/rfc9114.html)，§§1.2、2，2022-06；**QUIC 流级与连接级流量控制：** [IETF RFC 9000](https://www.rfc-editor.org/rfc/rfc9000.html)，§4，2021-05。核对于 2026-11-12。
 ## 52. 图标该用行内 SVG、外部图片、雪碧图还是图标字体？
 
-图标的四种常见载体是 inline SVG（行内 SVG）、作为 `<img>` 的独立 SVG 文件、CSS Sprite（CSS 雪碧图）和 icon font（图标字体）。没有哪一种单凭“文件更少”或“矢量更清晰”胜出。本章按三个问题比较它们：图标在控件里是否承担名称，图形是否要随页面样式变色，一组图标按什么单位缓存和更新。读者需要会写基本的 HTML 按钮和 CSS 选择器。
+图标的四种常见载体是 inline SVG (行内 SVG)、作为 `<img>` 的独立 SVG 文件、CSS Sprite (CSS 雪碧图)和 icon font (图标字体)。没有哪一种单凭“文件更少”或“矢量更清晰”胜出。本章按三个问题比较它们：图标在控件里是否承担名称，图形是否要随页面样式变色，一组图标按什么单位缓存和更新。读者需要会写基本的 HTML 按钮和 CSS 选择器。
 
 沿用主线一的报表页 `/reports/42`。本章给它加三类图标：
 
@@ -16521,7 +16495,7 @@ HTTP/1.1 时代，合并文件的主要理由是减少连接和排队。HTTP/2 �
 
 ### 要跟随按钮状态变色：行内 SVG
 
-“添加筛选条件”的加号要随按钮状态换色。行内 SVG 的路径就在宿主文档里，能直接被页面 CSS 选中；让形状的 `fill` 使用 `currentColor`（当前文字颜色），它就沿用按钮的 `color`：
+“添加筛选条件”的加号要随按钮状态换色。行内 SVG 的路径就在宿主文档里，能直接被页面 CSS 选中；让形状的 `fill` 使用 `currentColor` (当前文字颜色)，它就沿用按钮的 `color`：
 
 ~~~html
 <button type="button" class="report-action">
@@ -16559,7 +16533,7 @@ HTTP/1.1 时代，合并文件的主要理由是减少连接和排队。HTTP/2 �
 
 ### 一组小图总是一起出现：CSS Sprite
 
-当多个小图总在同一组页面里一起出现，可以把它们排进一张 sprite sheet（精灵图集），让一个固定尺寸的盒子只露出目标区域。
+当多个小图总在同一组页面里一起出现，可以把它们排进一张 sprite sheet (精灵图集)，让一个固定尺寸的盒子只露出目标区域。
 
 本章的合成图集是 `64 × 32px`，每格 `16 × 16px`，4 列 2 行，共 8 格。坐标 `x`、`y` 是每格左上角的位置，以图集左上角为原点，单位 CSS px。右侧的小盒子大小固定，移动的是它背后的整张背景图：
 
@@ -16675,7 +16649,7 @@ HTTP/1.1 时代，合并文件的主要理由是减少连接和排队。HTTP/2 �
 - 请求与组件状态的关系放在组件测试里，用可控的 Mock 制造等待、成功和失败。
 - 浏览器 Back、片段锚点、生产资源路径这类风险只有真实浏览器能覆盖。组件测试没有真实的会话历史，不能替代 Back 测试。
 
-把风险对应到可证明边界的通用方法见[怎样用测试边界验证一次报表服务改动？](../../engineering-foundations/practice/testing-by-failure-boundary.md)；本章只讲前端特有的边界。
+把风险对应到可证明边界的通用方法见[一次改动该在哪一层测试，怎样证明测试能区分对错？](../../engineering-foundations/practice/testing-by-failure-boundary.md)；本章只讲前端特有的边界。
 
 ### 组件测试：按用户能找到的角色和名称查询
 
@@ -16837,7 +16811,7 @@ typecheck -> unit/component tests -> production build
 > [!info] Vite 的本地预览（Vite 8.3.8，核对于 2026-11-12）
 > `vite preview` 可以在本地预览刚构建的 `dist`，适合做上面的冷开检查，但官方不把它定位为生产服务器。
 
-产物晋级、运行时配置和发布门禁的通用做法见[如何晋级并回滚已验证的报表服务产物？](../../engineering-foundations/practice/build-once-promote-by-digest.md)。
+产物晋级、运行时配置和发布门禁的通用做法见[已验证的产物怎样原样晋级到生产？](../../engineering-foundations/practice/build-once-promote-by-digest.md)。
 
 ### 分好层之后，组件层的异步断言怎样写
 
@@ -17145,13 +17119,13 @@ Jest 的 `--coverage` 报告哪些行和分支执行过。执行过不等于被�
 
 ### 三项核心指标各量用户的哪种感受？
 
-Core Web Vitals（核心网页指标）是三项衡量真实用户体验的稳定指标：
+Core Web Vitals (核心网页指标)是三项衡量真实用户体验的稳定指标：
 
 | 指标 | 量什么 | 良好 | 需改进 | 差 |
 |---|---|---:|---:|---:|
-| Largest Contentful Paint（最大内容绘制，LCP） | 视口里最大的合格图片、文字块或视频何时绘制，近似主要内容何时可见 | ≤ 2.5 秒 | ≤ 4 秒 | > 4 秒 |
-| Interaction to Next Paint（交互到下一次绘制，INP） | 点击、触屏或按键开始后，浏览器多久才能呈现下一帧 | ≤ 200 毫秒 | ≤ 500 毫秒 | > 500 毫秒 |
-| Cumulative Layout Shift（累积布局偏移，CLS） | 页面内容意外移动有多严重 | ≤ 0.1 | ≤ 0.25 | > 0.25 |
+| Largest Contentful Paint (最大内容绘制，LCP) | 视口里最大的合格图片、文字块或视频何时绘制，近似主要内容何时可见 | ≤ 2.5 秒 | ≤ 4 秒 | > 4 秒 |
+| Interaction to Next Paint (交互到下一次绘制，INP) | 点击、触屏或按键开始后，浏览器多久才能呈现下一帧 | ≤ 200 毫秒 | ≤ 500 毫秒 | > 500 毫秒 |
+| Cumulative Layout Shift (累积布局偏移，CLS) | 页面内容意外移动有多严重 | ≤ 0.1 | ≤ 0.25 | > 0.25 |
 
 三项指标各答一个问题，互不替代。LCP 良好不说明排序点击也快。INP 截止于浏览器能呈现下一帧，不等待网络请求或业务工作完成，所以 INP 良好也不说明异步数据返回得快。也因为 INP 量到下一帧为止，想让“正在排序”的提示先出现在屏幕上，只在同一个回调里先改文字、再做同步排序并不够：浏览器要等回调结束才有机会绘制。要在同步工作前让出主线程，或把排序改成异步工作。
 
@@ -17162,29 +17136,29 @@ Core Web Vitals（核心网页指标）是三项衡量真实用户体验的稳�
 - **p75，并分设备。** 看现场样本的第 75 百分位，移动端和桌面端分开检查。p75 达标表示至少四分之三的该组样本不高于目标，其余访问仍可能更慢。
 - **INP 只统计有交互的访问。** 纯阅读或只滚动的访问可能没有 INP 值，不能把缺失当成 0 毫秒。
 - **INP 取一次访问中最慢的交互。** 点击、触屏和按键都算；交互很多时，每 50 次忽略其中最慢的一次，避免个别异常值决定整次访问。
-- **CLS 取分数最大的会话窗口，不是全程累加。** session window（会话窗口）内连续偏移的间隔小于 1 秒，整个窗口最长 5 秒。离散的点击、触屏或按键之后 500 毫秒内的偏移按“近期输入”排除；连续滚动不适用这条规则，较晚的异步位移仍可能计入。
+- **CLS 取分数最大的会话窗口，不是全程累加。** session window (会话窗口)内连续偏移的间隔小于 1 秒，整个窗口最长 5 秒。离散的点击、触屏或按键之后 500 毫秒内的偏移按“近期输入”排除；连续滚动不适用这条规则，较晚的异步位移仍可能计入。
 
 ### 现场数据和实验室数据各回答什么？
 
-field data（现场数据）来自真实访问，包含用户设备、网络、缓存和操作路径的差异，回答“多少用户、在哪里遇到问题”。lab data（实验室数据）在指定环境里运行，适合重复动作、检查主线程和比较改动，回答“这项改动在这个环境里有没有效”。一次实验室录制的数字不是用户分布。
+field data (现场数据)来自真实访问，包含用户设备、网络、缓存和操作路径的差异，回答“多少用户、在哪里遇到问题”。lab data (实验室数据)在指定环境里运行，适合重复动作、检查主线程和比较改动，回答“这项改动在这个环境里有没有效”。一次实验室录制的数字不是用户分布。
 
 现场数据有两个常见来源：
 
-- **RUM（Real User Monitoring，真实用户监测）。** 自己采集，可以保留页面路径、查询参数、版本、设备组、操作类型，并把 INP 归因到具体按钮。它还能按版本分组，在同一时间比较灰度版和对照版。
-- **CrUX（Chrome User Experience Report，Chrome 用户体验报告）。** 适合看公开页面或整个来源的总体分布，但维度少：它去掉查询参数和片段，`/reports/42?sort=recent#summary` 归到 `/reports/42`；CrUX API 可按页面或来源、设备类型查询，日常结果是 28 天滚动汇总，没有应用部署版本这一维度。相邻窗口互相重叠，不能当作精确的发布前后对照。
+- **RUM (Real User Monitoring，真实用户监测)。** 自己采集，可以保留页面路径、查询参数、版本、设备组、操作类型，并把 INP 归因到具体按钮。它还能按版本分组，在同一时间比较灰度版和对照版。
+- **CrUX (Chrome User Experience Report，Chrome 用户体验报告)。** 适合看公开页面或整个来源的总体分布，但维度少：它去掉查询参数和片段，`/reports/42?sort=recent#summary` 归到 `/reports/42`；CrUX API 可按页面或来源、设备类型查询，日常结果是 28 天滚动汇总，没有应用部署版本这一维度。相邻窗口互相重叠，不能当作精确的发布前后对照。
 
 > [!example] 合成仪表板：从分布选出要复现的动作
 > 假设一个纯教学用的 RUM 仪表板显示：`/reports/42?sort=recent` 的移动端 INP p75 为 430 毫秒，桌面端为 170 毫秒；LCP 和 CLS 的 p75 都在良好范围内。430 毫秒落在“需改进”区间（高于 200、至多 500），170 毫秒良好。它只说明移动端的交互响应值得调查，不能证明排序就是根因。若 RUM 已把慢 INP 归因到“最早优先”这次点击，复现路径就选定了：移动端设备组、这个页面、这个按钮。
 
 比较版本效果时，优先用同一时间的灰度/对照分组；只能前后比较时，至少选时长和星期分布相近的窗口，并检查设备、操作和加载状态的组成有没有变。
 
-实验室里，Chrome DevTools（Chrome 开发者工具）的 Performance 面板可以单独录制导航或一次运行时点击：Interactions 轨道标出这次交互的三段延迟，Main 轨道显示对应的 JavaScript 调用、框架工作和浏览器任务。只跑一次 Lighthouse 页面加载、没有执行点击，就没有观察到这次排序交互。
+实验室里，Chrome DevTools (Chrome 开发者工具)的 Performance 面板可以单独录制导航或一次运行时点击：Interactions 轨道标出这次交互的三段延迟，Main 轨道显示对应的 JavaScript 调用、框架工作和浏览器任务。只跑一次 Lighthouse 页面加载、没有执行点击，就没有观察到这次排序交互。
 
-Lighthouse 报告的 TBT（Total Blocking Time，总阻塞时间）只是线索。它把 FCP（First Contentful Paint，首次内容绘制）之后一段窗口内、每个超过 50 毫秒的主线程长任务中超出 50 毫秒的部分相加；默认页面加载窗口通常到 TTI（Time to Interactive，可交互时间）为止。例如窗口内有 120 毫秒和 70 毫秒两个长任务，TBT 是 `70 + 20 = 90` 毫秒。它提示“用户此时点击可能要等”，但不知道真实用户何时点击，所以不能替代现场 INP。
+Lighthouse 报告的 TBT (Total Blocking Time，总阻塞时间)只是线索。它把 FCP (First Contentful Paint，首次内容绘制)之后一段窗口内、每个超过 50 毫秒的主线程长任务中超出 50 毫秒的部分相加；默认页面加载窗口通常到 TTI (Time to Interactive，可交互时间)为止。例如窗口内有 120 毫秒和 70 毫秒两个长任务，TBT 是 `70 + 20 = 90` 毫秒。它提示“用户此时点击可能要等”，但不知道真实用户何时点击，所以不能替代现场 INP。
 
 ### 一次慢交互怎样拆成三段？
 
-INP 不是某个事件处理器的耗时。一次触屏点击会产生 `pointerdown`、`pointerup`、`click` 等多个 Event Timing（事件计时）条目，浏览器用同一个 `interactionId` 把它们关联起来，交互延迟取这些条目里最长的 `duration`。
+INP 不是某个事件处理器的耗时。一次触屏点击会产生 `pointerdown`、`pointerup`、`click` 等多个 Event Timing (事件计时)条目，浏览器用同一个 `interactionId` 把它们关联起来，交互延迟取这些条目里最长的 `duration`。
 
 不要把最早条目的起点到最晚条目的终点当成交互时长。例如一次长按：`pointerdown` 用了 80 毫秒；按下后约 288 毫秒手指抬起，`pointerup` 和 `click` 各用 40 毫秒。交互延迟是 80 毫秒；跨条目的包络 `288 + 40 = 328` 毫秒把手指按住的时间也算进去了。
 
@@ -17192,9 +17166,9 @@ INP 不是某个事件处理器的耗时。一次触屏点击会产生 `pointerd
 
 | 阶段 | 起止点 | 排查方向 |
 |---|---|---|
-| input delay（输入延迟） | 输入发生，到事件处理开始 | 此前的长任务、脚本执行或其他主线程占用 |
-| processing duration（处理时长） | 事件处理开始，到处理结束 | 排序、筛选、组件计算、同步布局读取或监听器工作 |
-| presentation delay（呈现延迟） | 处理结束，到下一帧可呈现 | 后续主线程任务、样式计算、布局、绘制和帧提交 |
+| input delay (输入延迟) | 输入发生，到事件处理开始 | 此前的长任务、脚本执行或其他主线程占用 |
+| processing duration (处理时长) | 事件处理开始，到处理结束 | 排序、筛选、组件计算、同步布局读取或监听器工作 |
+| presentation delay (呈现延迟) | 处理结束，到下一帧可呈现 | 后续主线程任务、样式计算、布局、绘制和帧提交 |
 
 > [!example] 合成时间线：同步布局算在哪一段
 > 输入在 0 ms 发生，回调到 90 ms 才开始；回调在 105 ms 读取布局信息，触发 85 ms 的同步布局（105 → 190 ms）；回调在 195 ms 返回，下一帧在 230 ms 可呈现。三段分别是 `90 / 105 / 35 ms`，合计 230 ms。那 85 ms 布局发生在回调内部，所以属于处理时长；若布局在回调返回之后才发生，它才落入呈现延迟。这是阶段分类的示例，不是测量结果。
@@ -17244,12 +17218,12 @@ INP 不是某个事件处理器的耗时。一次触屏点击会产生 `pointerd
 
 | 时间点 | 可用于观察 | 不能单独证明 |
 |---|---|---|
-| TTFB（Time to First Byte，首字节时间） | 导航开始到收到第一个响应字节，含重定向、连接、服务器处理 | HTML 已接收完、应用已执行或内容已绘制 |
+| TTFB (Time to First Byte，首字节时间) | 导航开始到收到第一个响应字节，含重定向、连接、服务器处理 | HTML 已接收完、应用已执行或内容已绘制 |
 | FCP | 第一次有文本、图片等内容绘制 | 主要内容已出现，或按钮已能响应 |
 | `DOMContentLoaded`（DCL） | HTML 解析结束、defer 脚本执行完 | 图片等资源已加载，或应用的异步初始化、请求已完成 |
 | `load` | 会延迟该事件的文档资源已加载完 | 用户何时看到有用内容，或交互何时有反馈 |
 
-DCL 和 `load` 各自等待什么、模块脚本的顶层 `await` 和后续请求为什么可以在 DCL 之后继续，见[打开一个 URL 后，页面怎样变得可见又可交互？](#1.%20%E6%89%93%E5%BC%80%E4%B8%80%E4%B8%AA%20URL%20%E5%90%8E%EF%BC%8C%E9%A1%B5%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%8F%98%E5%BE%97%E5%8F%AF%E8%A7%81%E5%8F%88%E5%8F%AF%E4%BA%A4%E4%BA%92%EF%BC%9F)。First Input Delay（首次输入延迟，FID）曾是核心指标，已由 INP 取代；FCP、TTFB、TBT 仍可在各自范围内作诊断信号。用这些里程碑回答导航阶段的问题，再回到真实 LCP 元素和资源时序，不要把 DCL 或 `load` 当成体验终点。
+DCL 和 `load` 各自等待什么、模块脚本的顶层 `await` 和后续请求为什么可以在 DCL 之后继续，见[打开一个 URL 后，页面怎样变得可见又可交互？](#1.%20%E6%89%93%E5%BC%80%E4%B8%80%E4%B8%AA%20URL%20%E5%90%8E%EF%BC%8C%E9%A1%B5%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%8F%98%E5%BE%97%E5%8F%AF%E8%A7%81%E5%8F%88%E5%8F%AF%E4%BA%A4%E4%BA%92%EF%BC%9F)。First Input Delay (首次输入延迟，FID)曾是核心指标，已由 INP 取代；FCP、TTFB、TBT 仍可在各自范围内作诊断信号。用这些里程碑回答导航阶段的问题，再回到真实 LCP 元素和资源时序，不要把 DCL 或 `load` 当成体验终点。
 
 ### 50,000 行排序实验：慢在哪里，怎样修？
 
@@ -17300,7 +17274,7 @@ const oldestFirst = normalized
 若输入规模和算法都已合理，纯计算仍是主线程上的长任务，有两类手段：
 
 - **分块并让出主线程。** 把工作切成小段，段与段之间让出，让输入和渲染有机会插进来。总工作量不变，只是不再一次占满。让出的方式与时机见[事件循环怎样安排任务、微任务和渲染？](#2.%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E6%80%8E%E6%A0%B7%E5%AE%89%E6%8E%92%E4%BB%BB%E5%8A%A1%E3%80%81%E5%BE%AE%E4%BB%BB%E5%8A%A1%E5%92%8C%E6%B8%B2%E6%9F%93%EF%BC%9F)。
-- **移到 Web Worker（网页工作线程）。** 把不依赖 DOM 的计算放到另一个线程，主线程空出来处理界面。Worker 不减少计算量；`postMessage()` 传对象通常要结构化复制，消息传递和结果提交的时间也要计入。结构化复制复制什么、`ArrayBuffer` 怎样转移，见[复制一个对象到底复制了什么？](#23.%20%E5%A4%8D%E5%88%B6%E4%B8%80%E4%B8%AA%E5%AF%B9%E8%B1%A1%E5%88%B0%E5%BA%95%E5%A4%8D%E5%88%B6%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F)。
+- **移到 Web Worker (网页工作线程)。** 把不依赖 DOM 的计算放到另一个线程，主线程空出来处理界面。Worker 不减少计算量；`postMessage()` 传对象通常要结构化复制，消息传递和结果提交的时间也要计入。结构化复制复制什么、`ArrayBuffer` 怎样转移，见[复制一个对象到底复制了什么？](#23.%20%E5%A4%8D%E5%88%B6%E4%B8%80%E4%B8%AA%E5%AF%B9%E8%B1%A1%E5%88%B0%E5%BA%95%E5%A4%8D%E5%88%B6%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F)。
 
 排序例子已经用预处理消除了重复解析，应先复测这个更简单的改动，再决定是否值得引入额外线程。
 
@@ -17325,7 +17299,7 @@ const oldestFirst = normalized
 > - **50,000 行排序实验：** 本地 Chromium、4 倍 CPU 节流、合成数据实测，协议见正文；合成仪表板数字为教学假设。
 ## 56. 页面离开时，分析事件怎样尽力送出，又能确认什么？
 
-analytics event（分析事件）记录页面的使用情况，例如打开报表、改变排序。它通常不影响报表本身是否正确，可以容忍少量丢失。难点在离页那一刻：事件还在页面内存里，页面却要被销毁。本章回答三件事：采集什么、积压多少；离页时用哪个时机和哪条通道发出去；每个阶段观察到的信号能证明什么、不能证明什么。
+analytics event (分析事件)记录页面的使用情况，例如打开报表、改变排序。它通常不影响报表本身是否正确，可以容忍少量丢失。难点在离页那一刻：事件还在页面内存里，页面却要被销毁。本章回答三件事：采集什么、积压多少；离页时用哪个时机和哪条通道发出去；每个阶段观察到的信号能证明什么、不能证明什么。
 
 沿用主线一的报表页。合成运行如下：用户打开 `/reports/42?sort=recent#summary`，点一次“最早优先”把排序改成 oldest（地址随之变为 `?sort=oldest#summary`），然后在 10 秒定时器触发前点击普通链接 `<a href="/help">帮助</a>`，进入另一个完整文档。页面只采集两种事件 `report_opened` 和 `sort_changed`，加上预先登记的页面代号 `report_detail`。本章的数字上限（200、50、10 秒、8 KiB）是教学选择；浏览器实测来自 Chromium `157.0.8103.51` 的本地 HTTP 页面与 Node 服务器，只说明该环境下的行为，不是跨浏览器的送达保证。
 
@@ -17335,7 +17309,7 @@ analytics event（分析事件）记录页面的使用情况，例如打开报�
 
 - **事件名与页面代号**只接受登记过的值：`report_opened`、`sort_changed`；`report_list`、`report_detail`。
 - **每条事件只有四个字段**：事件 ID、名称、页面代号、时间戳。搜索框原文、完整 URL、用户令牌和身份字段都不进入载荷。
-- **事件 ID 在入队时生成**，用 `crypto.randomUUID()` 得到 UUID（通用唯一标识符）v4，原样放进载荷供服务端去重。这个 API 只在安全上下文（HTTPS 或本机 loopback）中可用。
+- **事件 ID 在入队时生成**，用 `crypto.randomUUID()` 得到 UUID (通用唯一标识符)v4，原样放进载荷供服务端去重。这个 API 只在安全上下文（HTTPS 或本机 loopback）中可用。
 - **用户退出可选采集时**，停止新入队，并清空内存里尚未发送的事件。已经交给浏览器的请求无法由这个开关撤回。
 
 再给积压量设上界：
@@ -17363,7 +17337,7 @@ analytics event（分析事件）记录页面的使用情况，例如打开报�
 
 - **`hidden` 不等于离开。** 它只表示页面变得不可见；切换标签页、应用进入后台时也会出现。在移动端，它往往是最后一个能可靠观察到的生命周期状态，进程之后可能被系统直接结束。
 - **单页应用的路由切换通常不触发它。** 同一文档内改路由，文档仍然可见。产品若要在路由边界提交队列，应由路由层显式调用队列模块的分批函数，不能指望生命周期事件代劳。
-- **`pagehide` 表示当前历史条目不再显示。** 它的 `persisted` 为 `true` 时，页面可能进入 back-forward cache（往返缓存，BFCache），之后还会恢复。它也不是所有后台或关闭场景都能观察到的信号。页面生命周期与 BFCache 的完整说明见[浏览器能把状态存在哪里，标签页和窗口之间怎样互相通知？](#47.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%83%BD%E6%8A%8A%E7%8A%B6%E6%80%81%E5%AD%98%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%8C%E6%A0%87%E7%AD%BE%E9%A1%B5%E5%92%8C%E7%AA%97%E5%8F%A3%E4%B9%8B%E9%97%B4%E6%80%8E%E6%A0%B7%E4%BA%92%E7%9B%B8%E9%80%9A%E7%9F%A5%EF%BC%9F)。
+- **`pagehide` 表示当前历史条目不再显示。** 它的 `persisted` 为 `true` 时，页面可能进入 back-forward cache (往返缓存，BFCache)，之后还会恢复。它也不是所有后台或关闭场景都能观察到的信号。页面生命周期与 BFCache 的完整说明见[浏览器能把状态存在哪里，标签页和窗口之间怎样互相通知？](#47.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%83%BD%E6%8A%8A%E7%8A%B6%E6%80%81%E5%AD%98%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%8C%E6%A0%87%E7%AD%BE%E9%A1%B5%E5%92%8C%E7%AA%97%E5%8F%A3%E4%B9%8B%E9%97%B4%E6%80%8E%E6%A0%B7%E4%BA%92%E7%9B%B8%E9%80%9A%E7%9F%A5%EF%BC%9F)。
 - **不要用 `unload` 作最后的发送钩子。** 移动端进程被系统结束时，脚本可能根本没有机会运行。
 
 本例的 `hidden` 处理器每次只尝试发送一批。队列里剩下的事件可能来不及发：达到 50 条门槛后安排的后续任务，在页面离开后未必还有机会运行。
@@ -17372,7 +17346,7 @@ analytics event（分析事件）记录页面的使用情况，例如打开报�
 
 普通 Fetch 请求不带 `keepalive`；文档销毁时，尚未完成的普通请求可以被终止。离页发送要用能越过页面销毁的通道，有两条：
 
-**Beacon API（信标接口）的 `navigator.sendBeacon()`** 是非阻塞的尽力传输：
+**Beacon API (信标接口)的 `navigator.sendBeacon()`** 是非阻塞的尽力传输：
 
 - 自动使用 `keepalive`；
 - 返回 `true` 只表示浏览器接受了排队；
@@ -17531,7 +17505,7 @@ Beacon 与 keepalive Fetch 的请求共享同一个 fetch group（Fetch 组）�
 
 本章交出的是一条“尽力送出”的通道：内容和积压量有界，离页时在 `hidden` 上用 Beacon 或 keepalive Fetch 发一批，并清楚每个信号只证明到哪一步。它适合可丢失的分析遥测。
 
-数据丢失不可接受时，问题就变成可靠投递：需要持久化的发件箱、重试和服务器确认。重试必须沿用入队时生成的同一个事件 ID；服务端为事件 ID 预先建立唯一约束，在写入事务中按这个键去重或幂等写入。幂等键怎样定义、重试怎样受控，见[请求超时后如何确认结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md)。不能丢的业务消息与这种可丢弃的遥测不同，断线后怎样恢复见[服务端持续推送时，界面怎样合并更新并从断线恢复？](#48.%20%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%8C%81%E7%BB%AD%E6%8E%A8%E9%80%81%E6%97%B6%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%90%88%E5%B9%B6%E6%9B%B4%E6%96%B0%E5%B9%B6%E4%BB%8E%E6%96%AD%E7%BA%BF%E6%81%A2%E5%A4%8D%EF%BC%9F)。
+数据丢失不可接受时，问题就变成可靠投递：需要持久化的发件箱、重试和服务器确认。重试必须沿用入队时生成的同一个事件 ID；服务端为事件 ID 预先建立唯一约束，在写入事务中按这个键去重或幂等写入。幂等键怎样定义、重试怎样受控，见[写请求超时后，怎样查清结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md)。不能丢的业务消息与这种可丢弃的遥测不同，断线后怎样恢复见[服务端持续推送时，界面怎样合并更新并从断线恢复？](#48.%20%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%8C%81%E7%BB%AD%E6%8E%A8%E9%80%81%E6%97%B6%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%90%88%E5%B9%B6%E6%9B%B4%E6%96%B0%E5%B9%B6%E4%BB%8E%E6%96%AD%E7%BA%BF%E6%81%A2%E5%A4%8D%EF%BC%9F)。
 
 > [!info]- 来源
 > - `sendBeacon()` 返回值只表示成功排队、无响应回调、自动 `keepalive`，并在 `visibilityState` 变为 `hidden` 时安排传输：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3.1、§3.2，2026-11-12 核对。支持“用哪条通道发出去？”。
@@ -17554,14 +17528,14 @@ Beacon 与 keepalive Fetch 的请求共享同一个 fetch group（Fetch 组）�
 
 问题是：打开说明面板这个动作和报表数据无关，为什么录制里看到整张列表的行组件都重新执行了？
 
-先回顾一句 React 的更新模型：render（渲染）是 React 调用组件函数，算出下一份界面描述；commit（提交）才把必要的变化写进 DOM。组件运行了，DOM 不一定变；DOM 变了，浏览器还要做样式、布局和绘制。所以“行组件重新执行”是成本，但未必是用户等待的主要部分，要先测。
+先回顾一句 React 的更新模型：render (渲染)是 React 调用组件函数，算出下一份界面描述；commit (提交)才把必要的变化写进 DOM。组件运行了，DOM 不一定变；DOM 变了，浏览器还要做样式、布局和绘制。所以“行组件重新执行”是成本，但未必是用户等待的主要部分，要先测。
 
 ### 先用浏览器 Performance 定位，什么时候再开 React Profiler？
 
 ![React 工作与浏览器呈现的诊断路径](../../frontend/delivery/resources/react-rendering-triage.svg)
 
 1. **在浏览器里录基线。** 用同一 URL、同一组报表、同一交互和目标设备，在 Chrome DevTools 的 Performance 面板录一次。Interactions 轨道定位“显示说明”这次点击及其三段延迟；Main 轨道显示时间花在事件处理、React 工作、commit 与 Effect，还是样式、布局和绘制。
-2. **React 子树的 render 占主导时，再开 Profiler。** React Developer Tools（React 开发者工具）的 Profiler（性能分析器）面板能看出这次提交里哪些组件参与了 render。代码里的 `<Profiler>` API 可以给指定子树记录 `phase`、`actualDuration` 和 `baseDuration`：
+2. **React 子树的 render 占主导时，再开 Profiler。** React Developer Tools (React 开发者工具)的 Profiler (性能分析器)面板能看出这次提交里哪些组件参与了 render。代码里的 `<Profiler>` API 可以给指定子树记录 `phase`、`actualDuration` 和 `baseDuration`：
    - `actualDuration`：这次已提交的更新中，该子树实际花在 render 上的时间。
    - `baseDuration`：按各组件最近一次耗时估算、完全不跳过时整棵子树的成本。两者差距大，说明跳过已经生效。
 3. **注意测量本身的条件。** Profiler 有额外开销；普通生产构建不记录 `<Profiler>` 计时，要测接近线上的代码，需改用 React 提供的 profiling 构建。开发构建的耗时也不能当成生产时延。
@@ -17577,7 +17551,7 @@ render 次数或控制台日志只能提示“谁可能运行过”，不能单�
 - **其余 Effect。** 普通 `useEffect` 通常在绘制后运行；但由点击这类交互引起时，React 也可能在绘制前运行它。
 - **浏览器的样式、布局和绘制。** 阶段边界见[用户觉得慢时，怎样从指标走到证据？](#55.%20%E7%94%A8%E6%88%B7%E8%A7%89%E5%BE%97%E6%85%A2%E6%97%B6%EF%BC%8C%E6%80%8E%E6%A0%B7%E4%BB%8E%E6%8C%87%E6%A0%87%E8%B5%B0%E5%88%B0%E8%AF%81%E6%8D%AE%EF%BC%9F)，读写几何值引起的同步布局见[DOM 改动后浏览器重做了什么，读几何值为什么会卡住脚本？](#5.%20DOM%20%E6%94%B9%E5%8A%A8%E5%90%8E%E6%B5%8F%E8%A7%88%E5%99%A8%E9%87%8D%E5%81%9A%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E8%AF%BB%E5%87%A0%E4%BD%95%E5%80%BC%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E5%8D%A1%E4%BD%8F%E8%84%9A%E6%9C%AC%EF%BC%9F)。
 
-React Performance tracks（React 性能轨道）把 React 的工作直接画在浏览器 Performance 时间线上，分出 render、commit（含 layout Effect）和其余 Effect，便于和 Main 轨道对齐。这些轨道只在开发构建和 profiling 构建中出现，也有额外开销。
+React Performance tracks (React 性能轨道)把 React 的工作直接画在浏览器 Performance 时间线上，分出 render、commit（含 layout Effect）和其余 Effect，便于和 Main 轨道对齐。这些轨道只在开发构建和 profiling 构建中出现，也有额外开销。
 
 ### 第一选择：把状态移进用它的组件
 
@@ -17686,7 +17660,7 @@ function HelpPanel() {
 
 - **`useMemo` 管计算。** 首次 render 照常筛选；之后只有 `reports` 或 `query` 按 `Object.is` 比较发生变化，才重跑 `filterReports`，否则返回上次的 `visible`。
 - **`useCallback` 管函数身份。** 依赖不变时返回同一个函数引用，不会替你执行函数。这里依赖可以为空，是因为回调只调用 updater 形式的 `setReports`，不读取某一轮的 `reports` 快照。
-- **`memo` 管跳过子组件。** `memo(ReportRow)` 默认对每个 prop（属性）用 `Object.is` 比较；`report` 和 `onToggle` 都与上次相同，就跳过这一行的组件函数。
+- **`memo` 管跳过子组件。** `memo(ReportRow)` 默认对每个 prop (属性)用 `Object.is` 比较；`report` 和 `onToggle` 都与上次相同，就跳过这一行的组件函数。
 
 下表每一行都从同一起点独立重放（两行都挂载），不是连续操作：
 
@@ -17715,15 +17689,15 @@ function HelpPanel() {
 
 两个相邻的选择也会改变工作量：
 
-- **隐藏还是卸载说明面板。** 用 CSS 隐藏，组件留在 React 树中，state 和 Effect 都还在；条件移除会卸载组件并运行 cleanup（清理），再次显示时创建新实例。按交互和生命周期需求选，不只看性能。
-- **Fragment（片段）** 能省掉纯包装用的 DOM 节点，但有没有性能收益仍要测。
+- **隐藏还是卸载说明面板。** 用 CSS 隐藏，组件留在 React 树中，state 和 Effect 都还在；条件移除会卸载组件并运行 cleanup (清理)，再次显示时创建新实例。按交互和生命周期需求选，不只看性能。
+- **Fragment (片段)** 能省掉纯包装用的 DOM 节点，但有没有性能收益仍要测。
 
 ### 实例：React Compiler 怎样改变手工 memo 的默认做法？
 
 > [!info] 版本
 > React Compiler v1.0（2025-10-07 稳定）；React 官方文档版本 19.3（npm `v19.3.0`，2026-09-09）。核对于 2026-11-12。
 
-React Compiler（React 编译器）是可选的构建期优化。项目要在构建链里配置它，具体文件和组件还要被编译器识别。启用后，它在组件和 Hook 内自动记忆化可复用的子树和计算；上例“打开说明面板”那一行，Compiler 生效时也可能自动建立等价的缓存。新代码通常不必先手写 `memo`、`useMemo`、`useCallback`。
+React Compiler (React 编译器)是可选的构建期优化。项目要在构建链里配置它，具体文件和组件还要被编译器识别。启用后，它在组件和 Hook 内自动记忆化可复用的子树和计算；上例“打开说明面板”那一行，Compiler 生效时也可能自动建立等价的缓存。新代码通常不必先手写 `memo`、`useMemo`、`useCallback`。
 
 它有几条边界：
 
@@ -17787,20 +17761,13 @@ Profiler 有开销，最终判断要回到目标构建和目标设备上的浏�
 
 ### 跨请求分页怎样保证不重不漏？
 
-分页先要有确定的顺序。把报表页的 `sort=recent` 交给服务端时，定义为按 `createdAt` 降序，时间相同时再按唯一的 `report.id` 升序打破并列。只按可能重复的时间排序时，并列报表在两次请求之间的先后不确定，页边界会落在不同位置。
-
-即使顺序确定，用 `OFFSET` 翻页仍会在数据变化时出错。用页大小为 2 的小例子看：原顺序为 `A, B, C, D`，第一页是 `A, B`。
-
-- 下一次请求前，头部插入 `X`，新顺序是 `X, A, B, C, D`。`OFFSET 2` 返回 `B, C`，`B` 重复了。
-- 若改为头部的 `A` 被删除，剩下 `B, C, D`。`OFFSET 2` 只返回 `D`，`C` 被跳过。
-
-keyset pagination（键集分页）不数“跳过几行”，而是从上一页最后一行的位置接着取。它的游标记录页尾那行的完整排序键，这里是 `(createdAt, id)`；服务端按同一排序定义取“排在它之后”的行。排序方向已由查询参数固定时，不必再编码进游标。上面的例子里，第一页尾是 `B`，下一页从 `B` 之后取，插入 `X` 或删除 `A` 都不影响结果。
+分页先要有确定的顺序：报表页的 `sort=recent` 交给服务端时，定义为按 `createdAt` 降序，时间相同时再按唯一的 `report.id` 升序打破并列。顺序确定之后，`OFFSET` 翻页仍会在数据变化时重复或漏行（头部插入一行，上一页的末行会在下一页再出现；删除一行，就有一行被跳过）。keyset pagination (键集分页) 改为从上一页末行的完整排序键 `(createdAt, id)` 之后接着取，插入和删除不再移动页边界。为什么排序键必须唯一、游标里该放什么、集合 API 的分页契约怎样写，以[怎样无重复、无遗漏地分页读取一个还在变化的集合？](../../engineering-foundations/data/keyset-pagination-and-snapshots.md)为准；前端只需按契约原样回传游标，并让排序参数与游标同属一个查询键。
 
 键集分页解决的是页边界漂移，不会冻结整个数据集：两次请求之间新增到后面的行仍会出现。需要一致的历史浏览时，还要由服务端定义快照或版本边界。分页减少的是单次传输；客户端已经收到全量数据后再虚拟化，不会追溯减少之前的流量。
 
 ### 固定行高时，怎样从滚动位置算出挂载窗口？
 
-virtualization（虚拟化）只把视口附近的行放进 DOM，用一个占位元素保持整条列表的滚动高度。先看行高固定的模型，约定如下：行号从 0 开始；区间写成半开区间 `[start, end)`，右端不包含；每行的重复步长为 40px（有行间距时也计入步长）；滚动窗口高 480px；上下各多渲染 4 行的 overscan（预渲染缓冲）。
+virtualization (虚拟化)只把视口附近的行放进 DOM，用一个占位元素保持整条列表的滚动高度。先看行高固定的模型，约定如下：行号从 0 开始；区间写成半开区间 `[start, end)`，右端不包含；每行的重复步长为 40px（有行间距时也计入步长）；滚动窗口高 480px；上下各多渲染 4 行的 overscan (预渲染缓冲)。
 
 在 `scrollTop = 4000px` 时：
 
@@ -17875,7 +17842,7 @@ const mountedItems = items.slice(range.start, range.end);
 
 窗口外的行不在 DOM 里，依赖 DOM 的焦点、键盘导航和辅助技术都会受影响。
 
-**焦点会丢。** 键盘焦点落在某行的按钮上，下一次滚动把该行卸载，焦点就没了。交互列表要按报表 ID 跟踪活动项，保证它一直挂载，或在卸载前按控件模式转移、稍后恢复焦点。对用方向键导航的虚拟 `grid`（网格），目标单元格在窗口外时，先算出目标行的 ID 或索引、滚动到包含它的窗口，等目标行挂载后再把焦点移过去。
+**焦点会丢。** 键盘焦点落在某行的按钮上，下一次滚动把该行卸载，焦点就没了。交互列表要按报表 ID 跟踪活动项，保证它一直挂载，或在卸载前按控件模式转移、稍后恢复焦点。对用方向键导航的虚拟 `grid` (网格)，目标单元格在窗口外时，先算出目标行的 ID 或索引、滚动到包含它的窗口，等目标行挂载后再把焦点移过去。
 
 **角色不能随手加。** 数据看起来像列表，不等于该用 `role="listbox"`。listbox 是用来选择选项的复合控件，不适合在每个选项里放按钮、复选框这类独立控件；listbox、grid 这些复合控件还各自要求一套方向键和焦点行为。
 

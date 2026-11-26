@@ -22,7 +22,7 @@ flowchart LR
 
 ## 一次请求留下哪些可关联的记录
 
-一条 trace (追踪) 把请求的根 span 与子 span 串成一次端到端操作。span (追踪片段) 记录一个阶段的耗时、状态和关联版本，例如身份检查、读取构建日志、检索运行手册、模型生成、结构校验和结果交付。日志可以通过 trace ID 和 span ID 挂到对应 span 上。通用的 trace、metrics、日志怎样配合排障，见[服务信号与故障定位](../../engineering-foundations/practice/slis-slos-and-error-budgets.md)；这里只讲 AI 应用要额外关联的东西。
+一条 trace (追踪) 把请求的根 span 与子 span 串成一次端到端操作。span (追踪片段) 记录一个阶段的耗时、状态和关联版本，例如身份检查、读取构建日志、检索运行手册、模型生成、结构校验和结果交付。日志可以通过 trace ID 和 span ID 挂到对应 span 上。通用的 trace、metrics、日志各回答什么，见[发布后用户结果变坏，怎样从信号走到根因并确认恢复？](../../engineering-foundations/practice/incident-diagnosis-and-recovery.md#指标、追踪和日志各回答什么)；按用户结果定义服务指标，见[怎样用用户结果衡量一个服务，并决定还能不能放量？](../../engineering-foundations/practice/slis-slos-and-error-budgets.md)。这里只讲 AI 应用要额外关联的东西。
 
 AI 应用的一次任务往往不止一次调用，所以关联键要分层：
 
@@ -30,7 +30,7 @@ AI 应用的一次任务往往不止一次调用，所以关联键要分层：
 - 尝试之下还有应用的模型调用 ID、SDK 内部的重试、`runId` 与 worker 尝试、每次工具调用的 `tool_call_id`。
 - 每条记录带上版本：模型部署、提示词、检索索引、工具、来源文档。
 
-这些 ID 各自的含义和谁持有它们，见[运行身份与权威状态](../runs/run-identity-and-authoritative-state.md)。分层的意义在于区分三种“又调用了一次”：客户端重试、运行恢复，以及 Agent 自己反复发起却没有进展的循环。后一种怎样识别，见[多阶段编排](../actions/multi-stage-orchestration.md)。
+这些 ID 各自的含义和谁持有它们，见[运行身份与权威状态](../runs/run-identity-and-authoritative-state.md)。运行经队列交给 worker 后，每个 attempt 单独建 span，并用 span link (跨度链接) 接回受理请求的上下文，做法与异步导出相同，见[追踪：哪个阶段慢或失败](../../engineering-foundations/practice/incident-diagnosis-and-recovery.md#追踪：哪个阶段慢或失败)。分层的意义在于区分三种“又调用了一次”：客户端重试、运行恢复，以及 Agent 自己反复发起却没有进展的循环。后一种怎样识别，见[多阶段编排](../actions/multi-stage-orchestration.md)。
 
 ## 每个阶段记什么，默认不存什么
 

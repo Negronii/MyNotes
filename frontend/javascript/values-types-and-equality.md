@@ -20,7 +20,7 @@ const retry = {
 
 ## 七种原始类型，其余都是对象
 
-JavaScript 有七种 primitive type（原始类型），其余的值都是 object（对象），函数也是对象。
+JavaScript 有七种 primitive type (原始类型)，其余的值都是 object (对象)，函数也是对象。
 
 | 类型 | 本章用到的行为 |
 |---|---|
@@ -29,10 +29,10 @@ JavaScript 有七种 primitive type（原始类型），其余的值都是 objec
 | `Boolean` | `true` 与 `false` |
 | `Number` | IEEE 754 `binary64`（64 位二进制浮点）；包含 `NaN`、正负无穷和 `+0`/`-0` |
 | `BigInt` | 任意精度整数；不能直接与 `Number` 混合做算术 |
-| `String` | 不可变的 UTF-16 code unit（码元）序列 |
+| `String` | 不可变的 UTF-16 code unit (码元)序列 |
 | `Symbol` | 每次 `Symbol()` 都产生一个新的唯一值；`Symbol.for(key)` 从全局注册表取回同一个值；可作属性键 |
 
-对象和原始值的关键区别在“身份”。把对象赋给另一个变量，复制的是指向它的引用，两个变量从此指向同一个对象；修改其中一个看到的属性，另一个也看得到。常说的 reference type（引用类型）只是这条语义的简称：值在内存里放在栈上还是堆上，由引擎决定，语言并不规定。
+对象和原始值的关键区别在“身份”。把对象赋给另一个变量，复制的是指向它的引用，两个变量从此指向同一个对象；修改其中一个看到的属性，另一个也看得到。常说的 reference type (引用类型)只是这条语义的简称：值在内存里放在栈上还是堆上，由引擎决定，语言并不规定。
 
 案例里，`first.owner` 和变量 `owner` 是同一个对象；`retry.owner` 是第二次响应解析出来的另一个对象，只是字段内容相同。
 
@@ -64,7 +64,7 @@ isNaN("x");        // true：先把 "x" 转成数字 NaN
 
 ## == 会先转换，=== 不会
 
-strict equality（严格相等，`===`）不做跨类型转换，类型不同直接为 `false`。loose equality（宽松相等，`==`）在类型不同时按一串规则转换后再比，结果常常出人意料：
+strict equality (严格相等，`===`)不做跨类型转换，类型不同直接为 `false`。loose equality (宽松相等，`==`)在类型不同时按一串规则转换后再比，结果常常出人意料：
 
 ~~~javascript
 5 == "5";          // true：字符串转成数字
@@ -77,7 +77,7 @@ null == 0;         // false：null 只与 undefined 宽松相等
 
 所以默认用 `===`。`value == null` 是少数有意的用法：它恰好匹配 `null` 和 `undefined`，不匹配 `0`、`""` 或 `false`（`document.all` 这个历史例外除外）。
 
-比较对象时，两个运算符都只看 identity（身份）：
+比较对象时，两个运算符都只看 identity (身份)：
 
 ~~~javascript
 first.id === retry.id;       // true：业务字段相同
@@ -94,9 +94,9 @@ first.owner === owner;       // true：同一个对象
 
 | 规则 | `NaN` 与自身 | `+0` 与 `-0` | 对象 | 谁在用 |
 |---|---|---|---|---|
-| IsStrictlyEqual（严格相等） | 不等 | 相等 | 按身份 | `===`、`!==`；数组 `indexOf`、`lastIndexOf`；`switch` 的 `case` 匹配 |
-| SameValue（同值） | 相等 | 不等 | 按身份 | `Object.is`；React 判断 state 是否变化、依赖是否变化 |
-| SameValueZero（同值零） | 相等 | 相等 | 按身份 | `Map` 的键、`Set` 的成员、数组 `includes` |
+| IsStrictlyEqual (严格相等) | 不等 | 相等 | 按身份 | `===`、`!==`；数组 `indexOf`、`lastIndexOf`；`switch` 的 `case` 匹配 |
+| SameValue (同值) | 相等 | 不等 | 按身份 | `Object.is`；React 判断 state 是否变化、依赖是否变化 |
+| SameValueZero (同值零) | 相等 | 相等 | 按身份 | `Map` 的键、`Set` 的成员、数组 `includes` |
 
 ~~~javascript
 NaN === NaN;                      // false
@@ -124,7 +124,7 @@ Math.abs((0.1 + 0.2) - 0.3);         // 5.551115123125783e-17
 Math.abs((0.1 + 0.2) - 0.3) < 1e-12; // true：对这个量级的数成立
 ~~~
 
-容差要按领域定：数值量级、业务能接受的误差和舍入规则共同决定它，没有对所有场景都成立的固定 epsilon（误差容限）。`Number.EPSILON`（约 `2.22e-16`）只是 `1` 附近相邻两个浮点数的间距，数值变大后间距随之变大，它不是通用容差。
+容差要按领域定：数值量级、业务能接受的误差和舍入规则共同决定它，没有对所有场景都成立的固定 epsilon (误差容限)。`Number.EPSILON`（约 `2.22e-16`）只是 `1` 附近相邻两个浮点数的间距，数值变大后间距随之变大，它不是通用容差。
 
 金额这类需要精确相等的量，可在币种规则允许时换成最小单位的整数：`0.10 + 0.20` 元改记为 `10 + 20` 分，得到精确的 `30`。整数在 `Number.MAX_SAFE_INTEGER`（2⁵³ − 1 = 9007199254740991）以内才能精确表示，超出时用 `BigInt` 或明确舍入规则的十进制库。
 
@@ -172,7 +172,7 @@ profile.name; // "Grace"
 几种常见检查各自只回答一个窄问题：
 
 - `typeof` 适合区分原始值和函数：`typeof 1n` 为 `"bigint"`，`typeof (() => {})` 为 `"function"`；但 `typeof null` 是 `"object"`，数组也是 `"object"`。
-- `Array.isArray(value)` 检查是不是数组，也能认出来自另一个 realm（执行环境，例如 iframe 或另一个窗口各有一套全局对象）的数组。
+- `Array.isArray(value)` 检查是不是数组，也能认出来自另一个 realm (执行环境，例如 iframe 或另一个窗口各有一套全局对象)的数组。
 - `value instanceof C` 检查 `C.prototype` 是否在 `value` 的原型链上。不同 realm 的 `Array` 各有自己的 `prototype`，所以 iframe 里创建的数组 `instanceof Array` 为 `false`；`Symbol.hasInstance` 还能改写这项检查。
 - `Object.prototype.toString.call(value)` 给出 `"[object Array]"` 这类内建标签，但 `Symbol.toStringTag` 可以伪造它：
 

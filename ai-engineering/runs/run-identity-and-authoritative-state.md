@@ -23,7 +23,7 @@
 
 ## 谁持有运行的权威状态？
 
-答案是应用自己。一次运行会经过很多参与者：客户端到服务的 HTTP 请求、推送进度的事件流、执行步骤的 worker（工作进程）、唤醒 worker 的队列消息、模型的上下文，以及供应商侧的会话或线程。它们都可能单独消失，而且消失本身不说明任何事：
+答案是应用自己。一次运行会经过很多参与者：客户端到服务的 HTTP 请求、推送进度的事件流、执行步骤的 worker (工作进程)、唤醒 worker 的队列消息、模型的上下文，以及供应商侧的会话或线程。它们都可能单独消失，而且消失本身不说明任何事：
 
 - 浏览器断线，不说明运行停止了，也不说明客户想取消；
 - worker 崩溃，不说明它登记意图后的请求没有发出；
@@ -38,7 +38,7 @@
 
 - **`runId`（运行标识）** 标识一次逻辑任务。本例是 `run-o73-1`：从受理到最终答复，无论中间换了几个 worker、客户断线几次，都是这一个运行。客户端重连、查询结果、提交取消都用它定位。
 - **`tool_call_id`（工具调用 ID）** 把模型的一个工具请求和它的结果配对。`call-r1` 配对订单读取与返回的资格信息，`call-r2` 配对退款提议与“已生成待确认方案 `Q-204`”这个结果。它只在模型对话里有意义，不是外部系统的去重键；配对规则见[模型“调用工具”时实际发生了什么](../actions/tool-calls-are-requests.md)。
-- **`attempt`（执行代次）** 标识 worker 取得租约后的一次执行。本例中 attempt 1 读订单并生成方案，attempt 2 负责发送，之后接手对账的是 attempt 3。代次只增不减，每一次推进本地状态都要核验“当前代次仍是我、我的 lease（租约）尚未过期”，所以它同时充当 fencing token（栅栏令牌）：被新代次取代的旧 worker 即使还活着，也写不进运行记录。它约束不了的是远端：旧 worker 若在登记发送意图后暂停，醒来后仍可能把请求发出去。
+- **`attempt`（执行代次）** 标识 worker 取得租约后的一次执行。本例中 attempt 1 读订单并生成方案，attempt 2 负责发送，之后接手对账的是 attempt 3。代次只增不减，每一次推进本地状态都要核验“当前代次仍是我、我的 lease (租约)尚未过期”，所以它同时充当 fencing token (栅栏令牌)：被新代次取代的旧 worker 即使还活着，也写不进运行记录。它约束不了的是远端：旧 worker 若在登记发送意图后暂停，醒来后仍可能把请求发出去。
 
 这三层之外，还有两组标识符会在后面出现。客户端提交请求时带的 `Idempotency-Key` 只用来让重复提交找回同一个 `runId`，见[请求受理后，怎样保证任务最终被执行且不被两个 worker 同时推进](accepting-queuing-and-claiming-runs.md)；退款操作 `R-204` 和发给提供方的 `K-R204` 标识外部写入本身，见[退款请求超时后，怎样查清结果而不重复扣款](external-writes-and-reconciliation.md)。完整对照在本章末的词汇表。
 
@@ -55,7 +55,7 @@
 | 模型上下文与 KV cache / prompt cache | 本轮对话、可复用的前缀计算 | 能减少重复计算 | 审批、运行状态或外部结果 |
 | 队列消息 | “`run-o73-1` 可以被处理”的唤醒信号 | 有一项工作等着领取 | 可能被重投，不是状态的权威记录 |
 
-前三类由应用在条件事务里写入，是恢复的依据；后三类只是让工作发生或让人看到工作的通道。主线三交来的记录分别落在这里：获批草稿和审批记录在检查点里，grant 引用在单独的授权记录里，发送意图在操作账本里。
+前三类由应用在条件事务里写入，是恢复的依据；后三类只是让工作发生或让人看到工作的通道。队列消息只是唤醒线索，broker 的投递和消费者的确认都不证明业务完成，见[发布确认、消费者确认和业务完成各证明什么？](../../engineering-foundations/services/queue-delivery-and-acknowledgement.md)。主线三交来的记录分别落在这里：获批草稿和审批记录在检查点里，grant 引用在单独的授权记录里，发送意图在操作账本里。
 
 ## 检查点和推理缓存各恢复什么？
 
@@ -67,7 +67,7 @@
 
 ## 事件历史能恢复什么？
 
-更复杂的编排可以使用保存事件历史的工作流运行时。以 Temporal 为例，它把工作流发出的命令和活动返回的结果记成 event history（事件历史），worker 崩溃后按历史重放，重建编排状态。这能恢复应用的工作流，但有两件事它不做：它不会让模型调用变得确定，也不会替你判断一个历史里没有记下结果的远端写入有没有提交。用了这类运行时，仍要为每个外部写入定义操作记录，以及幂等或对账契约。
+更复杂的编排可以使用保存事件历史的工作流运行时。以 Temporal 为例，它把工作流发出的命令和活动返回的结果记成 event history (事件历史)，worker 崩溃后按历史重放，重建编排状态。这能恢复应用的工作流，但有两件事它不做：它不会让模型调用变得确定，也不会替你判断一个历史里没有记下结果的远端写入有没有提交。用了这类运行时，仍要为每个外部写入定义操作记录，以及幂等或对账契约。
 
 持久化的关键不在于用哪种技术。运行表、操作记录加持久队列就能完成本主线的全部职责；要检验的是：进程、连接或 worker 消失后，系统仍能回答“任务到哪一步、外部动作发生了什么”。
 
@@ -81,6 +81,8 @@ stateDiagram-v2
     accepted --> queued: 发布器投递唤醒
     queued --> running: worker 领取 attempt 与 lease
     running --> queued: lease 过期且没有发送意图
+    running --> awaiting_input: 向客户提问后挂起
+    awaiting_input --> queued: 答复或到期，同事务写唤醒
     running --> awaiting_approval: 保存方案 Q-204
     awaiting_approval --> queued: 客户确认，同事务建 R-204
     awaiting_approval --> rejected: 客户拒绝
@@ -104,6 +106,7 @@ stateDiagram-v2
     accepted --> canceled: 无意图时取消
     queued --> canceled: 无意图时取消
     running --> canceled: 无意图时取消
+    awaiting_input --> canceled: 无意图时取消
     awaiting_approval --> canceled: 无意图时取消
 ```
 
@@ -112,6 +115,7 @@ stateDiagram-v2
 | `accepted` | 运行记录和 outbox 事件已在同一事务写入，唤醒尚未投递 | outbox 发布器 | [受理与领取](accepting-queuing-and-claiming-runs.md) |
 | `queued` | 等待 worker 领取，没有有效 lease | 收到唤醒的 worker，条件领取下一 attempt | 同上 |
 | `running` | 某个 attempt 持有有效 lease，执行读订单、调模型、拟方案等不产生外部写入的步骤 | 当前 attempt；lease 过期后由扫描器放回 `queued` | 同上；模型调用的边界见[有界的模型 API 调用](bounded-model-api-calls.md) |
+| `awaiting_input` | 向客户提的问题已保存在待答记录里，不依赖答案的步骤已做完，等答复或截止时刻；期间没有执行 lease | 只消费这条待答记录的答复、超时或取消事务 | [断线、取消与用户输入](disconnect-cancel-and-user-input.md) |
 | `awaiting_approval` | 不可变方案 `Q-204` 已保存，等客户确认；期间没有执行 lease | 只消费当前待审版本的确认、拒绝或取消事务 | [外部写入与对账](external-writes-and-reconciliation.md) |
 | `effect_in_flight` | 当前 attempt 已登记发送意图，请求可能正在发送或处理 | 当前 attempt 写回回执；lease 过期后由扫描器转 `effect_unknown` | 同上 |
 | `effect_unknown` | 已登记意图，但没有可判定的结果 | 对账 worker；满足全部前提时才可同键重放 | 同上 |

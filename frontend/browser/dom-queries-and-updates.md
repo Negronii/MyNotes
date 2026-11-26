@@ -1,6 +1,6 @@
 # 怎样查询和修改 DOM，才拿到并改到预期的节点？
 
-HTML 解析完成后，页面在内存里是一棵 Document Object Model（DOM，文档对象模型）节点树；脚本查询、修改的都是这棵树，而不是 HTML 源文本。本章沿用主线一的报表页：脚本要找到排序按钮和两行报表，把行顺序从 May、April 改成 April、May，并更新按钮状态。读者手上已经有解析好的 DOM 和已注册的模块脚本（见[打开一个 URL 后，页面怎样变得可见又可交互？](./from-url-to-interactive-page.md)）；点击怎样到达处理器留给下一章。
+HTML 解析完成后，页面在内存里是一棵 Document Object Model (DOM，文档对象模型)节点树；脚本查询、修改的都是这棵树，而不是 HTML 源文本。本章沿用主线一的报表页：脚本要找到排序按钮和两行报表，把行顺序从 May、April 改成 April、May，并更新按钮状态。读者手上已经有解析好的 DOM 和已注册的模块脚本（见[打开一个 URL 后，页面怎样变得可见又可交互？](./from-url-to-interactive-page.md)）；点击怎样到达处理器留给下一章。
 
 ## 本章用到的报表页片段
 
@@ -31,15 +31,15 @@ HTML 解析完成后，页面在内存里是一棵 Document Object Model（DOM�
 
 ## DOM 树里有哪些节点？
 
-树里不只有元素。标签之间的换行缩进是文本节点，`<!-- -->` 是注释节点，整棵树的根是 Document。元素的 attribute（属性）有对应的 `Attr` 对象，但它不是树的子节点。
+树里不只有元素。标签之间的换行缩进是文本节点，`<!-- -->` 是注释节点，整棵树的根是 Document。元素的 attribute (属性)有对应的 `Attr` 对象，但它不是树的子节点。
 
 | `nodeType` | 节点 | 报表页中的例子 |
 |---:|---|---|
-| 1 | Element（元素） | `<ol>`、`<li>`、`<button>` |
-| 2 | Attr（属性） | `id="reports"`，不是子节点 |
-| 3 | Text（文本） | `May report` |
-| 8 | Comment（注释） | `<!-- 排序控件 -->` |
-| 9 | Document（文档） | `document` 本身 |
+| 1 | Element (元素) | `<ol>`、`<li>`、`<button>` |
+| 2 | Attr (属性) | `id="reports"`，不是子节点 |
+| 3 | Text (文本) | `May report` |
+| 8 | Comment (注释) | `<!-- 排序控件 -->` |
+| 9 | Document (文档) | `document` 本身 |
 
 亲属 API 因此成对出现：一个看所有节点，一个只看元素。
 
@@ -154,15 +154,15 @@ console.log(JSON.stringify({ literal, visibleLines }));
 // visibleLines: ["May<br>Report", "May\nReport"]
 ~~~
 
-`textContent` 把 `<b>` 原样当文字，所以没有生成子元素。报表标题这类来自用户或服务端的字符串，一律用 `textContent` 写；把它交给 `innerHTML` 等于让数据决定页面结构和脚本，安全边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
+`textContent` 把 `<b>` 原样当文字，所以没有生成子元素。报表标题这类来自用户或服务端的字符串，一律用 `textContent` 写；把它交给 `innerHTML` 等于让数据决定页面结构和脚本，安全边界见[不可信报表标题怎样安全显示？](../../engineering-foundations/services/sessions-and-browser-boundaries.md#不可信报表标题怎样安全显示？)。
 
 ## attribute 和 property 什么时候会分开？
 
-HTML 标记上写的是 content attribute（内容属性），JavaScript 对象上读写的是 DOM property（DOM 对象属性）。许多 property 会 reflect（反射）同名 attribute：读写其中一个，另一个跟着变，例如 `button.id` 与 `id` 属性。但有三种常见情况两者不等价。
+HTML 标记上写的是 content attribute (内容属性)，JavaScript 对象上读写的是 DOM property (DOM 对象属性)。许多 property 会 reflect (反射)同名 attribute：读写其中一个，另一个跟着变，例如 `button.id` 与 `id` 属性。但有三种常见情况两者不等价。
 
 ### 输入框的 value：默认值与当前值
 
-`value` attribute 是默认值，`input.value` property 是当前值。HTML 用 dirty value flag（值已修改标记）区分二者：用户输入或脚本写 `input.value` 之后，标记变为 dirty，此后再改 attribute 只更新默认值；`form.reset()` 把当前值恢复为默认值并清除标记。
+`value` attribute 是默认值，`input.value` property 是当前值。HTML 用 dirty value flag (值已修改标记)区分二者：用户输入或脚本写 `input.value` 之后，标记变为 dirty，此后再改 attribute 只更新默认值；`form.reset()` 把当前值恢复为默认值并清除标记。
 
 ~~~html
 <form id="filter-form">
@@ -190,7 +190,7 @@ console.log(JSON.stringify({ beforeEdit, afterEdit, afterReset }));
 
 ### 布尔属性只看存不存在
 
-`disabled`、`checked`、`hidden` 这类 boolean attribute（布尔属性）只看是否存在，不看值。`setAttribute("disabled", "false")` 照样禁用元素；要解除，写 `button.disabled = false` 或 `removeAttribute("disabled")`。
+`disabled`、`checked`、`hidden` 这类 boolean attribute (布尔属性)只看是否存在，不看值。`setAttribute("disabled", "false")` 照样禁用元素；要解除，写 `button.disabled = false` 或 `removeAttribute("disabled")`。
 
 ### 禁用状态还会从 fieldset 继承
 

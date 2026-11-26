@@ -6,10 +6,10 @@
 
 DOM 只记录节点怎样嵌套。要变成画面，还要依次派生出几层数据：
 
-1. **style（样式）**：CSS 规则匹配当前 DOM，为每个元素算出 computed style（计算样式）。
-2. **layout（布局）**：为盒子求出尺寸与位置。
-3. **paint（绘制）**：把几何、颜色、文字和图片变成有顺序的绘制操作。
-4. **raster（栅格化）与 composite（合成）**：需要新像素时把绘制操作转成像素，再把各绘制表面组合成一帧交给显示。
+1. **style (样式)**：CSS 规则匹配当前 DOM，为每个元素算出 computed style (计算样式)。
+2. **layout (布局)**：为盒子求出尺寸与位置。
+3. **paint (绘制)**：把几何、颜色、文字和图片变成有顺序的绘制操作。
+4. **raster (栅格化)与 composite (合成)**：需要新像素时把绘制操作转成像素，再把各绘制表面组合成一帧交给显示。
 
 ![点击后的 DOM 状态怎样经过按需的样式、布局与绘制更新进入画面](resources/rendering-update.svg)
 
@@ -19,9 +19,9 @@ DOM 只记录节点怎样嵌套。要变成画面，还要依次派生出几层�
 
 ### 计算样式不是最终几何
 
-`/reports.css` 到达后，CSS 解析器把文本解析成样式表和规则；脚本可见的 CSS Object Model（CSSOM，CSS 对象模型）用 `CSSStyleSheet`、`CSSRule` 等对象表示它们。规则不是 DOM 节点：渲染时浏览器让选择器匹配 DOM，按层叠与继承为每个元素挑出适用声明（冲突怎样裁决见[多条 CSS 声明冲突时谁赢，没有声明时值又从哪来？](../html-css/css-cascade-and-inheritance.md)），得到 computed value（计算值），例如标题的字号和行高。
+`/reports.css` 到达后，CSS 解析器把文本解析成样式表和规则；脚本可见的 CSS Object Model (CSSOM，CSS 对象模型)用 `CSSStyleSheet`、`CSSRule` 等对象表示它们。规则不是 DOM 节点：渲染时浏览器让选择器匹配 DOM，按层叠与继承为每个元素挑出适用声明（冲突怎样裁决见[多条 CSS 声明冲突时谁赢，没有声明时值又从哪来？](../html-css/css-cascade-and-inheritance.md)），得到 computed value (计算值)，例如标题的字号和行高。
 
-计算值还不是位置和尺寸。`width: auto` 这样的值要结合可用宽度、字体度量和前面内容，由布局算法求出 used value（使用值）。
+计算值还不是位置和尺寸。`width: auto` 这样的值要结合可用宽度、字体度量和前面内容，由布局算法求出 used value (使用值)。
 
 ### DOM 和盒不是一一对应
 
@@ -31,7 +31,7 @@ DOM 只记录节点怎样嵌套。要变成画面，还要依次派生出几层�
 - `display: contents` 的元素自己不生成盒，子元素照常生成。
 - 一个文本节点换行后，会对应多个行内片段。
 
-布局再按父容器约束和前面内容的尺寸，确定每个盒或片段的宽高、坐标和顺序。Blink 把一种布局结果组织为 fragment tree（片段树），Gecko 用 frame tree（帧树），一个节点也可能对应多个 frame。共同点是：这些结构携带布局结果，不是 DOM 的原样复制。
+布局再按父容器约束和前面内容的尺寸，确定每个盒或片段的宽高、坐标和顺序。Blink 把一种布局结果组织为 fragment tree (片段树)，Gecko 用 frame tree (帧树)，一个节点也可能对应多个 frame。共同点是：这些结构携带布局结果，不是 DOM 的原样复制。
 
 ![DOM 节点和 CSS 规则经过匹配、计算样式、盒生成和布局约束，形成片段结构](resources/browser-basics-rules-to-layout.svg)
 
@@ -86,11 +86,11 @@ button svg { display: block; width: 16px; height: 16px; flex: none; }
 
 按 Chromium RenderingNG 架构文档（核对于 2026-11-11）：
 
-1. **Pre-paint** 计算 transform、clip、effect、scroll 四类 property trees（属性树），并标记失效的显示项或图块。
-2. **Paint** 按绘制顺序生成 display items（显示项），把共享同一属性状态的显示项分组为 paint chunks（绘制块）。
+1. **Pre-paint** 计算 transform、clip、effect、scroll 四类 property trees (属性树)，并标记失效的显示项或图块。
+2. **Paint** 按绘制顺序生成 display items (显示项)，把共享同一属性状态的显示项分组为 paint chunks (绘制块)。
 3. **Commit** 把显示列表和属性树交给合成器；**layerize** 按可独立合成的视觉关系把绘制块组织成一层或多层。
-4. **Raster** 把可见空间切成相邻的 tile（图块），每个栅格任务处理覆盖到某个矩形图块的绘制项；互不依赖的图块可以并行。一个绘制项可以跨多个图块，各图块只得到自己那部分像素。长页面可以复用已栅格的图块，滚动时补画新进入视口的区域。
-5. **Activate** 产生描述图块摆放和视觉效果的 compositor frame（合成帧）；**Viz** 汇总各可见表面的合成帧，由 GPU 执行 Draw 画出屏幕像素。
+4. **Raster** 把可见空间切成相邻的 tile (图块)，每个栅格任务处理覆盖到某个矩形图块的绘制项；互不依赖的图块可以并行。一个绘制项可以跨多个图块，各图块只得到自己那部分像素。长页面可以复用已栅格的图块，滚动时补画新进入视口的区域。
+5. **Activate** 产生描述图块摆放和视觉效果的 compositor frame (合成帧)；**Viz** 汇总各可见表面的合成帧，由 GPU 执行 Draw 画出屏幕像素。
 
 ![同一报表从已提交的绘制数据与图层进入相邻 tile 栅格区域，再由合成帧描述标题、图片、按钮和两条列表项](resources/browser-basics-tiles-to-frame.svg)
 
@@ -110,7 +110,7 @@ Firefox 的公开说明也从 DOM/CSS 得到布局 frame，再生成 WebRender �
 | 改 `transform` 或 `opacity` | 某些实现路径可跳过布局，甚至复用绘制结果 | 不能凭属性名保证只走合成或使用 GPU |
 | DOM 或样式写入后读取几何 | 若所需样式或布局已失效，读取前同步更新 | 同一个几何 API 并非每次调用都触发布局 |
 
-reflow（重排）和 repaint（重绘）是常见的工程说法，指“重新布局”和“重新绘制”，不是可以跨浏览器比较的指标。一个节点尺寸变化后，排在后面的内容可能都要移动；属性变了但几何没失效时，也可能不必重做布局。`transform` 和 `opacity` 常被选作动画属性，是因为它们在某些渲染路径中能绕过布局或复用绘制内容；目标页面是否真走这条路，要看目标浏览器的性能录制（动画层面的取舍见[过渡和关键帧动画怎样选，怎样不伤性能和可访问性？](../html-css/transitions-and-animations.md)）。
+reflow (重排)和 repaint (重绘)是常见的工程说法，指“重新布局”和“重新绘制”，不是可以跨浏览器比较的指标。一个节点尺寸变化后，排在后面的内容可能都要移动；属性变了但几何没失效时，也可能不必重做布局。`transform` 和 `opacity` 常被选作动画属性，是因为它们在某些渲染路径中能绕过布局或复用绘制内容；目标页面是否真走这条路，要看目标浏览器的性能录制（动画层面的取舍见[过渡和关键帧动画怎样选，怎样不伤性能和可访问性？](../html-css/transitions-and-animations.md)）。
 
 处理器返回时 DOM 已是新顺序，但浏览器不保证每个任务结束就画一帧，读取几何也不会让屏幕立即多画一帧。上表最后一行是脚本能直接撞上的成本，下面先看几何 API 各量什么，再看读取为什么会卡住。
 
@@ -178,7 +178,7 @@ element.scrollTop = 0; // 在普通向下溢出的例子中，回到滚动起点
 
 ### getBoundingClientRect 与 transform
 
-前面的属性都忽略 transform。要知道元素在视口里实际占据的范围，用 `getBoundingClientRect()`：它先取元素的 client rect 列表（每个盒片段一个矩形，已计入元素自身和祖先的 transform），对普通非零片段求最小的轴对齐包围矩形。元素没有布局盒时返回全 0 的矩形。坐标以 layout viewport（布局视口）左上角为原点。
+前面的属性都忽略 transform。要知道元素在视口里实际占据的范围，用 `getBoundingClientRect()`：它先取元素的 client rect 列表（每个盒片段一个矩形，已计入元素自身和祖先的 transform），对普通非零片段求最小的轴对齐包围矩形。元素没有布局盒时返回全 0 的矩形。坐标以 layout viewport (布局视口)左上角为原点。
 
 一个可以手算的例子：文档没有滚动或缩放，祖先没有 transform。
 
@@ -215,7 +215,7 @@ function overlapsLayoutViewport(element) {
 }
 ~~~
 
-函数名不叫“已可见”，因为它不检查祖先滚动容器的裁剪、遮挡、透明度或旋转后形状内的空白。移动端 pinch-zoom（双指缩放）放大或平移时，布局视口也不等于用户眼前的 visual viewport（视觉视口）。要和视觉视口比较，把 `window.visualViewport` 的 `offsetLeft`、`offsetTop` 当作视觉视口在布局视口中的左上角，四边界取 `(offsetLeft, offsetTop, offsetLeft + width, offsetTop + height)`，再按同样的条件比较。
+函数名不叫“已可见”，因为它不检查祖先滚动容器的裁剪、遮挡、透明度或旋转后形状内的空白。移动端 pinch-zoom (双指缩放)放大或平移时，布局视口也不等于用户眼前的 visual viewport (视觉视口)。要和视觉视口比较，把 `window.visualViewport` 的 `offsetLeft`、`offsetTop` 当作视觉视口在布局视口中的左上角，四边界取 `(offsetLeft, offsetTop, offsetLeft + width, offsetTop + height)`，再按同样的条件比较。
 
 只想异步知道元素何时与视口或某个根相交时，`IntersectionObserver` 通常比反复读矩形更合适，用法见[图片和音视频该怎样写语义、定地址、选文件和定加载时机？](./images-and-media-loading.md)。
 
@@ -227,7 +227,7 @@ DOM 或样式写入后，浏览器通常只把样式或布局标记为“待更�
 
 ![几何读取遇到失效布局时，浏览器先同步更新再把当前值交回脚本](resources/geometry-read-flow.svg)
 
-这种同步布局，Chrome 文档称为 forced reflow（强制重排），也常叫强制布局。脚本要等它算完才继续，等待多久取决于此前哪些数据失效、影响范围多大、实现能复用多少，不是 API 本身的固定成本。同样的契约也适用于 `getComputedStyle()`：它要返回当前样式，所以在样式已失效时也可能先同步重算样式。
+这种同步布局，Chrome 文档称为 forced reflow (强制重排)，也常叫强制布局。脚本要等它算完才继续，等待多久取决于此前哪些数据失效、影响范围多大、实现能复用多少，不是 API 本身的固定成本。同样的契约也适用于 `getComputedStyle()`：它要返回当前样式，所以在样式已失效时也可能先同步重算样式。
 
 ### 把读和写分批
 

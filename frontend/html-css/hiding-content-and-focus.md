@@ -4,7 +4,7 @@
 
 ## 关闭一个面板，要回答哪四个问题
 
-沿用[主线一的报表页](../browser/from-url-to-interactive-page.md)。本章在它上面加一个普通的 disclosure（展开/折叠控件）：“查看详情”按钮（`Show details`）控制下方的 `#report-details` 面板，面板里有一个“关闭详情”按钮（`Close details`），页面其余部分始终可操作。用户在面板里点“关闭详情”时，期望三件事：内容淡出；焦点回到“查看详情”；之后按 Tab 不再进入已关闭的面板。
+沿用[主线一的报表页](../browser/from-url-to-interactive-page.md)。本章在它上面加一个普通的 disclosure (展开/折叠控件)：“查看详情”按钮（`Show details`）控制下方的 `#report-details` 面板，面板里有一个“关闭详情”按钮（`Close details`），页面其余部分始终可操作。用户在面板里点“关闭详情”时，期望三件事：内容淡出；焦点回到“查看详情”；之后按 Tab 不再进入已关闭的面板。
 
 关闭其实改变了两件事，而且时点不同：
 
@@ -37,7 +37,7 @@
 - **`inert` 与 `aria-hidden` 的职责不同。** `inert` 让子树同时退出用户交互、焦点和辅助技术呈现，外观仍由 CSS 决定，也不阻止脚本读取 DOM 或调用函数。`aria-hidden` 只对辅助技术隐藏，不管焦点；把仍可聚焦的区域标成 `aria-hidden`，键盘用户会 Tab 进一块读屏“看不见”的区域，所以不要用它代替焦点管理。
 
 > [!warning] 模态对话框是 inert 的例外
-> 用 `showModal()` 打开的 modal dialog（模态对话框）可以脱离祖先的 inert 状态，除非对话框自身也显式设置了 `inert`。不要假设给外层容器加 `inert` 就能连带关掉其中的模态对话框。
+> 用 `showModal()` 打开的 modal dialog (模态对话框)可以脱离祖先的 inert 状态，除非对话框自身也显式设置了 `inert`。不要假设给外层容器加 `inert` 就能连带关掉其中的模态对话框。
 
 ## until-found：可以被页内查找揭示的隐藏
 
@@ -45,7 +45,7 @@ HTML `hidden` 还有第二种状态 `hidden="until-found"`，用于折叠起来�
 
 - 元素仍有盒子、边框和间距，只是内容不显示。
 - 页内查找或片段导航命中其中内容时，浏览器先在元素上派发 `beforematch` 事件，再移除 `hidden` 属性。页面可以在 `beforematch` 里同步自己的展开状态，例如更新触发按钮的 `aria-expanded`。
-- 它依赖 layout containment（布局包含）。作者样式若把元素设成 `display: none`、`contents` 或 `inline`，查找就无法揭示它。
+- 它依赖 layout containment (布局包含)。作者样式若把元素设成 `display: none`、`contents` 或 `inline`，查找就无法揭示它。
 
 报表页的详情面板关闭后不需要被查找到，所以下面用普通 `hidden`。
 

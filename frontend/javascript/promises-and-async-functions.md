@@ -4,7 +4,7 @@
 
 ## 本章要写的请求：报表、摘要和权限
 
-三项数据互相独立，可以同时请求。Fetch API 先交回的是 `Response`（响应对象），正文要另外读取和解析。只有三份响应状态都成功、正文都能解析、内容都通过校验，页面才算拿到一组可信数据。权限结果里的 `canReadRows` 再决定要不要继续读取报表行。
+三项数据互相独立，可以同时请求。Fetch API 先交回的是 `Response` (响应对象)，正文要另外读取和解析。只有三份响应状态都成功、正文都能解析、内容都通过校验，页面才算拿到一组可信数据。权限结果里的 `canReadRows` 再决定要不要继续读取报表行。
 
 本章最后写出的 `loadReport(reportId, sort, signal)` 要么履行为三份已校验的数据，要么以失败原因拒绝。传进去的 `AbortSignal` 能停住什么，留给[下一章](./cancellation-timeouts-and-concurrency.md)；失败交给哪一层处理，见[错误处理一章](./error-handling-across-layers.md)。
 
@@ -45,7 +45,7 @@ response.then(value => console.log(value));
 // （约 20 ms 或更久之后）报表响应已到
 ~~~
 
-20 毫秒只是计时器的最短等待，计时器由宿主提供，不属于语言本身。在浏览器里，Promise 处理器和 `await` 之后的代码作为 microtask (微任务) 排队：当前调用栈清空后，浏览器在微任务检查点把队列逐个跑完。微任务何时插进事件循环、和绘制怎样交错，见[事件循环怎样安排任务、微任务和渲染？](../browser/event-loop-tasks-and-rendering.md)；Node.js 的调度边界不同，见 [Node.js 事件循环阶段与微任务队列如何交互？](../../engineering-foundations/runtime/node-event-loop-and-microtasks.md)。
+20 毫秒只是计时器的最短等待，计时器由宿主提供，不属于语言本身。在浏览器里，Promise 处理器和 `await` 之后的代码作为 microtask (微任务) 排队：当前调用栈清空后，浏览器在微任务检查点把队列逐个跑完。微任务何时插进事件循环、和绘制怎样交错，见[事件循环怎样安排任务、微任务和渲染？](../browser/event-loop-tasks-and-rendering.md)；Node.js 的调度边界不同，见 [Node.js 的事件循环怎样安排计时器、I/O 回调和微任务？](../../engineering-foundations/runtime/node-event-loop-and-microtasks.md)。
 
 ## then 链怎样决定下一个 Promise
 
@@ -54,7 +54,7 @@ response.then(value => console.log(value));
 - 处理器返回普通值，新 Promise 以该值履行；
 - 处理器抛出异常，新 Promise 以该异常拒绝；
 - 处理器返回 Promise，新 Promise 跟随它的最终结局，这一步叫“采用”；
-- 处理器返回 thenable（带 `then` 方法的对象），新 Promise 会调用这个 `then`，看它回调解析函数还是拒绝函数来决定结局。
+- 处理器返回 thenable (带 `then` 方法的对象)，新 Promise 会调用这个 `then`，看它回调解析函数还是拒绝函数来决定结局。
 
 内建 Promise 也有 `then` 方法，但有一条捷径：`Promise.resolve(p)` 遇到真正的 Promise、且读到 `p.constructor === Promise` 时直接返回 `p`，不经过采用。普通 thenable 没有这条捷径，[组合器一节](#组合器怎样保持输入顺序)会看到它的处理步骤。
 

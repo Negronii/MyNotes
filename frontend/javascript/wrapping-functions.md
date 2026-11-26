@@ -1,12 +1,12 @@
 # 怎样包装一个函数而不弄丢参数、this 和结果？
 
-wrapper（包装器）是一个新函数：它调用原函数，并在调用前后加一种策略，比如固定部分参数、计时、只执行一次、缓存结果、推迟执行。上一章讲了闭包保存跨调用的状态、`this` 由调用形式提供；本章把两者用到包装器上。
+wrapper (包装器)是一个新函数：它调用原函数，并在调用前后加一种策略，比如固定部分参数、计时、只执行一次、缓存结果、推迟执行。上一章讲了闭包保存跨调用的状态、`this` 由调用形式提供；本章把两者用到包装器上。
 
-每个包装器都要回答四个问题：实参何时凑齐，`this` 怎样转给原函数，返回值和异常怎样传出，闭包里存什么状态。本章按这四个问题依次看 currying（柯里化）、composition（组合）、计时包装、`once`、memoization（记忆化），最后是 debounce（防抖）和 throttle（节流）。
+每个包装器都要回答四个问题：实参何时凑齐，`this` 怎样转给原函数，返回值和异常怎样传出，闭包里存什么状态。本章按这四个问题依次看 currying (柯里化)、composition (组合)、计时包装、`once`、memoization (记忆化)，最后是 debounce (防抖)和 throttle (节流)。
 
 ## rest 参数收集实参
 
-rest parameter（剩余参数）把前面形参没接住的实参收集成数组。下面的函数只有 `...args`，所以收集全部实参；显式传入的 `undefined` 也算一个。
+rest parameter (剩余参数)把前面形参没接住的实参收集成数组。下面的函数只有 `...args`，所以收集全部实参；显式传入的 `undefined` 也算一个。
 
 ~~~javascript
 function argumentsLength(...args) {
@@ -30,9 +30,9 @@ createHelloWorld()({}, null, 42); // "Hello World"
 
 ## 柯里化与部分应用：实参分几次给
 
-严格意义的 currying 把多参数函数变成一串单参数函数：`sum(a, b, c)` 变成 `curriedSum(a)(b)(c)`。partial application（部分应用）先固定一部分实参，返回等待其余实参的函数，不要求每次只给一个。
+严格意义的 currying 把多参数函数变成一串单参数函数：`sum(a, b, c)` 变成 `curriedSum(a)(b)(c)`。partial application (部分应用)先固定一部分实参，返回等待其余实参的函数，不要求每次只给一个。
 
-下面是常见的宽松版 `curry`：每次可以给一个或多个实参，凑够声明的个数才调用原函数。“声明的个数”取 `fn.length`，即 arity（元数）。
+下面是常见的宽松版 `curry`：每次可以给一个或多个实参，凑够声明的个数才调用原函数。“声明的个数”取 `fn.length`，即 arity (元数)。
 
 ~~~javascript
 function curry(fn) {
@@ -79,7 +79,7 @@ partial.call({ name: "final" }, "May"); // "final:daily/May"
 
 ## 组合：上一步的输出接到下一步的输入
 
-function composition（函数组合）按从右到左执行：`compose([f, g, h])(x)` 计算 `f(g(h(x)))`。列表为空时返回 identity function（恒等函数），原样返回输入。
+function composition (函数组合)按从右到左执行：`compose([f, g, h])(x)` 计算 `f(g(h(x)))`。列表为空时返回 identity function (恒等函数)，原样返回输入。
 
 ~~~javascript
 function compose(functions) {
@@ -226,7 +226,7 @@ const add = memoizeNumeric(function (a, b) {
 
 沿用主线一的报表页，本章给它加一个搜索框：用户停止输入后再按搜索词请求报表列表。排序按钮则不该延迟，点击就立即导航。
 
-debounce（防抖）在一串连续调用停下、静默一段时间后，只执行最后一次；throttle（节流）限制执行频率。执行时机可以在 leading edge（首沿，一串调用的开头）、trailing edge（尾沿，一串调用结束后），或两者都要。两者都由返回的包装函数用闭包保存状态，区别在存什么、何时更新。
+debounce (防抖)在一串连续调用停下、静默一段时间后，只执行最后一次；throttle (节流)限制执行频率。执行时机可以在 leading edge (首沿，一串调用的开头)、trailing edge (尾沿，一串调用结束后)，或两者都要。两者都由返回的包装函数用闭包保存状态，区别在存什么、何时更新。
 
 ### 尾沿防抖与首沿节流的实现
 
@@ -290,7 +290,7 @@ function throttleLeading(fn, interval) {
 - **只要首沿**：一串调用的第一次立即执行，之后在窗口内的调用被忽略。按钮防连点通常这样用。
 - **首沿和尾沿都要**：第一次立即执行；窗口内若又有调用，窗口结束时再执行最后那次。窗口内只有一次调用时，尾沿不会重复执行它。
 
-只用尾沿防抖时，用户一直输入就永远不触发。maxWait（最大等待时间）给出上限：从这串调用开始（或上次执行）算起，等满 `maxWait` 就先执行当时最新的输入，不再等静默。节流可以看成 `maxWait` 等于 `wait` 的防抖：连续调用期间每隔 `wait` 至少执行一次。
+只用尾沿防抖时，用户一直输入就永远不触发。maxWait (最大等待时间)给出上限：从这串调用开始（或上次执行）算起，等满 `maxWait` 就先执行当时最新的输入，不再等静默。节流可以看成 `maxWait` 等于 `wait` 的防抖：连续调用期间每隔 `wait` 至少执行一次。
 
 ### cancel 和 flush 只管还没执行的调用
 

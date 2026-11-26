@@ -2,7 +2,7 @@
 
 前几章的路由和数据读取都在浏览器里发生。Next.js App Router 把一部分工作移到服务端：页面默认在服务端渲染、在服务端取数，只把需要交互的部分作为客户端代码发给浏览器。本章是一个综合实例，沿报表页从文件路由走到首屏、排序、Back 和失败重试，回答四个问题：哪段代码在哪一侧运行；首屏怎样从服务端结果变成可交互的页面；哪些等待可以分块显示；缓存存在哪一层。读者需要知道[路由怎样把 URL 变成已提交的数据](routing-and-loaders.md)，以及 React 的 render/commit 与 key 身份（见 [React 更新模型](react-update-model.md)）。
 
-主例采用 Next.js 16.4.6 App Router，按官方建议同时开启 Cache Components（组件缓存）与 Partial Prefetching（部分预取），核对于 2026-11-12。
+主例采用 Next.js 16.4.6 App Router，按官方建议同时开启 Cache Components (组件缓存)与 Partial Prefetching (部分预取)，核对于 2026-11-12。
 
 ## 案例：服务端读取报表 42
 
@@ -29,10 +29,10 @@ App Router 用 `app/` 下的特殊文件组成路由：
 
 - `app/reports/[reportId]/page.tsx` 对应 `/reports/:reportId`；方括号是动态段，`42` 通过 `params` 交给页面。
 - `layout.tsx` 给一组子路由提供共享外壳，共享段在客户端导航时可以保留。从零搭建至少需要根 `app/layout.tsx`。
-- `app/api/reports/route.ts` 这样的 Route Handler（路由处理器）是独立的 HTTP 端点：按方法导出 `GET`、`POST` 等函数，返回 Web `Response`，不生成页面。
+- `app/api/reports/route.ts` 这样的 Route Handler (路由处理器)是独立的 HTTP 端点：按方法导出 `GET`、`POST` 等函数，返回 Web `Response`，不生成页面。
 - 同一段下的 `loading.tsx` 和 `error.tsx` 分别是该段的等待边界和错误边界，不是端点（见后文）。
 
-Cache Components 要求 Node.js runtime，不支持 Edge，也不支持路由段里的 `runtime` 导出。托管平台可以把 Node.js 服务打包成 serverless function（无服务器函数）；运行时与托管形态是两个独立的选择。
+Cache Components 要求 Node.js runtime，不支持 Edge，也不支持路由段里的 `runtime` 导出。托管平台可以把 Node.js 服务打包成 serverless function (无服务器函数)；运行时与托管形态是两个独立的选择。
 
 ## params 与 searchParams 都是 Promise
 
@@ -46,9 +46,9 @@ URL 三段在这里跨越不同边界：path `/reports/42` 决定匹配的页面
 
 ## 服务端组件与客户端组件的分界线
 
-layout 和 page 默认是 Server Component（服务端组件）：可以在服务端读数据库、非公开环境变量或后端 API，这些模块不会因此进入浏览器的 JavaScript。组件需要本地 state、事件处理器、Effect 或浏览器 API 时，才在**最小的交互子树**的文件顶部写 `"use client"`，它就成为 Client Component（客户端组件）。
+layout 和 page 默认是 Server Component (服务端组件)：可以在服务端读数据库、非公开环境变量或后端 API，这些模块不会因此进入浏览器的 JavaScript。组件需要本地 state、事件处理器、Effect 或浏览器 API 时，才在**最小的交互子树**的文件顶部写 `"use client"`，它就成为 Client Component (客户端组件)。
 
-这条指令划分的是 module graph（模块图）：该文件直接和间接导入的运行时模块都进入客户端模块图，不必在每个子组件重复标记。反方向不行：客户端模块不能导入并执行需要服务端能力的组件。但服务端可以把一个**已经渲染好的** Server Component 作为 `children` 交给 Client Component。
+这条指令划分的是 module graph (模块图)：该文件直接和间接导入的运行时模块都进入客户端模块图，不必在每个子组件重复标记。反方向不行：客户端模块不能导入并执行需要服务端能力的组件。但服务端可以把一个**已经渲染好的** Server Component 作为 `children` 交给 Client Component。
 
 服务端传给客户端组件的 props 必须满足 React 的可序列化规则，而且会原样进入发往浏览器的载荷。可序列化不等于保密：只传标题、期间、ID 这类展示字段，不传凭证或内部记录；普通回调和数据库连接也不能作为 props。以 `NEXT_PUBLIC_` 开头的环境变量会编进客户端 bundle，服务端密钥不能用这个前缀命名。
 
@@ -58,9 +58,9 @@ layout 和 page 默认是 Server Component（服务端组件）：可以在服�
 
 首次打开文档时，服务端结果经过三种表示才变成可交互的页面：
 
-1. **RSC payload（React Server Component Payload，服务端组件载荷）。** Server Component 先渲染成一份载荷，里面有服务端组件的渲染结果、Client Component 的位置占位与 JavaScript 文件引用，以及传给客户端组件的 props。
-2. **初始 HTML。** Next.js 用这份载荷加上 Client Component 生成 HTML。这一步是 SSR（服务端渲染），给首次文档可显示的标记，不会因此把 Server Component 的代码发给浏览器。
-3. **hydration（水合）。** 浏览器先显示不可交互的 HTML，再用载荷对齐两侧的组件树，最后运行客户端 JavaScript，把事件处理器接上去。
+1. **RSC payload (React Server Component Payload，服务端组件载荷)。** Server Component 先渲染成一份载荷，里面有服务端组件的渲染结果、Client Component 的位置占位与 JavaScript 文件引用，以及传给客户端组件的 props。
+2. **初始 HTML。** Next.js 用这份载荷加上 Client Component 生成 HTML。这一步是 SSR (服务端渲染)，给首次文档可显示的标记，不会因此把 Server Component 的代码发给浏览器。
+3. **hydration (水合)。** 浏览器先显示不可交互的 HTML，再用载荷对齐两侧的组件树，最后运行客户端 JavaScript，把事件处理器接上去。
 
 流式页面可以逐区完成，数据交付和水合交错进行；下图画的是一个交互区域从“看得见”到“能操作”的条件。
 
@@ -68,7 +68,7 @@ layout 和 page 默认是 Server Component（服务端组件）：可以在服�
 
 图的右栏是后续导航：用户先在搜索框输入 `April`，再点“最早优先”。客户端导航不重新下载整份 HTML，而是请求新的 RSC payload 合进现有组件树。`ReportSearch` 若仍在同一树位置，就保留本地的 `query = "April"`，并继续过滤新列表；它若被卸载、key 改变或整页重载，没写进 URL 的 `query` 不会恢复。
 
-服务器的第一次渲染和浏览器的第一次渲染必须得到同样的结果，否则会出现 hydration mismatch（水合不匹配）。时间、随机数、地区设置和浏览器专属值都是常见来源：需要浏览器值时，先渲染稳定的占位，再在首次提交后的 Effect 里读取。这类问题的更多处理见[紧急更新与延后更新](urgent-and-deferred-updates.md)。
+服务器的第一次渲染和浏览器的第一次渲染必须得到同样的结果，否则会出现 hydration mismatch (水合不匹配)。时间、随机数、地区设置和浏览器专属值都是常见来源：需要浏览器值时，先渲染稳定的占位，再在首次提交后的 Effect 里读取。这类问题的更多处理见[紧急更新与延后更新](urgent-and-deferred-updates.md)。
 
 ## 用 Suspense 分块等待
 
@@ -223,7 +223,7 @@ Suspense 只处理等待，读取失败会向错误边界传播。实际哪个 f
 >
 > 排序控件用 `<Link>` 而不是主线一的 `aria-pressed` 按钮：切换排序就是切换地址，Link 保留链接语义，并让 Next 能预取目标。
 
-示例在服务边界把 `response.json()` 当作 `unknown`，逐行检查并投影成只含展示字段的 DTO（Data Transfer Object，数据传输对象），避免把上游行里可能存在的内部字段带进 RSC payload；摘要的 `rowCount` 也必须是非负安全整数（见 [TypeScript 能保证什么](../javascript/typescript-guarantees-and-runtime-validation.md)）。本例没有身份提供者，省略了鉴权接线；真实读取要先验证会话，再确认用户有权看报表 42。数据量大、需要分页，或过滤受权限影响时，把条件写进 URL，由服务端按条件查询，而不是把全部行发给浏览器再本地过滤。
+示例在服务边界把 `response.json()` 当作 `unknown`，逐行检查并投影成只含展示字段的 DTO (Data Transfer Object，数据传输对象)，避免把上游行里可能存在的内部字段带进 RSC payload；摘要的 `rowCount` 也必须是非负安全整数（见 [TypeScript 能保证什么](../javascript/typescript-guarantees-and-runtime-validation.md)）。本例没有身份提供者，省略了鉴权接线；真实读取要先验证会话，再确认用户有权看报表 42。数据量大、需要分页，或过滤受权限影响时，把条件写进 URL，由服务端按条件查询，而不是把全部行发给浏览器再本地过滤。
 
 ## 缓存存在哪一层
 
@@ -237,7 +237,7 @@ Suspense 只处理等待，读取失败会向错误边界传播。实际哪个 f
 
 Cache Components 的作用是让静态外壳先返回，把只有本次请求才知道的数据留在等待边界里；它并没有把所有数据自动变成跨请求可复用。`fetch` 的 `force-cache` 在开启 Cache Components 后仍然有效，但它缓存的是 fetch 响应，与 `use cache` 的函数/组件结果缓存是两回事。与身份有关的数据，还要把权限范围纳入缓存设计，不能把一个用户的结果共享给另一个用户。
 
-`no-store` 约束的只是那次 fetch，不能迫使每次 Link 或 Back 都重跑服务端。选择缓存时要说清：缓存的是哪一层、能陈旧多久、变更后怎样失效；不能因为页面变快就推断数据仍然正确。浏览器自身的 HTTP 缓存语义是另一层，见[哈希发布与缓存](../delivery/hashed-release-and-caching.md)。
+`no-store` 约束的只是那次 fetch，不能迫使每次 Link 或 Back 都重跑服务端。选择缓存时要说清：缓存的是哪一层、能陈旧多久、变更后怎样失效；不能因为页面变快就推断数据仍然正确。浏览器自身的 HTTP 缓存是另一层，语义见[一份 HTTP 响应什么时候可以直接复用，什么时候必须回源确认？](../../engineering-foundations/services/http-caching-and-conditional-requests.md)；静态资源的哈希发布策略见[发布新版本时，怎样让缓存和还开着的旧页面都不出错？](../delivery/hashed-release-and-caching.md)。
 
 > [!info] 实例：Next.js 16.4.6 的缓存配置与旧模型识别
 > ~~~ts
@@ -246,7 +246,7 @@ Cache Components 的作用是让静态外壳先返回，把只有本次请求才
 > const nextConfig: NextConfig = { cacheComponents: true, partialPrefetching: true };
 > export default nextConfig;
 > ~~~
-> 官方要求开启 `cacheComponents` 时显式设置 `partialPrefetching`，不设会输出警告，因为 Cache Components 的首个版本不含部分预取；只有迁移更早采用 Cache Components 的应用时才暂设为 `false`。官方计划在下一个大版本默认启用二者并移除这两个选项。维护未开启 Cache Components 的旧项目时，按上一缓存模型理解：动态页面的默认 fetch 在请求时执行，静态页面可能在构建时读取；`dynamic`、`revalidate` 等路由段选项不能原样套到新模型。开发模式的 HMR（Hot Module Replacement，热模块替换）可能复用部分 `no-store` 结果，实际缓存契约要在生产运行中检验。
+> 官方要求开启 `cacheComponents` 时显式设置 `partialPrefetching`，不设会输出警告，因为 Cache Components 的首个版本不含部分预取；只有迁移更早采用 Cache Components 的应用时才暂设为 `false`。官方计划在下一个大版本默认启用二者并移除这两个选项。维护未开启 Cache Components 的旧项目时，按上一缓存模型理解：动态页面的默认 fetch 在请求时执行，静态页面可能在构建时读取；`dynamic`、`revalidate` 等路由段选项不能原样套到新模型。开发模式的 HMR (Hot Module Replacement，热模块替换)可能复用部分 `no-store` 结果，实际缓存契约要在生产运行中检验。
 
 ## 等待与失败各有自己的边界
 
@@ -282,7 +282,7 @@ Cache Components 的作用是让静态外壳先返回，把只有本次请求才
 
 ## Server Action 不是私有接口
 
-若之后要加“标记已读”这样的变更，可以用 Server Action（服务端动作）处理表单：它是一个用 `"use server"` 标记的 Server Function（服务端函数），客户端通过 POST 调用。它在网络上就是一个可以被直接请求的端点，按钮隐藏了、action ID 不好猜，都不能让它变成私有接口。每次调用都要重新认证调用者、授权这次操作、校验输入。需要给其他消费者提供独立 HTTP API 时，用 Route Handler。
+若之后要加“标记已读”这样的变更，可以用 Server Action (服务端动作)处理表单：它是一个用 `"use server"` 标记的 Server Function (服务端函数)，客户端通过 POST 调用。它在网络上就是一个可以被直接请求的端点，按钮隐藏了、action ID 不好猜，都不能让它变成私有接口。每次调用都要重新认证调用者、授权这次操作、校验输入。需要给其他消费者提供独立 HTTP API 时，用 Route Handler。
 
 ## 排序、Back 与取消
 
@@ -305,7 +305,7 @@ Back 把地址恢复成 `sort=recent`，但可能复用客户端已有的路由�
 > | 动态路径参数 | `next/router` 的 `router.query` | 页面收到 Promise `params`，`await` 后读取 |
 > | 查询参数 | `router.query`；自动静态优化时首屏可能暂为空，客户端代码要在 Effect 里等 `router.isReady` | 页面收到 Promise `searchParams`，读取请求时的 URL |
 > | 服务端数据 | `getServerSideProps` 按请求读；`getStaticProps` 读静态数据；动态路径用 `getStaticPaths` 列出构建路径 | 默认由 Server Component 读取；本例等待边界里的 `no-store` fetch 执行时取新数据 |
-> | 刷新静态结果 | `getStaticProps` 的 `revalidate`，即 ISR（Incremental Static Regeneration，增量静态再生） | 按当前 App Router 缓存配置 |
+> | 刷新静态结果 | `getStaticProps` 的 `revalidate`，即 ISR (Incremental Static Regeneration，增量静态再生) | 按当前 App Router 缓存配置 |
 > | API 端点 | `pages/api` 的默认处理器 | `app/**/route.ts` 按 HTTP 方法导出 |
 >
 > `revalidate: 60` 不是后台每分钟定时重建：构建出的页面先被缓存，60 秒后遇到的第一个请求仍拿到旧页并触发后台生成，生成成功后，之后的请求才拿到新页。对构建时未列出的动态路径，`getStaticPaths` 的 `fallback: false` 直接 404；`fallback: true` 在普通浏览器首次直达时先给 fallback 并在后台生成，但爬虫以及经 `next/link` 或 `next/router` 的客户端导航按 blocking 行为等待；`"blocking"` 对首次访问也等生成完成再返回。

@@ -121,7 +121,7 @@ flowchart TD
 
 ## Context：远距离读取同一份值
 
-`sort` 只跨一层父子关系，用 props 传很自然。行距偏好不同：读它的按钮和列表中间隔着布局组件，逐层转发 props 会让中间组件接收自己不用的值。这时用 Context（上下文）。
+`sort` 只跨一层父子关系，用 props 传很自然。行距偏好不同：读它的按钮和列表中间隔着布局组件，逐层转发 props 会让中间组件接收自己不用的值。这时用 Context (上下文)。
 
 ![Provider 持有行距状态，布局组件只转交 children，两个消费者读取同一个 Context](resources/report-context-ownership.svg)
 

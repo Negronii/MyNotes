@@ -6,13 +6,13 @@
 
 沿用主线一的报表页：报表 42 就是 `/reports/42` 那份报表。本章从报表**列表**进入它。管理员在合成账户 `acct-a` 打开 `/reports?sort=recent&status=published&page=1#summary`；每页两行，已发布第 1 页是报表 `17`、`42`，第 2 页是 `61`。管理员勾选 `42`，翻到第 2 页，再从工具栏的“已选 1 项”打开编辑抽屉。账户、地址、字段和响应都是合成数据。
 
-报表 42 的详情和它的强 ETag（entity tag，实体标签）`"report-42-v7"` 一起返回：
+报表 42 的详情和它的强 ETag (entity tag，实体标签) `"report-42-v7"` 一起返回：
 
 ~~~json
 {"id":42,"title":"Monthly summary","delivery":{"channel":"email","recipients":["reader@example.test"]},"note":"Draft"}
 ~~~
 
-抽屉有两步：第 1 步编辑通知方式 `delivery.channel` 和收件人 `delivery.recipients`，第 2 步编辑备注 `note` 并确认。`title` 在表单里只读，用来演示服务端同时改了别的字段时怎样比较。保存使用 [HTTP API 条件更新契约](../../engineering-foundations/services/api-contracts-errors-and-evolution.md)里的 JSON Merge Patch、`If-Match`、强 ETag 和 `412` 约定。客户端的选择、URL 和缓存都不授予任何权限，每次读写仍由服务端按当前身份授权。
+抽屉有两步：第 1 步编辑通知方式 `delivery.channel` 和收件人 `delivery.recipients`，第 2 步编辑备注 `note` 并确认。`title` 在表单里只读，用来演示服务端同时改了别的字段时怎样比较。保存沿用[两个客户端同时修改同一资源时，API 怎样防止互相覆盖？](../../engineering-foundations/services/conditional-updates-and-etags.md)定下的 JSON Merge Patch、`If-Match`、强 ETag 和 `412`/`428` 语义，本章只讲界面侧怎样用它们。客户端的选择、URL 和缓存都不授予任何权限，每次读写仍由服务端按当前身份授权。
 
 示例的本地验证组合是 React 19.3.1、React Router 8.5.1 Declarative Mode（组件用 `useSearchParams` 读查询、`useNavigate` 写地址，不用 loader）、TanStack Query 5.107.1。
 
@@ -78,7 +78,7 @@ URL 不编码选择，所以 Back/Forward 恢复的是地址和查询键，不�
 这次 GET 要拿到**当前**版本，所以有两个细节：
 
 - **先清掉同键的旧读取。** 先取消并等待同一详情键上的旧请求结束，再发新请求。这一步不能省：即使设了 `staleTime: 0`，TanStack Query 仍会把同键的新读取并入在途的旧请求，一条更早开始的读取就会被当成当前值。
-- **要求 HTTP 缓存重新验证。** 请求用 Fetch 的 `cache: "no-cache"`：HTTP 缓存里有对应响应就发条件请求，没有就发普通请求，然后更新缓存。它不同于完全跳过缓存的 `no-store`（两者的语义见[哈希发布与缓存](../delivery/hashed-release-and-caching.md)）。本例假定 Service Worker 不会把它替换成旧的本地响应。
+- **要求 HTTP 缓存重新验证。** 请求用 Fetch 的 `cache: "no-cache"`：HTTP 缓存里有对应响应就发条件请求，没有就发普通请求，然后更新缓存。它不同于完全跳过缓存的 `no-store`（HTTP 缓存的 `no-cache` 与 `no-store` 语义见[一份 HTTP 响应什么时候可以直接复用，什么时候必须回源确认？](../../engineering-foundations/services/http-caching-and-conditional-requests.md#常用指令各允许什么)）。本例假定 Service Worker 不会把它替换成旧的本地响应。
 
 还有一个跨挂载周期的协调：若同一账户/报表还有旧 PATCH 没结算（包括它的缓存回调），新的打开意图先显示等待，不发详情 GET；等旧 mutation 完全结算、再确认意图仍有效，才开始读取。否则旧成功回调“取消同键 GET”时，会把新抽屉刚发出的读取一起取消。这份协调状态不能随旧编辑器卸载而消失。不同详情键互不影响。
 
@@ -231,7 +231,7 @@ ETag: "report-42-v9"
 
 客户端能做的是：保留草稿和原基线，告诉用户“写入结果未确认”；等客户端请求结算后，发一次重新验证的 GET 核对当前资源。核对也有边界：若服务端仍可能处理那条断开的写请求，GET 的结果和那次写入孰先孰后，要由 API 的回执或一致性契约确定；即使读到的值和草稿一样，也不能证明是这次写入造成的。同理，若更早一次尝试的回执丢失，后来的 412 也不能证明那次写入一定没发生。
 
-“结果不明”之后怎样查清、何时允许用同一个幂等键重放，是一套通用的外部写入状态机，见[超时后怎样查清外部写入的结果](../../ai-engineering/runs/external-writes-and-reconciliation.md)。
+“结果不明”之后怎样查清、何时允许用同一个幂等键重放，是通用的未知结果机制，见[写请求超时后，怎样查清结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md#超时之后，调用方处于什么状态？)；`PATCH` 不保证幂等、响应丢失后重放得到 `412` 无法区分“自己已写入”与“别人先写”，见条件写章的[412 之后客户端怎么办](../../engineering-foundations/services/conditional-updates-and-etags.md#412%20之后客户端怎么办)。AI 工程里的退款状态机是同一机制的一个领域实例，见[退款请求超时后，怎样查清结果而不重复扣款？](../../ai-engineering/runs/external-writes-and-reconciliation.md)。
 
 ## 代码：意图、票据、闩锁与补丁
 

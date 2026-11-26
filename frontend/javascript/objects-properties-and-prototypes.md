@@ -18,9 +18,9 @@ const report = { profile: null, rows };
 
 ## 属性键只有字符串和 Symbol
 
-property key（属性键）只能是字符串或 `Symbol`。点号写法 `object.key` 用字符串 `"key"`；方括号写法 `object[expr]` 先求出 `expr`，再用规范操作 `ToPropertyKey` 把它转成键，分两步：
+property key (属性键)只能是字符串或 `Symbol`。点号写法 `object.key` 用字符串 `"key"`；方括号写法 `object[expr]` 先求出 `expr`，再用规范操作 `ToPropertyKey` 把它转成键，分两步：
 
-1. 以 string hint（字符串提示）调用 `ToPrimitive`，把值转成原始值。对象若定义了可调用的 `Symbol.toPrimitive`，就以 `"string"` 为参数调用它，返回对象则抛 `TypeError`；若该属性是 `null`/`undefined` 以外的不可调用值，也抛 `TypeError`。没有定义时依次尝试 `toString`、`valueOf`，取第一个返回的原始值；都不返回原始值则抛 `TypeError`。
+1. 以 string hint (字符串提示)调用 `ToPrimitive`，把值转成原始值。对象若定义了可调用的 `Symbol.toPrimitive`，就以 `"string"` 为参数调用它，返回对象则抛 `TypeError`；若该属性是 `null`/`undefined` 以外的不可调用值，也抛 `TypeError`。没有定义时依次尝试 `toString`、`valueOf`，取第一个返回的原始值；都不返回原始值则抛 `TypeError`。
 2. 得到 `Symbol` 就原样作为键，其他原始值转成字符串。
 
 所以“对象作键时调用 `toString`”只是默认情况，钩子可以改变结果。
@@ -65,11 +65,11 @@ dictionary["[object Object]"]; // "retry object"：两条记录撞在同一个�
 
 ## 读取：先查自有属性，再沿原型链
 
-每个对象都有一个内部链接 `[[Prototype]]`，指向它的原型对象（或 `null`）。一串这样的链接组成 prototype chain（原型链）。读取 `object.key` 时：
+每个对象都有一个内部链接 `[[Prototype]]`，指向它的原型对象（或 `null`）。一串这样的链接组成 prototype chain (原型链)。读取 `object.key` 时：
 
-1. 先在 `object` 自身找这个键的 property descriptor（属性描述符）。
+1. 先在 `object` 自身找这个键的 property descriptor (属性描述符)。
 2. 没有找到，就沿 `[[Prototype]]` 到下一个对象继续找，直到命中或到达 `null`。
-3. 命中 data descriptor（数据描述符）时返回它的 `value`，值也可以是函数；命中 accessor descriptor（访问器描述符）时，调用它的 getter（读取器），没有 getter 就得到 `undefined`。
+3. 命中 data descriptor (数据描述符)时返回它的 `value`，值也可以是函数；命中 accessor descriptor (访问器描述符)时，调用它的 getter (读取器)，没有 getter 就得到 `undefined`。
 4. 到达 `null` 仍未找到，结果是 `undefined`。
 
 继承不是拷贝：对象只保存自己的属性，继承来的成员每次读取都要重新查找。
@@ -94,7 +94,7 @@ Object.getPrototypeOf(record) === base;  // true
 
 ## 访问器以最初的接收者为 this
 
-getter 定义在原型上时，调用它的 `this` 仍是最初被读取的那个对象（接收者），而不是原型。setter（设置器）同理。所以原型上的访问器能读写每个实例自己的状态：
+getter 定义在原型上时，调用它的 `this` 仍是最初被读取的那个对象（接收者），而不是原型。setter (设置器)同理。所以原型上的访问器能读写每个实例自己的状态：
 
 ~~~javascript
 const profile = { _name: "John" };
@@ -125,7 +125,7 @@ setter 里那次 `this._name = value` 为什么新建了属性而没有改 `prof
 
 ## 实例状态放实例，共享方法放原型
 
-有了查找规则，就能回到报表服务。每个实例的前缀和处理器放在实例上；格式化函数只有一份，放在 `ReportService.prototype` 上。工厂函数 `makeReportHandler` 用 closure（闭包）给每个处理器保存标签和调用次数：
+有了查找规则，就能回到报表服务。每个实例的前缀和处理器放在实例上；格式化函数只有一份，放在 `ReportService.prototype` 上。工厂函数 `makeReportHandler` 用 closure (闭包)给每个处理器保存标签和调用次数：
 
 ~~~javascript
 function makeReportHandler(tag) {
@@ -250,7 +250,7 @@ Object.defineProperty(demo, "fresh", { value: 1 });
 // { value: 1, writable: false, enumerable: false, configurable: false }
 ~~~
 
-不可配置的属性不能删除或任意重定义。给不可写属性或没有 setter 的访问器赋值时，strict mode（严格模式）下普通赋值抛 `TypeError`，非严格代码静默失败。
+不可配置的属性不能删除或任意重定义。给不可写属性或没有 setter 的访问器赋值时，strict mode (严格模式)下普通赋值抛 `TypeError`，非严格代码静默失败。
 
 ## 赋值的三种结局
 
@@ -303,7 +303,7 @@ Example.value();   // 1：构造函数体改写了函数对象自己的静态属
 - `for...in` 还会遍历继承来的可枚举字符串键，不适合遍历对象数据或数组。
 - 要 Symbol 键用 `Object.getOwnPropertySymbols`，要全部自有键用 `Reflect.ownKeys`。
 
-普通对象的键顺序是：先按数值升序列出 array index（数组索引，`0` 到 2³² − 2 的规范整数字符串），再按创建顺序列出其他字符串键。`Proxy` 和特殊对象的顺序可能不同。
+普通对象的键顺序是：先按数值升序列出 array index (数组索引，`0` 到 2³² − 2 的规范整数字符串)，再按创建顺序列出其他字符串键。`Proxy` 和特殊对象的顺序可能不同。
 
 ~~~javascript
 const record = { name: "Ada", age: 36 };
@@ -340,7 +340,7 @@ const spread = { ...{ retries: 2 }, ...{ retries: 4 } };
 
 ## 缺失属性：可选链、空值合并与解构默认值
 
-回到案例的零金额和空位。optional chaining（可选链）`?.` 只在左侧为 `null` 或 `undefined` 时短路，返回 `undefined`；`0`、`false`、空字符串不算缺失。它有两个边界：根变量未声明仍抛 `ReferenceError`；用括号截断链后，括号外的普通访问不受保护。
+回到案例的零金额和空位。optional chaining (可选链)`?.` 只在左侧为 `null` 或 `undefined` 时短路，返回 `undefined`；`0`、`false`、空字符串不算缺失。它有两个边界：根变量未声明仍抛 `ReferenceError`；用括号截断链后，括号外的普通访问不受保护。
 
 ~~~javascript
 report.profile?.name;   // undefined
@@ -360,7 +360,7 @@ user?.profile?.name;    // undefined
 // undeclaredUser?.name // ReferenceError：根标识符不存在
 ~~~
 
-只在值缺失时取默认值，用 nullish coalescing（空值合并）`??`；`||` 会把所有假值都换掉。`??` 与 `||` 或 `&&` 混用时必须加括号，否则是语法错误。
+只在值缺失时取默认值，用 nullish coalescing (空值合并)`??`；`||` 会把所有假值都换掉。`??` 与 `||` 或 `&&` 混用时必须加括号，否则是语法错误。
 
 ~~~javascript
 report.rows[0].amount ?? 100;  // 0：保留零金额
@@ -368,7 +368,7 @@ report.rows[0].amount || 100;  // 100：零被当成缺失
 report.rows[1]?.amount ?? 100; // 100：空位读出 undefined
 ~~~
 
-destructuring（解构）的默认值只在读到 `undefined` 时生效，不会覆盖 `0`、`false`、空字符串或 `null`。对象的剩余项 `...rest` 收集余下的自有可枚举属性，只复制一层。数组解构按迭代器逐个取值，模式里留空的位置也会消耗一个值。
+destructuring (解构)的默认值只在读到 `undefined` 时生效，不会覆盖 `0`、`false`、空字符串或 `null`。对象的剩余项 `...rest` 收集余下的自有可枚举属性，只复制一层。数组解构按迭代器逐个取值，模式里留空的位置也会消耗一个值。
 
 ~~~javascript
 const { amount: firstAmount = 100, owner: firstOwner, ...rowFields } = first;
@@ -415,11 +415,11 @@ bag.toString;        // undefined
 代价是不能直接调用这些常用方法，需要时用 `Object.hasOwn` 这类静态函数。去掉原型不改变键转换规则：`bag[123]` 和 `bag["123"]` 仍是同一个属性。
 
 > [!info] V8 实例：hidden class
-> V8 用 hidden class（隐藏类）记录对象的属性布局，并沿属性添加顺序做布局转换，以加快属性访问。这是引擎的实现选择，不是 ECMAScript 语义。只有性能测量确认瓶颈在属性访问时，才值得为了保持对象形状稳定而调整代码。
+> V8 用 hidden class (隐藏类)记录对象的属性布局，并沿属性添加顺序做布局转换，以加快属性访问。这是引擎的实现选择，不是 ECMAScript 语义。只有性能测量确认瓶颈在属性访问时，才值得为了保持对象形状稳定而调整代码。
 
 ## 属性值拼进文本：带标签模板不会净化
 
-行数据最后常被拼进文本。template literal（模板字面量）把表达式的值插进字符串；tagged template（带标签模板）调用一个标签函数，把固定文本片段和各个表达式的值分开传给它：
+行数据最后常被拼进文本。template literal (模板字面量)把表达式的值插进字符串；tagged template (带标签模板)调用一个标签函数，把固定文本片段和各个表达式的值分开传给它：
 
 ~~~javascript
 function capture(strings, ...values) {
@@ -431,7 +431,7 @@ capture`label: ${untrusted}`;
 // { strings: ["label: ", ""], values: ["<b>user text</b>"] }
 ~~~
 
-标签函数可以做格式化或转义，但“用了标签”本身不让插入的用户输入变安全；转义规则要按输出上下文（HTML 文本、属性、URL）选择。报表文本进入 DOM 时的上下文边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
+标签函数可以做格式化或转义，但“用了标签”本身不让插入的用户输入变安全；转义规则要按输出上下文（HTML 文本、属性、URL）选择。报表文本进入 DOM 时的上下文边界见[不可信报表标题怎样安全显示？](../../engineering-foundations/services/sessions-and-browser-boundaries.md#不可信报表标题怎样安全显示？)。
 
 ## 属性规则定下后：集合该怎样选
 

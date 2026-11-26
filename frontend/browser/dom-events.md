@@ -10,7 +10,7 @@
 
 - **`removeEventListener()`。** 必须传入注册时的**同一个函数引用**和相同的 `capture` 设置。当场写一个新箭头函数，或者传 `handler.bind(x)` 的又一次结果，都是另一个函数，移除不会生效。
 - **`{ once: true }`。** 监听器第一次运行前就被移除，适合只响应一次的事件。
-- **`{ signal }`。** 把同一个 `AbortSignal`（中止信号）传给多个监听器，页面区域销毁时调用一次 `controller.abort()`，它们全部移除，不必保存每个函数引用。`AbortSignal` 本身的语义见[取消、超时和并发上限各自停得住什么？](../javascript/cancellation-timeouts-and-concurrency.md)。
+- **`{ signal }`。** 把同一个 `AbortSignal` (中止信号)传给多个监听器，页面区域销毁时调用一次 `controller.abort()`，它们全部移除，不必保存每个函数引用。`AbortSignal` 本身的语义见[取消、超时和并发上限各自停得住什么？](../javascript/cancellation-timeouts-and-concurrency.md)。
 
 ~~~javascript
 const region = new AbortController();
@@ -51,11 +51,11 @@ results; // [true, true]
 
 ## 一次点击沿哪条路径传播？
 
-浏览器派发事件时，先确定 event path（传播路径）：从 `Window` 经 Document 一直到被点中的节点。监听器在三个阶段运行：
+浏览器派发事件时，先确定 event path (传播路径)：从 `Window` 经 Document 一直到被点中的节点。监听器在三个阶段运行：
 
-1. **capture phase（捕获阶段）**：从 `Window` 向内，运行用 `{ capture: true }` 注册的监听器。
-2. **target phase（目标阶段）**：在目标节点上，先运行捕获监听器，再运行普通监听器。
-3. **bubble phase（冒泡阶段）**：从目标的父节点向外，运行普通监听器。只有 `bubbles` 为 true 的事件才有这一段，`click` 会冒泡。
+1. **capture phase (捕获阶段)**：从 `Window` 向内，运行用 `{ capture: true }` 注册的监听器。
+2. **target phase (目标阶段)**：在目标节点上，先运行捕获监听器，再运行普通监听器。
+3. **bubble phase (冒泡阶段)**：从目标的父节点向外，运行普通监听器。只有 `bubbles` 为 true 的事件才有这一段，`click` 会冒泡。
 
 被点中的节点是哪个，取决于命中位置。点按钮上的文字时，目标是 `.sort-label` 这个 `span`；点 SVG 箭头的可见描边时是 `<path>`；点图标里没有描边的留白处则可能是 `svg`。SVG 元素是否命中，按可见的 fill/stroke 和 `pointer-events` 规则判断。
 
@@ -90,11 +90,11 @@ document.body.addEventListener("click", () => console.log("body bubble"));
 - **焦点。** 输入框获得、失去焦点时派发的 `focus` 和 `blur` 不冒泡；父级要统一处理焦点变化，监听会冒泡的 `focusin` 和 `focusout`。
 - **元素滚动。** 元素滚动时派发的 `scroll` 不冒泡，要监听在实际滚动的那个容器上（见后文）。
 
-Shadow DOM（影子 DOM）还会改变外部看到的目标。组件内部的节点被点击后，影子树外的监听器读到的 `target` 会被 retarget（重定向）为该组件的宿主元素，内部结构不外泄。事件能否穿出影子边界由 `composed` 决定，能否向祖先冒泡由 `bubbles` 决定，两者是不同的开关。本章其余例子都在普通文档树中。
+Shadow DOM (影子 DOM)还会改变外部看到的目标。组件内部的节点被点击后，影子树外的监听器读到的 `target` 会被 retarget (重定向)为该组件的宿主元素，内部结构不外泄。事件能否穿出影子边界由 `composed` 决定，能否向祖先冒泡由 `bubbles` 决定，两者是不同的开关。本章其余例子都在普通文档树中。
 
 ## 事件委托：在父级处理一组子控件
 
-冒泡让祖先能收到后代上的事件。event delegation（事件委托）利用这一点：在共同的父级注册一个监听器，处理一组子控件，包括之后才插入的控件。它适用于三个条件同时成立的场景：事件会冒泡；父级确实拥有这些子控件；能从 `event.target` 可靠地判断事件属于哪个控件。委托减少的是注册次数和插入新控件时的重新注册，每次派发和处理器本身的计算并不会变少。
+冒泡让祖先能收到后代上的事件。event delegation (事件委托)利用这一点：在共同的父级注册一个监听器，处理一组子控件，包括之后才插入的控件。它适用于三个条件同时成立的场景：事件会冒泡；父级确实拥有这些子控件；能从 `event.target` 可靠地判断事件属于哪个控件。委托减少的是注册次数和插入新控件时的重新注册，每次派发和处理器本身的计算并不会变少。
 
 报表页的工具栏正好满足这些条件。处理器从命中的节点出发，向上找到带 `data-sort` 的按钮，再交给上一章的 `applySort()`：
 
@@ -124,7 +124,7 @@ controls.addEventListener("click", (event) => {
 
 ## 默认动作和传播控制是两回事
 
-工具栏里的按钮都写了 `type="button"`。不写时，表单里的 `<button>` 默认是提交按钮，点击会提交表单（表单控件的默认行为见[表单控件怎样命名、提交和校验，才对所有人可用？](../html-css/accessible-forms-and-submission.md)）。这种浏览器自带的 default action（默认动作）和事件传播是两件事，各有各的开关：
+工具栏里的按钮都写了 `type="button"`。不写时，表单里的 `<button>` 默认是提交按钮，点击会提交表单（表单控件的默认行为见[表单控件怎样命名、提交和校验，才对所有人可用？](../html-css/accessible-forms-and-submission.md)）。这种浏览器自带的 default action (默认动作)和事件传播是两件事，各有各的开关：
 
 | 方法 | 作用 | 不做什么 |
 |---|---|---|
@@ -172,11 +172,11 @@ controls.addEventListener("click", (event) => {
 
 判断“向左移动”这类语义时读 `key === "ArrowLeft"`；只有游戏控制这类要固定物理位置的场景才考虑 `code`，并要处理不同键盘布局的差异。某个动作若要求每次按下只执行一次，可以忽略 `repeat` 为 true 的事件；但这替代不了限流或服务端去重。旧的 `keypress` 和数字式 `keyCode` / `which` 是兼容接口，新代码不要用它们判断字符。
 
-键盘事件也不等于文本变化：粘贴、语音输入和 Input Method Editor（IME，输入法编辑器）都会改变文本，却不一定一次 `keydown` 对应一个字符。观察编辑结果用 `input` 事件；需要在变化发生前处理编辑意图时，用 `beforeinput`，并结合 composition（组合输入）事件判断输入法是否还在组字。
+键盘事件也不等于文本变化：粘贴、语音输入和 Input Method Editor (IME，输入法编辑器)都会改变文本，却不一定一次 `keydown` 对应一个字符。观察编辑结果用 `input` 事件；需要在变化发生前处理编辑意图时，用 `beforeinput`，并结合 composition (组合输入)事件判断输入法是否还在组字。
 
 ## 指针拖动：坐标、捕获与三种结束
 
-Pointer Events（指针事件）把鼠标、触摸和笔统一成 `pointer*` 事件。一次拖动有一个开始和三种结束：
+Pointer Events (指针事件)把鼠标、触摸和笔统一成 `pointer*` 事件。一次拖动有一个开始和三种结束：
 
 - `pointerdown` 开始，可调用 `setPointerCapture(pointerId)`，让这个指针的后续事件都发给被拖元素，即使指针移出了它。
 - `pointerup`：正常松开。
@@ -187,7 +187,7 @@ Pointer Events（指针事件）把鼠标、触摸和笔统一成 `pointer*` 事
 
 | 属性 | 参照系 | 回答的问题 |
 |---|---|---|
-| `clientX / clientY` | viewport（视口） | 指针在当前可视区域的哪里 |
+| `clientX / clientY` | viewport (视口) | 指针在当前可视区域的哪里 |
 | `pageX / pageY` | 文档 | 指针在页面内容坐标中的哪里 |
 | `screenX / screenY` | 屏幕 | 指针相对设备显示区域的位置 |
 
@@ -278,7 +278,7 @@ function disposeCard() {
 | 想知道 | 监听什么 | 注意 |
 |---|---|---|
 | 窗口（视口）尺寸变了 | `window` 的 `resize` | 父容器单独变大小时不会触发 |
-| 某个元素自身尺寸变了 | `ResizeObserver`（尺寸变化观察器） | 用 `disconnect()` 停止观察 |
+| 某个元素自身尺寸变了 | `ResizeObserver` (尺寸变化观察器) | 用 `disconnect()` 停止观察 |
 | 页面或容器滚动了 | 页面用 `window`，元素用实际滚动的那个容器 | 元素的 `scroll` 不冒泡 |
 
 这些事件都可能高频触发，处理器只做界面确实需要的更新；需要限频时，debounce 和 throttle 的语义见[怎样包装一个函数而不弄丢参数、this 和结果？](../javascript/wrapping-functions.md)。
@@ -314,10 +314,10 @@ function stopObservingReport() {
 
 ## 交给 React 时交出的是意图
 
-如果报表页改由 React 管理，浏览器照常派发 `click`，变化的是处理器做什么：它从按钮读出排序意图 `oldest`，交给 state（状态）更新，由 React 计算新界面并提交 DOM 变化，而不是像 `applySort()` 那样直接移动节点。浏览器这一侧交出的是事件和当前 DOM，应用拿到的是“排序变为 `oldest`”这个意图。React 管理的节点若另用 DOM API 改动，下一次提交可能把修改覆盖掉。React 怎样把意图变成界面，见[React 怎样把一次用户操作变成界面更新？](../ui-state/react-update-model.md)。
+如果报表页改由 React 管理，浏览器照常派发 `click`，变化的是处理器做什么：它从按钮读出排序意图 `oldest`，交给 state (状态)更新，由 React 计算新界面并提交 DOM 变化，而不是像 `applySort()` 那样直接移动节点。浏览器这一侧交出的是事件和当前 DOM，应用拿到的是“排序变为 `oldest`”这个意图。React 管理的节点若另用 DOM API 改动，下一次提交可能把修改覆盖掉。React 怎样把意图变成界面，见[React 怎样把一次用户操作变成界面更新？](../ui-state/react-update-model.md)。
 
 > [!info] React 19 实例：事件对象与 currentTarget（核对 React DOM v19.2.0，2026-11-12）
-> - JSX 事件处理器收到的是 SyntheticEvent（合成事件）。`onClick` 在冒泡阶段运行，`onClickCapture` 对应捕获阶段；`currentTarget` 指向写了该事件属性的元素。
+> - JSX 事件处理器收到的是 SyntheticEvent (合成事件)。`onClick` 在冒泡阶段运行，`onClickCapture` 对应捕获阶段；`currentTarget` 指向写了该事件属性的元素。
 > - React 17 起不再池化事件对象，但每个处理器返回后，React 仍把 `event.currentTarget` 重置为 `null`；`persist()` 在 React DOM 中已无作用。所以在 `await` 之前先把值读成普通字符串：
 >
 >   ~~~jsx

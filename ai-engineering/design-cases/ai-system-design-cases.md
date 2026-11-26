@@ -97,7 +97,7 @@
 
 预算之外，还要估模型阶段同时有多少请求在途。
 
-> [!info] Little's Law（利特尔定律）
+> [!info] Little's Law (利特尔定律)
 > 在稳定系统里，长期平均的在途数 $L$ 等于平均到达率 $\lambda$ 乘以平均停留时间 $W$：$L = \lambda W$。比如一家店平均每分钟进 2 位顾客、每人平均待 5 分钟，店里平均就有 10 人。它只给长期平均，不给分位数，也不直接给出要开几个 worker。
 
 > [!example] 模型阶段的平均在途请求
@@ -105,7 +105,7 @@
 > L_{\mathrm{model}} = \lambda_{\mathrm{model}} W_{\mathrm{model}} = 6\ \text{次/秒} \times 1.2\ \text{秒} = 7.2
 > $$
 >
-> 这里 $\lambda_{\mathrm{model}}$ 是实际进入模型阶段的平均速率，$W_{\mathrm{model}}$ 是请求在模型阶段的平均停留时间（含该阶段的排队与执行），两者都是教学假设。1.2 秒是平均值；上表的 2.5 秒是给尾部请求留的预算上限，两者不矛盾。7.2 是长期平均量，不用上取整，也不是 worker 或 GPU 副本数。缓存、旁路、重试或被拒请求都会让模型阶段的实际 λ 不同于外层的 6 QPS，所以要用实测的进入速率。队列上限、突发和目标利用率还要靠实际负载确定，见[API 容量与背压](../../engineering-foundations/services/capacity-admission-and-backpressure.md)。
+> 这里 $\lambda_{\mathrm{model}}$ 是实际进入模型阶段的平均速率，$W_{\mathrm{model}}$ 是请求在模型阶段的平均停留时间（含该阶段的排队与执行），两者都是教学假设。1.2 秒是平均值；上表的 2.5 秒是给尾部请求留的预算上限，两者不矛盾。7.2 是长期平均量，不用上取整，也不是 worker 或 GPU 副本数。缓存、旁路、重试或被拒请求都会让模型阶段的实际 λ 不同于外层的 6 QPS，所以要用实测的进入速率。队列上限、突发和目标利用率还要靠实际负载确定，见[一条异步管线能接多少工作，超出时在哪里拒绝？](../../engineering-foundations/services/capacity-admission-and-backpressure.md#Little%20定律能算什么、不能算什么？)。
 
 ### 文档问答的方案与上线检查
 

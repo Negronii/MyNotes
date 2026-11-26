@@ -1,6 +1,6 @@
 # Redux 怎样管理跨组件的客户端状态和异步请求？
 
-当一份纯客户端状态要被页面上相距很远的几个组件同时读写，而且希望每次变化都可追踪时，可以把它放进 Redux 的 store（状态容器）。本章沿一次“勾选行 → 请求导出预览 → 显示结果”的操作，说明 Redux 的更新链、异步请求放在哪里、怎样不让迟到的响应覆盖较新的选择，以及组件怎样订阅才不会多余渲染。读者需要知道一份状态该归谁（见[界面状态的所有权](state-ownership-and-composition.md)），以及“异步结果按身份归属”的原理（见[服务端数据的缓存与乐观更新](server-state-and-optimistic-updates.md#异步结果按身份归属)）。
+当一份纯客户端状态要被页面上相距很远的几个组件同时读写，而且希望每次变化都可追踪时，可以把它放进 Redux 的 store (状态容器)。本章沿一次“勾选行 → 请求导出预览 → 显示结果”的操作，说明 Redux 的更新链、异步请求放在哪里、怎样不让迟到的响应覆盖较新的选择，以及组件怎样订阅才不会多余渲染。读者需要知道一份状态该归谁（见[界面状态的所有权](state-ownership-and-composition.md)），以及“异步结果按身份归属”的原理（见[服务端数据的缓存与乐观更新](server-state-and-optimistic-updates.md#异步结果按身份归属)）。
 
 示例按 Redux Toolkit 2.14.0 与 React-Redux 9.3.1 核对（2026-11-12 时两者均为 npm latest）。
 
@@ -17,7 +17,7 @@
 - **排序** 在 URL：分享、刷新和 Back 都恢复它。Back 不会改动 Redux 里的勾选。
 - **报表行** 归服务器，查询缓存保存副本，键里含 `sort`。不要把同一批行再复制进 Redux：两个缓存所有者会各自过期、各自更新，迟早不一致。Redux 应用若要缓存服务器数据，官方方案是 RTK Query；本例已用 TanStack Query，就只用它。
 - **已选行 ID** 进 Redux：行、工具栏都读同一组稳定 ID，排序或列表位置变了也仍指向同一行。
-- **预览状态与结果** 进同一个 slice（状态切片）：工具栏和预览区共用，而且勾选一变，预览就要在同一次更新里作废。
+- **预览状态与结果** 进同一个 slice (状态切片)：工具栏和预览区共用，而且勾选一变，预览就要在同一次更新里作废。
 - **弹层开关** 这类只影响一个组件的值，留在组件本地。
 
 只有一个组件用的值留在组件里；两个相邻组件共享时，先考虑提升到最近的共同父组件。多个相距较远的部分共享、并且需要统一可追踪的更新时，再评估 Redux。若预览结果可以按选择集合缓存复用，查询缓存可能更合适；本例只保留“当前选择”的一份预览，所以用 slice 演示。
@@ -26,7 +26,7 @@ store 默认只在本次运行期间保存勾选；本例没有把勾选写进 U
 
 ## action 怎样经过 store 变成新状态
 
-勾选框派发的是一个事实：“某一行被勾选或取消勾选”。Redux 的 action（动作）就是描述这个事实的普通对象，`payload`（载荷）携带所需的值；reducer（归约函数）根据当前 state 和 action 同步算出下一份 state；store 保存结果并通知订阅者。
+勾选框派发的是一个事实：“某一行被勾选或取消勾选”。Redux 的 action (动作)就是描述这个事实的普通对象，`payload` (载荷)携带所需的值；reducer (归约函数)根据当前 state 和 action 同步算出下一份 state；store 保存结果并通知订阅者。
 
 设开始时 `selectedIds=[]`。点 April 行派发：
 
@@ -34,19 +34,19 @@ store 默认只在本次运行期间保存勾选；本例没有把勾选写进 U
 { type: "rowSelection/rowToggled", payload: "r-103" }
 ~~~
 
-reducer 算出 `selectedIds=["r-103"]`，并在同一次计算里把旧预览清空；store 通知订阅者，各组件的 selector（选择器）重新检查：April 行的 selector 得到 `true`，工具栏读到新的数组引用。行 ID 不随排序改变，所以不要用数组下标代替它。
+reducer 算出 `selectedIds=["r-103"]`，并在同一次计算里把旧预览清空；store 通知订阅者，各组件的 selector (选择器)重新检查：April 行的 selector 得到 `true`，工具栏读到新的数组引用。行 ID 不随排序改变，所以不要用数组下标代替它。
 
-Redux Toolkit 的 `createSlice` 把初始状态、reducers 和自动生成的 action creator 放在一起。reducer 里可以写 `push`、`splice` 这种看似原地修改的代码：Immer 把它们记录为对 draft（草稿副本）的修改，再产出新的不可变 state，并没有改动 store 已发布的对象。reducer 只计算状态，不能在里面发请求、启动计时器或取消请求。
+Redux Toolkit 的 `createSlice` 把初始状态、reducers 和自动生成的 action creator 放在一起。reducer 里可以写 `push`、`splice` 这种看似原地修改的代码：Immer 把它们记录为对 draft (草稿副本)的修改，再产出新的不可变 state，并没有改动 store 已发布的对象。reducer 只计算状态，不能在里面发请求、启动计时器或取消请求。
 
 ## 异步工作插在 dispatch 的路径上
 
-reducer 不能发请求，异步工作就要放在 `dispatch` 之前。普通 action 先经过已配置的 middleware（中间件），再交给核心 `dispatch`，然后根 reducer 同步计算新状态。中间件包裹 `dispatch`，可以观察 action、扩展 `dispatch` 能接受的输入，或在 action 到达 reducer 前后执行副作用。
+reducer 不能发请求，异步工作就要放在 `dispatch` 之前。普通 action 先经过已配置的 middleware (中间件)，再交给核心 `dispatch`，然后根 reducer 同步计算新状态。中间件包裹 `dispatch`，可以观察 action、扩展 `dispatch` 能接受的输入，或在 action 到达 reducer 前后执行副作用。
 
 thunk middleware 让 `dispatch` 能接受一个函数。这个函数（thunk）在 reducer 之外运行，可以读 `getState`、派发普通 action、等待异步操作；store 本身仍然只根据普通 action 同步更新。`configureStore` 默认加入 thunk、开发期检查和 Redux DevTools 集成；添加自定义中间件时用 `getDefaultMiddleware().concat(...)` 保留默认项。
 
 DevTools 能看到所有派发过的 action 和 state，所以不要把凭证放进去，也不要把 `AbortController`、Promise 这类运行时对象存进 Redux state。
 
-`createAsyncThunk` 为常见的请求生命周期生成 action：正常启动时先派发 `pending`，再调用 payload creator（载荷函数）执行请求，完成后派发 `fulfilled` 或 `rejected`。slice 用 `extraReducers` 响应它们。这套生命周期是 `createAsyncThunk` 提供的，手写的普通 thunk 不会自动派发。若工作需要响应**后续**的 action 或状态变化，再评估 listener middleware；普通按钮触发的请求不必手写异步中间件。
+`createAsyncThunk` 为常见的请求生命周期生成 action：正常启动时先派发 `pending`，再调用 payload creator (载荷函数)执行请求，完成后派发 `fulfilled` 或 `rejected`。slice 用 `extraReducers` 响应它们。这套生命周期是 `createAsyncThunk` 提供的，手写的普通 thunk 不会自动派发。若工作需要响应**后续**的 action 或状态变化，再评估 listener middleware；普通按钮触发的请求不必手写异步中间件。
 
 ## 用 requestId 守住唯一的预览槽
 
@@ -83,7 +83,7 @@ flowchart TD
 
 本例只有一个预览槽。若要同时保留多个并发预览或导出作业，就按请求 ID 或服务端作业 ID 分格存储，而不是共用一个槽。
 
-服务器仍须按当前调用者和租户范围逐个授权这些行 ID，客户端勾选不能代替[服务端资源权限检查](../../engineering-foundations/services/per-request-authorization.md)。响应 JSON 先当作 `unknown`，在运行时校验 `rowCount`、`estimatedBytes` 是非负安全整数（见 [TypeScript 能保证什么](../javascript/typescript-guarantees-and-runtime-validation.md)）。
+服务器仍须按当前调用者和租户范围逐个授权这些行 ID，客户端勾选不能代替服务端资源权限检查，见[服务怎样逐次确认这个主体能对这份资源做这个动作？](../../engineering-foundations/services/per-request-authorization.md)。响应 JSON 先当作 `unknown`，在运行时校验 `rowCount`、`estimatedBytes` 是非负安全整数（见 [TypeScript 能保证什么](../javascript/typescript-guarantees-and-runtime-validation.md)）。
 
 ## 取消与错误
 
@@ -93,7 +93,7 @@ flowchart TD
 
 `dispatch(thunk)` 返回的 Promise 总以 `fulfilled` 或 `rejected` action 结束，不会自己抛错。调用方需要在失败时进入 `catch`，就调用 `.unwrap()`。本例的预览区直接由 Redux state 驱动，工具栏不必等待这个 Promise。
 
-**没有乐观更新，也不需要补偿。** 勾选 action 记录的是已经发生的本地操作，预览出错不会把 ID 回滚。预览接口没有远端写入，所以可以用同一组勾选直接重试。若按钮改成“创建导出作业”，情况就变了：网络超时不能证明服务器没有创建作业，那是有外部效果的命令，需要接口提供幂等键、作业 ID 或核对流程（见[超时后怎样查清外部写入的结果](../../ai-engineering/runs/external-writes-and-reconciliation.md)），不能照搬只读预览的重试结论。
+**没有乐观更新，也不需要补偿。** 勾选 action 记录的是已经发生的本地操作，预览出错不会把 ID 回滚。预览接口没有远端写入，所以可以用同一组勾选直接重试。若按钮改成“创建导出作业”，情况就变了：网络超时不能证明服务器没有创建作业，那是有外部效果的命令，需要接口提供幂等键、作业 ID 或核对流程（见[写请求超时后，怎样查清结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md)），不能照搬只读预览的重试结论。
 
 ## 接进 React：类型化 Hook 与 selector 引用
 
