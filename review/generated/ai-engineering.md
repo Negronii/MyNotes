@@ -3324,7 +3324,7 @@ B 在 L1 的重筛以 B 为中心，候选按到 B 的距离排为 X 0.4、C 2�
 - **候选队列 C**：按到查询的距离从近到远，取下一个要扩展的节点。
 - **结果集合 W**：最多放 `efSearch` 个已发现的最好节点。`efSearch` 是 W 的容量，不是 C 的容量。请求 top-k 时需要 `efSearch ≥ k`。
 
-实现通常用 min-heap（最小堆）维护 C，快速取出最近的待扩展点；用 max-heap（最大堆）维护 W，快速找到该淘汰的最远结果（堆的原理见[怎样在不断加入任务时持续取出最高优先级？](../../engineering-foundations/algorithms/heaps-and-priority-queues.md)）。另有一个 visited 集合，避免重复检查同一节点。
+实现通常用 min-heap（最小堆）维护 C，快速取出最近的待扩展点；用 max-heap（最大堆）维护 W，快速找到该淘汰的最远结果（堆的原理见[怎样在不断加入任务时持续取出最高优先级？](../../engineering-foundations/computation/heaps-and-priority-queues.md)）。另有一个 visited 集合，避免重复检查同一节点。
 
 每轮从 C 取出最近的候选 c：
 
@@ -4506,7 +4506,7 @@ flowchart TD
 | 动作审批 | 对“`build-service` + 标题 + 正文 + `c1` 证据”这份精确草稿的批准 | 用户看过并批准了这一份预览 | 内容或目标一变就失效；不授予任何 scope |
 | 远端操作键 | `run-r42-6:create-issue:v1` | 接收端据此对这次副作用去重或查询 | 是否真能去重，由接收端的契约决定 |
 
-应用会话怎样建立、OpenID Connect (OIDC) 身份令牌与访问 API 的令牌有什么区别，见[Cookie 会话与 OIDC 令牌怎样建立身份](../../engineering-foundations/security/web-sessions-and-oidc.md)。
+应用会话怎样建立、OpenID Connect (OIDC) 身份令牌与访问 API 的令牌有什么区别，见[Cookie 会话与 OIDC 令牌怎样建立身份](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
 
 grant 记录只保存描述和引用：`grantRef`、用户与租户、第三方账号、目标资源的 resource URI 或令牌的 audience (受众)、实际授予的 scope、到期与刷新状态，以及指向加密秘密存储的凭据引用。运行记录、动作草稿、审批和操作键各自存放，只通过 `grantRef` 关联到 grant。这样一来，模型、事件流和检查点里最多出现 `g-31` 这个引用，看不到令牌本身；模型也无法自己挑选令牌或改换资源。
 
@@ -5897,7 +5897,7 @@ Batch 有独立于同步端点的速率池和待处理词元限制，官方完�
 
 `request_digest` 只识别原始请求。之后客户确认的退款方案另有 `plan_digest`，两者不能互相代替：同一个请求可能先后生成不同版本的方案。
 
-这项保证不是 HTTP 自带的。`POST` 本身不是幂等方法；同一提交重复到达时返回原运行，是应用为 `POST /runs` 定义的去重契约。幂等键的一般设计见[请求超时后如何确认结果并安全重试](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md)。
+这项保证不是 HTTP 自带的。`POST` 本身不是幂等方法；同一提交重复到达时返回原运行，是应用为 `POST /runs` 定义的去重契约。幂等键的一般设计见[请求超时后如何确认结果并安全重试](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md)。
 
 ### 返回 `202 Accepted` 之前要存下什么？
 
@@ -5920,7 +5920,7 @@ RFC 9110 中的 `202` 只表示请求已被接受处理，不表示处理完成�
 2. 若发布器在投递前崩溃，重启后仍能找到这条未发送的事件，重新投递。
 3. 若在投递之后、标记“已发送”之前崩溃，同一条消息会被再投一次。重复消息唤醒的是同一个 `queued` 运行，由下一节的条件领取保证只有一个 worker 能领到。
 
-如果运行记录和 outbox 无法放进同一个事务，就需要等价的可恢复入队协议，再加一个扫描修复任务。消息系统的发布确认和消费者确认各证明什么，见[报表任务的发布确认、消费者确认与业务完成各证明什么](../../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
+如果运行记录和 outbox 无法放进同一个事务，就需要等价的可恢复入队协议，再加一个扫描修复任务。消息系统的发布确认和消费者确认各证明什么，见[报表任务的发布确认、消费者确认与业务完成各证明什么](../../engineering-foundations/services/queue-delivery-and-acknowledgement.md)。
 
 ### worker 怎样领取运行，旧 worker 怎样被挡在外面？
 
@@ -6112,7 +6112,7 @@ attempt 2 领取运行后，重新读取 `Q-204`、确认记录和 `R-204`。真
 
 业务更新要以操作的当前状态作条件：一条迟到的旧 `pending` 事件不能把已确认的 `completed` 覆盖回去。但“避免回退”不能实现成“忽略后续事实”：如果之后从提供方读到真实的状态变化，就把它作为一项新的异常送入对账，并保留状态历史。
 
-确认退款后若还要发通知、记账，就把状态变更和待执行的通知一起持久化（outbox），按操作身份 `R-204` 去重。“只处理一次”不能靠内存里的标记。webhook 接收方怎样验签、去重和应答，见[Webhook 接收方如何验证并可靠受理](../../engineering-foundations/reliability/webhook-delivery-and-verification.md)。
+确认退款后若还要发通知、记账，就把状态变更和待执行的通知一起持久化（outbox），按操作身份 `R-204` 去重。“只处理一次”不能靠内存里的标记。webhook 接收方怎样验签、去重和应答，见[Webhook 接收方如何验证并可靠受理](../../engineering-foundations/services/webhook-delivery-and-verification.md)。
 
 ### 查询、重放和披露结果各要什么授权？
 
@@ -6870,7 +6870,7 @@ flowchart LR
 
 ### 一次请求留下哪些可关联的记录
 
-一条 trace (追踪) 把请求的根 span 与子 span 串成一次端到端操作。span (追踪片段) 记录一个阶段的耗时、状态和关联版本，例如身份检查、读取构建日志、检索运行手册、模型生成、结构校验和结果交付。日志可以通过 trace ID 和 span ID 挂到对应 span 上。通用的 trace、metrics、日志怎样配合排障，见[服务信号与故障定位](../../engineering-foundations/reliability/observability-slos-and-incident-response.md)；这里只讲 AI 应用要额外关联的东西。
+一条 trace (追踪) 把请求的根 span 与子 span 串成一次端到端操作。span (追踪片段) 记录一个阶段的耗时、状态和关联版本，例如身份检查、读取构建日志、检索运行手册、模型生成、结构校验和结果交付。日志可以通过 trace ID 和 span ID 挂到对应 span 上。通用的 trace、metrics、日志怎样配合排障，见[服务信号与故障定位](../../engineering-foundations/practice/slis-slos-and-error-budgets.md)；这里只讲 AI 应用要额外关联的东西。
 
 AI 应用的一次任务往往不止一次调用，所以关联键要分层：
 
@@ -8937,7 +8937,7 @@ flowchart TD
 > L_{\mathrm{model}} = \lambda_{\mathrm{model}} W_{\mathrm{model}} = 6\ \text{次/秒} \times 1.2\ \text{秒} = 7.2
 > $$
 >
-> 这里 $\lambda_{\mathrm{model}}$ 是实际进入模型阶段的平均速率，$W_{\mathrm{model}}$ 是请求在模型阶段的平均停留时间（含该阶段的排队与执行），两者都是教学假设。1.2 秒是平均值；上表的 2.5 秒是给尾部请求留的预算上限，两者不矛盾。7.2 是长期平均量，不用上取整，也不是 worker 或 GPU 副本数。缓存、旁路、重试或被拒请求都会让模型阶段的实际 λ 不同于外层的 6 QPS，所以要用实测的进入速率。队列上限、突发和目标利用率还要靠实际负载确定，见[API 容量与背压](../../engineering-foundations/reliability/api-capacity-and-backpressure.md)。
+> 这里 $\lambda_{\mathrm{model}}$ 是实际进入模型阶段的平均速率，$W_{\mathrm{model}}$ 是请求在模型阶段的平均停留时间（含该阶段的排队与执行），两者都是教学假设。1.2 秒是平均值；上表的 2.5 秒是给尾部请求留的预算上限，两者不矛盾。7.2 是长期平均量，不用上取整，也不是 worker 或 GPU 副本数。缓存、旁路、重试或被拒请求都会让模型阶段的实际 λ 不同于外层的 6 QPS，所以要用实测的进入速率。队列上限、突发和目标利用率还要靠实际负载确定，见[API 容量与背压](../../engineering-foundations/services/capacity-admission-and-backpressure.md)。
 
 #### 文档问答的方案与上线检查
 

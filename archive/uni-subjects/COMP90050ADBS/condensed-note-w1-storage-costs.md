@@ -70,7 +70,7 @@ $H$ 是 DBMS 缓冲池的命中率；$C$ 和 $M$ 分别是从上述同一计时�
 
 加大 DBMS 缓冲池会占用更多主存，可能挤占操作系统页缓存或其他用途。命中率收益取决于工作集和访问局部性；应结合内存压力与实际工作负载测量，而不能只凭“缓冲池越大越快”决定容量。
 
-与更广的 CPU 缓存、DRAM 和设备局部性问题相接时，可继续看[内存层次与数据局部性](../../../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)。
+与更广的 CPU 缓存、DRAM 和设备局部性问题相接时，可继续看[内存层次与数据局部性](../../../engineering-foundations/computation/memory-hierarchy-and-locality.md)。
 
 > [!info]- 来源
 > - `HDD 定位/传输、闪存页与擦除块、FTL`：[Database System Concepts, 7th ed., ch. 12: Physical Storage Systems](https://db-book.com/slides-dir/PDF-dir/ch12.pdf)，第 12.9–12.16 页，2026-11-12 核验。本文中的 12 ms、4 ms、4 MB/s 是课程算例，不是当前产品规格。

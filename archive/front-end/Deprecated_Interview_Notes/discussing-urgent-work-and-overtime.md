@@ -1,5 +1,5 @@
 # 紧急任务与加班安排：迁移说明
 
-面试中如何讨论紧急任务、容量取舍、值班和加班安排的完整内容，已迁入[怎样准备有事实支撑的行为面试回答？](../../../engineering-foundations/career/interview-preparation.md#讨论紧急任务与加班安排)。
+面试中如何讨论紧急任务、容量取舍、值班和加班安排的完整内容，已迁入[怎样准备有事实支撑的行为面试回答？](../../engineering-practice/interview-preparation.md)。
 
 本页保留原题入口；后续以正式职业面试章节为准。

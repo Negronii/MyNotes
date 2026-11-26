@@ -105,7 +105,7 @@
 > L_{\mathrm{model}} = \lambda_{\mathrm{model}} W_{\mathrm{model}} = 6\ \text{次/秒} \times 1.2\ \text{秒} = 7.2
 > $$
 >
-> 这里 $\lambda_{\mathrm{model}}$ 是实际进入模型阶段的平均速率，$W_{\mathrm{model}}$ 是请求在模型阶段的平均停留时间（含该阶段的排队与执行），两者都是教学假设。1.2 秒是平均值；上表的 2.5 秒是给尾部请求留的预算上限，两者不矛盾。7.2 是长期平均量，不用上取整，也不是 worker 或 GPU 副本数。缓存、旁路、重试或被拒请求都会让模型阶段的实际 λ 不同于外层的 6 QPS，所以要用实测的进入速率。队列上限、突发和目标利用率还要靠实际负载确定，见[API 容量与背压](../../engineering-foundations/reliability/api-capacity-and-backpressure.md)。
+> 这里 $\lambda_{\mathrm{model}}$ 是实际进入模型阶段的平均速率，$W_{\mathrm{model}}$ 是请求在模型阶段的平均停留时间（含该阶段的排队与执行），两者都是教学假设。1.2 秒是平均值；上表的 2.5 秒是给尾部请求留的预算上限，两者不矛盾。7.2 是长期平均量，不用上取整，也不是 worker 或 GPU 副本数。缓存、旁路、重试或被拒请求都会让模型阶段的实际 λ 不同于外层的 6 QPS，所以要用实测的进入速率。队列上限、突发和目标利用率还要靠实际负载确定，见[API 容量与背压](../../engineering-foundations/services/capacity-admission-and-backpressure.md)。
 
 ### 文档问答的方案与上线检查
 

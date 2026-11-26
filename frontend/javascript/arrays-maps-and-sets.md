@@ -243,7 +243,7 @@ Array.of(3);       // [3]：参数本身作为元素
 Array.of(1, 2, 3); // [1, 2, 3]
 ~~~
 
-DOM 查询返回的 `NodeList`、`HTMLCollection` 常用 `Array.from` 转成快照，见[怎样查询和修改 DOM，才拿到并改到预期的节点？](../browser/dom-queries-and-updates.md)；迭代协议本身见[迭代器和生成器怎样按需产出值，提前退出时怎样清理？](iterators-and-generators.md)。`Array.from(string)` 按 Unicode 码点拆分字符串，但用户感知的一个字符可能由多个码点组成，见[文本算法应按码元、码点还是字素簇处理？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
+DOM 查询返回的 `NodeList`、`HTMLCollection` 常用 `Array.from` 转成快照，见[怎样查询和修改 DOM，才拿到并改到预期的节点？](../browser/dom-queries-and-updates.md)；迭代协议本身见[迭代器和生成器怎样按需产出值，提前退出时怎样清理？](iterators-and-generators.md)。`Array.from(string)` 按 Unicode 码点拆分字符串，但用户感知的一个字符可能由多个码点组成，见[文本算法应按码元、码点还是字素簇处理？](../../engineering-foundations/computation/text-units-and-unicode.md)。
 
 ## 排序：默认按字符串比较
 

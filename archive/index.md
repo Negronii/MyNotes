@@ -16,8 +16,9 @@
 - [Spring Boot 怎样把一次 JSON 请求接到服务和数据访问对象？](back-end/Spring.md) — Java Web 请求和数据访问示例。
 - [Zsh 怎样从启动配置找到插件与 pnpm 命令？](back-end/Shell-Setup.md) — Zsh 启动配置、插件与 pnpm 命令查找。
 - [Jest 异步测试示例入口](testing/Jest/readme.md) — 链接到当前前端测试材料中的 Jest 示例。
+- [工程协作与求职旧笔记](engineering-practice/agile-and-scrum.md) — 敏捷与 Scrum 的检查与调整；同目录另有[面试准备笔记](engineering-practice/interview-preparation.md)。原样保留，不进入工程基础主线。
 - 历史合并脚本：[AI 旧脚本](historical-scripts/AI_Engineering_Notes/merge-md.sh)、[前端旧脚本](historical-scripts/Frontend_Notes/merge-md.sh)。仅作为历史文件保留；当前连续阅读稿使用 [README 中的生成入口](../readme.md#连续阅读稿)。
 
 ## 已并入工程基础的材料
 
-早期 Docker 命令参考中的容器、卷和网络示例，现已并入工程基础中的[Docker 如何把报表服务的源码构建成可运行镜像？](../engineering-foundations/infrastructure/docker-operations.md)。
+早期 Docker 命令参考中的容器、卷和网络示例，现已并入工程基础中的[Docker 如何把报表服务的源码构建成可运行镜像？](../engineering-foundations/practice/container-images-and-builds.md)。

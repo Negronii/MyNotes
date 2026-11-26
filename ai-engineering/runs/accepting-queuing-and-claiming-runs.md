@@ -14,7 +14,7 @@
 
 `request_digest` 只识别原始请求。之后客户确认的退款方案另有 `plan_digest`，两者不能互相代替：同一个请求可能先后生成不同版本的方案。
 
-这项保证不是 HTTP 自带的。`POST` 本身不是幂等方法；同一提交重复到达时返回原运行，是应用为 `POST /runs` 定义的去重契约。幂等键的一般设计见[请求超时后如何确认结果并安全重试](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md)。
+这项保证不是 HTTP 自带的。`POST` 本身不是幂等方法；同一提交重复到达时返回原运行，是应用为 `POST /runs` 定义的去重契约。幂等键的一般设计见[请求超时后如何确认结果并安全重试](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md)。
 
 ## 返回 `202 Accepted` 之前要存下什么？
 
@@ -37,7 +37,7 @@ RFC 9110 中的 `202` 只表示请求已被接受处理，不表示处理完成�
 2. 若发布器在投递前崩溃，重启后仍能找到这条未发送的事件，重新投递。
 3. 若在投递之后、标记“已发送”之前崩溃，同一条消息会被再投一次。重复消息唤醒的是同一个 `queued` 运行，由下一节的条件领取保证只有一个 worker 能领到。
 
-如果运行记录和 outbox 无法放进同一个事务，就需要等价的可恢复入队协议，再加一个扫描修复任务。消息系统的发布确认和消费者确认各证明什么，见[报表任务的发布确认、消费者确认与业务完成各证明什么](../../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
+如果运行记录和 outbox 无法放进同一个事务，就需要等价的可恢复入队协议，再加一个扫描修复任务。消息系统的发布确认和消费者确认各证明什么，见[报表任务的发布确认、消费者确认与业务完成各证明什么](../../engineering-foundations/services/queue-delivery-and-acknowledgement.md)。
 
 ## worker 怎样领取运行，旧 worker 怎样被挡在外面？
 

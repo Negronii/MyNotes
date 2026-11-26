@@ -154,7 +154,7 @@ console.log(JSON.stringify({ literal, visibleLines }));
 // visibleLines: ["May<br>Report", "May\nReport"]
 ~~~
 
-`textContent` 把 `<b>` 原样当文字，所以没有生成子元素。报表标题这类来自用户或服务端的字符串，一律用 `textContent` 写；把它交给 `innerHTML` 等于让数据决定页面结构和脚本，安全边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/security/web-browser-security-boundaries.md)。
+`textContent` 把 `<b>` 原样当文字，所以没有生成子元素。报表标题这类来自用户或服务端的字符串，一律用 `textContent` 写；把它交给 `innerHTML` 等于让数据决定页面结构和脚本，安全边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
 
 ## attribute 和 property 什么时候会分开？
 

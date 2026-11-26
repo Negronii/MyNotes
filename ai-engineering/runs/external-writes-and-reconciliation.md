@@ -121,7 +121,7 @@ attempt 2 领取运行后，重新读取 `Q-204`、确认记录和 `R-204`。真
 
 业务更新要以操作的当前状态作条件：一条迟到的旧 `pending` 事件不能把已确认的 `completed` 覆盖回去。但“避免回退”不能实现成“忽略后续事实”：如果之后从提供方读到真实的状态变化，就把它作为一项新的异常送入对账，并保留状态历史。
 
-确认退款后若还要发通知、记账，就把状态变更和待执行的通知一起持久化（outbox），按操作身份 `R-204` 去重。“只处理一次”不能靠内存里的标记。webhook 接收方怎样验签、去重和应答，见[Webhook 接收方如何验证并可靠受理](../../engineering-foundations/reliability/webhook-delivery-and-verification.md)。
+确认退款后若还要发通知、记账，就把状态变更和待执行的通知一起持久化（outbox），按操作身份 `R-204` 去重。“只处理一次”不能靠内存里的标记。webhook 接收方怎样验签、去重和应答，见[Webhook 接收方如何验证并可靠受理](../../engineering-foundations/services/webhook-delivery-and-verification.md)。
 
 ## 查询、重放和披露结果各要什么授权？
 

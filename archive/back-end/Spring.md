@@ -2,7 +2,7 @@
 
 **案例背景：** 一个本地教学 API（application programming interface，应用程序编程接口）接收 `{"name":"James Bond"}`，由服务端生成 ID，保存后返回人员记录；随后可列出人员，或按 ID 查找。本章跟着这条请求区分两件事：应用启动时如何连接对象，请求到达后这些对象如何处理数据。
 
-示例按 Spring Boot 4.1.2、Spring Framework 7.0 的 API 编排，使用 Java 17 以上语法。它展示依赖连接与请求校验，内存数据只属于一个进程；对外服务还需要[身份与逐次资源授权](../../engineering-foundations/security/web-security-and-authentication.md)。
+示例按 Spring Boot 4.1.2、Spring Framework 7.0 的 API 编排，使用 Java 17 以上语法。它展示依赖连接与请求校验，内存数据只属于一个进程；对外服务还需要[身份与逐次资源授权](../../engineering-foundations/services/per-request-authorization.md)。
 
 ~~~mermaid
 flowchart TD
@@ -130,7 +130,7 @@ public class PersonService {
 
 Spring 为构造器参数寻找类型匹配的 Bean；`@Qualifier("fakeDAO")` 进一步限定候选。只有一个构造器时无需再标 `@Autowired`。依赖用 `final` 字段保存，服务对象创建后不会再随意替换它。单元测试也能直接给构造器传一个测试 DAO。
 
-换成数据库实现时，可以保留该接口，但仍要设计事务、约束、连接生命周期与错误映射。DI 改变的是对象如何连接，不会把内存列表自动升级成耐久数据库；[连接池与数据访问](../../engineering-foundations/backend/data-access-and-connection-pools.md)解释持久实现需要补上的责任。
+换成数据库实现时，可以保留该接口，但仍要设计事务、约束、连接生命周期与错误映射。DI 改变的是对象如何连接，不会把内存列表自动升级成耐久数据库；[连接池与数据访问](../../engineering-foundations/data/orm-sessions-and-connection-pools.md)解释持久实现需要补上的责任。
 
 ## 从控制器返回时，HTTP 状态怎样确定？
 
@@ -206,7 +206,7 @@ curl -i http://127.0.0.1:8080/api/v1/person \
   --data '{"name":"James Bond"}'
 ~~~
 
-因此成功路径是“反序列化 → 校验 → 服务调用 → 数据写入 → 序列化响应”，启动阶段的 DI 只负责让调用链事先可用。业务授权、幂等和数据库提交语义仍在各自边界内处理，见[HTTP API 契约](../../engineering-foundations/backend/http-api-contracts.md)。
+因此成功路径是“反序列化 → 校验 → 服务调用 → 数据写入 → 序列化响应”，启动阶段的 DI 只负责让调用链事先可用。业务授权、幂等和数据库提交语义仍在各自边界内处理，见[HTTP API 契约](../../engineering-foundations/services/api-contracts-errors-and-evolution.md)。
 
 ## 打包后运行的是哪一份应用？
 

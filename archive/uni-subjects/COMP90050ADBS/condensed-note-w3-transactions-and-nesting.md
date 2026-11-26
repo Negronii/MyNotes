@@ -70,7 +70,7 @@ rollback:
 
 宿主变量声明在 `BEGIN DECLARE SECTION` 与 `END DECLARE SECTION` 之间，SQL 中带冒号的名字（如 `:amount`）引用的就是这些 C 宿主变量。ECPG 预处理器先把 `.pgc` 变成 C，再由 C 编译器编译。`WHENEVER SQLERROR` 是按源码位置生效的预处理指令，会为后续嵌入 SQL 生成错误处理；它不是 C 异常机制。PostgreSQL ECPG 还区分 `NOT FOUND`：成功执行但影响零行不是 SQL 执行错误，默认不会走 `SQLERROR` 分支。这里显式读 `sqlca.sqlerrd[2]`，所以任一账户缺失时也会走回滚路径。
 
-这里返回 `0` 表示收到了成功提交的确认；`-1` 既可能表示已撤销，也可能表示结果无法确认。若 `COMMIT` 已在数据库成功，而确认在网络中丢失，客户端看到的错误并不能证明提交失败；后续 `ROLLBACK` 也可能因连接断开而无法确认。调用方应使用稳定的业务操作 ID 查询既有结果，避免把未知提交当成可盲目重试的新转账。如何识别未知结果并安排安全重试，见[未知结果与安全重试](../../../engineering-foundations/reliability/api-reliability-and-async-delivery.md)。这段代码只演示事务边界和错误诊断，不是完整的生产级转账服务。
+这里返回 `0` 表示收到了成功提交的确认；`-1` 既可能表示已撤销，也可能表示结果无法确认。若 `COMMIT` 已在数据库成功，而确认在网络中丢失，客户端看到的错误并不能证明提交失败；后续 `ROLLBACK` 也可能因连接断开而无法确认。调用方应使用稳定的业务操作 ID 查询既有结果，避免把未知提交当成可盲目重试的新转账。如何识别未知结果并安排安全重试，见[未知结果与安全重试](../../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md)。这段代码只演示事务边界和错误诊断，不是完整的生产级转账服务。
 
 > [!example] 课程购货函数怎样加入外层事务
 > 课程用另一个例子说明同样的边界划分：`BuySomething()` 先向购货历史表插入记录，再扣减账户余额，并以 `SELECT ... INTO` 取回扣款后的余额。外层 `process_purchase()` 负责 `BEGIN WORK`，调用函数后检查业务结果，再决定 `ROLLBACK WORK` 或 `COMMIT WORK`。函数不会自动创建独立事务；它的写入归调用者拥有的根事务。`SELECT ... INTO` 预期一行；多行结果应使用游标或其他多行接口。

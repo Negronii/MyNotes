@@ -30,21 +30,21 @@
 
 遇到别的断线场景，先看自己要确认的结果由谁保存。
 
-- **库存到底扣了吗？** 客户端用原键 `reserve-demo-208` 重发相同预留，服务找到已经提交的那笔预留，返回它的当前状态。[库存事务与安全重试](../engineering-foundations/reliability/api-reliability-and-async-delivery.md)
-- **导出的 CSV 能下载了吗？** 受理回执丢失时，用原键 `report-demo-208` 重发相同导出请求，取回任务 `job-demo-731` 和查询地址。沿[账户报表的任务与结果](../engineering-foundations/architecture/system-design-fundamentals.md)读到成功提交和授权下载。[队列确认](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)只说明消息交付到了哪一步。
-- **进度页面该显示哪一版？** 在报表的实时视图里，[服务端从快照游标 103 续发事件](../engineering-foundations/networking/real-time-web-updates.md#SSE%20如何从快照游标续读事件？)。[页面](../frontend/ui-state/streaming-updates-and-resume.md)应用 104 后在断线期间保留第 10 版，重连收到 105 才把报表更新为第 11 版的「就绪」。
+- **库存到底扣了吗？** 客户端用原键 `reserve-demo-208` 重发相同预留，服务找到已经提交的那笔预留，返回它的当前状态。[库存事务与安全重试](../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md)
+- **导出的 CSV 能下载了吗？** 受理回执丢失时，用原键 `report-demo-208` 重发相同导出请求，取回任务 `job-demo-731` 和查询地址。沿[账户报表的任务与结果](../engineering-foundations/services/durable-job-acceptance-and-outbox.md)读到成功提交和授权下载。[队列确认](../engineering-foundations/services/queue-delivery-and-acknowledgement.md)只说明消息交付到了哪一步。
+- **进度页面该显示哪一版？** 在报表的实时视图里，[服务端从快照游标 103 续发事件](../engineering-foundations/services/real-time-channels-and-resume.md)。[页面](../frontend/ui-state/streaming-updates-and-resume.md)应用 104 后在断线期间保留第 10 版，重连收到 105 才把报表更新为第 11 版的「就绪」。
 
-只需理解一次普通读取时，可以沿 [HTTP 请求和响应](../engineering-foundations/networking/http-protocols-and-websockets.md)、[API 对调用方的承诺](../engineering-foundations/backend/http-api-contracts.md)、[获取数据连接](../engineering-foundations/backend/data-access-and-connection-pools.md)或[缓存何时需要更新](../engineering-foundations/backend/caching-and-redis.md)进入对应章节。
+只需理解一次普通读取时，可以沿 [HTTP 请求和响应](../engineering-foundations/services/http-semantics-and-transport.md)、[API 对调用方的承诺](../engineering-foundations/services/api-contracts-errors-and-evolution.md)、[获取数据连接](../engineering-foundations/data/orm-sessions-and-connection-pools.md)或[缓存何时需要更新](../engineering-foundations/data/caching-and-staleness.md)进入对应章节。
 
 ## 怎样证明一次改动可以上线？
 
 报表 42 属于租户 A，已登录的租户 B 猜到编号竟也能读到。旧版已有越权问题，先隔离受影响的入口。要恢复访问，沿着修复从源码走到实际接收流量的版本。
 
-1. **把漏洞变成能重复验证的条件。** 从[漏掉租户条件的查询](../engineering-foundations/architecture/reading-debugging-and-reviewing-code.md)入手。[测试](../engineering-foundations/testing/software-testing-strategy.md)用两个身份读同一份报表，要求 A 得到 `200` 和自己的内容，B 得到与资源不存在时一致的 `404`。
-2. **固定测试过的内容。** [用 Git 核对暂存的源码和测试](../engineering-foundations/version-control/git-essentials.md)，在发布案例中将这份快照记作 `c4f2a91`。[从该提交构建一次镜像](../engineering-foundations/infrastructure/docker-operations.md)，推送后在镜像仓库核对其内容摘要。后面每个环境都用这份摘要取镜像。
-3. **用同一镜像接流量。** 预发布用真实认证流程建立两个身份，重验上述响应，并跑通异步任务。进生产后，先让 A、B 经正常鉴权访问新版本，核对两份响应和两条请求追踪，确认命中的都是目标摘要，再开放小流量。若验证失败，维持隔离或转到已证安全且兼容的版本。[发布与回退](../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)
+1. **把漏洞变成能重复验证的条件。** 从[漏掉租户条件的查询](../engineering-foundations/practice/debugging-and-code-review.md)入手。[测试](../engineering-foundations/practice/testing-by-failure-boundary.md)用两个身份读同一份报表，要求 A 得到 `200` 和自己的内容，B 得到与资源不存在时一致的 `404`。
+2. **固定测试过的内容。** [用 Git 核对暂存的源码和测试](../engineering-foundations/practice/git-snapshots-and-recovery.md)，在发布案例中将这份快照记作 `c4f2a91`。[从该提交构建一次镜像](../engineering-foundations/practice/container-images-and-builds.md)，推送后在镜像仓库核对其内容摘要。后面每个环境都用这份摘要取镜像。
+3. **用同一镜像接流量。** 预发布用真实认证流程建立两个身份，重验上述响应，并跑通异步任务。进生产后，先让 A、B 经正常鉴权访问新版本，核对两份响应和两条请求追踪，确认命中的都是目标摘要，再开放小流量。若验证失败，维持隔离或转到已证安全且兼容的版本。[发布与回退](../engineering-foundations/practice/build-once-promote-by-digest.md)
 
-怎样看出新版本在变慢？[生产事故演练](../engineering-foundations/reliability/observability-slos-and-incident-response.md)另给一个发布窗口，演示怎样单看新版本的请求，避免旧版本的大量成功请求掩盖退化。改动落在界面时，读[前端行为与构建产物的测试](../frontend/delivery/frontend-testing-strategy.md)；改在提示词、模型或 Agent 时，读[独立任务评估](../ai-engineering/evaluation-and-release/holdout-acceptance-and-paired-statistics.md)。若差距确实来自模型行为，再看[训练怎样更新权重](../ai-engineering/evaluation-and-release/training-gradients-and-optimizers.md)和[什么时候值得微调](../ai-engineering/evaluation-and-release/fine-tuning-lora-sft-dpo.md)。
+怎样看出新版本在变慢？[生产事故演练](../engineering-foundations/practice/slis-slos-and-error-budgets.md)另给一个发布窗口，演示怎样单看新版本的请求，避免旧版本的大量成功请求掩盖退化。改动落在界面时，读[前端行为与构建产物的测试](../frontend/delivery/frontend-testing-strategy.md)；改在提示词、模型或 Agent 时，读[独立任务评估](../ai-engineering/evaluation-and-release/holdout-acceptance-and-paired-statistics.md)。若差距确实来自模型行为，再看[训练怎样更新权重](../ai-engineering/evaluation-and-release/training-gradients-and-optimizers.md)和[什么时候值得微调](../ai-engineering/evaluation-and-release/fine-tuning-lora-sft-dpo.md)。
 
 ## AI 应用怎样凭证据回答？
 
@@ -62,14 +62,14 @@
 
 ## 访问数据的成本从哪来？
 
-报表程序已经取回 1,024 条事件，先按发生时间排序，时间相同再比事件 ID。要在页内定位一个游标，[算法章](../engineering-foundations/algorithms/algorithms-and-complexity.md)解释为什么按同一规则比较就可以每次排除一半候选。[数据结构章](../engineering-foundations/algorithms/core-data-structures.md)接着问，若只知道事件 ID，或手上已经有了下标，应怎样找到那条记录？
+报表程序已经取回 1,024 条事件，先按发生时间排序，时间相同再比事件 ID。要在页内定位一个游标，[算法章](../engineering-foundations/computation/invariants-and-cost-models.md)解释为什么按同一规则比较就可以每次排除一半候选。[数据结构章](../engineering-foundations/computation/data-structures-by-access-pattern.md)接着问，若只知道事件 ID，或手上已经有了下标，应怎样找到那条记录？
 
 换一个观察尺度，成本的单位也会变。可以按要回答的问题选读。
 
-- **都访问四项，为什么内存开销会不同？** 数组和链表累加同一组时长 `[4, 7, 1, 3]` 都得到 15。沿[两个布局的地址](../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)逐项读，可以看到缓存行是否被复用、下一次读取要等哪个指针。
-- **还没取回数据，数据库怎样找到最近的任务？** 另一个查询要取某账户最近的 20 个导出任务。用账户、创建时间和任务 ID 建立符合排序的复合索引，数据库就多了一条按账户定位、取够 20 条便可停止的路径。可以从执行计划看它是否选了这条路。[复合索引怎样配合任务列表](../engineering-foundations/databases/database-constraints-and-indexes.md#复合索引怎样配合任务列表？)
+- **都访问四项，为什么内存开销会不同？** 数组和链表累加同一组时长 `[4, 7, 1, 3]` 都得到 15。沿[两个布局的地址](../engineering-foundations/computation/memory-hierarchy-and-locality.md)逐项读，可以看到缓存行是否被复用、下一次读取要等哪个指针。
+- **还没取回数据，数据库怎样找到最近的任务？** 另一个查询要取某账户最近的 20 个导出任务。用账户、创建时间和任务 ID 建立符合排序的复合索引，数据库就多了一条按账户定位、取够 20 条便可停止的路径。可以从执行计划看它是否选了这条路。[复合索引怎样配合任务列表](../engineering-foundations/data/constraints-and-indexes.md)
 
-要继续推导连接代价或理解提交后的数据怎样恢复，可转到[数据库课程地图](../archive/uni-subjects/COMP90050ADBS/readme.md)和[事务与恢复](../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)。
+要继续推导连接代价或理解提交后的数据怎样恢复，可转到[数据库课程地图](../archive/uni-subjects/COMP90050ADBS/readme.md)和[事务与恢复](../engineering-foundations/data/transactions-and-isolation.md)。
 
 ## 按机制查找
 
@@ -82,12 +82,12 @@
 | 模型配额、缓存与向量索引 | [有界模型调用](../ai-engineering/runs/bounded-model-api-calls.md)、[缓存命中与成本](../ai-engineering/evaluation-and-release/model-selection-and-unit-cost.md)、[HNSW](../ai-engineering/context/hnsw-vector-index-search.md) |
 | debounce、throttle、Promise 与结构相等 | [闭包调度](../frontend/javascript/scope-closures-and-this.md)、[Promise 组合](../frontend/javascript/promises-and-async-functions.md)、[并发池](../frontend/javascript/cancellation-timeouts-and-concurrency.md)、[值与结构比较](../frontend/javascript/values-types-and-equality.md) |
 | Context、编辑草稿与聊天状态 | [组件中的状态所有者](../frontend/ui-state/state-ownership-and-composition.md)、[表格与表单](../frontend/ui-state/editing-sessions-and-conditional-writes.md)、[流式聊天](../frontend/ui-state/streaming-ai-chat.md) |
-| 条件写、回调与持久队列 | [HTTP 更新契约](../engineering-foundations/backend/http-api-contracts.md)、[Webhook](../engineering-foundations/reliability/webhook-delivery-and-verification.md)、[任务领取与确认](../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)、[Kafka offset](../engineering-foundations/reliability/kafka-partitions-and-offsets.md) |
-| 类型、构建产物与渐进迁移 | [运行时 schema](../frontend/javascript/typescript-guarantees-and-runtime-validation.md)、[静态资源版本](../frontend/delivery/build-pipeline-and-bundling.md)、[微前端迁移](../engineering-foundations/architecture/frontend-architecture-boundaries.md#怎样迁移微前端而不打断深链、身份与回退？) |
-| 数据分布与存储引擎 | [分片与搬迁](../engineering-foundations/databases/database-sharding-and-rebalancing.md)、[InnoDB 索引、锁与恢复](../engineering-foundations/databases/mysql-innodb-index-lock-and-recovery.md) |
-| Python 属性解析 | [descriptor、方法绑定与 MRO](../engineering-foundations/backend/python-attribute-lookup-and-mro.md) |
-| 部署身份与密钥 | [凭据的注入、轮换与撤销](../engineering-foundations/infrastructure/production-application-runtime.md#worker%20凭据怎样注入、轮换并撤销？) |
-| 窗口、优先级与搜索路径 | [窗口与区间扫描](../engineering-foundations/algorithms/range-scans-and-active-sets.md)、[堆](../engineering-foundations/algorithms/heaps-and-priority-queues.md)、[图搜索与回溯](../engineering-foundations/algorithms/graph-search-and-backtracking.md)、[文本单位与 Trie](../engineering-foundations/algorithms/text-units-and-algorithms.md) |
+| 条件写、回调与持久队列 | [HTTP 更新契约](../engineering-foundations/services/api-contracts-errors-and-evolution.md)、[Webhook](../engineering-foundations/services/webhook-delivery-and-verification.md)、[任务领取与确认](../engineering-foundations/services/queue-delivery-and-acknowledgement.md)、[Kafka offset](../engineering-foundations/services/kafka-partitions-and-offsets.md) |
+| 类型、构建产物与渐进迁移 | [运行时 schema](../frontend/javascript/typescript-guarantees-and-runtime-validation.md)、[静态资源版本](../frontend/delivery/build-pipeline-and-bundling.md)、[微前端迁移](../engineering-foundations/practice/page-editor-data-model.md) |
+| 数据分布与存储引擎 | [分片与搬迁](../engineering-foundations/data/sharding-and-hot-keys.md)、[InnoDB 索引、锁与恢复](../engineering-foundations/data/mysql-innodb-locks-and-logs.md) |
+| Python 属性解析 | [descriptor、方法绑定与 MRO](../engineering-foundations/runtime/python-object-model.md) |
+| 部署身份与密钥 | [凭据的注入、轮换与撤销](../engineering-foundations/practice/production-runtime.md) |
+| 窗口、优先级与搜索路径 | [窗口与区间扫描](../engineering-foundations/computation/sliding-windows-and-sweep-lines.md)、[堆](../engineering-foundations/computation/heaps-and-priority-queues.md)、[图搜索与回溯](../engineering-foundations/computation/graph-search-and-backtracking.md)、[文本单位与 Trie](../engineering-foundations/computation/text-units-and-unicode.md) |
 
 ## 阅读记录与资料
 

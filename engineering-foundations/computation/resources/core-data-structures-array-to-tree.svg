@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="660" viewBox="0 0 720 660">
+<defs>
+  <marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L7,3.5 L0,7 Z" fill="#7187a8"/></marker>
+  <style>
+    text { font-family: "Noto Sans CJK SC", "PingFang SC", "Noto Sans", sans-serif; fill: #24344d; }
+    .head { font-size: 17px; font-weight: 700; }
+    .small { font-size: 13px; fill: #526681; }
+    .mono { font-family: "Noto Sans Mono CJK SC", Menlo, monospace; font-size: 13px; }
+    .panel { fill: #fff; stroke: #d5dfeb; stroke-width: 2; }
+    .record { fill: #edf4fb; stroke: #91a8c4; stroke-width: 1.5; }
+    .parent { fill: #f0eafb; stroke: #9a77d1; stroke-width: 2; }
+    .child { fill: #e7f5ef; stroke: #58a88a; stroke-width: 2; }
+    .line { stroke: #7187a8; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+  </style>
+</defs>
+<rect x="0" y="0" width="720" height="660" fill="#fbfcfe"/>
+
+<rect class="panel" x="24" y="14" width="672" height="132" rx="12"/>
+<text class="head" x="42" y="42">输入 rows（按此顺序读；子行可以先于父行）</text>
+<rect class="record" x="42" y="56" width="306" height="32" rx="6"/><text class="mono" x="54" y="77">① { id:2, parentId:1, name:"收入" }</text>
+<rect class="record" x="372" y="56" width="306" height="32" rx="6"/><text class="mono" x="384" y="77">② { id:1, parentId:0, name:"根" }</text>
+<rect class="record" x="42" y="100" width="306" height="32" rx="6"/><text class="mono" x="54" y="121">③ { id:4, parentId:2, name:"工资" }</text>
+<rect class="record" x="372" y="100" width="306" height="32" rx="6"/><text class="mono" x="384" y="121">④ { id:3, parentId:1, name:"支出" }</text>
+<path class="line" d="M360,148 L360,178"/>
+
+<rect class="panel" x="24" y="184" width="672" height="128" rx="12"/>
+<text class="head" x="42" y="212">第一趟：为每行建浅拷贝节点，按 id 放进 Map</text>
+<rect class="child" x="42" y="228" width="150" height="50" rx="7"/><text class="mono" x="54" y="249">id=2 收入</text><text class="small" x="54" y="268">children: []</text>
+<rect class="parent" x="202" y="228" width="150" height="50" rx="7"/><text class="mono" x="214" y="249">id=1 根</text><text class="small" x="214" y="268">children: []</text>
+<rect class="child" x="362" y="228" width="150" height="50" rx="7"/><text class="mono" x="374" y="249">id=4 工资</text><text class="small" x="374" y="268">children: []</text>
+<rect class="child" x="522" y="228" width="150" height="50" rx="7"/><text class="mono" x="534" y="249">id=3 支出</text><text class="small" x="534" y="268">children: []</text>
+<text class="small" x="42" y="300">四个节点都已在 Map 里，第二趟查父节点时不必关心父行在输入中的位置。</text>
+<path class="line" d="M360,314 L360,344"/>
+
+<rect class="panel" x="24" y="350" width="672" height="292" rx="12"/>
+<text class="head" x="42" y="378">第二趟：按行序用 Map.get(parentId) 找父节点，追加引用</text>
+<text class="small" x="42" y="402">① 2 挂到 1；② 1 是根；③ 4 挂到 2；④ 3 挂到 1。于是 1.children = [2, 3]，2.children = [4]。</text>
+<rect class="parent" x="290" y="420" width="140" height="44" rx="7"/><text class="mono" x="304" y="447">id=1 根</text>
+<rect class="child" x="130" y="500" width="140" height="44" rx="7"/><text class="mono" x="144" y="527">id=2 收入</text>
+<rect class="child" x="450" y="500" width="140" height="44" rx="7"/><text class="mono" x="464" y="527">id=3 支出</text>
+<rect class="child" x="130" y="584" width="140" height="44" rx="7"/><text class="mono" x="144" y="611">id=4 工资</text>
+<path class="line" d="M330,466 L226,496"/>
+<path class="line" d="M390,466 L494,496"/>
+<path class="line" d="M200,546 L200,580"/>
+<text class="small" x="180" y="478" text-anchor="end">children[0]</text>
+<text class="small" x="540" y="478">children[1]</text>
+<text class="small" x="320" y="598">从根遍历：到达 4 个节点 = Map 中 4 个节点</text>
+<text class="small" x="320" y="618">→ 没有与根断开的环，转换完成</text>
+</svg>

@@ -146,4 +146,4 @@
 
 ## 跨域脉络
 
-生产级 AI 应用依赖通用网络与安全机制：[HTTP 请求](../engineering-foundations/networking/http-protocols-and-websockets.md)解释单次交换，[轮询、SSE 与 WebSocket](../engineering-foundations/networking/real-time-web-updates.md)解释持续更新；[Cookie 会话与 OIDC](../engineering-foundations/security/web-sessions-and-oidc.md)建立身份，[租户资源授权](../engineering-foundations/security/web-security-and-authentication.md)决定每次操作能访问什么。聊天界面怎样应用重放事件，见前端的 [AI 聊天界面](../frontend/ui-state/streaming-ai-chat.md)。
+生产级 AI 应用依赖通用网络与安全机制：[HTTP 请求](../engineering-foundations/services/http-semantics-and-transport.md)解释单次交换，[轮询、SSE 与 WebSocket](../engineering-foundations/services/real-time-channels-and-resume.md)解释持续更新；[Cookie 会话与 OIDC](../engineering-foundations/services/sessions-and-browser-boundaries.md)建立身份，[租户资源授权](../engineering-foundations/services/per-request-authorization.md)决定每次操作能访问什么。聊天界面怎样应用重放事件，见前端的 [AI 聊天界面](../frontend/ui-state/streaming-ai-chat.md)。

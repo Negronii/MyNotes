@@ -28,7 +28,7 @@
 - 请求与组件状态的关系放在组件测试里，用可控的 Mock 制造等待、成功和失败。
 - 浏览器 Back、片段锚点、生产资源路径这类风险只有真实浏览器能覆盖。组件测试没有真实的会话历史，不能替代 Back 测试。
 
-把风险对应到可证明边界的通用方法见[怎样用测试边界验证一次报表服务改动？](../../engineering-foundations/testing/software-testing-strategy.md)；本章只讲前端特有的边界。
+把风险对应到可证明边界的通用方法见[怎样用测试边界验证一次报表服务改动？](../../engineering-foundations/practice/testing-by-failure-boundary.md)；本章只讲前端特有的边界。
 
 ## 组件测试：按用户能找到的角色和名称查询
 
@@ -190,7 +190,7 @@ typecheck -> unit/component tests -> production build
 > [!info] Vite 的本地预览（Vite 8.3.8，核对于 2026-11-12）
 > `vite preview` 可以在本地预览刚构建的 `dist`，适合做上面的冷开检查，但官方不把它定位为生产服务器。
 
-产物晋级、运行时配置和发布门禁的通用做法见[如何晋级并回滚已验证的报表服务产物？](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)。
+产物晋级、运行时配置和发布门禁的通用做法见[如何晋级并回滚已验证的报表服务产物？](../../engineering-foundations/practice/build-once-promote-by-digest.md)。
 
 ## 分好层之后，组件层的异步断言怎样写
 

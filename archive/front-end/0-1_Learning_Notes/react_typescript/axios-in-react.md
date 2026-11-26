@@ -233,7 +233,7 @@ function ReportsView({
 
 Effect 的 cleanup 会使旧读取失效并 abort 客户端请求。即便异步工作不理会 signal，current 检查也阻止旧成功或旧失败覆盖新视图。abort 只停止客户端继续等待或处理，不能撤回服务端已经收到的请求。预览只从按钮处理器触发；若视图被替换，cleanup 也会取消客户端等待。Effect 在提交后同步外部系统的阶段与清理语义见[React Effect 更新轮次](../../../../frontend/ui-state/react-update-model.md)；需要共享缓存、去重和跨组件更新时，可继续看[React 如何维护服务端数据与乐观更新](../../../../frontend/ui-state/server-state-and-optimistic-updates.md)。
 
-Axios 默认对 2xx 响应兑现 Promise，并把不符合默认 validateStatus 的 HTTP 响应放到拒绝分支；自定义 validateStatus 会改变分界。Fetch 对 HTTP 404/500 通常仍兑现 Promise，因此调用方要检查 response.ok。两种客户端都不能代替正文校验；HTTP 层响应和失败的边界见[浏览器请求如何到达 HTTP 响应](../../../../engineering-foundations/networking/http-protocols-and-websockets.md#%E6%9C%8D%E5%8A%A1%E7%AB%AF%E8%BF%94%E5%9B%9E%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%8C%E9%A1%B5%E9%9D%A2%E4%BD%95%E6%97%B6%E6%89%8D%E8%83%BD%E4%BD%BF%E7%94%A8%EF%BC%9F)。
+Axios 默认对 2xx 响应兑现 Promise，并把不符合默认 validateStatus 的 HTTP 响应放到拒绝分支；自定义 validateStatus 会改变分界。Fetch 对 HTTP 404/500 通常仍兑现 Promise，因此调用方要检查 response.ok。两种客户端都不能代替正文校验；HTTP 层响应和失败的边界见[浏览器请求如何到达 HTTP 响应](../../../../engineering-foundations/services/http-semantics-and-transport.md)。
 
 本机合成 API 对 GET 返回 [{ "id": "r-41", "period": "2026-Q3", "title": "acct-17-recent" }]。parseReports 接受这些字段后，页面显示 “recent: acct-17-recent”；若同一视图收到空数组，则显示“没有报表”。
 

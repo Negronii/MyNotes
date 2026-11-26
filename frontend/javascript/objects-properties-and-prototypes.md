@@ -431,7 +431,7 @@ capture`label: ${untrusted}`;
 // { strings: ["label: ", ""], values: ["<b>user text</b>"] }
 ~~~
 
-标签函数可以做格式化或转义，但“用了标签”本身不让插入的用户输入变安全；转义规则要按输出上下文（HTML 文本、属性、URL）选择。报表文本进入 DOM 时的上下文边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/security/web-browser-security-boundaries.md)。
+标签函数可以做格式化或转义，但“用了标签”本身不让插入的用户输入变安全；转义规则要按输出上下文（HTML 文本、属性、URL）选择。报表文本进入 DOM 时的上下文边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
 
 ## 属性规则定下后：集合该怎样选
 

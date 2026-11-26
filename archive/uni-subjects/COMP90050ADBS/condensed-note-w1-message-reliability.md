@@ -66,7 +66,7 @@ sequenceDiagram
 > [!info] 产品保证要看边界
 > 例如，Amazon Simple Queue Service (SQS，Amazon 简单队列服务) Standard 队列的语义是 at-least-once delivery（至少一次投递），应用应能幂等处理重复消息。SQS 的 first-in, first-out（先进先出，FIFO）队列会在五分钟去重窗口内对相同 message deduplication ID（消息去重编号）的重复发送去重；它不能替接收方保证“消息被消费后，另一个数据库或支付服务的副作用只发生一次”。服务的具体保证与去重窗口应以其版本化文档为准。
 
-当问题从消息投递延伸到数据库更新的原子提交，可看[事务、隔离与恢复](../../../engineering-foundations/databases/database-transactions-isolation-and-recovery.md)；此处保留消息编号、确认和重试的边界。
+当问题从消息投递延伸到数据库更新的原子提交，可看[事务、隔离与恢复](../../../engineering-foundations/data/transactions-and-isolation.md)；此处保留消息编号、确认和重试的边界。
 
 > [!info]- 来源
 > - `至少一次投递可能重复，接收方要幂等`：[Amazon SQS Developer Guide, Standard queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/standard-queues.html)，2026-11-12 核验；[Amazon SQS FIFO queues](https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/sqs-fifo-queues.html)，2026-11-12 核验。文中只把 SQS 作为产品例子，不外推到所有消息系统。
@@ -76,4 +76,4 @@ sequenceDiagram
 > - `固定快照看不到并发事务后续提交时需按隔离规则处理`：[PostgreSQL 18, Transaction Isolation](https://www.postgresql.org/docs/18/transaction-iso.html)，2026-11-12 核验，作为快照可见性的产品例，不外推所有数据库隔离实现。
 > - `TCP ACK 的编号属于字节流；ACK 表示下一个期望的字节序号`：[RFC 9293, Transmission Control Protocol](https://www.rfc-editor.org/rfc/rfc9293.html)，§3.1、§3.4，2022-08；它定义的是传输层接收状态，不是应用处理或数据库提交结果。
 > - `同步提交等待事务 WAL 持久化；异步提交可能先成功返回`：[PostgreSQL 18, WAL Introduction](https://www.postgresql.org/docs/18/wal-intro.html)，§28.3；[Asynchronous Commit](https://www.postgresql.org/docs/18/wal-async-commit.html)，§28.4，2026-11-12 核验。该例说明应用 ACK 若承诺耐久效果，必须等到对应数据库提交达到持久条件。
-> - `publisher confirm 与 consumer ACK 分别覆盖发布者—broker、broker—消费者，彼此正交`：[RabbitMQ 4.4, Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms)，2026-11-12 核验。该产品语义不外推到其他 broker；本地边界见[消息发布与消费者确认](../../../engineering-foundations/reliability/queue-delivery-and-acknowledgement.md)。
+> - `publisher confirm 与 consumer ACK 分别覆盖发布者—broker、broker—消费者，彼此正交`：[RabbitMQ 4.4, Consumer Acknowledgements and Publisher Confirms](https://www.rabbitmq.com/docs/confirms)，2026-11-12 核验。该产品语义不外推到其他 broker；本地边界见[消息发布与消费者确认](../../../engineering-foundations/services/queue-delivery-and-acknowledgement.md)。

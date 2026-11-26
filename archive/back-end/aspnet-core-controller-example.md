@@ -195,7 +195,7 @@ flowchart TD
 
 响应 DTO 包含 `id`，但不输出内部 `ItemId` 或卖家 ID。一个安全测试还在 JSON 中附加了 `sellerId`、`status`：在 .NET 10 的默认 `System.Text.Json` 设置下，DTO 没有声明的字段会被忽略，而不是拒绝整条 JSON；服务端仍从主体写入 `SellerId`，状态保持 `"draft"`。如果接口需要拒绝未知字段，应单独启用 `JsonUnmappedMemberHandling.Disallow`。防止越权和严格拒绝输入是两个不同的可观察契约。
 
-`CreatedAtAction` 创建 201 响应并根据 `GetById` 生成资源地址。响应 DTO 控制输出字段；状态码和 JSON 正文属于调用方可观察的 API 契约，详见[如何设计可预期的 HTTP API 契约？](../../engineering-foundations/backend/http-api-contracts.md)。
+`CreatedAtAction` 创建 201 响应并根据 `GetById` 生成资源地址。响应 DTO 控制输出字段；状态码和 JSON 正文属于调用方可观察的 API 契约，详见[如何设计可预期的 HTTP API 契约？](../../engineering-foundations/services/api-contracts-errors-and-evolution.md)。
 
 `Task<ActionResult<T>>` 同时表达异步完成和“带类型正文或 HTTP 结果”两种返回路径。`await` 等待数据库 I/O 时允许当前线程执行其他工作；`Task` 不意味着请求专属线程。`ActionResult<T>` 只是常见签名，控制器也可以返回 `IActionResult` 或其他受支持的结果类型。
 

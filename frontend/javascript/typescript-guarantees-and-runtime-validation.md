@@ -255,7 +255,7 @@ function parseReportDataWithZod(text: string): ParseResult<ReportDataFromSchema>
 
 拒不拒绝额外键、邮箱校验多严格，应按接口契约决定，而不是按库的默认值决定。
 
-同样的思路也用于服务端：Python 服务可以用 Pydantic 模型检查请求，FastAPI 还能根据路由和模型生成 OpenAPI 契约，但实际响应是否符合契约仍要另外核验，见[HTTP API 如何描述实际运行的请求与响应契约](../../engineering-foundations/backend/http-api-contracts.md)。
+同样的思路也用于服务端：Python 服务可以用 Pydantic 模型检查请求，FastAPI 还能根据路由和模型生成 OpenAPI 契约，但实际响应是否符合契约仍要另外核验，见[HTTP API 如何描述实际运行的请求与响应契约](../../engineering-foundations/services/api-contracts-errors-and-evolution.md)。
 
 ## as 和 z.infer 为什么都不算验证？
 

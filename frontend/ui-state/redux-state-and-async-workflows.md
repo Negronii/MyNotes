@@ -83,7 +83,7 @@ flowchart TD
 
 本例只有一个预览槽。若要同时保留多个并发预览或导出作业，就按请求 ID 或服务端作业 ID 分格存储，而不是共用一个槽。
 
-服务器仍须按当前调用者和租户范围逐个授权这些行 ID，客户端勾选不能代替[服务端资源权限检查](../../engineering-foundations/security/web-security-and-authentication.md)。响应 JSON 先当作 `unknown`，在运行时校验 `rowCount`、`estimatedBytes` 是非负安全整数（见 [TypeScript 能保证什么](../javascript/typescript-guarantees-and-runtime-validation.md)）。
+服务器仍须按当前调用者和租户范围逐个授权这些行 ID，客户端勾选不能代替[服务端资源权限检查](../../engineering-foundations/services/per-request-authorization.md)。响应 JSON 先当作 `unknown`，在运行时校验 `rowCount`、`estimatedBytes` 是非负安全整数（见 [TypeScript 能保证什么](../javascript/typescript-guarantees-and-runtime-validation.md)）。
 
 ## 取消与错误
 

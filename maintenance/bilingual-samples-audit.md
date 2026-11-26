@@ -5,7 +5,7 @@
 完整阅读了旧稿，并在迁移完成后重写以下两篇；未扩展到其它主题：
 
 - [作用域与闭包](../frontend/javascript/scope-closures-and-this.md)（旧稿：Frontend_Notes/4.2 Scope & Closure.md）
-- [HTTP与WebSocket](../engineering-foundations/networking/http-protocols-and-websockets.md)（旧稿：Frontend_Notes/8.1 HTTP Protocols and WebSockets.md）
+- [HTTP与WebSocket](../engineering-foundations/services/http-semantics-and-transport.md)（旧稿：Frontend_Notes/8.1 HTTP Protocols and WebSockets.md）
 
 两篇均以中英双语标题、核心解释和面试简答开篇；细节以中文说明，保留必要英文术语、规范名和代码。保留了原稿中的词法作用域、闭包工厂、私有状态、循环回调、REST方法、请求API、TCP分层、CORS/JSONP/代理、WebSocket示例和资源提示。未添加学习状态或面试专用删减。
 

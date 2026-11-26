@@ -204,7 +204,7 @@ JOIN "Items" AS item ON item."Id" = auction."ItemId";
 
 关于上面的命令和版本：.NET 10 SDK 中 `dotnet new sln` 默认创建 `.slnx` 格式的解决方案；`dotnet package add` 是 .NET 10 引入的“名词在前”命令形式。`dotnet-ef`、EF Core 主包和 Tools/Design 包应使用同一主版本，Npgsql 的 EF Core provider（数据库提供程序）也必须兼容该 EF Core 版本。上例使用 EF Core 10.0.15、`dotnet-ef` 10.0.15 和 Npgsql provider 10.0.3。EF Core 11.0.0 已于 2026-11-10 发布，但截至 2026-11-16，Npgsql 的 11.x provider 仍是 RC 版本，所以本例继续固定在 .NET 10 / EF Core 10。项目内的 tool manifest 把 `dotnet-ef` 版本固定在项目中，不需要改动用户级全局工具。
 
-对本地开发数据库，可以直接用 `dotnet ef database update` 应用尚未执行的迁移。生产发布通常生成并审查 SQL 脚本，或生成迁移 bundle（打包好的可执行迁移程序）；需要 DBA 审批、修改或归档 SQL 时适合用脚本。EF Core 迁移与 provider 绑定；如果应用要同时部署到 PostgreSQL 和 SQL Server，应分别验证各自的 provider 和迁移，不要把一种数据库生成的迁移当作另一种数据库也能用的通用 SQL。数据库约束仍是数据正确性的最终共享边界，见[如何用约束保护业务规则并为读取建立索引？](../../engineering-foundations/databases/database-constraints-and-indexes.md)。
+对本地开发数据库，可以直接用 `dotnet ef database update` 应用尚未执行的迁移。生产发布通常生成并审查 SQL 脚本，或生成迁移 bundle（打包好的可执行迁移程序）；需要 DBA 审批、修改或归档 SQL 时适合用脚本。EF Core 迁移与 provider 绑定；如果应用要同时部署到 PostgreSQL 和 SQL Server，应分别验证各自的 provider 和迁移，不要把一种数据库生成的迁移当作另一种数据库也能用的通用 SQL。数据库约束仍是数据正确性的最终共享边界，见[如何用约束保护业务规则并为读取建立索引？](../../engineering-foundations/data/constraints-and-indexes.md)。
 
 > [!info]- 来源
 > - EF Core 10.0.15 包版本与目标框架：[Microsoft.EntityFrameworkCore NuGet](https://www.nuget.org/packages/Microsoft.EntityFrameworkCore/10.0.15)，于 2026-11-13 核对；EF Core 11.0.0 于 2026-11-10 发布、Npgsql provider 11.0.0 仍为 rc.3：[NuGet 版本列表](https://www.nuget.org/packages/Microsoft.EntityFrameworkCore#versions-body-tab)、[Npgsql.EntityFrameworkCore.PostgreSQL 版本列表](https://www.nuget.org/packages/Npgsql.EntityFrameworkCore.PostgreSQL#versions-body-tab)，于 2026-11-16 核对。

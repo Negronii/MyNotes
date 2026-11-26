@@ -271,7 +271,7 @@ function OrderActions({
 
 网络失败、重定向被拒绝或 200 正文损坏时，客户端可能不知道服务器是否已经处理取消。组件不在失败后再次调用 POST，而是禁用旧取消按钮并提供只读 self 刷新；刷新后显示最新状态，但不能仅凭 cancelled 归因于刚才的请求。单次应用层 fetch 调用也不保证服务端只收到一次：在本文 Chrome 157 本地连接断开夹具中，服务端在处理一次逻辑 POST 后关闭连接，记录到两条 POST。若同一业务写入必须至多生效一次，服务端需要幂等键去重或原子状态转换等写入一致性规则；状态查询只能帮助客户端重新观察结果，不能单独防止重复副作用。不能把按钮回调或浏览器一次 Promise 当作传输层至多一次保证。
 
-超媒体把当前可选状态转移放进表示，让客户端通过关系发现下一步资源；它不替代媒体类型/API 合同、运行时校验或授权，也不要求服务端返回 HTML。HTTP 的 GET “安全”指请求语义不要求源站改变状态，不意味着调用代码无需谨慎处理缓存、重定向或响应正文。安全读取与写入操作在通用 API 中的设计边界见[如何设计可预期的 HTTP API 契约？](../../../../engineering-foundations/backend/http-api-contracts.md)。
+超媒体把当前可选状态转移放进表示，让客户端通过关系发现下一步资源；它不替代媒体类型/API 合同、运行时校验或授权，也不要求服务端返回 HTML。HTTP 的 GET “安全”指请求语义不要求源站改变状态，不意味着调用代码无需谨慎处理缓存、重定向或响应正文。安全读取与写入操作在通用 API 中的设计边界见[如何设计可预期的 HTTP API 契约？](../../../../engineering-foundations/services/api-contracts-errors-and-evolution.md)。
 
 > [!info]- 来源
 > - REST 的统一接口约束及客户端从表示发现后续状态转移：[Roy Fielding, REST Dissertation](https://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm)，§5.1.5、§5.3.3；2000。

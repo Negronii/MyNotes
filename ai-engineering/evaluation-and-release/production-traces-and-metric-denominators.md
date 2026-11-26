@@ -22,7 +22,7 @@ flowchart LR
 
 ## 一次请求留下哪些可关联的记录
 
-一条 trace (追踪) 把请求的根 span 与子 span 串成一次端到端操作。span (追踪片段) 记录一个阶段的耗时、状态和关联版本，例如身份检查、读取构建日志、检索运行手册、模型生成、结构校验和结果交付。日志可以通过 trace ID 和 span ID 挂到对应 span 上。通用的 trace、metrics、日志怎样配合排障，见[服务信号与故障定位](../../engineering-foundations/reliability/observability-slos-and-incident-response.md)；这里只讲 AI 应用要额外关联的东西。
+一条 trace (追踪) 把请求的根 span 与子 span 串成一次端到端操作。span (追踪片段) 记录一个阶段的耗时、状态和关联版本，例如身份检查、读取构建日志、检索运行手册、模型生成、结构校验和结果交付。日志可以通过 trace ID 和 span ID 挂到对应 span 上。通用的 trace、metrics、日志怎样配合排障，见[服务信号与故障定位](../../engineering-foundations/practice/slis-slos-and-error-budgets.md)；这里只讲 AI 应用要额外关联的东西。
 
 AI 应用的一次任务往往不止一次调用，所以关联键要分层：
 

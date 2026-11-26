@@ -10,4 +10,4 @@
 - [空间索引如何缩小搜索范围，又不漏掉几何结果？](condensed-note-w2-spatial-indexes.md)
 - [这些索引语句和物理规则哪些只适用于 SQL Server？](condensed-note-w2-sql-server-index-examples.md)
 
-相关主题：[SQL 空值、连接与分组会怎样改变报表 42 的结果？](../../../engineering-foundations/databases/sql-null-joins-and-aggregates.md)、[如何用约束保护业务规则并为读取建立索引？](../../../engineering-foundations/databases/database-constraints-and-indexes.md)，以及[为什么连续扫描往往比链表遍历快？](../../../engineering-foundations/operating-systems/memory-hierarchy-and-data-locality.md)。
+相关主题：[SQL 空值、连接与分组会怎样改变报表 42 的结果？](../../../engineering-foundations/data/sql-nulls-joins-and-aggregates.md)、[如何用约束保护业务规则并为读取建立索引？](../../../engineering-foundations/data/constraints-and-indexes.md)，以及[为什么连续扫描往往比链表遍历快？](../../../engineering-foundations/computation/memory-hierarchy-and-locality.md)。

@@ -106,7 +106,7 @@ B 在 L1 的重筛以 B 为中心，候选按到 B 的距离排为 X 0.4、C 2�
 - **候选队列 C**：按到查询的距离从近到远，取下一个要扩展的节点。
 - **结果集合 W**：最多放 `efSearch` 个已发现的最好节点。`efSearch` 是 W 的容量，不是 C 的容量。请求 top-k 时需要 `efSearch ≥ k`。
 
-实现通常用 min-heap（最小堆）维护 C，快速取出最近的待扩展点；用 max-heap（最大堆）维护 W，快速找到该淘汰的最远结果（堆的原理见[怎样在不断加入任务时持续取出最高优先级？](../../engineering-foundations/algorithms/heaps-and-priority-queues.md)）。另有一个 visited 集合，避免重复检查同一节点。
+实现通常用 min-heap（最小堆）维护 C，快速取出最近的待扩展点；用 max-heap（最大堆）维护 W，快速找到该淘汰的最远结果（堆的原理见[怎样在不断加入任务时持续取出最高优先级？](../../engineering-foundations/computation/heaps-and-priority-queues.md)）。另有一个 visited 集合，避免重复检查同一节点。
 
 每轮从 C 取出最近的候选 c：
 

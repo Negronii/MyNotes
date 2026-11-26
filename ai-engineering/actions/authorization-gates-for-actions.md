@@ -51,7 +51,7 @@ flowchart TD
 | 动作审批 | 对“`build-service` + 标题 + 正文 + `c1` 证据”这份精确草稿的批准 | 用户看过并批准了这一份预览 | 内容或目标一变就失效；不授予任何 scope |
 | 远端操作键 | `run-r42-6:create-issue:v1` | 接收端据此对这次副作用去重或查询 | 是否真能去重，由接收端的契约决定 |
 
-应用会话怎样建立、OpenID Connect (OIDC) 身份令牌与访问 API 的令牌有什么区别，见[Cookie 会话与 OIDC 令牌怎样建立身份](../../engineering-foundations/security/web-sessions-and-oidc.md)。
+应用会话怎样建立、OpenID Connect (OIDC) 身份令牌与访问 API 的令牌有什么区别，见[Cookie 会话与 OIDC 令牌怎样建立身份](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
 
 grant 记录只保存描述和引用：`grantRef`、用户与租户、第三方账号、目标资源的 resource URI 或令牌的 audience (受众)、实际授予的 scope、到期与刷新状态，以及指向加密秘密存储的凭据引用。运行记录、动作草稿、审批和操作键各自存放，只通过 `grantRef` 关联到 grant。这样一来，模型、事件流和检查点里最多出现 `g-31` 这个引用，看不到令牌本身；模型也无法自己挑选令牌或改换资源。
 

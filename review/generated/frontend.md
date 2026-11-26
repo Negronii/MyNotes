@@ -117,7 +117,7 @@ scheme       host         path        query   fragment
 4. **DNS 与 TLS。** 只有需要新建连接、而且主机地址也没有缓存时，才查询 Domain Name System（DNS，域名系统）。HTTPS 新连接还要完成 Transport Layer Security（TLS，传输层安全协议）握手：验证服务器证书，建立加密通道，然后才发送请求。
 5. **重定向。** 若响应是重定向，浏览器按 `Location` 头继续导航；目标换了主机或协议时，连接也要按新目标重新确定。最终请求的地址和拿到的资源由整条重定向链决定。
 
-逐个协议的细节见[浏览器请求如何到达 HTTP 响应？](../../engineering-foundations/networking/http-protocols-and-websockets.md)。
+逐个协议的细节见[浏览器请求如何到达 HTTP 响应？](../../engineering-foundations/services/http-semantics-and-transport.md)。
 
 并非每次 URL 变化都要走这条路：`#summary` 这样的片段导航只在当前文档内定位；脚本用 History API 改地址时也不取新文档；用户后退时，浏览器还可能从 back/forward cache（前进/后退缓存）直接恢复整个旧页面，这和复用 HTTP 缓存里的响应是两回事。这些情况都在[地址变了，浏览器什么时候加载新文档？](#7.%20%E5%9C%B0%E5%9D%80%E5%8F%98%E4%BA%86%EF%BC%8C%E6%B5%8F%E8%A7%88%E5%99%A8%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99%E5%8A%A0%E8%BD%BD%E6%96%B0%E6%96%87%E6%A1%A3%EF%BC%8C%E7%95%8C%E9%9D%A2%E7%8A%B6%E6%80%81%E4%BD%95%E6%97%B6%E8%AF%A5%E5%86%99%E8%BF%9B%20URL%EF%BC%9F)里展开。
 
@@ -460,7 +460,7 @@ requestIdleCallback(runIdleSlice, { timeout: 2000 });
 
 ### Node.js 的事件循环不是这一套
 
-Node.js 的宿主边界不同：它按 libuv 的阶段处理计时器、I/O 和 `setImmediate()`，另有 `process.nextTick()` 队列；在 CommonJS 顶层和 ES 模块顶层，`nextTick` 与 Promise 微任务的相对顺序也可能不同。本章的渲染机会和 rAF 只属于浏览器窗口，不能套到 Node 的阶段图上。Node 的模型见[Node.js 事件循环阶段与微任务队列如何交互？](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
+Node.js 的宿主边界不同：它按 libuv 的阶段处理计时器、I/O 和 `setImmediate()`，另有 `process.nextTick()` 队列；在 CommonJS 顶层和 ES 模块顶层，`nextTick` 与 Promise 微任务的相对顺序也可能不同。本章的渲染机会和 rAF 只属于浏览器窗口，不能套到 Node 的阶段图上。Node 的模型见[Node.js 事件循环阶段与微任务队列如何交互？](../../engineering-foundations/runtime/node-event-loop-and-microtasks.md)。
 
 ### 处理器返回之后，下一步是什么
 
@@ -634,7 +634,7 @@ console.log(JSON.stringify({ literal, visibleLines }));
 // visibleLines: ["May<br>Report", "May\nReport"]
 ~~~
 
-`textContent` 把 `<b>` 原样当文字，所以没有生成子元素。报表标题这类来自用户或服务端的字符串，一律用 `textContent` 写；把它交给 `innerHTML` 等于让数据决定页面结构和脚本，安全边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/security/web-browser-security-boundaries.md)。
+`textContent` 把 `<b>` 原样当文字，所以没有生成子元素。报表标题这类来自用户或服务端的字符串，一律用 `textContent` 写；把它交给 `innerHTML` 等于让数据决定页面结构和脚本，安全边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
 
 ### attribute 和 property 什么时候会分开？
 
@@ -2032,7 +2032,7 @@ API 兼容不代表消息格式兼容，反过来也一样。后文的兼容检�
 
 来源检查确认的是“消息来自允许来源的文档主 frame”。宿主把回调里的 origin 与当前 WebView 配置的页面包 origin 精确比较，并要求消息来自主 frame。
 
-它分辨不出是该文档里哪段脚本发的消息：文档里执行的任何脚本都拥有同样的来源和 frame。因此页面内容由谁提供、导航策略、第三方脚本和 XSS 漏洞，都落在桥接的可信边界之内。XSS 的成因与防法见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/security/web-browser-security-boundaries.md)。若同一 WebView 还要装载不受宿主控制的同源内容，就把它隔离到另一来源或另一 WebView，或者不给它原生能力。
+它分辨不出是该文档里哪段脚本发的消息：文档里执行的任何脚本都拥有同样的来源和 frame。因此页面内容由谁提供、导航策略、第三方脚本和 XSS 漏洞，都落在桥接的可信边界之内。XSS 的成因与防法见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。若同一 WebView 还要装载不受宿主控制的同源内容，就把它隔离到另一来源或另一 WebView，或者不给它原生能力。
 
 #### 宿主按什么顺序处理？
 
@@ -2042,7 +2042,7 @@ API 兼容不代表消息格式兼容，反过来也一样。后文的兼容检�
 2. **解析信封。** 限制消息大小和字段，解析 `protocolVersion`、`id`、`operation`、`payload`；拒绝未知协议版本和错误类型。
 3. **业务门。** 宿主内存里有一个 `businessReady` 标志。它打开前，只接受受限的引导操作 `bridgeHello`（见[新包怎样试启并晋升为稳定包？](#%E6%96%B0%E5%8C%85%E6%80%8E%E6%A0%B7%E8%AF%95%E5%90%AF%E5%B9%B6%E6%99%8B%E5%8D%87%E4%B8%BA%E7%A8%B3%E5%AE%9A%E5%8C%85%EF%BC%9F)）。
 4. **操作白名单与参数。** `openReport` 只在 `businessReady=true` 时接受，且 `reportId` 必须是正的安全整数。拒绝任意类名、方法名、URL、文件路径、JavaScript 字符串或通用 evaluate 请求。
-5. **授权。** 从原生登录态取当前主体，检查它此刻能否执行 `report:read` 并访问报表 42。正文里的用户 ID、隐藏的按钮、难猜的报表编号都不能授权。资源级授权怎样做，见[如何逐次授权租户内的报表资源？](../../engineering-foundations/security/web-security-and-authentication.md)。
+5. **授权。** 从原生登录态取当前主体，检查它此刻能否执行 `report:read` 并访问报表 42。正文里的用户 ID、隐藏的按钮、难猜的报表编号都不能授权。资源级授权怎样做，见[如何逐次授权租户内的报表资源？](../../engineering-foundations/services/per-request-authorization.md)。
 6. **执行并回复。** 通过后调用一个固定的原生方法，把规范化结果或稳定错误码回给同一个请求 `id`。本例成功时回 `{ opened: true, reportId: 42 }`。
 
 > [!example]- 宿主入口的业务分支（中立伪代码）
@@ -2568,7 +2568,7 @@ td.pending {
 
 HTML 源码里的 `<` 和 `&` 有特殊含义，要显示它们本身就写 character reference (字符引用)：普通文本里 `&lt;` 显示为 `<`，`&amp;` 显示为 `&`，`&nbsp;` 是不换行空格。字符引用按所在解析状态处理：`script` 里的 script data 状态和 `style` 里的 RAWTEXT 状态都不会像正文那样解码它们。
 
-字符引用是写源码的手段，不是安全显示动态字符串的手段。报表标题、负责人姓名这类来自用户的值，要通过 DOM 的文本接口（如 `textContent`）写进页面，浏览器只把它当文字；不要把拼接好的字符串交给 `innerHTML` 当标记解析。几种内容接口的区别见[怎样查询和修改 DOM？](#3.%20%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E5%92%8C%E4%BF%AE%E6%94%B9%20DOM%EF%BC%8C%E6%89%8D%E6%8B%BF%E5%88%B0%E5%B9%B6%E6%94%B9%E5%88%B0%E9%A2%84%E6%9C%9F%E7%9A%84%E8%8A%82%E7%82%B9%EF%BC%9F)，不可信文本的安全显示见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/security/web-browser-security-boundaries.md#%E4%B8%8D%E5%8F%AF%E4%BF%A1%E6%8A%A5%E8%A1%A8%E6%A0%87%E9%A2%98%E6%80%8E%E6%A0%B7%E5%AE%89%E5%85%A8%E6%98%BE%E7%A4%BA%EF%BC%9F)。
+字符引用是写源码的手段，不是安全显示动态字符串的手段。报表标题、负责人姓名这类来自用户的值，要通过 DOM 的文本接口（如 `textContent`）写进页面，浏览器只把它当文字；不要把拼接好的字符串交给 `innerHTML` 当标记解析。几种内容接口的区别见[怎样查询和修改 DOM？](#3.%20%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E5%92%8C%E4%BF%AE%E6%94%B9%20DOM%EF%BC%8C%E6%89%8D%E6%8B%BF%E5%88%B0%E5%B9%B6%E6%94%B9%E5%88%B0%E9%A2%84%E6%9C%9F%E7%9A%84%E8%8A%82%E7%82%B9%EF%BC%9F)，不可信文本的安全显示见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
 
 ### 结构定好之后，表单和样式从这里接手
 
@@ -5266,7 +5266,7 @@ capture`label: ${untrusted}`;
 // { strings: ["label: ", ""], values: ["<b>user text</b>"] }
 ~~~
 
-标签函数可以做格式化或转义，但“用了标签”本身不让插入的用户输入变安全；转义规则要按输出上下文（HTML 文本、属性、URL）选择。报表文本进入 DOM 时的上下文边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/security/web-browser-security-boundaries.md)。
+标签函数可以做格式化或转义，但“用了标签”本身不让插入的用户输入变安全；转义规则要按输出上下文（HTML 文本、属性、URL）选择。报表文本进入 DOM 时的上下文边界见[浏览器安全控制分别保护什么信任边界？](../../engineering-foundations/services/sessions-and-browser-boundaries.md)。
 
 ### 属性规则定下后：集合该怎样选
 
@@ -6268,7 +6268,7 @@ Array.of(3);       // [3]：参数本身作为元素
 Array.of(1, 2, 3); // [1, 2, 3]
 ~~~
 
-DOM 查询返回的 `NodeList`、`HTMLCollection` 常用 `Array.from` 转成快照，见[怎样查询和修改 DOM，才拿到并改到预期的节点？](#3.%20%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E5%92%8C%E4%BF%AE%E6%94%B9%20DOM%EF%BC%8C%E6%89%8D%E6%8B%BF%E5%88%B0%E5%B9%B6%E6%94%B9%E5%88%B0%E9%A2%84%E6%9C%9F%E7%9A%84%E8%8A%82%E7%82%B9%EF%BC%9F)；迭代协议本身见[迭代器和生成器怎样按需产出值，提前退出时怎样清理？](#29.%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E5%92%8C%E7%94%9F%E6%88%90%E5%99%A8%E6%80%8E%E6%A0%B7%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%8C%E6%8F%90%E5%89%8D%E9%80%80%E5%87%BA%E6%97%B6%E6%80%8E%E6%A0%B7%E6%B8%85%E7%90%86%EF%BC%9F)。`Array.from(string)` 按 Unicode 码点拆分字符串，但用户感知的一个字符可能由多个码点组成，见[文本算法应按码元、码点还是字素簇处理？](../../engineering-foundations/algorithms/text-units-and-algorithms.md)。
+DOM 查询返回的 `NodeList`、`HTMLCollection` 常用 `Array.from` 转成快照，见[怎样查询和修改 DOM，才拿到并改到预期的节点？](#3.%20%E6%80%8E%E6%A0%B7%E6%9F%A5%E8%AF%A2%E5%92%8C%E4%BF%AE%E6%94%B9%20DOM%EF%BC%8C%E6%89%8D%E6%8B%BF%E5%88%B0%E5%B9%B6%E6%94%B9%E5%88%B0%E9%A2%84%E6%9C%9F%E7%9A%84%E8%8A%82%E7%82%B9%EF%BC%9F)；迭代协议本身见[迭代器和生成器怎样按需产出值，提前退出时怎样清理？](#29.%20%E8%BF%AD%E4%BB%A3%E5%99%A8%E5%92%8C%E7%94%9F%E6%88%90%E5%99%A8%E6%80%8E%E6%A0%B7%E6%8C%89%E9%9C%80%E4%BA%A7%E5%87%BA%E5%80%BC%EF%BC%8C%E6%8F%90%E5%89%8D%E9%80%80%E5%87%BA%E6%97%B6%E6%80%8E%E6%A0%B7%E6%B8%85%E7%90%86%EF%BC%9F)。`Array.from(string)` 按 Unicode 码点拆分字符串，但用户感知的一个字符可能由多个码点组成，见[文本算法应按码元、码点还是字素簇处理？](../../engineering-foundations/computation/text-units-and-unicode.md)。
 
 ### 排序：默认按字符串比较
 
@@ -8099,7 +8099,7 @@ response.then(value => console.log(value));
 // （约 20 ms 或更久之后）报表响应已到
 ~~~
 
-20 毫秒只是计时器的最短等待，计时器由宿主提供，不属于语言本身。在浏览器里，Promise 处理器和 `await` 之后的代码作为 microtask (微任务) 排队：当前调用栈清空后，浏览器在微任务检查点把队列逐个跑完。微任务何时插进事件循环、和绘制怎样交错，见[事件循环怎样安排任务、微任务和渲染？](#2.%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E6%80%8E%E6%A0%B7%E5%AE%89%E6%8E%92%E4%BB%BB%E5%8A%A1%E3%80%81%E5%BE%AE%E4%BB%BB%E5%8A%A1%E5%92%8C%E6%B8%B2%E6%9F%93%EF%BC%9F)；Node.js 的调度边界不同，见 [Node.js 事件循环阶段与微任务队列如何交互？](../../engineering-foundations/backend/node-event-loop-and-microtasks.md)。
+20 毫秒只是计时器的最短等待，计时器由宿主提供，不属于语言本身。在浏览器里，Promise 处理器和 `await` 之后的代码作为 microtask (微任务) 排队：当前调用栈清空后，浏览器在微任务检查点把队列逐个跑完。微任务何时插进事件循环、和绘制怎样交错，见[事件循环怎样安排任务、微任务和渲染？](#2.%20%E4%BA%8B%E4%BB%B6%E5%BE%AA%E7%8E%AF%E6%80%8E%E6%A0%B7%E5%AE%89%E6%8E%92%E4%BB%BB%E5%8A%A1%E3%80%81%E5%BE%AE%E4%BB%BB%E5%8A%A1%E5%92%8C%E6%B8%B2%E6%9F%93%EF%BC%9F)；Node.js 的调度边界不同，见 [Node.js 事件循环阶段与微任务队列如何交互？](../../engineering-foundations/runtime/node-event-loop-and-microtasks.md)。
 
 ### then 链怎样决定下一个 Promise
 
@@ -10801,7 +10801,7 @@ function parseReportDataWithZod(text: string): ParseResult<ReportDataFromSchema>
 
 拒不拒绝额外键、邮箱校验多严格，应按接口契约决定，而不是按库的默认值决定。
 
-同样的思路也用于服务端：Python 服务可以用 Pydantic 模型检查请求，FastAPI 还能根据路由和模型生成 OpenAPI 契约，但实际响应是否符合契约仍要另外核验，见[HTTP API 如何描述实际运行的请求与响应契约](../../engineering-foundations/backend/http-api-contracts.md)。
+同样的思路也用于服务端：Python 服务可以用 Pydantic 模型检查请求，FastAPI 还能根据路由和模型生成 OpenAPI 契约，但实际响应是否符合契约仍要另外核验，见[HTTP API 如何描述实际运行的请求与响应契约](../../engineering-foundations/services/api-contracts-errors-and-evolution.md)。
 
 ### as 和 z.infer 为什么都不算验证？
 
@@ -13159,7 +13159,7 @@ flowchart TD
 
 本例只有一个预览槽。若要同时保留多个并发预览或导出作业，就按请求 ID 或服务端作业 ID 分格存储，而不是共用一个槽。
 
-服务器仍须按当前调用者和租户范围逐个授权这些行 ID，客户端勾选不能代替[服务端资源权限检查](../../engineering-foundations/security/web-security-and-authentication.md)。响应 JSON 先当作 `unknown`，在运行时校验 `rowCount`、`estimatedBytes` 是非负安全整数（见 [TypeScript 能保证什么](#34.%20TypeScript%20%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%8C%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%E5%8F%88%E8%AF%A5%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%EF%BC%9F)）。
+服务器仍须按当前调用者和租户范围逐个授权这些行 ID，客户端勾选不能代替[服务端资源权限检查](../../engineering-foundations/services/per-request-authorization.md)。响应 JSON 先当作 `unknown`，在运行时校验 `rowCount`、`estimatedBytes` 是非负安全整数（见 [TypeScript 能保证什么](#34.%20TypeScript%20%E8%83%BD%E4%BF%9D%E8%AF%81%E4%BB%80%E4%B9%88%EF%BC%8C%E5%A4%96%E9%83%A8%E6%95%B0%E6%8D%AE%E5%8F%88%E8%AF%A5%E6%80%8E%E6%A0%B7%E9%AA%8C%E8%AF%81%EF%BC%9F)）。
 
 ### 取消与错误
 
@@ -13366,7 +13366,7 @@ Redux 管的是跨组件共享的纯客户端状态：action 描述事实，redu
 {"id":42,"title":"Monthly summary","delivery":{"channel":"email","recipients":["reader@example.test"]},"note":"Draft"}
 ~~~
 
-抽屉有两步：第 1 步编辑通知方式 `delivery.channel` 和收件人 `delivery.recipients`，第 2 步编辑备注 `note` 并确认。`title` 在表单里只读，用来演示服务端同时改了别的字段时怎样比较。保存使用 [HTTP API 条件更新契约](../../engineering-foundations/backend/http-api-contracts.md#%E5%A6%82%E4%BD%95%E7%94%A8%E6%9D%A1%E4%BB%B6%20PATCH%20%E9%98%B2%E6%AD%A2%E8%A6%86%E7%9B%96%E5%88%AB%E4%BA%BA%E6%9B%B4%E6%96%B0%EF%BC%9F)里的 JSON Merge Patch、`If-Match`、强 ETag 和 `412` 约定。客户端的选择、URL 和缓存都不授予任何权限，每次读写仍由服务端按当前身份授权。
+抽屉有两步：第 1 步编辑通知方式 `delivery.channel` 和收件人 `delivery.recipients`，第 2 步编辑备注 `note` 并确认。`title` 在表单里只读，用来演示服务端同时改了别的字段时怎样比较。保存使用 [HTTP API 条件更新契约](../../engineering-foundations/services/api-contracts-errors-and-evolution.md)里的 JSON Merge Patch、`If-Match`、强 ETag 和 `412` 约定。客户端的选择、URL 和缓存都不授予任何权限，每次读写仍由服务端按当前身份授权。
 
 示例的本地验证组合是 React 19.3.1、React Router 8.5.1 Declarative Mode（组件用 `useSearchParams` 读查询、`useNavigate` 写地址，不用 loader）、TanStack Query 5.107.1。
 
@@ -14445,7 +14445,7 @@ Web Storage 里的内容，当前页面上任何脚本都能读。页面一旦�
 - **`SameSite`：** 控制跨站请求是否附带；当前 IETF Cookie 文稿要求 `SameSite=None` 必须同时带 `Secure`。
 - **`HttpOnly`：** 不让脚本通过 `document.cookie` 读到。
 
-换一个存储位置本身不完成认证或授权。Cookie、XSS 和 CSRF 的服务端防护见[Web 安全与认证](../../engineering-foundations/security/web-security-and-authentication.md)。
+换一个存储位置本身不完成认证或授权。Cookie、XSS 和 CSRF 的服务端防护见[Web 安全与认证](../../engineering-foundations/services/per-request-authorization.md)。
 
 ### 收到通知后，向权威核实
 
@@ -14877,7 +14877,7 @@ worker 方案和上一节的 `BroadcastChannel` 是二选一的传输方式：�
 | Fetch 响应流 | 响应体是 `ReadableStream`，请求方法、请求头和正文可自定义 | 应用自己读字节、组帧、取消、重试和续读 |
 | WebSocket | 握手后双向发送消息 | 应用协议定义重连、事件 ID、确认、去重和补发 |
 
-WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标签页互相提醒的默认方案。它的握手与 Fetch 流程集成，却使用 WebSocket 专有的握手模式，不是普通 Fetch 的 Cross-Origin Resource Sharing (跨来源资源共享，CORS) 授权。服务端可以用握手请求的 `Origin` 限制浏览器来源，但非浏览器客户端能伪造这个头，所以它不是身份认证；仍要验证用户身份、逐条检查操作权限，并规定断线重放、确认与去重。通道选型的完整比较见[何时选择轮询、SSE、流式 Fetch 或 WebSocket](../../engineering-foundations/networking/real-time-web-updates.md)。
+WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标签页互相提醒的默认方案。它的握手与 Fetch 流程集成，却使用 WebSocket 专有的握手模式，不是普通 Fetch 的 Cross-Origin Resource Sharing (跨来源资源共享，CORS) 授权。服务端可以用握手请求的 `Origin` 限制浏览器来源，但非浏览器客户端能伪造这个头，所以它不是身份认证；仍要验证用户身份、逐条检查操作权限，并规定断线重放、确认与去重。通道选型的完整比较见[何时选择轮询、SSE、流式 Fetch 或 WebSocket](../../engineering-foundations/services/real-time-channels-and-resume.md)。
 
 ### 下一步：推送事件怎样接上快照
 
@@ -14897,7 +14897,7 @@ WebSocket 适合与服务端双向通信，但不是同一浏览器里两个标�
 > - Fetch 响应体流与 `websocket` 请求模式（“更新来自服务端时”）：[WHATWG Fetch Standard §§2.2.5、5.3、5.6](https://fetch.spec.whatwg.org/)，Living Standard 更新于 2026-10-19；SSE 重连与 `Last-Event-ID`：[WHATWG HTML Standard §§9.2.2–9.2.5](https://html.spec.whatwg.org/multipage/server-sent-events.html)；WebSocket 握手与 Fetch 集成：[WHATWG WebSockets Standard §§2.1–2.2](https://websockets.spec.whatwg.org/)；浏览器来源检查与非浏览器客户端可伪造 `Origin`：[RFC 6455 §§4.2.1、10.1–10.2](https://www.rfc-editor.org/rfc/rfc6455.html)。均于 2026-11-12 核对。服务端保留历史并按 ID 重放是应用协议的条件。
 ## 48. 服务端持续推送时，界面怎样合并更新并从断线恢复？
 
-本章回答：服务端不断推送更新时，页面怎样把每条更新合并进已有画面，连接断开后又怎样从正确的位置接着读，既不漏也不重。读者手上已有[上一章](#47.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%83%BD%E6%8A%8A%E7%8A%B6%E6%80%81%E5%AD%98%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%8C%E6%A0%87%E7%AD%BE%E9%A1%B5%E5%92%8C%E7%AA%97%E5%8F%A3%E4%B9%8B%E9%97%B4%E6%80%8E%E6%A0%B7%E4%BA%92%E7%9B%B8%E9%80%9A%E7%9F%A5%EF%BC%9F)的规则：任何通知都要向权威核实、只单调推进。这里的权威是“快照 + 游标”：快照给出某一时刻的完整状态，游标指出从事件日志的哪里接着读。传输方式怎样选、SSE 线格式的完整定义，见[何时选择轮询、SSE、流式 Fetch 或 WebSocket](../../engineering-foundations/networking/real-time-web-updates.md)；本章只讲页面侧的责任。
+本章回答：服务端不断推送更新时，页面怎样把每条更新合并进已有画面，连接断开后又怎样从正确的位置接着读，既不漏也不重。读者手上已有[上一章](#47.%20%E6%B5%8F%E8%A7%88%E5%99%A8%E8%83%BD%E6%8A%8A%E7%8A%B6%E6%80%81%E5%AD%98%E5%9C%A8%E5%93%AA%E9%87%8C%EF%BC%8C%E6%A0%87%E7%AD%BE%E9%A1%B5%E5%92%8C%E7%AA%97%E5%8F%A3%E4%B9%8B%E9%97%B4%E6%80%8E%E6%A0%B7%E4%BA%92%E7%9B%B8%E9%80%9A%E7%9F%A5%EF%BC%9F)的规则：任何通知都要向权威核实、只单调推进。这里的权威是“快照 + 游标”：快照给出某一时刻的完整状态，游标指出从事件日志的哪里接着读。传输方式怎样选、SSE 线格式的完整定义，见[何时选择轮询、SSE、流式 Fetch 或 WebSocket](../../engineering-foundations/services/real-time-channels-and-resume.md)；本章只讲页面侧的责任。
 
 **案例。** 沿用主线一的报表页和上一章的报表 42 快照，所有 ID 和响应都是教学用合成数据。页面先取得快照 `id=42, version=9, status=running, progress=0, event_cursor="103"`，然后用 Server-Sent Events (服务器发送事件，SSE) 订阅进度。连接在收到事件 104 之后中断，浏览器自动重连，服务端接着发送事件 105，报表变为 `ready`。页面要做到三件事：断线期间保留最后一份有效状态；正确合并后续更新；把“连接是否正常”和“报表运行到哪一步”分开显示。本章最后换用一个独立的 NDJSON 作业例子，讲页面自己读字节流时多出来的责任。
 
@@ -14996,7 +14996,7 @@ URL 里仍是 `after=103`，请求头却是 `Last-Event-ID: 104`。本例服务�
 
 按标准，浏览器先更新 `EventSource` 的 last-event-ID，再排队派发 JavaScript 事件。所以这个值只说明“浏览器解析到了哪里”，不是 acknowledgment (确认，ACK)：它不证明应用已经渲染、写入本地存储或完成了某个副作用。服务端可以用 `retry:` 字段给出重连等待的毫秒数，但网络和浏览器实现仍会影响实际恢复时间，页面不应假定固定间隔。
 
-本例只需要最新的报表视图，所以够用：即使某条事件解析了却没来得及渲染，下一条完整视图或一次快照恢复都能把画面校正过来。如果每条事件都代表必须完成的副作用，`Last-Event-ID` 可能比应用真正完成的位置更靠后；这时要持久记录连续的应用层 ACK、按事件 ID 幂等处理，并处理 ACK 与副作用之间的崩溃窗口，见[断线后，客户端要重建状态还是补齐每条事件](../../engineering-foundations/networking/real-time-web-updates.md#%E6%96%AD%E7%BA%BF%E5%90%8E%EF%BC%8C%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%A6%81%E9%87%8D%E5%BB%BA%E7%8A%B6%E6%80%81%E8%BF%98%E6%98%AF%E8%A1%A5%E9%BD%90%E6%AF%8F%E6%9D%A1%E4%BA%8B%E4%BB%B6%EF%BC%9F)。
+本例只需要最新的报表视图，所以够用：即使某条事件解析了却没来得及渲染，下一条完整视图或一次快照恢复都能把画面校正过来。如果每条事件都代表必须完成的副作用，`Last-Event-ID` 可能比应用真正完成的位置更靠后；这时要持久记录连续的应用层 ACK、按事件 ID 幂等处理，并处理 ACK 与副作用之间的崩溃窗口，见[断线后，客户端要重建状态还是补齐每条事件](../../engineering-foundations/services/real-time-channels-and-resume.md)。
 
 ### 合并更新：完整视图按版本覆盖，patch 必须连续
 
@@ -15707,7 +15707,7 @@ Content-Type: application/x-ndjson
 推送的若是持久 AI 运行的事件，事件到达后怎样把运行 ID、序号、工具调用和不完整的 Markdown 安全地投影到聊天界面，见支线[AI 聊天界面怎样应用重放事件、安全渲染 Markdown，并处理停止与重试](#49.%20AI%20%E8%81%8A%E5%A4%A9%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%BA%94%E7%94%A8%E9%87%8D%E6%94%BE%E4%BA%8B%E4%BB%B6%E3%80%81%E5%AE%89%E5%85%A8%E6%B8%B2%E6%9F%93%20Markdown%EF%BC%8C%E5%B9%B6%E5%A4%84%E7%90%86%E5%81%9C%E6%AD%A2%E4%B8%8E%E9%87%8D%E8%AF%95%EF%BC%9F)。主线五从另一端接手：这些代码怎样构建、测试、发布，并测出页面慢在哪里，从[构建器怎样把源码变成可部署的文件](#50.%20%E6%9E%84%E5%BB%BA%E5%99%A8%E6%80%8E%E6%A0%B7%E6%8A%8A%E6%BA%90%E7%A0%81%E5%8F%98%E6%88%90%E5%8F%AF%E9%83%A8%E7%BD%B2%E7%9A%84%E6%96%87%E4%BB%B6%EF%BC%9F)开始。
 
 > [!info]- 来源
-> - SSE 字段解析与空行分发、显式空 `data:` 也会派发、命名事件、`readyState` 三值、204 停止重连、last-event-ID 先于事件派发更新、`Last-Event-ID` 请求头与 `retry:`（“连接状态和报表状态分开显示”“一次完整的续读”“续读接不上时”）：[WHATWG HTML Living Standard，Server-sent events §§9.2.2–9.2.6](https://html.spec.whatwg.org/multipage/server-sent-events.html)，2026-11-12 更新并核对。`after` 参数、优先采用 `Last-Event-ID`、`reset` 事件与报表 42 的快照/事件是本例应用约定，沿用[实时更新协议案例](../../engineering-foundations/networking/real-time-web-updates.md)。
+> - SSE 字段解析与空行分发、显式空 `data:` 也会派发、命名事件、`readyState` 三值、204 停止重连、last-event-ID 先于事件派发更新、`Last-Event-ID` 请求头与 `retry:`（“连接状态和报表状态分开显示”“一次完整的续读”“续读接不上时”）：[WHATWG HTML Living Standard，Server-sent events §§9.2.2–9.2.6](https://html.spec.whatwg.org/multipage/server-sent-events.html)，2026-11-12 更新并核对。`after` 参数、优先采用 `Last-Event-ID`、`reset` 事件与报表 42 的快照/事件是本例应用约定，沿用[实时更新协议案例](../../engineering-foundations/services/real-time-channels-and-resume.md)。
 > - Fetch 请求缓存模式 `cache: "no-store"` 不使用 HTTP 缓存（“快照和游标必须来自同一个一致性点”）：[WHATWG Fetch Standard §5.4 Request](https://fetch.spec.whatwg.org/#request-class)，2026-10-19 版本；2026-11-12 核对。
 > - Fetch 响应状态与 `Response.body` 流（“Fetch 流和 SSE 有什么不同？”）：[WHATWG Fetch Standard §5.3 Response](https://fetch.spec.whatwg.org/#response-class)；`getReader()`、读取、取消与释放 reader、内部队列与背压（“NDJSON 解析器的边界”“背压”）：[WHATWG Streams Standard §§4.2、4.3.3、4.4、4.9.3](https://streams.spec.whatwg.org/)，2026-11-12 核对。
 > - NDJSON 的 UTF-8、LF/CRLF 分隔与建议媒体类型（“从字节到记录要过三道关”）：[NDJSON Specification 1.0.0 §§3.1–3.3](https://github.com/ndjson/ndjson-spec)，2014-10-19。8,192 帧上限、64 Ki 输出上限、`seq`、`runId` 与终帧是本例教学协议扩展，不由 NDJSON 定义。
@@ -16396,7 +16396,7 @@ source map 不是权限边界。`.map` URL 只要仍由服务器公开提供，�
 
 - **同一个 URL 的内容会变**，例如入口 HTML。用 `no-cache` 加 `ETag`，让缓存保留正文，但每次复用前都问服务器；或给较短的 `max-age`，限制旧内容最多被直接复用多久，到期后再用 `ETag` 验证。
 
-报表 API 这类带用户数据的响应，还涉及 `private`、授权撤销与缓存的关系，见[浏览器请求如何到达 HTTP 响应？](../../engineering-foundations/networking/http-protocols-and-websockets.md)的缓存一节。本章只处理公开的静态资源。
+报表 API 这类带用户数据的响应，还涉及 `private`、授权撤销与缓存的关系，见[浏览器请求如何到达 HTTP 响应？](../../engineering-foundations/services/http-semantics-and-transport.md)的缓存一节。本章只处理公开的静态资源。
 
 ### 编辑器改了一行字，为什么入口脚本的文件名也变了？
 
@@ -16453,7 +16453,7 @@ HTTP 缓存和 Service Worker 的 Cache Storage 是两套机制，要分开设�
 
 回滚是把指针指回 v41，同样要成套：入口 HTML 和服务端会读取的 manifest 一起指回去。已经打开的 v42 页面仍可能需要 v42 的文件，所以回滚后也不能立即删除 v42。
 
-旧版本文件的保留时长，要覆盖三样东西：仍可能被提供的 HTML（包括 CDN 边缘上的副本）、用户仍开着的页面、可能继续控制旧页面的 Service Worker。后端 API 能否同时兼容新旧页面，是另一项要单独检查的发布条件。本章止于静态资源；构建一次、逐环境验证、渐进放量和服务端回滚见[如何晋级并回滚已验证的报表服务产物？](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)。
+旧版本文件的保留时长，要覆盖三样东西：仍可能被提供的 HTML（包括 CDN 边缘上的副本）、用户仍开着的页面、可能继续控制旧页面的 Service Worker。后端 API 能否同时兼容新旧页面，是另一项要单独检查的发布条件。本章止于静态资源；构建一次、逐环境验证、渐进放量和服务端回滚见[如何晋级并回滚已验证的报表服务产物？](../../engineering-foundations/practice/build-once-promote-by-digest.md)。
 
 ### 例子：图集和独立图标，缓存粒度差在哪里？
 
@@ -16481,7 +16481,7 @@ HTTP 缓存和 Service Worker 的 Cache Storage 是两套机制，要分开设�
 
 ### HTTP/2 与 HTTP/3 下，“少一个请求”还值多少？
 
-HTTP/1.1 时代，合并文件的主要理由是减少连接和排队。HTTP/2 让多个资源流在同一条 TCP 连接上交错传输，请求数不再等于新建连接数；但 TCP 丢失字节时，仍可能暂时挡住同一连接上所有流的后续数据。HTTP/3 用 QUIC 流承载请求，单个流受阻时其他流可以继续推进，但这些流仍共享连接级的拥塞控制和流量控制。协议细节见[浏览器请求如何到达 HTTP 响应？](../../engineering-foundations/networking/http-protocols-and-websockets.md)。
+HTTP/1.1 时代，合并文件的主要理由是减少连接和排队。HTTP/2 让多个资源流在同一条 TCP 连接上交错传输，请求数不再等于新建连接数；但 TCP 丢失字节时，仍可能暂时挡住同一连接上所有流的后续数据。HTTP/3 用 QUIC 流承载请求，单个流受阻时其他流可以继续推进，但这些流仍共享连接级的拥塞控制和流量控制。协议细节见[浏览器请求如何到达 HTTP 响应？](../../engineering-foundations/services/http-semantics-and-transport.md)。
 
 所以不能只凭“文件更少”断言合并更快。独立资源仍有各自的请求处理和响应头；合并则把未用部分的字节、变更频率和缓存失效绑在一起。若一组资源在多数页面一起出现、且一起更新，可以测合并；若路由只取其中少数、或它们经常独立更新，独立资源只请求当前需要的 URL，未变部分继续命中缓存。
 
@@ -16675,7 +16675,7 @@ HTTP/1.1 时代，合并文件的主要理由是减少连接和排队。HTTP/2 �
 - 请求与组件状态的关系放在组件测试里，用可控的 Mock 制造等待、成功和失败。
 - 浏览器 Back、片段锚点、生产资源路径这类风险只有真实浏览器能覆盖。组件测试没有真实的会话历史，不能替代 Back 测试。
 
-把风险对应到可证明边界的通用方法见[怎样用测试边界验证一次报表服务改动？](../../engineering-foundations/testing/software-testing-strategy.md)；本章只讲前端特有的边界。
+把风险对应到可证明边界的通用方法见[怎样用测试边界验证一次报表服务改动？](../../engineering-foundations/practice/testing-by-failure-boundary.md)；本章只讲前端特有的边界。
 
 ### 组件测试：按用户能找到的角色和名称查询
 
@@ -16837,7 +16837,7 @@ typecheck -> unit/component tests -> production build
 > [!info] Vite 的本地预览（Vite 8.3.8，核对于 2026-11-12）
 > `vite preview` 可以在本地预览刚构建的 `dist`，适合做上面的冷开检查，但官方不把它定位为生产服务器。
 
-产物晋级、运行时配置和发布门禁的通用做法见[如何晋级并回滚已验证的报表服务产物？](../../engineering-foundations/infrastructure/application-deployment-and-ci-cd.md)。
+产物晋级、运行时配置和发布门禁的通用做法见[如何晋级并回滚已验证的报表服务产物？](../../engineering-foundations/practice/build-once-promote-by-digest.md)。
 
 ### 分好层之后，组件层的异步断言怎样写
 
@@ -17531,7 +17531,7 @@ Beacon 与 keepalive Fetch 的请求共享同一个 fetch group（Fetch 组）�
 
 本章交出的是一条“尽力送出”的通道：内容和积压量有界，离页时在 `hidden` 上用 Beacon 或 keepalive Fetch 发一批，并清楚每个信号只证明到哪一步。它适合可丢失的分析遥测。
 
-数据丢失不可接受时，问题就变成可靠投递：需要持久化的发件箱、重试和服务器确认。重试必须沿用入队时生成的同一个事件 ID；服务端为事件 ID 预先建立唯一约束，在写入事务中按这个键去重或幂等写入。幂等键怎样定义、重试怎样受控，见[请求超时后如何确认结果并安全重试？](../../engineering-foundations/reliability/api-reliability-and-async-delivery.md)。不能丢的业务消息与这种可丢弃的遥测不同，断线后怎样恢复见[服务端持续推送时，界面怎样合并更新并从断线恢复？](#48.%20%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%8C%81%E7%BB%AD%E6%8E%A8%E9%80%81%E6%97%B6%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%90%88%E5%B9%B6%E6%9B%B4%E6%96%B0%E5%B9%B6%E4%BB%8E%E6%96%AD%E7%BA%BF%E6%81%A2%E5%A4%8D%EF%BC%9F)。
+数据丢失不可接受时，问题就变成可靠投递：需要持久化的发件箱、重试和服务器确认。重试必须沿用入队时生成的同一个事件 ID；服务端为事件 ID 预先建立唯一约束，在写入事务中按这个键去重或幂等写入。幂等键怎样定义、重试怎样受控，见[请求超时后如何确认结果并安全重试？](../../engineering-foundations/services/deadlines-retries-and-unknown-outcomes.md)。不能丢的业务消息与这种可丢弃的遥测不同，断线后怎样恢复见[服务端持续推送时，界面怎样合并更新并从断线恢复？](#48.%20%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%8C%81%E7%BB%AD%E6%8E%A8%E9%80%81%E6%97%B6%EF%BC%8C%E7%95%8C%E9%9D%A2%E6%80%8E%E6%A0%B7%E5%90%88%E5%B9%B6%E6%9B%B4%E6%96%B0%E5%B9%B6%E4%BB%8E%E6%96%AD%E7%BA%BF%E6%81%A2%E5%A4%8D%EF%BC%9F)。
 
 > [!info]- 来源
 > - `sendBeacon()` 返回值只表示成功排队、无响应回调、自动 `keepalive`，并在 `visibilityState` 变为 `hidden` 时安排传输：[W3C Beacon API](https://www.w3.org/TR/beacon/)，§3.1、§3.2，2026-11-12 核对。支持“用哪条通道发出去？”。
